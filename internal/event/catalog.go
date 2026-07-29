@@ -32,14 +32,17 @@ var Versions = map[string]int{
 	TypeNoteAdded:          1,
 }
 
-// Run outcomes for RunFinished (T5 finish_run, plus the daemon-only
-// "interrupted" for runs orphaned by lease expiry).
+// Run outcomes for RunFinished: the agent-reported set (T5 finish_run)
+// plus two daemon-only outcomes — "interrupted" for runs orphaned by
+// lease expiry and "superseded" for work voided by losing a cross-machine
+// claim race (D6).
 const (
 	OutcomeDone        = "done"
 	OutcomeFailed      = "failed"
 	OutcomeAbandoned   = "abandoned"
 	OutcomeBlocked     = "blocked"
 	OutcomeInterrupted = "interrupted"
+	OutcomeSuperseded  = "superseded"
 )
 
 // Payload structs. Fields deliberately carry no omitempty: every known

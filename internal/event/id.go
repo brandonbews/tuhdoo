@@ -20,6 +20,17 @@ func NewID(now time.Time, entropy io.Reader) (string, error) {
 	return id.String(), nil
 }
 
+// IDTime returns the UTC timestamp embedded in an event ID. Replay uses
+// it for the claim winner rule (D6): deterministic given the ID, whether
+// or not the writing machine's clock was truthful.
+func IDTime(id string) (time.Time, error) {
+	u, err := ulid.ParseStrict(id)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("event: id time: invalid id %q: %w", id, err)
+	}
+	return ulid.Time(u.Time()).UTC(), nil
+}
+
 // Path derives the date-sharded storage path for an event ID:
 // "events/YYYY/MM/DD/<ULID>.json", using the UTC date embedded in the
 // ULID's timestamp. It is a pure function of the ID alone.
