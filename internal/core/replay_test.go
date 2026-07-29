@@ -286,6 +286,36 @@ func TestEscalationLifecycle(t *testing.T) {
 	}
 }
 
+func TestBlockingEscalationGatesReadiness(t *testing.T) {
+	esc := tick(t, 2)
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeEscalationRaised, "brandon/impl-1", "t1",
+			event.EscalationRaised{Question: "which auth flow?", Blocking: true}),
+	}
+	s := replay(t, events, nil)
+	if s.Ready("t1") {
+		t.Fatal("task with an open blocking escalation must not be ready")
+	}
+
+	// A non-blocking question does not gate readiness.
+	events2 := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeEscalationRaised, "brandon/impl-1", "t1",
+			event.EscalationRaised{Question: "fyi ok?", Blocking: false}),
+	}
+	if s2 := replay(t, events2, nil); !s2.Ready("t1") {
+		t.Fatal("non-blocking escalation must not gate readiness")
+	}
+
+	// The answer returns the task to the pool.
+	events = append(events, evt(t, 3, event.TypeEscalationAnswered, "brandon", "t1",
+		event.EscalationAnswered{Answer: "oauth", Escalation: esc}))
+	if s3 := replay(t, events, nil); !s3.Ready("t1") {
+		t.Fatal("answered escalation must return the task to the pool")
+	}
+}
+
 func TestFailSafeUnknownType(t *testing.T) {
 	bad := event.Event{ID: tick(t, 2), Type: "task.frobnicated", V: 1,
 		Actor: "future/agent", Machine: "m-x", Task: "t1",

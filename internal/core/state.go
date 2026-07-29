@@ -123,7 +123,11 @@ func (s *State) ActiveClaim(taskID string) *Claim {
 }
 
 // Ready reports whether a task can be claimed right now: open, not
-// actively claimed, and every dependency done.
+// actively claimed, every dependency done, and no open blocking
+// escalation. The escalation clause closes the protocol loop: escalate →
+// release → finish_run(blocked) returns the task to the pool, and it is
+// the *answer* that makes it claimable again — serving it earlier would
+// hand an agent a task it can only re-ask the same question about.
 func (s *State) Ready(taskID string) bool {
 	t, ok := s.Tasks[taskID]
 	if !ok || t.Status != StatusOpen {
@@ -134,6 +138,11 @@ func (s *State) Ready(taskID string) bool {
 	}
 	for _, dep := range t.DependsOn {
 		if d, ok := s.Tasks[dep]; ok && d.Status != StatusDone {
+			return false
+		}
+	}
+	for _, id := range s.EscOrder {
+		if e := s.Escalations[id]; e.Task == taskID && e.Blocking && !e.Answered {
 			return false
 		}
 	}
