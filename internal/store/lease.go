@@ -25,6 +25,30 @@ func leasePath(claimID string) (string, error) {
 	return "leases/" + claimID + ".json", nil
 }
 
+// EncodeLease renders lease-file bytes for an expiry (UTC, second
+// precision). Exported so the sync layer can resolve lease-file merge
+// conflicts without duplicating the format.
+func EncodeLease(expires time.Time) []byte {
+	data, err := json.Marshal(leaseFile{Expires: expires.UTC().Truncate(time.Second).Format(time.RFC3339)})
+	if err != nil {
+		panic(err) // unreachable: a string field cannot fail to marshal
+	}
+	return data
+}
+
+// DecodeLease parses lease-file bytes to the expiry they declare.
+func DecodeLease(data []byte) (time.Time, error) {
+	var lf leaseFile
+	if err := json.Unmarshal(data, &lf); err != nil {
+		return time.Time{}, fmt.Errorf("store: decode lease: %w", err)
+	}
+	expires, err := time.Parse(time.RFC3339, lf.Expires)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("store: decode lease: %w", err)
+	}
+	return expires.UTC(), nil
+}
+
 // WriteLease creates or overwrites the lease file for claimID. Expiry is
 // stored in UTC at second precision.
 func (s *Store) WriteLease(claimID string, expires time.Time) error {
@@ -32,11 +56,7 @@ func (s *Store) WriteLease(claimID string, expires time.Time) error {
 	if err != nil {
 		return err
 	}
-	data, err := json.Marshal(leaseFile{Expires: expires.UTC().Truncate(time.Second).Format(time.RFC3339)})
-	if err != nil {
-		return fmt.Errorf("store: write lease %s: %w", claimID, err)
-	}
-	return s.AppendBatch(Batch{Files: map[string][]byte{path: data}})
+	return s.AppendBatch(Batch{Files: map[string][]byte{path: EncodeLease(expires)}})
 }
 
 // DeleteLease removes the lease file for claimID. Deleting an absent

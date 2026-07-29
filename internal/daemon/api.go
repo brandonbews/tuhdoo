@@ -15,6 +15,7 @@ import (
 
 	"github.com/brandonbews/tuhdoo/internal/core"
 	"github.com/brandonbews/tuhdoo/internal/event"
+	"github.com/brandonbews/tuhdoo/internal/syncer"
 )
 
 func (d *Daemon) handler() http.Handler {
@@ -669,15 +670,48 @@ type stateTask struct {
 
 type stateResp struct {
 	Degraded        string           `json:"degraded,omitempty"` // fail-safe message when read-only
+	Sync            syncJSON         `json:"sync"`
 	Tasks           []stateTask      `json:"tasks"`
 	OpenEscalations []escalationJSON `json:"open_escalations"`
 	Runs            []runJSON        `json:"runs"`
+}
+
+// syncJSON is the sync loop's health for status surfaces.
+type syncJSON struct {
+	Mode       string `json:"mode"` // local-only | syncing | error
+	Remote     string `json:"remote,omitempty"`
+	LastFetch  string `json:"last_fetch,omitempty"` // RFC3339
+	LastPush   string `json:"last_push,omitempty"`
+	LastError  string `json:"last_error,omitempty"`
+	Collisions int    `json:"collisions"`
+	Merges     int    `json:"merges"`
+}
+
+func syncJSONOf(st syncer.Status) syncJSON {
+	out := syncJSON{
+		Mode:       st.Mode,
+		Remote:     st.Remote,
+		LastError:  st.LastError,
+		Collisions: st.Collisions,
+		Merges:     st.Merges,
+	}
+	if st.Mode == "" {
+		out.Mode = "starting"
+	}
+	if !st.LastFetch.IsZero() {
+		out.LastFetch = st.LastFetch.UTC().Format(time.RFC3339)
+	}
+	if !st.LastPush.IsZero() {
+		out.LastPush = st.LastPush.UTC().Format(time.RFC3339)
+	}
+	return out
 }
 
 func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	resp := stateResp{
+		Sync:            syncJSONOf(d.sync.Status()),
 		Tasks:           []stateTask{},
 		OpenEscalations: []escalationJSON{},
 		Runs:            []runJSON{},

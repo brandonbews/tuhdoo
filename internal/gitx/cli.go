@@ -264,11 +264,28 @@ func (g *CLI) LsTree(rev string) ([]TreeEntry, error) {
 }
 
 func (g *CLI) Fetch(remote, refspec string) error {
-	_, _, err := g.run(nil, nil, "fetch", "--quiet", remote, refspec)
+	_, stderr, err := g.run(nil, nil, "fetch", "--quiet", remote, refspec)
 	if err != nil {
+		if strings.Contains(stderr, "couldn't find remote ref") {
+			return fmt.Errorf("gitx: fetch %s %s: %w", remote, refspec, ErrRemoteRefMissing)
+		}
 		return fmt.Errorf("gitx: %w", err)
 	}
 	return nil
+}
+
+// IsAncestor reports whether commit a is an ancestor of (or equal to)
+// commit b.
+func (g *CLI) IsAncestor(a, b string) (bool, error) {
+	_, _, err := g.run(nil, nil, "merge-base", "--is-ancestor", a, b)
+	if err == nil {
+		return true, nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return false, nil
+	}
+	return false, fmt.Errorf("gitx: %w", err)
 }
 
 func (g *CLI) Push(remote, refspec string) error {

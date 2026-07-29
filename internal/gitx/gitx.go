@@ -41,6 +41,10 @@ var (
 	// ErrNoRemote reports that the asked-for remote is not configured.
 	// Remoteless operation is a normal state (T2), not a crash.
 	ErrNoRemote = errors.New("remote not configured")
+
+	// ErrRemoteRefMissing reports a fetch of a ref the remote does not
+	// have — normal before the first push of the data branch.
+	ErrRemoteRefMissing = errors.New("remote does not have the ref")
 )
 
 // Git is the only door to git for the rest of tuhdoo.
@@ -78,8 +82,16 @@ type Git interface {
 	// or a ref) as path → blob OID, recursing into subtrees.
 	LsTree(rev string) ([]TreeEntry, error)
 
-	// Fetch fetches refspec from remote.
+	// Fetch fetches refspec from remote. A refspec naming a ref the
+	// remote lacks returns an error matching ErrRemoteRefMissing.
+	// Refspecs are used unforced on purpose: the data branch never
+	// rewinds (no-force-push law), so a non-fast-forward fetch is
+	// corruption and must fail loudly.
 	Fetch(remote, refspec string) error
+
+	// IsAncestor reports whether commit a is an ancestor of (or equal
+	// to) commit b.
+	IsAncestor(a, b string) (bool, error)
 
 	// Push pushes refspec to remote. A non-fast-forward rejection
 	// returns an error matching ErrNonFastForward. There is no force

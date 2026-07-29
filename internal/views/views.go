@@ -52,13 +52,21 @@ func Render(s *core.State) map[string][]byte {
 // and the guard exists to prevent ping-pong between versions, not to
 // authenticate the stamp.
 func CanWrite(existingMeta []byte) bool {
+	return Format(existingMeta) <= FormatVersion
+}
+
+// Format parses a stamp's declared view-format version. Absent or
+// unparseable metadata is 0: any writer may replace it. The sync layer
+// compares two peers' stamps with this to decide whose views win a
+// merge.
+func Format(meta []byte) int {
 	var m struct {
 		Format int `json:"format"`
 	}
-	if err := json.Unmarshal(existingMeta, &m); err != nil {
-		return true
+	if err := json.Unmarshal(meta, &m); err != nil {
+		return 0
 	}
-	return m.Format <= FormatVersion
+	return m.Format
 }
 
 // buckets is the backlog partition of tasks. Every open task lands in

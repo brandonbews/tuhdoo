@@ -27,6 +27,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"github.com/brandonbews/tuhdoo/internal/gitx"
 	"github.com/brandonbews/tuhdoo/internal/store"
+	"github.com/brandonbews/tuhdoo/internal/syncer"
 )
 
 // DefaultLeaseTTL is the claim lease lifetime (T8).
@@ -42,11 +43,12 @@ var defaultIdent = gitx.Identity{Name: "tuhdoo daemon", Email: "daemon@tuhdoo.in
 
 // Options tune a Daemon. The zero value is production defaults.
 type Options struct {
-	Ref      string        // data branch ref; empty means store.DefaultRef
-	Ident    gitx.Identity // commit identity; zero means defaultIdent
-	Quiet    time.Duration // commit debounce; <= 0 means store.DefaultQuiet
-	LeaseTTL time.Duration // claim lease TTL; <= 0 means DefaultLeaseTTL
-	Log      *log.Logger   // nil means stderr
+	Ref          string        // data branch ref; empty means store.DefaultRef
+	Ident        gitx.Identity // commit identity; zero means defaultIdent
+	Quiet        time.Duration // commit debounce; <= 0 means store.DefaultQuiet
+	LeaseTTL     time.Duration // claim lease TTL; <= 0 means DefaultLeaseTTL
+	SyncInterval time.Duration // fetch cadence; <= 0 means syncer.DefaultInterval
+	Log          *log.Logger   // nil means stderr
 }
 
 // discovery is the daemon.json contents: how CLIs and shims find the
@@ -69,6 +71,7 @@ type Daemon struct {
 	store   *store.Store
 	batcher *store.Batcher
 	replay  *core.Replayer
+	sync    *syncer.Syncer
 
 	// mu serializes every write and guards all fields below. Reads take
 	// it too — boring wins over a RWMutex at v0 volumes.
@@ -165,6 +168,17 @@ func New(root string, opts Options) (*Daemon, error) {
 		entropy:  ulid.Monotonic(rand.Reader, 0),
 		done:     make(chan struct{}),
 	}
+	d.sync = syncer.New(g, syncer.Options{
+		Ref:      opts.Ref,
+		Interval: opts.SyncInterval,
+		Ident:    ident,
+		OnMerged: func() {
+			if err := d.Refresh(); err != nil {
+				logger.Printf("daemon: refresh after sync: %v", err)
+			}
+		},
+		Log: logger,
+	})
 	d.state = emptyState()
 
 	if err := d.Refresh(); err != nil {
@@ -216,6 +230,7 @@ func New(root string, opts Options) (*Daemon, error) {
 // completes. Every exit path logs its reason.
 func (d *Daemon) Run() error {
 	d.log.Printf("daemon: pid %d serving %s", os.Getpid(), d.sockPath)
+	go d.sync.Run()
 	err := d.srv.Serve(d.ln)
 	if !errors.Is(err, http.ErrServerClosed) {
 		d.log.Printf("daemon: exiting: listener failed: %v", err)
@@ -236,6 +251,12 @@ func (d *Daemon) Shutdown(reason string) {
 		_ = d.srv.Shutdown(ctx)
 		if err := d.batcher.Flush(); err != nil {
 			d.log.Printf("daemon: final flush failed, events lost: %v", err)
+		}
+		d.sync.Stop()
+		// Best-effort final push so a laptop closing its lid doesn't
+		// strand the last few commits locally.
+		if err := d.sync.Cycle(); err != nil {
+			d.log.Printf("daemon: final sync: %v", err)
 		}
 		d.cleanup()
 		close(d.done)
@@ -309,6 +330,9 @@ func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 		if err := d.batcher.Flush(); err != nil {
 			return fmt.Errorf("daemon: flush: %w", err)
 		}
+		// Eager writes deserve eager wire time too (T8): ask the sync
+		// loop for an immediate pass.
+		d.sync.Poke()
 	}
 	return d.refreshLocked(time.Now())
 }
