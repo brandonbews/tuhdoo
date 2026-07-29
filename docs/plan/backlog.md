@@ -6,7 +6,7 @@ The build-out as an ordered, dependency-aware task list. Written the way tuhdoo 
 
 - **Done, committed, pushed:** B1 (scaffold), B2 (`internal/gitx`), B3 (`internal/event`), B4 (`internal/core` — replay engine), B5 (`internal/store`), B6 (`internal/daemon`), B7 (`internal/syncer` — convergence proven two-machine), B8 (`internal/views`). All acceptance criteria hold; `make test lint` green, daemon/store race-clean.
 - **Drafted:** B11 (`docs/agent-protocol.md`) — field-test still pending B9.
-- **In flight:** B10 (CLI portal) was being built by a background agent at session end; verify with `make test lint` + its acceptance criteria before committing.
+- **Done (late addition):** B10 (CLI portal) — init/status/backlog/task/escalations/watch, daemon auto-spawn, real sync status rendering. Committed same session.
 - **Not started:** B9 (MCP surface — the next real task), B12 (dogfood cutover — deliberately left for a fresh session: it IS the continuity test).
 - **Notable decisions made while building** (already reflected in code + revision notes): blocking escalations gate `core.Ready`; `superseded` added to run outcomes; view stamp lives at `.views-meta.json` (branch root); sync merge rules — lease conflicts keep later expiry, newer-format peer owns views wholesale; `gitx` gained `IsAncestor` + `ErrRemoteRefMissing` for the sync loop.
 - **Known deferred items:** the GitHub Actions workflow file exists locally but is uncommitted (token lacks `workflow` scope — run `gh auth refresh -h github.com -s workflow`, then commit `.github/workflows/test.yml` and remove the `.github/` line from `.git/info/exclude`); full-replay-per-write and the daemon's grow-forever event overlay are the flagged optimization point; daemon is unix-only (flock).
