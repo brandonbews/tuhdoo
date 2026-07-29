@@ -1,0 +1,458 @@
+// Package views renders core.State into the generated markdown views on
+// the data branch (002 T6). Every function here is pure: same State in,
+// byte-identical views out, on every machine, forever. That is what the
+// package trades everything else for — no clocks (so no relative times),
+// no map iteration (all walks go through the State's order slices or an
+// explicit sort), no template engine, no I/O.
+package views
+
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/brandonbews/tuhdoo/internal/core"
+	"github.com/brandonbews/tuhdoo/internal/event"
+)
+
+// FormatVersion is the view-format contract of T3's three-contract
+// taxonomy: a single integer, bumped whenever rendered output changes.
+// Peers compare it via CanWrite before regenerating (highest wins).
+const FormatVersion = 1
+
+// MetaPath is where the view-format stamp lives. T6 named "views/.meta",
+// but the views render at the branch root (README.md and friends), so
+// the stamp lives at the root too.
+const MetaPath = ".views-meta.json"
+
+// Render produces every view file as path → bytes. Paths are relative to
+// the data-branch root: README.md, backlog.md, escalations.md, one
+// tasks/<id>.md per task, and the MetaPath stamp.
+func Render(s *core.State) map[string][]byte {
+	b := classify(s)
+	out := make(map[string][]byte, len(s.TaskOrder)+4)
+	out["README.md"] = readme(s, b)
+	out["backlog.md"] = backlog(s, b)
+	out["escalations.md"] = escalations(s)
+	for _, id := range s.TaskOrder {
+		out["tasks/"+id+".md"] = taskPage(s, s.Tasks[id])
+	}
+	out[MetaPath] = []byte(fmt.Sprintf("{\"format\":%d}\n", FormatVersion))
+	return out
+}
+
+// CanWrite reports whether this generator may overwrite the existing
+// views, given the current meta stamp's bytes (nil/empty when absent).
+// Highest version wins (T6): a stamp declaring a HIGHER format means a
+// newer peer owns the views — the daemon must write events only and let
+// that peer regenerate. An absent or unreadable stamp never blocks:
+// refusing to write over garbage would wedge view generation forever,
+// and the guard exists to prevent ping-pong between versions, not to
+// authenticate the stamp.
+func CanWrite(existingMeta []byte) bool {
+	var m struct {
+		Format int `json:"format"`
+	}
+	if err := json.Unmarshal(existingMeta, &m); err != nil {
+		return true
+	}
+	return m.Format <= FormatVersion
+}
+
+// buckets is the backlog partition of tasks. Every open task lands in
+// exactly one of ready / inProgress / blocked.
+type buckets struct {
+	ready      []*core.Task // claimable now, highest priority first
+	inProgress []*core.Task // actively claimed, creation order
+	blocked    []*core.Task // open but not claimable, creation order
+	done       []*core.Task
+	cancelled  []*core.Task
+}
+
+func classify(s *core.State) buckets {
+	var b buckets
+	// A task the core calls ready can still be waiting on a blocking
+	// escalation answer (the escalate → release → finish_run(blocked)
+	// protocol returns it to the pool). The view files it under
+	// blocked/waiting: claiming it would burn an agent on an unanswered
+	// question.
+	for _, t := range s.ReadyTasks() {
+		if blockingEscalation(s, t.ID) == nil {
+			b.ready = append(b.ready, t)
+		}
+	}
+	for _, id := range s.TaskOrder {
+		t := s.Tasks[id]
+		switch t.Status {
+		case core.StatusDone:
+			b.done = append(b.done, t)
+		case core.StatusCancelled:
+			b.cancelled = append(b.cancelled, t)
+		default: // open
+			switch {
+			case s.ActiveClaim(id) != nil:
+				b.inProgress = append(b.inProgress, t)
+			case !s.Ready(id) || blockingEscalation(s, id) != nil:
+				b.blocked = append(b.blocked, t)
+			}
+		}
+	}
+	return b
+}
+
+// blockingEscalation returns the earliest open blocking escalation on a
+// task, or nil.
+func blockingEscalation(s *core.State, taskID string) *core.Escalation {
+	for _, id := range s.EscOrder {
+		if e := s.Escalations[id]; e.Task == taskID && e.Blocking && !e.Answered {
+			return e
+		}
+	}
+	return nil
+}
+
+func readme(s *core.State, b buckets) []byte {
+	var w strings.Builder
+	w.WriteString("# tuhdoo data branch\n\n")
+	w.WriteString("This branch is the coordination ledger for this repository, kept by\n")
+	w.WriteString("**tuhdoo** — a shared backlog, work queue, and activity ledger for a fleet of\n")
+	w.WriteString("agents steered by humans, synced through this ordinary git branch. It holds the\n")
+	w.WriteString("append-only event log under `events/` plus these generated markdown views. The\n")
+	w.WriteString("views are derived from the log — never edit them by hand. The design lives in\n")
+	w.WriteString("`docs/` on the repository's main branch.\n\n")
+
+	open := len(b.ready) + len(b.inProgress) + len(b.blocked)
+	w.WriteString("## Live counts\n\n")
+	w.WriteString("| | Count |\n|---|---:|\n")
+	fmt.Fprintf(&w, "| Open tasks | %d |\n", open)
+	fmt.Fprintf(&w, "| — ready | %d |\n", len(b.ready))
+	fmt.Fprintf(&w, "| — in progress | %d |\n", len(b.inProgress))
+	fmt.Fprintf(&w, "| — blocked / waiting | %d |\n", len(b.blocked))
+	fmt.Fprintf(&w, "| Done tasks | %d |\n", len(b.done))
+	fmt.Fprintf(&w, "| Cancelled tasks | %d |\n", len(b.cancelled))
+	fmt.Fprintf(&w, "| Open escalations | %d |\n\n", len(s.OpenEscalations()))
+
+	w.WriteString("- [backlog.md](backlog.md) — ready, in-progress, and blocked work\n")
+	w.WriteString("- [escalations.md](escalations.md) — open questions awaiting a human\n\n")
+	fmt.Fprintf(&w, "Generated by tuhdoo (view format %d).\n", FormatVersion)
+	return []byte(w.String())
+}
+
+func backlog(s *core.State, b buckets) []byte {
+	var w strings.Builder
+	w.WriteString("# Backlog\n\n")
+
+	w.WriteString("## Ready\n\n")
+	if len(b.ready) == 0 {
+		w.WriteString("_None._\n\n")
+	} else {
+		w.WriteString("| ID | Task | Priority | Labels |\n|---|---|---:|---|\n")
+		for _, t := range b.ready {
+			fmt.Fprintf(&w, "| %s | %s | %d | %s |\n",
+				rootLink(t.ID), inline(t.Title), t.Priority, inline(strings.Join(t.Labels, ", ")))
+		}
+		w.WriteString("\n")
+	}
+
+	w.WriteString("## In progress\n\n")
+	if len(b.inProgress) == 0 {
+		w.WriteString("_None._\n\n")
+	} else {
+		w.WriteString("| ID | Task | Priority | Claimed by |\n|---|---|---:|---|\n")
+		for _, t := range b.inProgress {
+			fmt.Fprintf(&w, "| %s | %s | %d | `%s` |\n",
+				rootLink(t.ID), inline(t.Title), t.Priority, s.ActiveClaim(t.ID).Actor)
+		}
+		w.WriteString("\n")
+	}
+
+	w.WriteString("## Blocked / waiting\n\n")
+	if len(b.blocked) == 0 {
+		w.WriteString("_None._\n\n")
+	} else {
+		w.WriteString("| ID | Task | Priority | Waiting on |\n|---|---|---:|---|\n")
+		for _, t := range b.blocked {
+			fmt.Fprintf(&w, "| %s | %s | %d | %s |\n",
+				rootLink(t.ID), inline(t.Title), t.Priority, waitingOn(s, t))
+		}
+		w.WriteString("\n")
+	}
+
+	w.WriteString("## Done\n\n")
+	compactList(&w, b.done)
+	w.WriteString("\n## Cancelled\n\n")
+	compactList(&w, b.cancelled)
+	return []byte(w.String())
+}
+
+func compactList(w *strings.Builder, tasks []*core.Task) {
+	if len(tasks) == 0 {
+		w.WriteString("_None._\n")
+		return
+	}
+	for _, t := range tasks {
+		fmt.Fprintf(w, "- %s — %s\n", rootLink(t.ID), inline(t.Title))
+	}
+}
+
+// waitingOn names why a blocked task cannot be claimed: each unmet
+// dependency, and/or an open blocking escalation.
+func waitingOn(s *core.State, t *core.Task) string {
+	var parts []string
+	for _, dep := range t.DependsOn {
+		if d, ok := s.Tasks[dep]; ok && d.Status != core.StatusDone {
+			parts = append(parts, "depends on "+rootLink(dep))
+		}
+	}
+	if e := blockingEscalation(s, t.ID); e != nil {
+		parts = append(parts, "escalation: "+inline(e.Question))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func escalations(s *core.State) []byte {
+	var w strings.Builder
+	w.WriteString("# Escalations\n\n")
+	w.WriteString("The steering inbox: questions raised by agents, awaiting a human answer.\n\n")
+
+	w.WriteString("## Open\n\n")
+	open := s.OpenEscalations()
+	if len(open) == 0 {
+		w.WriteString("_None — the fleet is unblocked._\n\n")
+	}
+	for _, e := range open {
+		fmt.Fprintf(&w, "### %s\n\n", inline(e.Question))
+		fmt.Fprintf(&w, "- Task: %s — %s\n", rootLink(e.Task), inline(s.Tasks[e.Task].Title))
+		fmt.Fprintf(&w, "- Asked by: `%s`\n", e.Actor)
+		fmt.Fprintf(&w, "- Raised: %s\n", stamp(e.RaisedAt))
+		fmt.Fprintf(&w, "- Blocking: %s\n\n", yesNo(e.Blocking))
+		if e.Context != "" {
+			writeBlock(&w, e.Context)
+			w.WriteString("\n")
+		}
+	}
+
+	w.WriteString("## Answered\n\n")
+	answered := 0
+	for _, id := range s.EscOrder {
+		e := s.Escalations[id]
+		if !e.Answered {
+			continue
+		}
+		answered++
+		fmt.Fprintf(&w, "- **%s** (%s, asked by `%s`, %s) — answered by `%s`: %s\n",
+			inline(e.Question), rootLink(e.Task), e.Actor, stamp(e.RaisedAt),
+			e.AnsweredBy, inline(e.Answer))
+	}
+	if answered == 0 {
+		w.WriteString("_None._\n")
+	}
+	return []byte(w.String())
+}
+
+func taskPage(s *core.State, t *core.Task) []byte {
+	var w strings.Builder
+	fmt.Fprintf(&w, "# %s — %s\n\n", t.ID, inline(t.Title))
+	fmt.Fprintf(&w, "- Status: %s\n", statusLine(s, t))
+	fmt.Fprintf(&w, "- Priority: %d\n", t.Priority)
+	if len(t.Labels) > 0 {
+		fmt.Fprintf(&w, "- Labels: `%s`\n", strings.Join(t.Labels, "`, `"))
+	}
+	if len(t.Parents) > 0 {
+		fmt.Fprintf(&w, "- Parents: %s\n", siblingLinks(t.Parents))
+	}
+	if len(t.DependsOn) > 0 {
+		fmt.Fprintf(&w, "- Depends on: %s\n", depLinks(s, t.DependsOn))
+	}
+	fmt.Fprintf(&w, "- Created: %s by `%s`\n\n", stamp(t.CreatedAt), t.CreatedBy)
+
+	w.WriteString("## Description\n\n")
+	if t.Description == "" {
+		w.WriteString("_No description._\n")
+	} else {
+		writeBlock(&w, t.Description) // verbatim: descriptions are prompts (T5)
+	}
+
+	w.WriteString("\n## History\n\n")
+	entries := history(s, t.ID)
+	if len(entries) == 0 {
+		w.WriteString("_No activity yet._\n")
+	}
+	for i, en := range entries {
+		if i > 0 {
+			w.WriteString("\n")
+		}
+		w.WriteString(en.text)
+	}
+	return []byte(w.String())
+}
+
+func statusLine(s *core.State, t *core.Task) string {
+	switch t.Status {
+	case core.StatusDone, core.StatusCancelled:
+		return t.Status
+	}
+	if c := s.ActiveClaim(t.ID); c != nil {
+		return fmt.Sprintf("open — in progress, claimed by `%s`", c.Actor)
+	}
+	if blockingEscalation(s, t.ID) != nil {
+		return "open — waiting on an escalation answer"
+	}
+	if s.Ready(t.ID) {
+		return "open — ready"
+	}
+	return "open — blocked on dependencies"
+}
+
+// entry is one history item; id is its event ULID, the chronological
+// sort key every machine agrees on.
+type entry struct {
+	id   string
+	text string
+}
+
+// history merges a task's notes, runs, and escalations into one
+// chronological (ULID-ordered) sequence of rendered blocks.
+func history(s *core.State, taskID string) []entry {
+	var out []entry
+	for i := range s.Notes {
+		if n := &s.Notes[i]; n.Task == taskID {
+			out = append(out, entry{n.ID, noteEntry(n)})
+		}
+	}
+	for i := range s.Runs {
+		if r := &s.Runs[i]; r.Task == taskID {
+			out = append(out, entry{r.ID, runEntry(r)})
+		}
+	}
+	for _, id := range s.EscOrder {
+		if e := s.Escalations[id]; e.Task == taskID {
+			out = append(out, entry{e.ID, escEntry(e)})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })
+	return out
+}
+
+func noteEntry(n *core.Note) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "### %s — note from `%s`\n\n", stamp(n.AddedAt), n.Actor)
+	writeBlock(&w, n.Text)
+	return w.String()
+}
+
+func runEntry(r *core.Run) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "### %s — run by `%s` — %s\n\n", idStamp(r.ID), r.Actor, r.Outcome)
+	links := false
+	if r.Branch != "" {
+		fmt.Fprintf(&w, "- Branch: `%s`\n", r.Branch)
+		links = true
+	}
+	if r.PR != "" {
+		fmt.Fprintf(&w, "- PR: <%s>\n", r.PR)
+		links = true
+	}
+	if len(r.Commits) > 0 {
+		fmt.Fprintf(&w, "- Commits: `%s`\n", strings.Join(r.Commits, "`, `"))
+		links = true
+	}
+	if links {
+		w.WriteString("\n")
+	}
+	if r.Summary != "" {
+		writeBlock(&w, r.Summary)
+	}
+	if r.Synthesized {
+		w.WriteString("\n_Synthesized by replay, not recorded by the agent._\n")
+	}
+	return w.String()
+}
+
+func escEntry(e *core.Escalation) string {
+	var w strings.Builder
+	blocking := ""
+	if e.Blocking {
+		blocking = " (blocking)"
+	}
+	fmt.Fprintf(&w, "### %s — escalation from `%s`%s\n\n", stamp(e.RaisedAt), e.Actor, blocking)
+	fmt.Fprintf(&w, "**Q:** %s\n", e.Question)
+	if e.Context != "" {
+		w.WriteString("\n")
+		writeBlock(&w, e.Context)
+	}
+	if e.Answered {
+		fmt.Fprintf(&w, "\n**A** (`%s`): %s\n", e.AnsweredBy, e.Answer)
+	} else {
+		w.WriteString("\n_Unanswered._\n")
+	}
+	return w.String()
+}
+
+// rootLink links a task from a branch-root view.
+func rootLink(id string) string {
+	return fmt.Sprintf("[%s](tasks/%s.md)", id, id)
+}
+
+// siblingLinks links tasks from within tasks/ (same directory).
+func siblingLinks(ids []string) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = fmt.Sprintf("[%s](%s.md)", id, id)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// depLinks is siblingLinks plus each dependency's status, so a reader
+// sees at a glance which prerequisites still gate this task.
+func depLinks(s *core.State, ids []string) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = fmt.Sprintf("[%s](%s.md)", id, id)
+		if d, ok := s.Tasks[id]; ok {
+			parts[i] += " (" + d.Status + ")"
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+// stamp renders an absolute UTC instant. Relative times ("3 hours ago")
+// are banned: they read a clock and rot the moment they are written.
+func stamp(t time.Time) string {
+	return t.UTC().Format("2006-01-02 15:04 UTC")
+}
+
+// idStamp derives an event's instant from its ULID. Replay has already
+// validated every ID it stores, so the error arm is vestigial.
+func idStamp(id string) string {
+	t, err := event.IDTime(id)
+	if err != nil {
+		return "(unknown time)"
+	}
+	return stamp(t)
+}
+
+// inline flattens text for a table cell, heading, or one-line list item:
+// newlines collapse to spaces and pipes are escaped so GitHub's table
+// parser keeps rows intact.
+func inline(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return strings.ReplaceAll(s, "|", "\\|")
+}
+
+// writeBlock writes multi-line body text verbatim, guaranteeing exactly
+// one trailing newline.
+func writeBlock(w *strings.Builder, text string) {
+	w.WriteString(strings.TrimRight(text, "\n"))
+	w.WriteString("\n")
+}
+
+func yesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
