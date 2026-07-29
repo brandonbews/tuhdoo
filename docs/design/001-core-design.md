@@ -1,6 +1,6 @@
 # tuhdoo — Core Design Record
 
-**Date:** 2026-07-28
+**Date:** 2026-07-28 (revised 2026-07-29 by Cycle 2 — see `002-technology.md`; revision notes inline)
 **Status:** Founding decisions from the first design grilling. Held firmly, but revisable — edit in place and note revisions.
 
 ---
@@ -59,7 +59,7 @@ The orphan branch beats the alternatives: an in-tree directory ties plan state t
 |---|---|
 | **Task** | Unit of intent: title, description, priority, status, labels, parent edges + dependency edges (a DAG — agents decompose recursively, not in tidy epic/story/subtask tiers). Milestones are just tasks other tasks point into. |
 | **Claim** | "Agent X on machine Y is working on task Z," carrying a **lease** that expires unless renewed — a crashed agent's task returns to the pool automatically. |
-| **Run** | The attempt record: claim → worktree/branch → commits/PR produced → outcome (`done` / `failed` / `abandoned` / `superseded`). The ledger that makes fleet activity legible after the fact. |
+| **Run** | The attempt record: claim → worktree/branch → commits/PR produced → outcome (`done` / `failed` / `abandoned` / `superseded` / `blocked` / `interrupted` — the last two added in Cycle 2: `blocked` = waiting on an escalation answer; `interrupted` = auto-closed by the daemon after lease expiry). The ledger that makes fleet activity legible after the fact — and, per Cycle 2, agent memory first: it's what lets a fresh agent resume a predecessor's work. |
 | **Escalation** | An agent-raised question or blocker awaiting a human answer, attached to a task. The human's inbox; the steering half of the product. |
 | **Note** | Comments/context on a task, from humans or agents. |
 
@@ -72,7 +72,7 @@ Nothing prevents two machines claiming the same task inside the sync window — 
 1. **Winner rule:** claims carry logical timestamps (ULID + machine-id tiebreak; wall clocks are never trusted across machines). On merge, **earliest claim wins**; the later claim is voided by replay logic — automatically and identically on every machine.
 2. **Loser handling:** the losing daemon tells its agent to stand down; half-done work is recorded as a Run with outcome `superseded` (branch name included) so it can be salvaged, not mystery-wasted.
 3. **No prevention machinery in v1:** agent-hours are cheap; rare duplicate attempts cost less than any coordination layer. Mitigations are: eager push on claim events, short fetch intervals, and advisory `assignee` as a soft filter. Measure real collision rates before building anything cleverer.
-4. **Leases:** renewable heartbeats (order of ~30 min); expiry is evaluated at read time by replay logic — no reaper process.
+4. **Leases:** renewable, session-bound (the daemon auto-renews while the claiming MCP session stays connected — agents never heartbeat manually); expiry is evaluated at read time by replay logic — no reaper process. Cycle 2 set TTL 15 min / renewal 5 min (see `002` T8, superseding the ~30 min sketch here).
 
 ### D7. Identity: hierarchical principals, git-derived, unsigned
 
@@ -80,11 +80,11 @@ Nothing prevents two machines claiming the same task inside the sync window — 
 - Human identity derives from git identity (`user.email`, as the host already trusts). Agent names are assigned in daemon config when a harness connects over MCP.
 - No cryptographic signing in v1 (trust boundary is repo-write; forgery is exactly as possible as forging git commit authors today). The event envelope reserves a `sig` field so signing can arrive later without a schema break.
 
-### D8. Surfaces and build order
+### D8. Surfaces and build order *(revised by Cycle 2 — details in `002` T7)*
 
-1. **v0 — daemon + MCP + CLI.** The daemon is the kernel (sole writer, sync loop, replay, view builder); the MCP server lives inside it (one process) and is the front door for every harness; the CLI is a thin veneer on the same API (`init`, `status`, `escalations`). v0 is fully usable by a solo power user who steers via the generated markdown views.
+1. **v0 — daemon + MCP + CLI.** The daemon is the kernel (sole writer, sync loop, replay, view builder); the MCP server lives inside it (one process) and is the front door for every harness. The CLI is the **local human's primary portal**, not a thin veneer: `status`, `backlog`, `task <id>`, `escalations`, and `watch` (a live read-only dashboard pane that sits beside a working agent). Markdown views serve the *remote/browsing* audience, not local steering.
 2. **Free surface — the git host.** The D3 markdown views make GitHub/GitLab a zero-effort read-only UI: browsable backlog, linkable tasks, per-task history via `git log`.
-3. **v1 — the steering UI.** Scoped strictly to steering: **escalation inbox, fleet ledger (what are/were my agents doing), queue reordering.** One dense page is acceptable.
+3. **v1 — the steering surface is a TUI** (in the same binary, works over SSH/tmux where the author lives), grown from `watch` by adding interactivity: escalation inbox, fleet ledger, queue reordering. Browser UI demoted to v2+.
 4. **No kanban board until the steering loop is proven.** The pretty board is the siren song that sank the POCs; it is product-(a) UI and competes with Linear on Linear's terms.
 
 Dogfooding order matters: living with the MCP surface first is what reveals what the UI must actually show.

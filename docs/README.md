@@ -5,7 +5,8 @@ Working documents for the design and development of tuhdoo.
 ## Layout
 
 - [`design/001-core-design.md`](design/001-core-design.md) — the founding design record: vision, principles, and the eleven decisions from the first design grilling (2026-07-28), with rationale and accepted consequences.
-- [`design/open-questions.md`](design/open-questions.md) — the backlog of unresolved questions, organized into candidate grilling cycles (technology choices are the next one up).
+- [`design/002-technology.md`](design/002-technology.md) — the technology decisions from Cycle 2 (2026-07-29): Go daemon, subprocess git plumbing, canonical-JSON event format and the three version contracts, per-repo daemon topology, the ten-verb MCP surface and agent protocol, views, CLI-portal/TUI surfaces, cadence defaults.
+- [`design/open-questions.md`](design/open-questions.md) — the backlog of unresolved questions, organized into candidate grilling cycles (the agent loop in practice is the next one up).
 
 ## Conventions
 
