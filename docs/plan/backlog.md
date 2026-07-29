@@ -2,6 +2,15 @@
 
 The build-out as an ordered, dependency-aware task list. Written the way tuhdoo tasks should be written (descriptions are prompts: context, acceptance criteria, doc references) — dogfooding the convention on paper until the tool can hold it. **The final task migrates this file into tuhdoo itself.**
 
+## Status (as of 2026-07-29, session 2)
+
+- **Done, committed, pushed:** B1 (scaffold), B2 (`internal/gitx`), B3 (`internal/event`), B4 (`internal/core` — replay engine), B5 (`internal/store`), B6 (`internal/daemon`), B7 (`internal/syncer` — convergence proven two-machine), B8 (`internal/views`). All acceptance criteria hold; `make test lint` green, daemon/store race-clean.
+- **Drafted:** B11 (`docs/agent-protocol.md`) — field-test still pending B9.
+- **In flight:** B10 (CLI portal) was being built by a background agent at session end; verify with `make test lint` + its acceptance criteria before committing.
+- **Not started:** B9 (MCP surface — the next real task), B12 (dogfood cutover — deliberately left for a fresh session: it IS the continuity test).
+- **Notable decisions made while building** (already reflected in code + revision notes): blocking escalations gate `core.Ready`; `superseded` added to run outcomes; view stamp lives at `.views-meta.json` (branch root); sync merge rules — lease conflicts keep later expiry, newer-format peer owns views wholesale; `gitx` gained `IsAncestor` + `ErrRemoteRefMissing` for the sync loop.
+- **Known deferred items:** the GitHub Actions workflow file exists locally but is uncommitted (token lacks `workflow` scope — run `gh auth refresh -h github.com -s workflow`, then commit `.github/workflows/test.yml` and remove the `.github/` line from `.git/info/exclude`); full-replay-per-write and the daemon's grow-forever event overlay are the flagged optimization point; daemon is unix-only (flock).
+
 Conventions: tasks are `B1…Bn`; "Depends" lists hard prerequisites; a task is done when its acceptance criteria hold **and its tests pass**. Agents may decompose any task further, but record the decomposition here.
 
 ---
