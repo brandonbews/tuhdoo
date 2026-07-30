@@ -42,7 +42,8 @@ func run(args []string) int {
 	case "escalations":
 		return runEscalations()
 	case "watch":
-		return runWatch()
+		fmt.Fprintln(os.Stderr, "tuhdoo: watch is now a mode of the TUI; run: tuhdoo --watch")
+		return 1
 	case "top":
 		return runTop(args[1:])
 	case "mcp":
@@ -64,7 +65,6 @@ usage: tuhdoo <command>
   backlog       ready / in-progress / blocked work, from live daemon state
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
-  watch         live auto-refreshing read-only dashboard (q quits)
   top           interactive steering: answer escalations, reprioritize,
                 cancel tasks; acts as you (--as <human> to override)
   mcp           stdio MCP shim for agent harnesses. The principal is

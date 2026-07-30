@@ -46,7 +46,13 @@ func topSnapshot() *snapshot {
 
 func newTopModel(api steeringAPI) topModel {
 	s := topSnapshot()
-	return topModel{api: api, actor: "brandon", snap: s, rows: buildRows(s)}
+	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+}
+
+// newWatchModel is the same seeded model launched with --watch: disarmed.
+func newWatchModel() topModel {
+	s := topSnapshot()
+	return topModel{snap: s, rows: buildRows(s)}
 }
 
 // fakeSteering records calls; err, when set, fails every call.
@@ -136,7 +142,8 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	v := m.View()
 	for _, want := range []string{
-		"tuhdoo top", "local-only", "acting as brandon",
+		"tuhdoo · sync: local-only", "acting as brandon",
+		"2 ready · 1 in progress · 1 blocked · 1 done · 0 cancelled · 1 escalation open",
 		"Open escalations (1)", "Which license?", "[blocking]", "asked by brandon/a2",
 		"Ready (2)", "write the parser", "sweep the floor",
 		"In progress (1)", "investigate the flake", "brandon/a1",
@@ -391,6 +398,56 @@ func TestTopQuitKeys(t *testing.T) {
 	}
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Errorf("ctrl+c in input mode produced %T, want tea.QuitMsg", cmd())
+	}
+}
+
+// TestWatchModeDisarmed pins the --watch contract: steering keys are
+// dead (successor of watch's zero-input-handling guarantee), the badge
+// is visible, and the Blocked section renders (old watch never showed
+// it; this is the one deliberate behavior change).
+func TestWatchModeDisarmed(t *testing.T) {
+	m := newWatchModel()
+	for _, r := range []rune{'a', 'p', 'c'} {
+		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		if mm.mode != modeNav {
+			t.Errorf("%q in watch mode entered mode %d", r, mm.mode)
+		}
+		if cmd != nil {
+			t.Errorf("%q in watch mode produced a command", r)
+		}
+	}
+	// Navigation and quit still work.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m.cursor != 1 {
+		t.Errorf("j in watch mode left cursor at %d, want 1", m.cursor)
+	}
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}); cmd == nil {
+		t.Error("q in watch mode should quit")
+	}
+	v := m.View()
+	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "j/k move · q quit"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
+		}
+	}
+	for _, reject := range []string{"acting as", "a answer"} {
+		if strings.Contains(v, reject) {
+			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
+		}
+	}
+}
+
+// TestTopViewLoadingAndError ports watch's pre-snapshot and
+// daemon-unreachable renderings, which the merged model now owns.
+func TestTopViewLoadingAndError(t *testing.T) {
+	m := topModel{actor: "brandon", armed: true}
+	if v := m.View(); !strings.Contains(v, "loading...") {
+		t.Errorf("view before first snapshot missing loading; view:\n%s", v)
+	}
+	m.err = errors.New("dial unix: no such file")
+	v := m.View()
+	if !strings.Contains(v, "daemon unreachable") || !strings.Contains(v, "(retrying)") {
+		t.Errorf("error view missing unreachable/retrying; view:\n%s", v)
 	}
 }
 

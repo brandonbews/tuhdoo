@@ -398,3 +398,14 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"1 question open", "brandon/a1")
 	_ = docs
 }
+
+// The watch and top verbs died in Cycle 4 (002 T7): the TUI is bare
+// `tuhdoo`, watch is its --watch mode. The tombstones must say so.
+func TestDeadVerbTombstones(t *testing.T) {
+	repo := newRepo(t)
+	out, code := runCLI(t, repo, "watch")
+	if code == 0 {
+		t.Fatalf("watch should exit nonzero; output:\n%s", out)
+	}
+	mustContain(t, out, "tuhdoo --watch")
+}

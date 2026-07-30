@@ -70,7 +70,7 @@ func runInit() int {
 CI guidance: exclude the %q branch from CI triggers — github-actions:
   on: { push: { branches-ignore: ["%s"] } }
 
-Next: tuhdoo status · tuhdoo backlog · tuhdoo watch
+Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
 `, branchName(), head, sync, c.socket, branchName(), branchName())
 	return 0
 }

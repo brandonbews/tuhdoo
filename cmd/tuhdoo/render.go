@@ -1,6 +1,6 @@
 package main
 
-// Terminal rendering shared by the read commands and watch.
+// Terminal rendering shared by the read commands and the TUI.
 
 import (
 	"fmt"
@@ -85,7 +85,7 @@ func plural(n int, word string) string {
 	return fmt.Sprintf("%d %ss", n, word)
 }
 
-// ---- shared sections (backlog and watch render the same buckets) ----
+// ---- shared sections (the one-shot commands render these buckets) ----
 
 func renderReady(w io.Writer, col colors, tasks []stateTask) {
 	fmt.Fprintf(w, "%s%sReady%s (%d)\n", col.bold, col.green, col.reset, len(tasks))

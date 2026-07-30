@@ -111,7 +111,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Fatalf("read daemon.json: %v", err)
 	}
 	c := newClient(socket)
-	m := topModel{c: c, api: httpSteering{c: c, actor: "brandon"}, actor: "brandon"}
+	m := topModel{c: c, api: httpSteering{c: c, actor: "brandon"}, actor: "brandon", armed: true}
 	m = refreshTop(t, m)
 
 	// ---- answer the blocking escalation from the TUI ----

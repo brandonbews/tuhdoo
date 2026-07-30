@@ -1,10 +1,11 @@
 package main
 
-// tuhdoo top: the interactive steering TUI (roadmap v1, 002 T7) — the
-// watch skeleton with input handling grafted on. Reads poll the daemon
-// exactly like watch; the three steering writes (answer an escalation,
-// reprioritize, cancel) go through the daemon HTTP API only, stamped
-// with the acting human principal.
+// The interactive TUI (002 T7, revised by Cycle 4): the single live
+// human surface. Reads poll the daemon on a tick; the three steering
+// writes (answer an escalation, reprioritize, cancel) go through the
+// daemon HTTP API only, stamped with the acting human principal.
+// Watch mode is the same screen disarmed: steering keys dead, fixed at
+// launch — no keypress can re-arm a disarmed pane.
 
 import (
 	"errors"
@@ -13,11 +14,35 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/brandonbews/tuhdoo/internal/daemon"
 )
+
+// ---- polling: state arrives by tick, never by keypress ----
+
+const tuiRefresh = 2 * time.Second
+
+type tickMsg time.Time
+
+// snapMsg carries one poll result; err is shown and retried, never fatal.
+type snapMsg struct {
+	snap *snapshot
+	err  error
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(tuiRefresh, func(t time.Time) tea.Msg { return tickMsg(t) })
+}
+
+func fetchCmd(c *client) tea.Cmd {
+	return func() tea.Msg {
+		s, err := fetchSnapshot(c)
+		return snapMsg{snap: s, err: err}
+	}
+}
 
 // steeringAPI is the full set of writes top can perform. An interface
 // so interaction tests run against a fake; the real one speaks the
@@ -118,6 +143,7 @@ type topModel struct {
 	api   steeringAPI
 	col   colors
 	actor string
+	armed bool // false in watch mode: steering keys are dead
 
 	snap   *snapshot
 	err    error
@@ -190,15 +216,15 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case "a":
-		if r, ok := m.selected(); ok && r.kind == rowEscalation {
+		if r, ok := m.selected(); m.armed && ok && r.kind == rowEscalation {
 			m.mode, m.target, m.input, m.status = modeAnswer, r, "", ""
 		}
 	case "p":
-		if r, ok := m.selected(); ok && r.kind == rowTask {
+		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.target, m.input, m.status = modePriority, r, "", ""
 		}
 	case "c":
-		if r, ok := m.selected(); ok && r.kind == rowTask {
+		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.target, m.input, m.status = modeConfirmCancel, r, "", ""
 		}
 	}
@@ -287,7 +313,17 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// ---- rendering (pure over model state, like watch) ----
+// ---- rendering (pure over model state) ----
+
+// badge names the mode in the header: who steering acts as, or a
+// visible marker that this pane cannot act at all.
+func (m topModel) badge() string {
+	col := m.col
+	if !m.armed {
+		return fmt.Sprintf("%s%swatch mode%s", col.bold, col.yellow, col.reset)
+	}
+	return fmt.Sprintf("acting as %s%s%s", col.bold, m.actor, col.reset)
+}
 
 func (m topModel) View() string {
 	col := m.col
@@ -296,8 +332,7 @@ func (m topModel) View() string {
 	if m.snap != nil {
 		sync = syncLine(m.snap.state.Sync)
 	}
-	fmt.Fprintf(&w, "%stuhdoo top%s · sync: %s · acting as %s%s%s\n",
-		col.bold, col.reset, sync, col.bold, m.actor, col.reset)
+	fmt.Fprintf(&w, "%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset, sync, m.badge())
 	if m.status != "" {
 		fmt.Fprintf(&w, "%s\n", m.status)
 	}
@@ -315,6 +350,13 @@ func (m topModel) View() string {
 	if s.state.Degraded != "" {
 		fmt.Fprintf(&w, "%sDEGRADED (read-only):%s %s\n\n", col.red, col.reset, s.state.Degraded)
 	}
+	b := s.classify()
+	fmt.Fprintf(&w, "%s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d cancelled · %s open\n\n",
+		col.green, len(b.ready), col.reset,
+		col.yellow, len(b.inProgress), col.reset,
+		col.red, len(b.blocked), col.reset,
+		len(b.done), len(b.cancelled),
+		plural(len(s.state.OpenEscalations), "escalation"))
 	renderTopRows(&w, col, s, m.rows, m.cursor)
 	w.WriteString("\n")
 	w.WriteString(m.footer())
@@ -401,6 +443,9 @@ func (m topModel) footer() string {
 		return fmt.Sprintf("%scancel%s %s (%s)? y/n\n",
 			col.bold, col.reset, m.target.task.ID, oneLine(m.target.task.Title))
 	}
+	if !m.armed {
+		return fmt.Sprintf("%sj/k move · q quit%s\n", col.dim, col.reset)
+	}
 	return fmt.Sprintf("%sj/k move · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
 }
 
@@ -440,16 +485,16 @@ func topActor(args []string) (string, error) {
 func runTop(args []string) int {
 	actor, err := topActor(args)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "tuhdoo top:", err)
+		fmt.Fprintln(os.Stderr, "tuhdoo:", err)
 		return 1
 	}
 	_, c, code := connect()
 	if code != 0 {
 		return code
 	}
-	m := topModel{c: c, api: httpSteering{c: c, actor: actor}, actor: actor, col: newColors(os.Stdout)}
+	m := topModel{c: c, api: httpSteering{c: c, actor: actor}, actor: actor, armed: true, col: newColors(os.Stdout)}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "tuhdoo top:", err)
+		fmt.Fprintln(os.Stderr, "tuhdoo:", err)
 		return 1
 	}
 	return 0
