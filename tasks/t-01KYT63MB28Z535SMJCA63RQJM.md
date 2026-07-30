@@ -1,9 +1,9 @@
 # t-01KYT63MB28Z535SMJCA63RQJM — Arm the TUI detail screen (a/p/c on the viewed task)
 
-- Status: open — blocked on dependencies
+- Status: open — ready
 - Priority: 0
 - Labels: `cli`, `tui`
-- Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (open)
+- Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done)
 - Created: 2026-07-30 18:55 UTC by `4099114+brandonbews`
 
 ## Description
