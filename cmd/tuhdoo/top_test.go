@@ -26,39 +26,39 @@ func topSnapshot() *snapshot {
 		state: stateResp{
 			Sync: syncJSON{Mode: "local-only"},
 			Tasks: []stateTask{
-				{ID: "t-parser", Title: "write the parser", Status: "open", Priority: 5},
-				{ID: "t-floor", Title: "sweep the floor", Status: "open", Priority: 1},
-				{ID: "t-flake", Title: "investigate the flake", Status: "open", Holder: "brandon/a1"},
+				{ID: "t-pars", Title: "write the parser", Status: "open", Priority: 5},
+				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: 1},
+				{ID: "t-flak", Title: "investigate the flake", Status: "open", Holder: "brandon/a1"},
 				{ID: "t-lic", Title: "choose a license", Status: "open"},
-				{ID: "t-chore", Title: "old chore", Status: "done"},
+				{ID: "t-chor", Title: "old chore", Status: "done"},
 			},
 			OpenEscalations: []escalationJSON{esc},
 		},
 		tasks: map[string]hydratedTask{
-			"t-parser": {Task: taskJSON{
-			ID: "t-parser", Title: "write the parser",
-			// Edges: t-chore is done, so t-parser still classifies ready.
-			Parents: []string{"t-epic"}, DependsOn: []string{"t-chore"},
-		}},
-			"t-floor":  {Task: taskJSON{ID: "t-floor", Title: "sweep the floor"}},
-			"t-flake": {
-			Task: taskJSON{
-				ID: "t-flake", Title: "investigate the flake",
-				Description: "The parser test flakes on CI.\nFind out why.",
-				Priority:    3,
+			"t-pars": {Task: taskJSON{
+				ID: "t-pars", Title: "write the parser",
+				// Edges: t-chor is done, so t-pars still classifies ready.
+				Parents: []string{"t-epic"}, DependsOn: []string{"t-chor"},
+			}},
+			"t-flor": {Task: taskJSON{ID: "t-flor", Title: "sweep the floor"}},
+			"t-flak": {
+				Task: taskJSON{
+					ID: "t-flak", Title: "investigate the flake",
+					Description: "The parser test flakes on CI.\nFind out why.",
+					Priority:    3,
+				},
+				Notes: []noteJSON{{
+					ID: "01N1", Task: "t-flak", Actor: "brandon/a1",
+					Text:    "Repros only under -race.",
+					AddedAt: time.Date(2026, 7, 29, 15, 0, 0, 0, time.UTC),
+				}},
+				Runs: []runJSON{{
+					ID: "01R1", Task: "t-flak", Actor: "brandon/a1",
+					Outcome: "interrupted", Summary: "Bisecting the flake.",
+				}},
 			},
-			Notes: []noteJSON{{
-				ID: "01N1", Task: "t-flake", Actor: "brandon/a1",
-				Text:    "Repros only under -race.",
-				AddedAt: time.Date(2026, 7, 29, 15, 0, 0, 0, time.UTC),
-			}},
-			Runs: []runJSON{{
-				ID: "01R1", Task: "t-flake", Actor: "brandon/a1",
-				Outcome: "interrupted", Summary: "Bisecting the flake.",
-			}},
-		},
-			"t-lic":    {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
-			"t-chore":  {Task: taskJSON{ID: "t-chore", Title: "old chore"}},
+			"t-lic":  {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
+			"t-chor": {Task: taskJSON{ID: "t-chor", Title: "old chore"}},
 		},
 	}
 }
@@ -141,9 +141,9 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 	rows := buildRows(topSnapshot())
 	want := []struct{ kind, section, id string }{
 		{rowEscalation, "escalations", "01E1"},
-		{rowTask, "ready", "t-parser"}, // p5 before p1
-		{rowTask, "ready", "t-floor"},
-		{rowTask, "inprogress", "t-flake"},
+		{rowTask, "ready", "t-pars"}, // p5 before p1
+		{rowTask, "ready", "t-flor"},
+		{rowTask, "inprogress", "t-flak"},
 		{rowTask, "blocked", "t-lic"},
 	}
 	if len(rows) != len(want) {
@@ -198,18 +198,18 @@ func TestTopNavigationMovesAndClamps(t *testing.T) {
 	if want := len(m.rows) - 2; m.cursor != want {
 		t.Errorf("k moved cursor to %d, want %d", m.cursor, want)
 	}
-	if v := m.View(); !strings.Contains(v, "▸ t-flake") {
-		t.Errorf("cursor marker not on t-flake; view:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "▸ t-flak") {
+		t.Errorf("cursor marker not on t-flak; view:\n%s", v)
 	}
 }
 
 func TestTopSelectionSurvivesRefresh(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // t-parser
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // t-pars
 	fresh := topSnapshot()
 	mm, _ := m.Update(snapMsg{snap: fresh})
 	m = mm.(topModel)
-	if r, ok := m.selected(); !ok || r.id() != "t-parser" {
+	if r, ok := m.selected(); !ok || r.id() != "t-pars" {
 		t.Errorf("selection lost across refresh: %+v", r)
 	}
 
@@ -309,7 +309,7 @@ func TestTopPriorityFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-parser
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if m.mode != modePriority {
 		t.Fatalf("mode = %d, want modePriority", m.mode)
@@ -334,7 +334,7 @@ func TestTopPriorityFlow(t *testing.T) {
 	if am := cmd().(actionMsg); am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if got := fake.priorities["t-parser"]; got != 7 {
+	if got := fake.priorities["t-pars"]; got != 7 {
 		t.Errorf("priority set to %d, want 7", got)
 	}
 }
@@ -348,7 +348,7 @@ func TestTopCancelFlow(t *testing.T) {
 	if m.mode != modeConfirmCancel {
 		t.Fatalf("mode = %d, want modeConfirmCancel", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "cancel t-parser") || !strings.Contains(v, "y/n") {
+	if v := m.View(); !strings.Contains(v, "cancel t-pars") || !strings.Contains(v, "y/n") {
 		t.Errorf("confirm prompt missing; view:\n%s", v)
 	}
 	// n backs out without a call.
@@ -366,8 +366,8 @@ func TestTopCancelFlow(t *testing.T) {
 	if am := cmd().(actionMsg); am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-parser" {
-		t.Errorf("cancelled %v, want [t-parser]", fake.cancelled)
+	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-pars" {
+		t.Errorf("cancelled %v, want [t-pars]", fake.cancelled)
 	}
 }
 
@@ -476,14 +476,14 @@ func TestTopEnterOpensDetail(t *testing.T) {
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flake
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flak
 		keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-flake" {
-		t.Fatalf("enter on task row: mode %d detail %q, want modeDetail t-flake", m.mode, m.detailID)
+	if m.mode != modeDetail || m.detailID != "t-flak" {
+		t.Fatalf("enter on task row: mode %d detail %q, want modeDetail t-flak", m.mode, m.detailID)
 	}
 	v := m.View()
 	for _, want := range []string{
-		"t-flake — investigate the flake",
+		"t-flak — investigate the flake",
 		"Description", "The parser test flakes on CI.",
 		"History", "note by brandon/a1", "Repros only under -race.",
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
@@ -530,15 +530,15 @@ func TestTopDetailStaysLiveAcrossRefresh(t *testing.T) {
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter)) // t-flake
+		keyOf(tea.KeyEnter)) // t-flak
 	fresh := topSnapshot()
-	h := fresh.tasks["t-flake"]
+	h := fresh.tasks["t-flak"]
 	h.Notes = append(h.Notes, noteJSON{
-		ID: "01N2", Task: "t-flake", Actor: "brandon/a1",
+		ID: "01N2", Task: "t-flak", Actor: "brandon/a1",
 		Text:    "Found it: unsynchronized map.",
 		AddedAt: time.Date(2026, 7, 29, 16, 0, 0, 0, time.UTC),
 	})
-	fresh.tasks["t-flake"] = h
+	fresh.tasks["t-flak"] = h
 	mm, _ := m.Update(snapMsg{snap: fresh})
 	m = mm.(topModel)
 	if m.mode != modeDetail {
@@ -557,7 +557,7 @@ func TestTopDetailScrollClamps(t *testing.T) {
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter)) // t-flake: the longest biography
+		keyOf(tea.KeyEnter)) // t-flak: the longest biography
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = mm.(topModel)
 	body := m.detailBody()
@@ -643,5 +643,60 @@ func TestTopActor(t *testing.T) {
 				t.Errorf("actor = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// shortID abbreviates from the tail, where same-batch ULIDs differ;
+// already-short toy IDs pass through untouched.
+func TestShortID(t *testing.T) {
+	tests := []struct{ in, want string }{
+		// A real same-batch trio: identical prefixes, distinct tails.
+		{"t-01KYT63MB28Z535SMJC9B0D83W", "t-d83w"},
+		{"t-01KYT63MB28Z535SMJCA63RQJM", "t-rqjm"},
+		{"t-01KYT63MB28Z535SMJCBC7SY1P", "t-sy1p"},
+		{"t-lic", "t-lic"},
+		{"t-epic", "t-epic"},
+		{"01KYT63MB28Z535SMJC9B0D83W", "d83w"}, // no type prefix
+	}
+	for _, tt := range tests {
+		if got := shortID(tt.in); got != tt.want {
+			t.Errorf("shortID(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+// List rows, waiting: reasons, and edge markers show the short form;
+// the full ULID never renders in the list.
+func TestTopRowsShowShortIDs(t *testing.T) {
+	long := "t-01KYT63MB28Z535SMJC9B0D83W"
+	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	s := &snapshot{
+		state: stateResp{Tasks: []stateTask{
+			{ID: long, Title: "the long one", Status: "open"},
+			{ID: dep, Title: "its dependency", Status: "open"},
+		}},
+		tasks: map[string]hydratedTask{
+			long: {Task: taskJSON{ID: long, Title: "the long one", DependsOn: []string{dep}}},
+			dep:  {Task: taskJSON{ID: dep, Title: "its dependency", Parents: []string{long}}},
+		},
+	}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s)}
+	v := m.View()
+	for _, want := range []string{
+		"t-rqjm  p0  its dependency  · in t-d83w", // ready row + parent marker
+		"t-d83w  the long one",                    // blocked row
+		"waiting: depends on t-rqjm",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("view missing %q; view:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, long) {
+		t.Errorf("full ULID leaked into the list; view:\n%s", v)
+	}
+	// The detail screen keeps the full ID.
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // cursor on the ready row (dep)
+	if dv := m.View(); !strings.Contains(dv, dep+" — its dependency") {
+		t.Errorf("detail lost the full ID; view:\n%s", dv)
 	}
 }

@@ -127,10 +127,17 @@ func (s *snapshot) blockingEscalation(taskID string) *escalationJSON {
 // blockedReason names why a blocked task cannot be claimed: each unmet
 // dependency, and/or an open blocking escalation.
 func (s *snapshot) blockedReason(id string) string {
+	return s.blockedReasonDisp(id, func(dep string) string { return dep })
+}
+
+// blockedReasonDisp is blockedReason with dependency IDs passed
+// through disp: the TUI shortens them for display, the one-shot
+// commands print them full.
+func (s *snapshot) blockedReasonDisp(id string, disp func(string) string) string {
 	var parts []string
 	for _, dep := range s.tasks[id].Task.DependsOn {
 		if st, ok := s.statusOf(dep); ok && st != "done" {
-			parts = append(parts, "depends on "+dep)
+			parts = append(parts, "depends on "+disp(dep))
 		}
 	}
 	if e := s.blockingEscalation(id); e != nil {

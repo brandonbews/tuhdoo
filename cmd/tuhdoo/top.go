@@ -500,6 +500,20 @@ func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor i
 	}
 }
 
+// shortID abbreviates a task ID for TUI display: the type prefix plus
+// the ULID's last four characters, lowercased (`t-d83w`). The tail is
+// where same-batch ULIDs actually differ — their timestamp prefixes
+// match — so abbreviation comes from the right-hand end. Display only:
+// stored, transmitted, and detail-screen IDs stay full-length.
+func shortID(id string) string {
+	i := strings.Index(id, "-")
+	tail := id[i+1:]
+	if len(tail) <= 4 {
+		return id
+	}
+	return id[:i+1] + strings.ToLower(tail[len(tail)-4:])
+}
+
 // edgeSuffix surfaces that a task is part of a structure — containment
 // (parents) and scheduling (depends_on) — without imposing a tree on
 // the flat, status-grouped list: edge semantics are still an open
@@ -508,7 +522,7 @@ func edgeSuffix(col colors, s *snapshot, id string) string {
 	t := s.tasks[id].Task
 	var parts []string
 	if n := len(t.Parents); n > 0 {
-		p := "in " + t.Parents[0]
+		p := "in " + shortID(t.Parents[0])
 		if n > 1 {
 			p += fmt.Sprintf(" +%d", n-1)
 		}
@@ -540,7 +554,7 @@ func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool)
 		}
 		fmt.Fprintf(w, "%s%s%s%s%s\n", mark, col.bold, oneLine(e.Question), col.reset, blocking)
 		fmt.Fprintf(w, "      task %s%s · asked by %s · raised %s\n",
-			e.Task, title, e.Actor, stamp(e.RaisedAt))
+			shortID(e.Task), title, e.Actor, stamp(e.RaisedAt))
 		return
 	}
 	t := r.task
@@ -548,13 +562,14 @@ func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool)
 	switch r.section {
 	case "ready":
 		fmt.Fprintf(w, "%s%s%s%s  p%d  %s%s%s\n",
-			mark, col.dim, t.ID, col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), edges)
+			mark, col.dim, shortID(t.ID), col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), edges)
 	case "inprogress":
 		fmt.Fprintf(w, "%s%s%s%s  %s  %s← %s%s%s\n",
-			mark, col.dim, t.ID, col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset, edges)
+			mark, col.dim, shortID(t.ID), col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset, edges)
 	default: // blocked
 		fmt.Fprintf(w, "%s%s%s%s  %s%s\n      %swaiting:%s %s\n",
-			mark, col.dim, t.ID, col.reset, oneLine(t.Title), edges, col.red, col.reset, s.blockedReason(t.ID))
+			mark, col.dim, shortID(t.ID), col.reset, oneLine(t.Title), edges, col.red, col.reset,
+			s.blockedReasonDisp(t.ID, shortID))
 	}
 }
 
