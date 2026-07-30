@@ -1,6 +1,6 @@
 # t-01KYRMFV10W1N28TCN5WVTCB1J — Two-machine dogfood: real claim races over one remote
 
-- Status: open — in progress, claimed by `brandon/impl-2`
+- Status: open — waiting on an escalation answer
 - Priority: 2
 - Labels: `dogfood`, `multiplayer`
 - Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -34,3 +34,7 @@ _Unanswered._
 ### 2026-07-30 05:51 UTC — note from `brandon/impl-2`
 
 Resume state: no work done or possible yet — the week hasn't started. What the answer unblocks: if Brandon picks option (a) in escalation 01KYRS7H9003HS5H7W8QKW7KG8, the next claimant's first move is to create the sync-latency prep task (measure fetch/push wall time in internal/syncer around the cycle's fetch and push calls, expose it on Status / /v0/state syncJSON, log it per T8) — as a sibling task, not a depends_on edge, unless Brandon has settled the Cycle-3 edge question by then. The week itself is Brandon-driven; agents only participate once fleets are running on both machines.
+
+### 2026-07-30 05:51 UTC — run by `brandon/impl-2` — blocked
+
+Blocked on escalation 01KYRS7H9003HS5H7W8QKW7KG8: the week is human-paced (Brandon must run the second machine), and a sync-latency instrumentation gap vs T8 needs his call before the week's evidence collection starts.
