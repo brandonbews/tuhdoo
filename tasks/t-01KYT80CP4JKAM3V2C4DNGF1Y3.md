@@ -1,0 +1,18 @@
+# t-01KYT80CP4JKAM3V2C4DNGF1Y3 — TUI readability: short display IDs, width-aware wrapping, list scrolling
+
+- Status: open — ready
+- Priority: 2
+- Labels: `cli`, `tui`
+- Created: 2026-07-30 19:28 UTC by `4099114+brandonbews`
+
+## Description
+
+Dogfooding feedback from Brandon (2026-07-30) on the Cycle-4 TUI:
+1. Full ULIDs obscure content. Display task IDs in TUI rows as `t-` + lowercase last-4 of the ULID (batch-created ULIDs share prefixes, so the tail is the distinguishing part; settled via AskUserQuestion with previews). Display-only — full IDs everywhere under the hood, in the detail screen, and in all one-shot commands.
+2. Long lines flow off screen with no horizontal scroll (deps lists, waiting: reasons, descriptions unreadable). Wrap all TUI output ANSI-aware to terminal width using charmbracelet/x/ansi (already in the module graph via bubbletea). Detail body wraps BEFORE line-windowing so scroll math counts real screen lines. List body gets vertical windowing that keeps the cursor row visible; blank line between rows for scanability (Brandon ok'd multi-line rows).
+
+Acceptance: no rendered line wider than the terminal; cursor row always on screen; detail scroll walks wrapped lines; short IDs shown in list/waiting/edge-marker text while detail shows full IDs; one-shot commands byte-identical; make test lint green.
+
+## History
+
+_No activity yet._
