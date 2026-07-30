@@ -700,3 +700,73 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 		t.Errorf("detail lost the full ID; view:\n%s", dv)
 	}
 }
+
+// maxLineWidth is the widest rendered line in runes (colors are empty
+// in tests, so rune count is display width for this ASCII-ish output).
+func maxLineWidth(v string) int {
+	max := 0
+	for _, l := range strings.Split(v, "\n") {
+		if n := len([]rune(l)); n > max {
+			max = n
+		}
+	}
+	return max
+}
+
+// With a known terminal size, no list line exceeds the width, the
+// whole frame fits the height, and the cursor row stays visible even
+// at the bottom of a list taller than the screen.
+func TestTopListWrapsAndScrolls(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 30, Height: 12})
+	m = mm.(topModel)
+	v := m.View()
+	if w := maxLineWidth(v); w > 30 {
+		t.Errorf("line wider than terminal: %d > 30; view:\n%s", w, v)
+	}
+	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 12 {
+		t.Errorf("frame taller than terminal: %d > 12 lines; view:\n%s", n, v)
+	}
+	if !strings.Contains(v, "▸") {
+		t.Errorf("cursor row not visible at top; view:\n%s", v)
+	}
+	// Walk to the last row: the window must follow the cursor there.
+	for i := 0; i < 10; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	v = m.View()
+	if !strings.Contains(v, "▸") || !strings.Contains(v, "choose a license") {
+		t.Errorf("cursor row (blocked t-lic) not visible after scrolling; view:\n%s", v)
+	}
+	if strings.Contains(v, "Which license?") {
+		t.Errorf("top of list should have scrolled off; view:\n%s", v)
+	}
+	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 12 {
+		t.Errorf("scrolled frame taller than terminal: %d > 12 lines; view:\n%s", n, v)
+	}
+}
+
+// The detail body wraps to the width before the scroll window slices
+// it, so narrow terminals scroll real screen lines.
+func TestTopDetailWrapsToWidth(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter)) // t-flak
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 24, Height: 10})
+	m = mm.(topModel)
+	if w := maxLineWidth(m.View()); w > 24 {
+		t.Errorf("detail line wider than terminal: %d > 24; view:\n%s", w, m.View())
+	}
+	if m.detailMaxScroll() == 0 {
+		t.Error("wrapped body should be scrollable at 24x10")
+	}
+	for i := 0; i < 100; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	if v := m.View(); !strings.Contains(v, "Bisecting the flake.") {
+		t.Errorf("tail not reachable by scrolling; view:\n%s", v)
+	}
+}

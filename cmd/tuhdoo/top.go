@@ -17,9 +17,21 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/brandonbews/tuhdoo/internal/daemon"
 )
+
+// wrapTo wraps rendered output to the terminal width, ANSI-aware:
+// wordwrap for readability, then a hard wrap so nothing (ULIDs, long
+// unbroken tokens) ever exceeds the width. Zero width — tests, or no
+// WindowSizeMsg yet — wraps nothing.
+func wrapTo(s string, width int) string {
+	if width <= 0 {
+		return s
+	}
+	return ansi.Hardwrap(ansi.Wordwrap(s, width, ""), width, true)
+}
 
 // ---- polling: state arrives by tick, never by keypress ----
 
@@ -159,7 +171,8 @@ type topModel struct {
 
 	detailID     string // task shown by modeDetail
 	detailScroll int    // first visible body line in modeDetail
-	height       int    // terminal rows; 0 (no WindowSizeMsg yet) renders all
+	width        int    // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
+	height       int    // terminal rows; 0 renders all
 }
 
 func (m topModel) Init() tea.Cmd {
@@ -177,7 +190,7 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.updateInput(msg)
 	case tea.WindowSizeMsg:
-		m.height = msg.Height
+		m.width, m.height = msg.Width, msg.Height
 		return m, nil
 	case tickMsg:
 		return m, tea.Batch(fetchCmd(m.c), tickCmd())
@@ -377,7 +390,9 @@ func (m topModel) detailBody() []string {
 	}
 	var b strings.Builder
 	printTask(&b, m.col, h)
-	return strings.Split(strings.TrimRight(b.String(), "\n"), "\n")
+	// Wrap before splitting so the scroll window counts screen lines,
+	// not logical ones.
+	return strings.Split(strings.TrimRight(wrapTo(b.String(), m.width), "\n"), "\n")
 }
 
 // detailWindow is how many body lines fit: terminal height minus the
@@ -407,8 +422,9 @@ func (m topModel) detailMaxScroll() int {
 func (m topModel) detailView(body []string) string {
 	col := m.col
 	var w strings.Builder
-	fmt.Fprintf(&w, "%stuhdoo%s · sync: %s · %s\n\n", col.bold, col.reset,
-		syncLine(m.snap.state.Sync), m.badge())
+	w.WriteString(wrapTo(fmt.Sprintf("%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset,
+		syncLine(m.snap.state.Sync), m.badge()), m.width))
+	w.WriteString("\n")
 	scroll := m.detailScroll
 	if max := m.detailMaxScroll(); scroll > max {
 		scroll = max // content shrank under a live refresh
@@ -421,7 +437,8 @@ func (m topModel) detailView(body []string) string {
 		body = body[scroll:end]
 	}
 	w.WriteString(strings.Join(body, "\n"))
-	fmt.Fprintf(&w, "\n\n%sj/k scroll · esc back · q quit%s\n", col.dim, col.reset)
+	w.WriteString("\n\n")
+	w.WriteString(wrapTo(fmt.Sprintf("%sj/k scroll · esc back · q quit%s\n", col.dim, col.reset), m.width))
 	return w.String()
 }
 
@@ -433,40 +450,72 @@ func (m topModel) View() string {
 		// The task vanished under a refresh: fall through to the list.
 	}
 	col := m.col
-	var w strings.Builder
+	var head strings.Builder
 	sync := "..."
 	if m.snap != nil {
 		sync = syncLine(m.snap.state.Sync)
 	}
-	fmt.Fprintf(&w, "%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset, sync, m.badge())
+	fmt.Fprintf(&head, "%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset, sync, m.badge())
 	if m.status != "" {
-		fmt.Fprintf(&w, "%s\n", m.status)
+		fmt.Fprintf(&head, "%s\n", m.status)
 	}
-	w.WriteString("\n")
+	head.WriteString("\n")
+	hs := wrapTo(head.String(), m.width)
 	if m.err != nil {
-		fmt.Fprintf(&w, "%sdaemon unreachable:%s %v %s(retrying)%s\n",
-			col.red, col.reset, m.err, col.dim, col.reset)
-		return w.String()
+		return hs + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
+			col.red, col.reset, m.err, col.dim, col.reset), m.width)
 	}
 	if m.snap == nil {
-		w.WriteString("loading...\n")
-		return w.String()
+		return hs + "loading...\n"
 	}
 	s := m.snap
+	var body strings.Builder
 	if s.state.Degraded != "" {
-		fmt.Fprintf(&w, "%sDEGRADED (read-only):%s %s\n\n", col.red, col.reset, s.state.Degraded)
+		fmt.Fprintf(&body, "%sDEGRADED (read-only):%s %s\n\n", col.red, col.reset, s.state.Degraded)
 	}
 	b := s.classify()
-	fmt.Fprintf(&w, "%s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d cancelled · %s open\n\n",
+	fmt.Fprintf(&body, "%s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d cancelled · %s open\n\n",
 		col.green, len(b.ready), col.reset,
 		col.yellow, len(b.inProgress), col.reset,
 		col.red, len(b.blocked), col.reset,
 		len(b.done), len(b.cancelled),
 		plural(len(s.state.OpenEscalations), "escalation"))
-	renderTopRows(&w, col, s, m.rows, m.cursor)
-	w.WriteString("\n")
-	w.WriteString(m.footer())
-	return w.String()
+	renderTopRows(&body, col, s, m.rows, m.cursor)
+	foot := "\n" + wrapTo(m.footer(), m.width)
+	list := m.windowList(wrapTo(body.String(), m.width),
+		strings.Count(hs, "\n"), strings.Count(foot, "\n"))
+	return hs + list + foot
+}
+
+// windowList slides a window over the wrapped list body so the cursor
+// row is always on screen (pinned to the bottom edge once the list
+// outgrows the terminal). Unknown height renders everything.
+func (m topModel) windowList(body string, headLines, footLines int) string {
+	body = strings.TrimRight(body, "\n")
+	if m.height <= 0 {
+		return body + "\n"
+	}
+	lines := strings.Split(body, "\n")
+	avail := m.height - headLines - footLines
+	if avail < 1 {
+		avail = 1
+	}
+	if len(lines) <= avail {
+		return body + "\n"
+	}
+	scroll := 0
+	for i, l := range lines {
+		if strings.Contains(l, "▸ ") {
+			if i >= avail {
+				scroll = i - avail + 1
+			}
+			break
+		}
+	}
+	if scroll+avail > len(lines) {
+		scroll = len(lines) - avail
+	}
+	return strings.Join(lines[scroll:scroll+avail], "\n") + "\n"
 }
 
 // renderTopRows renders the selectable sections with the cursor marker.
@@ -494,7 +543,10 @@ func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor i
 			fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
 			continue
 		}
-		for _, i := range idx {
+		for n, i := range idx {
+			if n > 0 {
+				fmt.Fprintln(w) // breathing room: rows wrap to multiple lines
+			}
 			renderTopRow(w, col, s, rows[i], i == cursor)
 		}
 	}
