@@ -7,8 +7,9 @@ data branch of this repository, managed by the system it built.
 ## Where the plan lives now
 
 - **Humans:** `tuhdoo status` · `tuhdoo backlog` · `tuhdoo escalations` ·
-  `tuhdoo task <id>` · `tuhdoo watch` — or browse the `tuhdoo` branch on the
-  git host (its `README.md` is the live overview).
+  `tuhdoo task <id>` · bare `tuhdoo` (the TUI; `--watch` for read-only) — or
+  browse the `tuhdoo` branch on the git host (its `README.md` is the live
+  overview).
 - **Agents:** connect through the stdio shim (`tuhdoo mcp --as <principal>`),
   follow `docs/agent-protocol.md`, and drive work through `claim_next`.
   Development sessions on this repo are driven that way from now on.

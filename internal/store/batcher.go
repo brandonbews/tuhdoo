@@ -8,7 +8,7 @@ import (
 )
 
 // DefaultQuiet is the commit debounce (T8): a fleet's burst of events
-// becomes one commit, while `watch` still feels live.
+// becomes one commit, while the TUI still feels live.
 const DefaultQuiet = 2 * time.Second
 
 // Batcher accumulates events and commits them as one batch after a quiet

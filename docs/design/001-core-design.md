@@ -80,11 +80,11 @@ Nothing prevents two machines claiming the same task inside the sync window — 
 - Human identity derives from git identity (`user.email`, as the host already trusts). Agent names are assigned in daemon config when a harness connects over MCP.
 - No cryptographic signing in v1 (trust boundary is repo-write; forgery is exactly as possible as forging git commit authors today). The event envelope reserves a `sig` field so signing can arrive later without a schema break.
 
-### D8. Surfaces and build order *(revised by Cycle 2 — details in `002` T7)*
+### D8. Surfaces and build order *(revised by Cycle 2 — details in `002` T7; revised 2026-07-30 by Cycle 4 — one verb-less TUI)*
 
-1. **v0 — daemon + MCP + CLI.** The daemon is the kernel (sole writer, sync loop, replay, view builder); the MCP server lives inside it (one process) and is the front door for every harness. The CLI is the **local human's primary portal**, not a thin veneer: `status`, `backlog`, `task <id>`, `escalations`, and `watch` (a live read-only dashboard pane that sits beside a working agent). Markdown views serve the *remote/browsing* audience, not local steering.
+1. **v0 — daemon + MCP + CLI.** The daemon is the kernel (sole writer, sync loop, replay, view builder); the MCP server lives inside it (one process) and is the front door for every harness. The CLI is the **local human's primary portal**, not a thin veneer: `status`, `backlog`, `task <id>`, `escalations`, and a live dashboard pane that sits beside a working agent *(v0 shipped that pane as read-only `watch`; Cycle 4 folded it into the TUI as `tuhdoo --watch` — see `002` T7)*. Markdown views serve the *remote/browsing* audience, not local steering.
 2. **Free surface — the git host.** The D3 markdown views make GitHub/GitLab a zero-effort read-only UI: browsable backlog, linkable tasks, per-task history via `git log`.
-3. **v1 — the steering surface is a TUI** (in the same binary, works over SSH/tmux where the author lives), grown from `watch` by adding interactivity: escalation inbox, fleet ledger, queue reordering. Browser UI demoted to v2+.
+3. **v1 — the steering surface is a TUI** (in the same binary, works over SSH/tmux where the author lives), grown from `watch` by adding interactivity: escalation inbox, fleet ledger, queue reordering. *(Cycle 4: the grown TUI is verb-less — bare `tuhdoo`, with `--watch` as the disarmed mode; `top` was a transient name.)* Browser UI demoted to v2+.
 4. **No kanban board until the steering loop is proven.** The pretty board is the siren song that sank the POCs; it is product-(a) UI and competes with Linear on Linear's terms.
 
 Dogfooding order matters: living with the MCP surface first is what reveals what the UI must actually show.

@@ -109,15 +109,20 @@ Nothing else in v0. **No template engine** — plain Go functions building markd
 
 **View-churn defense:** views carry a **view-format version** stamp (`views/.meta`); the rule is **highest version wins** — a daemon never overwrites views stamped by a newer generator; it updates the event log only and lets the newer peer regenerate. Prevents mixed-version regeneration ping-pong wars. Staleness consequence is cosmetic only (T3 table); replayed state (CLI/MCP/TUI) is always current.
 
-## T7. Human surfaces: CLI portal in v0, TUI in v1, browser demoted
+## T7. Human surfaces: CLI portal in v0, TUI in v1, browser demoted *(revised 2026-07-30 by Cycle 4 — one verb-less TUI)*
 
 The v0 CLI is not a thin setup veneer — it is the **local human's primary portal** (the author runs terminal-over-SSH; checking out a branch to read markdown is absurd, and a browser tab is friction where a tmux pane is native):
 
 - `tuhdoo status` — one-screen fleet overview: active claims, open escalations, queue depth, sync state (`local-only` is a normal state).
-- `tuhdoo backlog` / `tuhdoo task <id>` / `tuhdoo escalations` — terminal renderings served from the daemon's replayed state; always current.
-- `tuhdoo watch` — live auto-refreshing read-only dashboard: the pane that sits beside a working agent. Mechanically a Bubble Tea view loop with zero input handling — **the v1 TUI's skeleton with interactivity amputated**; v1 adds keybindings (answer escalation, reprioritize) to a screen real usage has already debugged.
+- `tuhdoo backlog` / `tuhdoo task <id>` / `tuhdoo escalations` — terminal renderings served from the daemon's replayed state; always current. Scriptable, pipeable plumbing — deliberately untouched by the Cycle 4 revision.
 
-**v1's steering surface is a TUI** (Bubble Tea, shipped inside the same binary — `tuhdoo top`): works over SSH and in tmux where the author actually lives; Go's TUI ecosystem is best-in-class (retroactively reinforcing T1); and the steering scope (inbox, ledger, queue) is naturally a dense terminal dashboard. **Browser UI is demoted to v2+** — it's the kanban board that wants a browser, and the board stays banned until the steering loop is proven (D8). CLI, TUI, and any future web UI all speak the same daemon HTTP API; nothing is throwaway.
+**The interactive surface is a single verb-less TUI** *(Cycle 4, 2026-07-30 — supersedes the v0 `watch` command and the v1 `tuhdoo top` name; both shipped, briefly coexisted as duplicate Bubble Tea models, and are now tombstoned)*. **Bare `tuhdoo`** launches the steering TUI (Bubble Tea, same binary), guarded: it launches only when stdout is a TTY — otherwise usage prints, exactly as bare invocation always behaved, so pipes/scripts/CI never meet a TUI — and an uninitialized repo gets a `run tuhdoo init` hint. `-w`/`--watch` launches the same screen **disarmed**: steering keys dead, navigation and the task detail screen alive, a visible `watch mode` badge in the header. The mode is fixed at launch — no keypress can re-arm a disarmed pane. Watch mode needs no principal; steer mode derives one from git identity as before (`--as` overrides; combining `--as` with `--watch` is rejected).
+
+One screen carries the whole picture: a header (mode badge, sync line, counts), four status sections (open escalations, ready, in progress, blocked — with `waiting:` reasons), flat rows with edge-marker suffixes (`· N deps`, `· in <parent>` — tree rendering is gated on the edge-semantics open question), and an in-place task detail screen (enter: description plus full ULID-merged history, live off the polled snapshot) — read-only this round; arming it is a filed follow-up. Key semantics are absolute: `esc` steps out, `q` quits, `ctrl+c` quits — one meaning per key, on every screen.
+
+Accepted consequences (Cycle 4): the always-open pane is armed unless launched with `--watch` (mitigations: the flag, and cancel stays confirm-gated); no runtime arm/disarm toggle — fluidity traded for an ironclad read-only guarantee; `watch` and `top` die as verbs with tombstone errors, not aliases — vestigial names outlive their excuse otherwise.
+
+Rationale unchanged from v1's original TUI bet: works over SSH and in tmux where the author actually lives; Go's TUI ecosystem is best-in-class (retroactively reinforcing T1); and the steering scope (inbox, ledger, queue) is naturally a dense terminal dashboard. **Browser UI is demoted to v2+** — it's the kanban board that wants a browser, and the board stays banned until the steering loop is proven (D8). CLI, TUI, and any future web UI all speak the same daemon HTTP API; nothing is throwaway.
 
 ## T8. Cadence defaults
 
@@ -125,7 +130,7 @@ Config-file knobs; these are starting values, and the daemon logs collision coun
 
 | Knob | Default | Rationale |
 |---|---|---|
-| Commit debounce | 2s | Batch a fleet's burst into one commit; `watch` still feels live. |
+| Commit debounce | 2s | Batch a fleet's burst into one commit; the TUI still feels live. |
 | Push | Immediate for commits containing claims or escalations; else piggyback ≤ 30s | Claims race (D6); escalations have a human waiting. Notes can amble. |
 | Fetch interval | 60s | With eager claim-push, worst-case collision window ≈ 1 min; D6 accepts rare duplicates. Host webhooks could make this push-driven later (optional add-on per T2). |
 | Lease TTL / renewal | 15 min / every 5 min | Renewal is the daemon's job (session-bound), so short TTLs cost nothing; crashed fleets return tasks in ≤ 15 min. Three missed renewals = expiry. *(Supersedes the ~30 min sketch in D6.)* |

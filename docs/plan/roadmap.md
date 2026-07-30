@@ -4,6 +4,8 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 
 ## v0 — The loop, dogfoodable
 
+*(2026-07-30, Cycle 4: `watch` was folded into the verb-less TUI — its pane is now `tuhdoo --watch`. The scope and DoD below describe v0 as shipped; read `tuhdoo watch` as `tuhdoo --watch` for the still-running dogfood week.)*
+
 **Scope:** daemon + MCP + CLI portal. No interactivity beyond read-only `watch`.
 
 **Definition of done:** tuhdoo manages its own remaining development. Concretely: this repo's `docs/plan/backlog.md` has been migrated into a live tuhdoo data branch; Brandon runs `tuhdoo watch` beside an agent session; the agent works exclusively through `claim_next` → work → `add_note` → `finish_run` / `escalate`; a full week of real use produces no manual repair of the data branch.
@@ -12,7 +14,7 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 
 ## v1 — Steering, and a second machine
 
-**Scope:** the TUI (`tuhdoo top`, grown from `watch` by adding input handling: answer escalations, reprioritize, cancel/archive) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery.
+**Scope:** the TUI (grown from `watch` by adding input handling: answer escalations, reprioritize, cancel/archive) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery. *(2026-07-30, Cycle 4: the TUI shipped verb-less — bare `tuhdoo`, `--watch` for the disarmed mode; `top` was a transient name. Details in `002` T7.)*
 
 **Definition of done:** a blocking escalation is raised by an agent, answered from the TUI, and picked up by a successor agent without the human touching git; two machines run fleets against the same remote for a week with collision counts logged and zero divergent state; Brandon's 5-person work team could be onboarded with `tuhdoo init` + docs alone (whether or not they are).
 
