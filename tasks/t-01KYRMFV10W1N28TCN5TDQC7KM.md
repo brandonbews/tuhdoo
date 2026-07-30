@@ -1,6 +1,6 @@
 # t-01KYRMFV10W1N28TCN5TDQC7KM — Grow watch into the interactive steering TUI (tuhdoo top)
 
-- Status: open — in progress, claimed by `brandon/impl-2`
+- Status: done
 - Priority: 3
 - Labels: `go`, `tui`
 - Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -33,3 +33,14 @@ Design settled after reading cmd/tuhdoo (watch.go, render.go, snapshot.go, clien
 - Tests: table-driven pure render/row tests (watch_test.go pattern), Update interaction tests against the fake API, plus an integration test (cli_test.go harness) driving the real model against a spawned daemon: answer blocking escalation -> task claimable again; priority patch visible in backlog; cancel event actor verified by reading the task.updated event off refs/heads/tuhdoo.
 
 Nothing implemented yet; next step is cmd/tuhdoo/top.go.
+
+### 2026-07-30 05:50 UTC — run by `brandon/impl-2` — done
+
+- Branch: `main`
+- Commits: `fa8c7d3`
+
+tuhdoo top shipped: the watch skeleton plus input handling (cmd/tuhdoo/top.go), wired into main.go. Cursor (j/k, arrows) moves over open escalations and open tasks; `a` answers an escalation, `p` reprioritizes, `c` cancels with y/n confirm; esc backs out; q/ctrl+c quits (q types text while in an input prompt). All writes go through the daemon HTTP API's existing admin verbs (POST /v0/escalations/answer, PATCH /v0/tasks/{id}) via a small steeringAPI interface — no git, no ops-layer access, MCP surface untouched at ten verbs.
+
+Acceptance verified by tests (make test lint green, commit fa8c7d3 pushed): unit tests cover pure row-building/rendering and every interaction flow against a fake API; an integration test drives the real model against a spawned daemon — answering a blocking escalation from the TUI makes the task claimable again, a reprioritize is served first by the next claim (same ReadyTasks pool get_backlog reads), and the cancel event lands on the data branch stamped "actor":"brandon".
+
+Two judgment calls to review: (1) acting principal — D7 says git-derived from user.email but not how; I made `top` default to the email's local part, overridable with --as <human>, and rejected agent-style principals (slash) since steering is human work. Note your git email here is a GitHub noreply address, so the derived default on this machine would be "4099114+brandonbews" — you'll likely want `tuhdoo top --as brandon` (or we later add a config knob). (2) "archive" = status:cancelled — the API has open/done/cancelled only; I didn't invent a new status.

@@ -1,10 +1,10 @@
 # t-01KYRMFV10W1N28TCN5WVTCB1J — Two-machine dogfood: real claim races over one remote
 
-- Status: open — blocked on dependencies
+- Status: open — ready
 - Priority: 2
 - Labels: `dogfood`, `multiplayer`
 - Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
-- Depends on: [t-01KYRMFV10W1N28TCN5TDQC7KM](t-01KYRMFV10W1N28TCN5TDQC7KM.md) (open)
+- Depends on: [t-01KYRMFV10W1N28TCN5TDQC7KM](t-01KYRMFV10W1N28TCN5TDQC7KM.md) (done)
 - Created: 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
