@@ -2,10 +2,10 @@
 
 The build-out as an ordered, dependency-aware task list. Written the way tuhdoo tasks should be written (descriptions are prompts: context, acceptance criteria, doc references) — dogfooding the convention on paper until the tool can hold it. **The final task migrates this file into tuhdoo itself.**
 
-## Status (as of 2026-07-29, session 3 — B9 landed; next: B11 field-test, then B12 in a fresh session)
+## Status (as of 2026-07-30, session 4 — B11 landed; next: B12, fresh session only)
 
 - **Done, committed, pushed:** B1 (scaffold), B2 (`internal/gitx`), B3 (`internal/event`), B4 (`internal/core` — replay engine), B5 (`internal/store`), B6 (`internal/daemon`), B7 (`internal/syncer` — convergence proven two-machine), B8 (`internal/views`), B9 (MCP surface — all three Accept tests pass, see below). All acceptance criteria hold; `make test lint` green, daemon/store race-clean.
-- **Drafted:** B11 (`docs/agent-protocol.md`) — now unblocked for its field-test (B9 landed).
+- **Done (session 4):** B11 — `docs/agent-protocol.md` revised against the live B9 surface (shim-only access, keepalive nuance, session-death semantics, agent-reportable outcomes), T8 gained the MCP keepalive row, and the field test ran: one real headless harness session through the shim on a seeded scratch repo. Full conformance on the order-sensitive protocol (claim discipline, blocking-escalation sequence, honest outcomes, empty-pool stop) on first read; two redundancy deviations (end-note duplicating the finish summary; blocked-flow content triplicated) folded back into the doc. Record appended to the doc itself. Incidental finding: a repo path long enough that `.git/tuhdoo/daemon.sock` exceeds the 103-byte unix-socket limit fails daemon startup with a clear error — acceptable for v0, noted here in case dogfood paths ever hit it.
 - **Done (late addition):** B10 (CLI portal) — init/status/backlog/task/escalations/watch, daemon auto-spawn, real sync status rendering. Committed same session.
 - **Not started:** B12 (dogfood cutover — deliberately left for a fresh session: it IS the continuity test).
 - **Notable decisions made while building** (already reflected in code + revision notes): blocking escalations gate `core.Ready`; `superseded` added to run outcomes; view stamp lives at `.views-meta.json` (branch root); sync merge rules — lease conflicts keep later expiry, newer-format peer owns views wholesale; `gitx` gained `IsAncestor` + `ErrRemoteRefMissing` for the sync loop.
