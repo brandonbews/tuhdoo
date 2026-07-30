@@ -1,0 +1,17 @@
+# Tests run on every push EXCEPT to the tuhdoo data branch — the same CI
+# path-filter guidance `tuhdoo init` will one day print for its users (B1/T2).
+name: test
+on:
+  push:
+    branches-ignore: [tuhdoo]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - run: make test lint
