@@ -1,6 +1,6 @@
 # t-01KYRMFV10W1N28TCN5WVTCB1J — Two-machine dogfood: real claim races over one remote
 
-- Status: open — ready
+- Status: open — in progress, claimed by `brandon/impl-2`
 - Priority: 2
 - Labels: `dogfood`, `multiplayer`
 - Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -19,4 +19,14 @@ Constraints: no force-push on the data branch, ever; no manual repair — needin
 
 ## History
 
-_No activity yet._
+### 2026-07-30 05:51 UTC — escalation from `brandon/impl-2` (blocking)
+
+**Q:** This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation?
+
+Two things, one blocking and one a finding:
+
+1. The task became ready when the TUI landed (fa8c7d3), but its substance — a week of two-machine operation against one origin, a real claim race, answering an escalation from `tuhdoo top` mid-week — is operational work only you can start and pace. This escalation fences it out of the ready pool so agents stop claim-churning it until you kick the week off. Answer when you're ready to begin (or tell me how you'd rather fence human-paced tasks — this is the same workaround B12 used for the milestone, per open-questions Cycle 3).
+
+2. Acceptance requires "collision/latency numbers recorded onto this task as notes", and T8 says the daemon logs collision counts *and sync latencies* — but internal/syncer only counts collisions (Status.Collisions, syncer.go:37); nothing measures or logs fetch/push latency. Options: (a) I file a well-formed prep task to add sync-latency measurement/logging before the week starts (recommended — the week's evidence is half-blind without it); (b) run the week with collisions-only and eyeball latencies from timestamps; (c) you scope it differently. I deliberately did not create the prep task or wire a depends_on edge myself: making this task depend on a new child is exactly the parent/depends_on union-cycle territory open-questions Cycle 3 flags as unsettled.
+
+_Unanswered._
