@@ -408,4 +408,53 @@ func TestDeadVerbTombstones(t *testing.T) {
 		t.Fatalf("watch should exit nonzero; output:\n%s", out)
 	}
 	mustContain(t, out, "tuhdoo --watch")
+
+	out, code = runCLI(t, repo, "top")
+	if code == 0 {
+		t.Fatalf("top should exit nonzero; output:\n%s", out)
+	}
+	mustContain(t, out, "bare tuhdoo")
+}
+
+// Verb-less dispatch (Cycle 4): help is a real command on stdout; bare
+// invocation without a terminal falls back to usage (the guarded
+// launch) instead of half-starting a TUI; unknown commands and bad
+// flags stay loud.
+func TestVerblessDispatch(t *testing.T) {
+	repo := newRepo(t)
+
+	out, code := runCLI(t, repo, "help")
+	if code != 0 {
+		t.Fatalf("help exit %d; output:\n%s", code, out)
+	}
+	mustContain(t, out, "usage: tuhdoo", "--watch", "mcp")
+	if strings.Contains(out, "top ") {
+		t.Errorf("help still lists the dead top verb:\n%s", out)
+	}
+
+	out, code = runCLI(t, repo, "bogus")
+	if code == 0 {
+		t.Fatalf("unknown command should exit nonzero; output:\n%s", out)
+	}
+	mustContain(t, out, `unknown command "bogus"`, "usage: tuhdoo")
+
+	// runCLI pipes output, so stdout is not a TTY: the guarded launch
+	// must print usage rather than start Bubble Tea.
+	out, code = runCLI(t, repo)
+	if code == 0 {
+		t.Fatalf("bare tuhdoo without a TTY should exit nonzero; output:\n%s", out)
+	}
+	mustContain(t, out, "usage: tuhdoo")
+
+	out, code = runCLI(t, repo, "--verbose")
+	if code == 0 {
+		t.Fatalf("unknown flag should exit nonzero; output:\n%s", out)
+	}
+	mustContain(t, out, "usage: tuhdoo")
+
+	out, code = runCLI(t, repo, "--watch", "--as", "brandon")
+	if code == 0 {
+		t.Fatalf("--watch with --as should be rejected; output:\n%s", out)
+	}
+	mustContain(t, out, "watch mode")
 }

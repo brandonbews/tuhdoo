@@ -1,12 +1,15 @@
-// Command tuhdoo is the CLI portal (002 T7): the local human's primary
-// window into the daemon's replayed state, plus the daemon itself as a
-// subcommand. Every read command talks HTTP to the per-repo daemon over
-// its unix socket, auto-spawning it when absent (T4 lazy lifecycle).
+// Command tuhdoo is the human surface (002 T7, Cycle 4): bare
+// invocation opens the interactive TUI; the one-shot subcommands are
+// scriptable renderings of the same daemon state. Every path talks
+// HTTP to the per-repo daemon over its unix socket, auto-spawning it
+// when absent (T4 lazy lifecycle).
 package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"strings"
 )
 
 // version is stamped at build time via -ldflags "-X main.version=...".
@@ -18,10 +21,12 @@ func main() {
 
 func run(args []string) int {
 	if len(args) == 0 {
-		usage()
-		return 1
+		return runTUI(nil)
 	}
 	switch args[0] {
+	case "help", "--help", "-h":
+		usage(os.Stdout)
+		return 0
 	case "version":
 		fmt.Println("tuhdoo " + version)
 		return 0
@@ -45,33 +50,42 @@ func run(args []string) int {
 		fmt.Fprintln(os.Stderr, "tuhdoo: watch is now a mode of the TUI; run: tuhdoo --watch")
 		return 1
 	case "top":
-		return runTop(args[1:])
+		fmt.Fprintln(os.Stderr, "tuhdoo: top is gone; the TUI is bare tuhdoo (watch mode: tuhdoo --watch)")
+		return 1
 	case "mcp":
 		return runMCP(args[1:])
 	default:
+		if strings.HasPrefix(args[0], "-") {
+			return runTUI(args)
+		}
 		fmt.Fprintf(os.Stderr, "tuhdoo: unknown command %q\n\n", args[0])
-		usage()
+		usage(os.Stderr)
 		return 1
 	}
 }
 
-func usage() {
-	fmt.Fprint(os.Stderr, `tuhdoo `+version+` — a coordination fabric for agent fleets, steered by humans
+func usage(w io.Writer) {
+	fmt.Fprint(w, `tuhdoo `+version+` — a coordination fabric for agent fleets, steered by humans
 
-usage: tuhdoo <command>
+usage: tuhdoo [-w|--watch] [--as <human>]   the TUI (needs a terminal)
+       tuhdoo <command>
+
+Bare tuhdoo opens the interactive TUI: answer escalations, reprioritize,
+cancel tasks, drill into any task. It acts as you (--as overrides).
+-w/--watch opens the same screen read-only: steering keys are dead for
+the life of the pane — the dashboard that sits beside a working agent.
 
   init          set up the data branch in this repository (idempotent)
   status        one-screen overview: sync state, counts, active claims
   backlog       ready / in-progress / blocked work, from live daemon state
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
-  top           interactive steering: answer escalations, reprioritize,
-                cancel tasks; acts as you (--as <human> to override)
   mcp           stdio MCP shim for agent harnesses. The principal is
                 auto-derived: git user.email local part + a session
                 name minted by the daemon; --as <p> overrides in full
                 (e.g. --as brandon/impl-1)
   daemon        run the per-repo daemon in the foreground
+  help          print this help
   version       print the version
 `)
 }

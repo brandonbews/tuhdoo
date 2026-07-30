@@ -17,12 +17,14 @@ type colors struct {
 	reset, bold, dim, green, yellow, red string
 }
 
+// isTTY reports whether f is a character device (a real terminal).
+func isTTY(f *os.File) bool {
+	fi, err := f.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
+}
+
 func newColors(out *os.File) colors {
-	if os.Getenv("NO_COLOR") != "" {
-		return colors{}
-	}
-	fi, err := out.Stat()
-	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
+	if os.Getenv("NO_COLOR") != "" || !isTTY(out) {
 		return colors{}
 	}
 	return colors{

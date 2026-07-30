@@ -454,19 +454,17 @@ func TestTopViewLoadingAndError(t *testing.T) {
 func TestTopActor(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    []string
+		as      string
 		want    string
 		wantErr string
 	}{
-		{name: "as flag", args: []string{"--as", "brandon"}, want: "brandon"},
-		{name: "as equals form", args: []string{"--as=brandon"}, want: "brandon"},
-		{name: "agent principal rejected", args: []string{"--as", "brandon/impl-1"}, wantErr: "root principal"},
-		{name: "whitespace rejected", args: []string{"--as", "two words"}, wantErr: "invalid actor"},
-		{name: "unknown flag", args: []string{"--verbose"}, wantErr: "usage"},
+		{name: "explicit override", as: "brandon", want: "brandon"},
+		{name: "agent principal rejected", as: "brandon/impl-1", wantErr: "root principal"},
+		{name: "whitespace rejected", as: "two words", wantErr: "invalid actor"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := topActor(tt.args)
+			got, err := topActor(tt.as)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("err = %v, want containing %q", err, tt.wantErr)

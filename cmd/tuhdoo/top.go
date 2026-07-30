@@ -8,7 +8,7 @@ package main
 // launch — no keypress can re-arm a disarmed pane.
 
 import (
-	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -451,24 +451,15 @@ func (m topModel) footer() string {
 
 // ---- entry point ----
 
-// topActor resolves the acting human principal: --as wins; otherwise
-// it derives from git identity per D7 (the local part of user.email).
-// top steers as a root human, never as an agent.
-func topActor(args []string) (string, error) {
-	as := ""
-	switch {
-	case len(args) == 0:
-	case len(args) == 2 && args[0] == "--as":
-		as = args[1]
-	case len(args) == 1 && strings.HasPrefix(args[0], "--as="):
-		as = strings.TrimPrefix(args[0], "--as=")
-	default:
-		return "", errors.New("usage: tuhdoo top [--as <human>]")
-	}
+// topActor resolves the acting human principal for steer mode: an
+// explicit --as wins; otherwise it derives from git identity per D7
+// (the local part of user.email). The TUI steers as a root human,
+// never as an agent.
+func topActor(as string) (string, error) {
 	if as == "" {
 		local, err := gitEmailLocalPart("")
 		if err != nil {
-			return "", fmt.Errorf("cannot derive your principal from git identity: %v; run: tuhdoo top --as <human>", err)
+			return "", fmt.Errorf("cannot derive your principal from git identity: %v; run: tuhdoo --as <human>", err)
 		}
 		as = local
 	}
@@ -476,23 +467,54 @@ func topActor(args []string) (string, error) {
 		return "", err
 	}
 	if strings.Contains(as, "/") {
-		return "", fmt.Errorf("top steers as a human root principal, not an agent: want e.g. %q, got %q",
+		return "", fmt.Errorf("the TUI steers as a human root principal, not an agent: want e.g. %q, got %q",
 			strings.SplitN(as, "/", 2)[0], as)
 	}
 	return as, nil
 }
 
-func runTop(args []string) int {
-	actor, err := topActor(args)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "tuhdoo:", err)
+// runTUI is bare `tuhdoo`: parse the flags, guard the launch, run the
+// TUI. Watch mode never acts, so it needs no principal at all.
+func runTUI(args []string) int {
+	fs := flag.NewFlagSet("tuhdoo", flag.ContinueOnError)
+	fs.SetOutput(io.Discard) // errors get our usage line, not the pkg default
+	var watch, w bool
+	var as string
+	fs.BoolVar(&watch, "watch", false, "")
+	fs.BoolVar(&w, "w", false, "")
+	fs.StringVar(&as, "as", "", "")
+	if err := fs.Parse(args); err != nil || fs.NArg() > 0 {
+		fmt.Fprintln(os.Stderr, "usage: tuhdoo [-w|--watch] [--as <human>]")
 		return 1
+	}
+	watch = watch || w
+	if watch && as != "" {
+		fmt.Fprintln(os.Stderr, "tuhdoo: --as means nothing in watch mode; a disarmed pane never acts")
+		return 1
+	}
+	// Guarded launch (T7): the TUI wants a terminal; a pipe, script, or
+	// CI run gets usage instead — what bare invocation always printed.
+	if !isTTY(os.Stdout) {
+		usage(os.Stderr)
+		return 1
+	}
+	m := topModel{armed: !watch, col: newColors(os.Stdout)}
+	if m.armed {
+		actor, err := topActor(as)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "tuhdoo:", err)
+			return 1
+		}
+		m.actor = actor
 	}
 	_, c, code := connect()
 	if code != 0 {
 		return code
 	}
-	m := topModel{c: c, api: httpSteering{c: c, actor: actor}, actor: actor, armed: true, col: newColors(os.Stdout)}
+	m.c = c
+	if m.armed {
+		m.api = httpSteering{c: c, actor: m.actor}
+	}
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo:", err)
 		return 1
