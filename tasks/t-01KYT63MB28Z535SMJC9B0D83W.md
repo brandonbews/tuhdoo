@@ -1,6 +1,6 @@
 # t-01KYT63MB28Z535SMJC9B0D83W — One TUI: bare tuhdoo is the interactive surface (Cycle 4)
 
-- Status: open — ready
+- Status: open — in progress, claimed by `4099114+brandonbews`
 - Priority: 2
 - Labels: `cli`, `tui`, `design-revision`
 - Created: 2026-07-30 18:55 UTC by `4099114+brandonbews`
@@ -25,4 +25,6 @@ Constraints: boring Go; no new dependencies; stored event bytes untouched (this 
 
 ## History
 
-_No activity yet._
+### 2026-07-30 19:02 UTC — note from `4099114+brandonbews`
+
+Commits 1-3 landed green (606d0f0 docs revision, f85134f watch fold, aaad5b5 verb-less dispatch). Deviation from plan: the "uninitialized repo → run tuhdoo init hint" scenario doesn't exist — the daemon auto-creates the data branch on spawn (runInit is spawn+confirm), so only "not a git repo" errors, and openRepo's existing message covers it. Remaining: commit 4 (modeDetail screen: enter/esc, j/k scroll via line windowing, render via printTask from live snapshot) and commit 5 (edge-marker suffixes · N deps / · in <parent> on rows). Then push, update memory/docs? No — docs done in commit 1.

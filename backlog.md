@@ -4,14 +4,15 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYT63MB28Z535SMJC9B0D83W](tasks/t-01KYT63MB28Z535SMJC9B0D83W.md) | One TUI: bare tuhdoo is the interactive surface (Cycle 4) | 2 | cli, tui, design-revision |
 | [t-01KYRMFV10W1N28TCN5ZZ9Z2C1](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) | Retire full-replay-per-write and the grow-forever event overlay | 1 | go, performance |
 | [t-01KYRVCBE83KT62BAE11W3TAM8](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) | Release pipeline: tagged, cross-compiled binaries | 1 | distribution, ci |
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform, parked |
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [t-01KYT63MB28Z535SMJC9B0D83W](tasks/t-01KYT63MB28Z535SMJC9B0D83W.md) | One TUI: bare tuhdoo is the interactive surface (Cycle 4) | 2 | `4099114+brandonbews` |
 
 ## Blocked / waiting
 
