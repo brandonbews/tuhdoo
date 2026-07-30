@@ -23,6 +23,13 @@ Design phase complete through two cycles; **no application code exists yet**. Th
 - **Stored event bytes are never rewritten**; schema evolution is additive-first with in-memory upcasters; incomprehensible events trigger fail-safe read-only mode, never best-effort skipping (T3).
 - **Fewer, better MCP verbs**: the agent surface is ten tools (T5); additions need a design-doc revision.
 
+## Building backlog tasks
+
+- A task's **Accept** block in `docs/plan/backlog.md` is its definition of done: the tests it describes must exist and pass. Nothing is "complete" until `make test lint` is green from the repo root.
+- One commit per task (or per coherent piece), named for it ("B9: …"), pushed after green.
+- When fanning work out to sub-agents, point each at: this file, the relevant design-doc sections, and the task's backlog entry — with explicit file/directory boundaries and "do not commit; report back" (the orchestrator reviews and commits). This is the established pattern; it kept eight parallel-built packages conflict-free.
+- Review is behavioral and machine-driven: humans judge behavior, protocol semantics, and design drift; line-level scrutiny comes from test suites now and a full `/code-review` pass at the POC milestone — not from human diff-reading.
+
 ## Working conventions
 
 - The design was produced through `/grill-me` sessions ("cycles"); decisions carry rationale and **accepted consequences** — the consequences are the part future sessions are tempted to quietly un-accept. Don't.
