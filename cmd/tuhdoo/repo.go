@@ -98,7 +98,7 @@ func gitDirOf(root string) (string, error) {
 // identity: the local part of user.email (brandonbews@gmail.com →
 // brandonbews). This is the one documented auto-derivation rule,
 // shared by every surface that acts as a human without an explicit
-// --as (the mcp shim, tuhdoo top).
+// --as (the mcp shim, the TUI).
 func gitEmailLocalPart(dir string) (string, error) {
 	out, err := gitOutput(dir, "config", "user.email")
 	if err != nil {

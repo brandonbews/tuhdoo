@@ -35,7 +35,11 @@ func topSnapshot() *snapshot {
 			OpenEscalations: []escalationJSON{esc},
 		},
 		tasks: map[string]hydratedTask{
-			"t-parser": {Task: taskJSON{ID: "t-parser", Title: "write the parser"}},
+			"t-parser": {Task: taskJSON{
+			ID: "t-parser", Title: "write the parser",
+			// Edges: t-chore is done, so t-parser still classifies ready.
+			Parents: []string{"t-epic"}, DependsOn: []string{"t-chore"},
+		}},
 			"t-floor":  {Task: taskJSON{ID: "t-floor", Title: "sweep the floor"}},
 			"t-flake": {
 			Task: taskJSON{
@@ -578,6 +582,23 @@ func TestTopDetailScrollClamps(t *testing.T) {
 	}
 	if m.detailScroll != 0 {
 		t.Errorf("k past the top: scroll %d, want 0", m.detailScroll)
+	}
+}
+
+// Edge markers: a row whose task has parents or dependencies says so
+// inline; edge-free rows stay clean. Same renderer in both modes.
+func TestTopEdgeMarkers(t *testing.T) {
+	for name, m := range map[string]topModel{
+		"steer": newTopModel(newFakeSteering()),
+		"watch": newWatchModel(),
+	} {
+		v := m.View()
+		if !strings.Contains(v, "write the parser  · in t-epic · 1 dep") {
+			t.Errorf("%s: parser row missing edge markers; view:\n%s", name, v)
+		}
+		if strings.Contains(v, "sweep the floor  ·") {
+			t.Errorf("%s: edge-free row grew a marker; view:\n%s", name, v)
+		}
 	}
 }
 

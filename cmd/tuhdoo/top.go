@@ -500,6 +500,29 @@ func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor i
 	}
 }
 
+// edgeSuffix surfaces that a task is part of a structure — containment
+// (parents) and scheduling (depends_on) — without imposing a tree on
+// the flat, status-grouped list: edge semantics are still an open
+// question, so the list only marks that edges exist.
+func edgeSuffix(col colors, s *snapshot, id string) string {
+	t := s.tasks[id].Task
+	var parts []string
+	if n := len(t.Parents); n > 0 {
+		p := "in " + t.Parents[0]
+		if n > 1 {
+			p += fmt.Sprintf(" +%d", n-1)
+		}
+		parts = append(parts, p)
+	}
+	if n := len(t.DependsOn); n > 0 {
+		parts = append(parts, plural(n, "dep"))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("  %s· %s%s", col.dim, strings.Join(parts, " · "), col.reset)
+}
+
 func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool) {
 	mark := "  "
 	if selected {
@@ -521,16 +544,17 @@ func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool)
 		return
 	}
 	t := r.task
+	edges := edgeSuffix(col, s, t.ID)
 	switch r.section {
 	case "ready":
-		fmt.Fprintf(w, "%s%s%s%s  p%d  %s%s\n",
-			mark, col.dim, t.ID, col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels))
+		fmt.Fprintf(w, "%s%s%s%s  p%d  %s%s%s\n",
+			mark, col.dim, t.ID, col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), edges)
 	case "inprogress":
-		fmt.Fprintf(w, "%s%s%s%s  %s  %s← %s%s\n",
-			mark, col.dim, t.ID, col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset)
+		fmt.Fprintf(w, "%s%s%s%s  %s  %s← %s%s%s\n",
+			mark, col.dim, t.ID, col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset, edges)
 	default: // blocked
-		fmt.Fprintf(w, "%s%s%s%s  %s\n      %swaiting:%s %s\n",
-			mark, col.dim, t.ID, col.reset, oneLine(t.Title), col.red, col.reset, s.blockedReason(t.ID))
+		fmt.Fprintf(w, "%s%s%s%s  %s%s\n      %swaiting:%s %s\n",
+			mark, col.dim, t.ID, col.reset, oneLine(t.Title), edges, col.red, col.reset, s.blockedReason(t.ID))
 	}
 }
 
