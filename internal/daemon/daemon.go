@@ -103,6 +103,11 @@ type Daemon struct {
 	// sorting before the task it claims. Guarded by mu.
 	entropy *ulid.MonotonicEntropy
 
+	// agentMu guards agentSeq, the per-client-name counters behind
+	// auto-minted session principals (agentNameHeader in mcp.go).
+	agentMu  sync.Mutex
+	agentSeq map[string]int
+
 	lockFile *os.File
 	ln       net.Listener
 	srv      *http.Server
@@ -186,6 +191,7 @@ func New(root string, opts Options) (*Daemon, error) {
 		replay:       core.NewReplayer(),
 		lockFile:     lockFile,
 		entropy:      ulid.Monotonic(rand.Reader, 0),
+		agentSeq:     make(map[string]int),
 		done:         make(chan struct{}),
 	}
 	d.sync = syncer.New(g, syncer.Options{

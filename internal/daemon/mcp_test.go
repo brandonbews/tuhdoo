@@ -24,17 +24,22 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// mcpTestTransport injects the actor header on every request, like the
-// shim's actorTransport.
+// mcpTestTransport injects the identity headers on every request, like
+// the shim's actorTransport. client, when set, asks the daemon to mint
+// the agent half of the principal.
 type mcpTestTransport struct {
-	base  http.RoundTripper
-	actor string
+	base   http.RoundTripper
+	actor  string
+	client string
 }
 
 func (t mcpTestTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	if t.actor != "" {
 		req.Header.Set("X-Tuhdoo-Actor", t.actor)
+	}
+	if t.client != "" {
+		req.Header.Set("X-Tuhdoo-Agent-Name", t.client)
 	}
 	return t.base.RoundTrip(req)
 }
@@ -94,6 +99,20 @@ func mcpConnect(t *testing.T, d *Daemon, actor string, rt http.RoundTripper) *mc
 	}
 	t.Cleanup(func() { cs.Close() })
 	return cs
+}
+
+// mcpTryConnect attempts a session with explicit identity headers and
+// returns the SDK's verdict — for exercising the daemon's session-bind
+// rejections, which mcpConnect would turn into test failures.
+func mcpTryConnect(d *Daemon, actor, client string) (*mcp.ClientSession, error) {
+	rt := &http.Transport{
+		DialContext: (&killableDialer{socket: d.SocketPath()}).DialContext,
+	}
+	c := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil)
+	return c.Connect(context.Background(), &mcp.StreamableClientTransport{
+		Endpoint:   "http://tuhdoo/mcp",
+		HTTPClient: &http.Client{Transport: mcpTestTransport{base: rt, actor: actor, client: client}},
+	}, nil)
 }
 
 // callTool invokes one tool and fails the test on protocol errors.
@@ -412,5 +431,80 @@ func TestMCPBatchDAGAtomic(t *testing.T) {
 	}
 	if n := len(flushedEvents(t, d)); n != 15 {
 		t.Fatalf("event count after rejected batch = %d, want still 15", n)
+	}
+}
+
+// Auto-minted principals (D7): when the shim forwards the harness's
+// clientInfo.name, the daemon completes the principal at session bind
+// as <human>/<client>-<n> — and two concurrent sessions from the same
+// human and harness get distinct principals.
+func TestMCPMintsDistinctSessionPrincipals(t *testing.T) {
+	d, _ := startDaemon(t)
+	cs1, err := mcpTryConnect(d, "brandon", "Claude Code")
+	if err != nil {
+		t.Fatalf("connect session 1: %v", err)
+	}
+	defer cs1.Close()
+	cs2, err := mcpTryConnect(d, "brandon", "Claude Code")
+	if err != nil {
+		t.Fatalf("connect session 2: %v", err)
+	}
+	defer cs2.Close()
+
+	actorOf := func(cs *mcp.ClientSession) string {
+		t.Helper()
+		var created struct {
+			IDs []string `json:"ids"`
+		}
+		mustToolOK(t, cs, "create_task",
+			map[string]any{"tasks": []map[string]any{{"title": "who am I"}}}, &created)
+		var h hydratedTask
+		mustToolOK(t, cs, "get_task", map[string]any{"task": created.IDs[0]}, &h)
+		return h.Task.CreatedBy
+	}
+	a1, a2 := actorOf(cs1), actorOf(cs2)
+	if a1 != "brandon/claude-code-1" {
+		t.Errorf("session 1 principal = %q, want brandon/claude-code-1", a1)
+	}
+	if a2 != "brandon/claude-code-2" {
+		t.Errorf("session 2 principal = %q, want brandon/claude-code-2", a2)
+	}
+	if a1 == a2 {
+		t.Errorf("concurrent sessions share principal %q", a1)
+	}
+}
+
+// Session-bind rejections: minting requires a valid root human; a full
+// agent principal or a garbage human fails the connect, loudly, at the
+// door.
+func TestMCPMintRejectsBadHumans(t *testing.T) {
+	d, _ := startDaemon(t)
+	for _, tt := range []struct{ actor, client string }{
+		{"brandon/impl-1", "claude-code"}, // agent principal cannot take a minted suffix
+		{"", "claude-code"},               // empty human
+		{"two words", "claude-code"},      // invalid principal
+	} {
+		if cs, err := mcpTryConnect(d, tt.actor, tt.client); err == nil {
+			cs.Close()
+			t.Errorf("actor %q + client %q connected; want rejection", tt.actor, tt.client)
+		}
+	}
+}
+
+func TestSanitizeAgentName(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"claude-code", "claude-code"},
+		{"Claude Code", "claude-code"},
+		{"  spaced   out  ", "spaced-out"},
+		{"weird!!name", "weird-name"},
+		{"v2.1_beta", "v2.1_beta"},
+		{"///", "agent"},
+		{"", "agent"},
+		{"ünïcode", "n-code"},
+	}
+	for _, tt := range tests {
+		if got := sanitizeAgentName(tt.in); got != tt.want {
+			t.Errorf("sanitizeAgentName(%q) = %q, want %q", tt.in, got, tt.want)
+		}
 	}
 }

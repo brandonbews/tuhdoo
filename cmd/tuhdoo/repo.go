@@ -9,6 +9,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -91,6 +92,23 @@ func gitDirOf(root string) (string, error) {
 		target = filepath.Join(root, target)
 	}
 	return filepath.Clean(target), nil
+}
+
+// gitEmailLocalPart derives the human half of a D7 principal from git
+// identity: the local part of user.email (brandonbews@gmail.com →
+// brandonbews). This is the one documented auto-derivation rule,
+// shared by every surface that acts as a human without an explicit
+// --as (the mcp shim, tuhdoo top).
+func gitEmailLocalPart(dir string) (string, error) {
+	out, err := gitOutput(dir, "config", "user.email")
+	if err != nil {
+		return "", fmt.Errorf("git user.email is not set (%v)", err)
+	}
+	local, _, _ := strings.Cut(strings.TrimSpace(out), "@")
+	if local == "" {
+		return "", errors.New("git user.email has an empty local part")
+	}
+	return local, nil
 }
 
 // gitOutput runs one read-only git query. An empty dir inherits the

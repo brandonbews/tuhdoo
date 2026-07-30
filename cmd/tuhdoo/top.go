@@ -421,13 +421,9 @@ func topActor(args []string) (string, error) {
 		return "", errors.New("usage: tuhdoo top [--as <human>]")
 	}
 	if as == "" {
-		out, err := gitOutput("", "config", "user.email")
+		local, err := gitEmailLocalPart("")
 		if err != nil {
-			return "", fmt.Errorf("cannot derive your principal from git user.email (%v); run: tuhdoo top --as <human>", err)
-		}
-		local, _, _ := strings.Cut(strings.TrimSpace(out), "@")
-		if local == "" {
-			return "", errors.New("git user.email is empty; run: tuhdoo top --as <human>")
+			return "", fmt.Errorf("cannot derive your principal from git identity: %v; run: tuhdoo top --as <human>", err)
 		}
 		as = local
 	}

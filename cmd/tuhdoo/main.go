@@ -67,8 +67,10 @@ usage: tuhdoo <command>
   watch         live auto-refreshing read-only dashboard (q quits)
   top           interactive steering: answer escalations, reprioritize,
                 cancel tasks; acts as you (--as <human> to override)
-  mcp --as <p>  stdio MCP shim for agent harnesses; <p> is the acting
-                principal, "human" or "human/agent" (e.g. brandon/impl-1)
+  mcp           stdio MCP shim for agent harnesses. The principal is
+                auto-derived: git user.email local part + a session
+                name minted by the daemon; --as <p> overrides in full
+                (e.g. --as brandon/impl-1)
   daemon        run the per-repo daemon in the foreground
   version       print the version
 `)

@@ -187,11 +187,81 @@ func TestMCPShimRejectsBadPrincipal(t *testing.T) {
 	}
 	mustContain(t, out, "invalid actor")
 
+	// No --as means auto-derive — and this hermetic repo has no
+	// user.email, so the shim must fail loudly at connect, not start a
+	// session under a made-up name.
 	out, code = runCLI(t, repo, "mcp")
 	if code == 0 {
-		t.Fatalf("mcp with no --as exited 0; output:\n%s", out)
+		t.Fatalf("mcp with no --as and no user.email exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, "cannot derive a principal", "--as")
+
+	out, code = runCLI(t, repo, "mcp", "--bogus")
+	if code == 0 {
+		t.Fatalf("mcp --bogus exited 0; output:\n%s", out)
 	}
 	mustContain(t, out, "usage")
+}
+
+// Zero-config identity (D7): with no --as, the human half derives from
+// git user.email's local part and the daemon mints the agent half from
+// the harness's clientInfo.name at session bind.
+func TestMCPShimAutoDerivesPrincipal(t *testing.T) {
+	repo := newRepo(t)
+	runGit(t, repo, "config", "user.email", "brandon@example.com")
+
+	cmd := exec.Command(binPath, "mcp")
+	cmd.Dir = repo
+	cmd.Env = cliEnv()
+	client := mcp.NewClient(&mcp.Implementation{Name: "Claude Code", Version: "0"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.CommandTransport{Command: cmd}, nil)
+	if err != nil {
+		t.Fatalf("connect through shim: %v", err)
+	}
+	defer cs.Close()
+
+	// The bridge still carries the daemon's instructions and full
+	// tool surface (they now flow through the initialize middleware).
+	if instr := cs.InitializeResult().Instructions; !strings.Contains(instr, "claim_next") {
+		t.Errorf("instructions should describe the loop, got %q", instr)
+	}
+	var names []string
+	for tool, err := range cs.Tools(context.Background(), nil) {
+		if err != nil {
+			t.Fatalf("list tools: %v", err)
+		}
+		names = append(names, tool.Name)
+	}
+	if fmt.Sprint(names) != fmt.Sprint(mcpTools) {
+		t.Fatalf("tool surface = %v, want %v", names, mcpTools)
+	}
+
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "create_task",
+		Arguments: map[string]any{"tasks": []map[string]any{{"title": "born without --as"}}},
+	})
+	if err != nil {
+		t.Fatalf("create_task: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("create_task returned a tool error: %+v", res.Content)
+	}
+	var created struct {
+		IDs []string `json:"ids"`
+	}
+	decodeStructured(t, res, &created)
+	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"task": created.IDs[0]},
+	})
+	if err != nil {
+		t.Fatalf("get_task: %v", err)
+	}
+	var h hydratedTask
+	decodeStructured(t, res, &h)
+	if h.Task.CreatedBy != "brandon/claude-code-1" {
+		t.Fatalf("created_by = %q, want the auto-derived brandon/claude-code-1", h.Task.CreatedBy)
+	}
 }
 
 func decodeStructured(t *testing.T, res *mcp.CallToolResult, dst any) {

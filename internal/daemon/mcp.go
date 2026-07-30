@@ -10,7 +10,9 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,12 +41,28 @@ const mcpKeepAliveFailures = 3
 // through this session, which the daemon keeps leased until the session
 // ends.
 type mcpSession struct {
-	actor string
-	stop  chan struct{}
-	once  sync.Once // guards the goroutine pair spawn
+	actor string // full principal; empty until minted when mint is set
+	// mint completes an auto-derived principal (agentNameHeader). It
+	// runs at most once, at session bind — getServer is documented to
+	// run any number of times per session, so the counter bump cannot
+	// live there.
+	mint     func() string
+	mintOnce sync.Once
+	stop     chan struct{}
+	once     sync.Once // guards the goroutine pair spawn
 
 	mu     sync.Mutex
 	claims map[string]string // task ID → claim ID
+}
+
+// principal returns the session's actor, minting it on first use for
+// auto-derived sessions. sync.Once makes the mint exactly-once and
+// publishes actor safely to every later caller.
+func (s *mcpSession) principal() string {
+	if s.mint != nil {
+		s.mintOnce.Do(func() { s.actor = s.mint() })
+	}
+	return s.actor
 }
 
 func (s *mcpSession) track(task, claim string) {
@@ -70,17 +88,27 @@ func (s *mcpSession) snapshot() map[string]string {
 	return out
 }
 
+// agentNameHeader carries the harness's MCP initialize clientInfo.name,
+// forwarded by the shim when no --as override was given. Its presence
+// asks the daemon to mint the agent half of the principal at session
+// bind (D7: agent names are assigned when a harness connects over MCP).
+const agentNameHeader = "X-Tuhdoo-Agent-Name"
+
 // mcpHandler mounts the streamable HTTP endpoint. The getServer
 // callback runs once per session — the first POST arrives without an
-// Mcp-Session-Id header — which is exactly where the actor binds.
+// Mcp-Session-Id header — which is exactly where the actor binds:
+// either the full principal from X-Tuhdoo-Actor, or, when
+// X-Tuhdoo-Agent-Name is present, a daemon-minted
+// <human>/<client-name>-<n> unique among this daemon's sessions.
 func (d *Daemon) mcpHandler() http.Handler {
 	return mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		actor := r.Header.Get(actorHeader)
-		if err := ValidateActor(actor); err != nil {
+		client := r.Header.Get(agentNameHeader)
+		if err := validateSessionIdentity(actor, client); err != nil {
 			d.log.Printf("daemon: mcp: rejecting session: %v", err)
 			return nil // the SDK serves a 400
 		}
-		return d.newMCPServer(actor)
+		return d.newMCPServer(actor, client)
 	}, &mcp.StreamableHTTPOptions{
 		// Requests arrive over the repo-local unix socket, which is
 		// gated by filesystem permissions; Host headers over a unix
@@ -93,13 +121,74 @@ func (d *Daemon) mcpHandler() http.Handler {
 	})
 }
 
+// validateSessionIdentity checks the identity headers at the door.
+// Without an agent name, the actor must be a full valid principal.
+// With one, the actor must be a root human (single segment) — the shim
+// derives it from git identity (D7) and the daemon mints the agent
+// half at bind.
+func validateSessionIdentity(actor, client string) error {
+	if err := ValidateActor(actor); err != nil {
+		return err
+	}
+	if client != "" && strings.Contains(actor, "/") {
+		return fmt.Errorf("auto-derive: %q must be a root human, not an agent principal", actor)
+	}
+	return nil
+}
+
+// mintPrincipal builds <human>/<client>-<n> for a session that asked
+// for auto-derivation. The per-name counter is monotonic for the
+// daemon's lifetime: distinct sessions never share a name, which is
+// stronger than uniqueness among live sessions and keeps ledger
+// attribution honest. It resets on daemon restart.
+func (d *Daemon) mintPrincipal(human, client string) string {
+	name := sanitizeAgentName(client)
+	d.agentMu.Lock()
+	d.agentSeq[name]++
+	n := d.agentSeq[name]
+	d.agentMu.Unlock()
+	minted := fmt.Sprintf("%s/%s-%d", human, name, n)
+	d.log.Printf("daemon: mcp: session bound as %s (minted from client %q)", minted, client)
+	return minted
+}
+
+// sanitizeAgentName folds a free-form MCP clientInfo.name into a
+// principal-safe segment: lowercased, runs of anything outside
+// [a-z0-9._-] collapsed to one dash. An empty result falls back to
+// "agent" — a nameless client still gets a unique principal.
+func sanitizeAgentName(client string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range strings.ToLower(client) {
+		ok := r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-'
+		if ok {
+			b.WriteRune(r)
+			dash = false
+		} else if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "agent"
+	}
+	return out
+}
+
 // newMCPServer builds the per-session server: the ten T5 tools plus
-// the lease-renewal machinery tied to session liveness.
-func (d *Daemon) newMCPServer(actor string) *mcp.Server {
+// the lease-renewal machinery tied to session liveness. A non-empty
+// client name means the principal is auto-derived: actor is the root
+// human and the agent half is minted at session bind.
+func (d *Daemon) newMCPServer(actor, client string) *mcp.Server {
 	s := &mcpSession{
 		actor:  actor,
 		stop:   make(chan struct{}),
 		claims: make(map[string]string),
+	}
+	if client != "" {
+		s.actor = ""
+		s.mint = func() string { return d.mintPrincipal(actor, client) }
 	}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "tuhdoo", Version: d.version}, &mcp.ServerOptions{
 		Instructions:              mcpInstructions,
@@ -108,6 +197,11 @@ func (d *Daemon) newMCPServer(actor string) *mcp.Server {
 		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
 			ss := req.Session
 			s.once.Do(func() {
+				// Session bind: this runs once per real session (getServer
+				// may build throwaway servers), so the minted principal is
+				// fixed here. Tool handlers also call principal() as a
+				// safety net for clients that skip initialized.
+				s.principal()
 				go d.renewSessionLeases(s)
 				go func() {
 					// Wait returns when the session ends: client
@@ -117,7 +211,7 @@ func (d *Daemon) newMCPServer(actor string) *mcp.Server {
 					// tasks to the pool (T5).
 					_ = ss.Wait()
 					close(s.stop)
-					d.log.Printf("daemon: mcp: session for %s ended", s.actor)
+					d.log.Printf("daemon: mcp: session for %s ended", s.principal())
 				}()
 			})
 		},
@@ -163,12 +257,12 @@ func (d *Daemon) renewOnce(s *mcpSession) {
 	renewed := false
 	for task, claim := range claims {
 		c := d.state.Claims[claim]
-		if c == nil || c.Status != core.ClaimActive || c.Actor != s.actor {
+		if c == nil || c.Status != core.ClaimActive || c.Actor != s.principal() {
 			stale = append(stale, task)
 			continue
 		}
 		if err := d.store.WriteLease(claim, now.Add(d.leaseTTL)); err != nil {
-			d.log.Printf("daemon: mcp: renew lease %s for %s: %v", claim, s.actor, err)
+			d.log.Printf("daemon: mcp: renew lease %s for %s: %v", claim, s.principal(), err)
 			continue
 		}
 		renewed = true
@@ -305,7 +399,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"An empty pool returns claimed:false — a normal outcome, not an error. " +
 			"The claim's lease auto-renews while this session stays connected.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimNextInput) (*mcp.CallToolResult, claimNextResult, error) {
-		h, oe := d.opClaimNext(s.actor, in.Labels)
+		h, oe := d.opClaimNext(s.principal(), in.Labels)
 		if oe != nil {
 			return nil, claimNextResult{}, oe
 		}
@@ -323,7 +417,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Claim one specific task (the human-directed path) and return it hydrated. " +
 			"Fails if the task is already claimed, not open, or has unmet dependencies.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimTaskInput) (*mcp.CallToolResult, hydratedTask, error) {
-		h, oe := d.opClaimTask(s.actor, in.Task)
+		h, oe := d.opClaimTask(s.principal(), in.Task)
 		if oe != nil {
 			return nil, hydratedTask{}, oe
 		}
@@ -338,7 +432,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Voluntarily stand down from a task you hold, returning it to the pool with " +
 			"your reason on record. add_note first if you learned anything worth passing on.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in releaseClaimInput) (*mcp.CallToolResult, releaseClaimResult, error) {
-		claim, oe := d.opReleaseClaim(s.actor, in.Task, in.Reason)
+		claim, oe := d.opReleaseClaim(s.principal(), in.Task, in.Reason)
 		if oe != nil {
 			return nil, releaseClaimResult{}, oe
 		}
@@ -360,7 +454,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			return nil, eventIDResult{}, opErrf(http.StatusBadRequest,
 				"invalid outcome %q: agents report done, failed, abandoned, or blocked", in.Outcome)
 		}
-		id, oe := d.opFinishRun(s.actor, finishRunReq{
+		id, oe := d.opFinishRun(s.principal(), finishRunReq{
 			Task: in.Task, Outcome: in.Outcome, Branch: in.Branch,
 			PR: in.PR, Commits: in.Commits, Summary: in.Summary,
 		})
@@ -377,7 +471,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"ends: for a blocking question, escalate, note where you stopped, release_claim, then " +
 			"finish_run with outcome blocked — the next claimant inherits question and answer.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in escalateInput) (*mcp.CallToolResult, eventIDResult, error) {
-		id, oe := d.opEscalate(s.actor, escalateReq{
+		id, oe := d.opEscalate(s.principal(), escalateReq{
 			Task: in.Task, Question: in.Question, Context: in.Context, Blocking: in.Blocking,
 		})
 		if oe != nil {
@@ -392,7 +486,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"changes, at any stopping point. Notes outlive your session — they are how the next " +
 			"agent resumes instead of re-deriving your work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in addNoteInput) (*mcp.CallToolResult, eventIDResult, error) {
-		id, oe := d.opAddNote(s.actor, in.Task, in.Text)
+		id, oe := d.opAddNote(s.principal(), in.Task, in.Text)
 		if oe != nil {
 			return nil, eventIDResult{}, oe
 		}
@@ -405,7 +499,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"edges) using tmp: refs between items, or a single task as a batch of one. Task " +
 			"descriptions are prompts: include acceptance criteria, constraints, and file pointers.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in createTasksInput) (*mcp.CallToolResult, createTasksResult, error) {
-		ids, tmp, oe := d.opCreateTasks(s.actor, in.Tasks)
+		ids, tmp, oe := d.opCreateTasks(s.principal(), in.Tasks)
 		if oe != nil {
 			return nil, createTasksResult{}, oe
 		}
@@ -417,7 +511,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Update a task's fields: status, priority, labels, edges, title, description. " +
 			"Only the fields you send change.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateTaskInput) (*mcp.CallToolResult, taskJSON, error) {
-		t, oe := d.opUpdateTask(s.actor, in.Task, updateTaskReq{
+		t, oe := d.opUpdateTask(s.principal(), in.Task, updateTaskReq{
 			Title: in.Title, Description: in.Description, Status: in.Status,
 			Priority: in.Priority, Labels: in.Labels, Parents: in.Parents, DependsOn: in.DependsOn,
 		})

@@ -2,7 +2,9 @@
   "mcpServers": {
     "tuhdoo": {
       "command": "bin/tuhdoo",
-      "args": ["mcp", "--as", "brandon/impl-2"]
+      "args": [
+        "mcp"
+      ]
     }
   }
 }
