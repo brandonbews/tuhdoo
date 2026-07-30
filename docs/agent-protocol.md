@@ -1,6 +1,6 @@
 # tuhdoo agent protocol
 
-**Status:** revised against the live MCP surface (B9, session 3); field-test per B11's Accept block pending. The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
+**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
 
 This is the instruction text a harness loads for any agent working a tuhdoo-managed project. It is the agent's half of the contract; the daemon's half (leases, serialization, sync) is automatic. The protocol exists because the ledger is **agent memory before it is human audit trail**: sessions end and contexts compact, and the only continuity between today's agent and tomorrow's is what today's agent wrote down.
 
@@ -30,7 +30,7 @@ Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_
 1. **Claim before working.** Call `claim_next` (or `claim_task` if the human named a specific task). Never start work on a task you have not claimed — an unclaimed task may be claimed by another agent at any moment. `claim_next` returning `claimed: false` means the pool is empty or nothing matches your labels — a normal outcome, not an error; report it and stand by rather than retrying in a loop.
 2. **Read the task as a prompt.** The claim returns the task fully hydrated: description, acceptance criteria, dependency context, prior notes, prior runs. If a prior run exists, you are a **successor, not a pioneer**: read its notes and outcome first, resume from where it stopped, and do not re-derive what a predecessor already learned. A prior run ending `interrupted` means your predecessor died mid-work — trust its notes over its (absent) summary.
 3. **Work normally.** Worktrees, branches, commits — ordinary git on ordinary code branches. tuhdoo never touches your code workflow.
-4. **Checkpoint with `add_note`.** Notes are letters to your next incarnation. Write one: after any significant finding; before any risky or hard-to-reverse step; at any stopping point. A good note says what you learned or decided and *exactly where work stands* — file paths, branch name, what's done, what's next. Do not save noting for the end; the sessions that die are precisely the ones that never reach the end.
+4. **Checkpoint with `add_note`.** Notes are letters to your next incarnation. Write one: after any significant finding; before any risky or hard-to-reverse step; at any stopping point. A good note says what you learned or decided and *exactly where work stands* — file paths, branch name, what's done, what's next. Do not save noting for the end; the sessions that die are precisely the ones that never reach the end. The test: if your session died right now, could a successor resume from your notes without redoing anything significant? A run short enough to have no stopping points may legitimately end with zero notes — notes are not the finish summary (see below), and a note that merely restates it is noise on the ledger.
 5. **Finish honestly.** `finish_run` with the true outcome and links (branch, PR, commits) plus a summary a human can act on. You may report exactly four outcomes:
    - `done` — the acceptance criteria hold.
    - `failed` — attempted and did not work; summary says why.
@@ -38,6 +38,8 @@ Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_
    - `blocked` — see escalation protocol below.
 
    `interrupted` and `superseded` are daemon-synthesized verdicts; the agent surface rejects them.
+
+   The summary is the handoff — it, not a final note, is where "what happened and where things stand" belongs. Don't write a closing note that duplicates it.
 6. **Or release.** If you claimed something you cannot or should not work on, `release_claim` with a reason. Never sit on a claim you are not working.
 
 **Never end a session holding a live claim silently.** Finish or release. (If you die anyway, the lease expires and the daemon auto-closes your run as `interrupted` — recoverable, but a note-poor `interrupted` run wastes your successor's time.)
@@ -48,6 +50,8 @@ Your question will usually be answered after your session is gone. Do not wait f
 
 - **Non-blocking question:** `escalate` with the question and context, keep working on what doesn't depend on it.
 - **Blocking question:** in order — (1) `escalate` with the question, full context, and `blocking: true`; (2) `add_note` recording exactly where work stopped and what the answer will unblock; (3) `release_claim`; (4) `finish_run` with outcome `blocked`. A blocking escalation keeps the task out of the ready pool until a human answers, so releasing does not risk a claimant working blind. When the answer lands, the task re-enters the pool and the next claimant (possibly future-you) picks up question and answer together in hydration.
+
+  Say each thing once: the full story lives in the escalation (that's what the human reads); the note adds only resume-state the escalation doesn't carry; the `blocked` summary can be one line pointing at the escalation. All three land on the same task and the next claimant hydrates all of them — three near-copies is ledger noise.
 
 Write escalations so a human can answer from the escalation alone, without reading your whole run: the question, the minimal context, the options you see, your recommendation if you have one.
 
@@ -76,3 +80,18 @@ If you claim a task whose description fails this bar and you cannot proceed safe
 - Never delete or archive tasks — curation is human work via CLI/TUI; the agent surface has no verbs for it.
 - Never report an outcome you didn't earn — `interrupted` and `superseded` are the daemon's words, and `done` means the acceptance criteria actually hold.
 - Never work unclaimed, never claim un-worked.
+
+---
+
+## Field-test record (B11 Accept)
+
+**2026-07-30 — session 1.** Scratch repo (`greeter`), Claude Code headless (`claude -p`) through `tuhdoo mcp --as claude/field-1`, given only this doc and "work the backlog until `claim_next` returns `claimed:false`". Backlog seeded by `brandon` over the HTTP API: one well-specified coding task (priority 2) and one deliberately unscoped trap task ("migrate the deploy pipeline to the new region", priority 1, no pointers, no criteria — and no pipeline exists).
+
+**Conformed:** read the doc before touching tools; claimed before working, both times via `claim_next`; worked on a task branch with passing tests; ran the blocking flow in the exact prescribed order — `escalate(blocking: true)` → `add_note` → `release_claim` → `finish_run(blocked)` — rather than guessing at the trap task's scope; treated `claimed: false` as a normal stopping point and ended cleanly holding nothing. Every event landed with the right actor stamp; the blocking escalation held the task out of the ready pool, and answering it (as `brandon`, over the HTTP API) returned the task to ready — the full succession round trip works as this doc describes it.
+
+**Deviated, and what changed because of it:**
+
+1. *Noting collapsed into the finish.* The agent's only note on the coding task came after all work was done, immediately before `finish_run`, and restated the summary nearly verbatim — no checkpoint existed during the window where dying would actually have cost a successor something. The loop's step 4 now carries the "could a successor resume from your notes right now?" test and licenses zero-note short runs, and step 5 states that the summary, not a closing note, is the handoff.
+2. *The blocked flow triplicated its content.* Escalation context, note, and `blocked` summary were three near-copies of the same paragraph. The escalation section now says: full story in the escalation, resume-state only in the note, one-line summary pointing at the escalation.
+
+Neither deviation broke coordination — both were redundancy, not protocol violations. The order-sensitive parts (claim discipline, the blocking sequence, honest outcomes) were followed to the letter on the first read, by an agent that had never seen the tool surface before.
