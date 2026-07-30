@@ -32,15 +32,18 @@ type client struct {
 func newClient(socket string) *client {
 	return &client{
 		socket: socket,
-		hc: &http.Client{
-			Transport: &http.Transport{
-				// The URL host is a placeholder; every request dials
-				// the daemon's socket.
-				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-					var d net.Dialer
-					return d.DialContext(ctx, "unix", socket)
-				},
-			},
+		hc:     &http.Client{Transport: unixTransport(socket)},
+	}
+}
+
+// unixTransport dials the daemon's socket for every request; the URL
+// host is a placeholder. Shared by the JSON API client and the mcp
+// shim's streamable client.
+func unixTransport(socket string) *http.Transport {
+	return &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, "unix", socket)
 		},
 	}
 }

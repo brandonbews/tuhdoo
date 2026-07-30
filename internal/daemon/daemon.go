@@ -33,6 +33,11 @@ import (
 // DefaultLeaseTTL is the claim lease lifetime (T8).
 const DefaultLeaseTTL = 15 * time.Minute
 
+// DefaultMCPKeepAlive is the MCP session ping interval. Session
+// liveness is what keeps leases renewed (T5: session-bound leases), so
+// the daemon pings well inside the lease TTL.
+const DefaultMCPKeepAlive = 30 * time.Second
+
 // maxSocketPath is the longest unix socket path we bind (sun_path is
 // 104 bytes on macOS including the NUL).
 const maxSocketPath = 103
@@ -48,6 +53,8 @@ type Options struct {
 	Quiet        time.Duration // commit debounce; <= 0 means store.DefaultQuiet
 	LeaseTTL     time.Duration // claim lease TTL; <= 0 means DefaultLeaseTTL
 	SyncInterval time.Duration // fetch cadence; <= 0 means syncer.DefaultInterval
+	MCPKeepAlive time.Duration // MCP session ping interval; <= 0 means DefaultMCPKeepAlive
+	Version      string        // binary version reported to MCP clients; empty means "dev"
 	Log          *log.Logger   // nil means stderr
 }
 
@@ -62,11 +69,13 @@ type discovery struct {
 // Daemon owns one repository's tuhdoo runtime: the flock, the socket,
 // the store, and the cached replayed state.
 type Daemon struct {
-	root     string
-	dir      string // <git-dir>/tuhdoo runtime dir
-	machine  string
-	leaseTTL time.Duration
-	log      *log.Logger
+	root         string
+	dir          string // <git-dir>/tuhdoo runtime dir
+	machine      string
+	leaseTTL     time.Duration
+	mcpKeepAlive time.Duration
+	version      string
+	log          *log.Logger
 
 	store   *store.Store
 	batcher *store.Batcher
@@ -120,6 +129,14 @@ func New(root string, opts Options) (*Daemon, error) {
 	if ttl <= 0 {
 		ttl = DefaultLeaseTTL
 	}
+	keepAlive := opts.MCPKeepAlive
+	if keepAlive <= 0 {
+		keepAlive = DefaultMCPKeepAlive
+	}
+	version := opts.Version
+	if version == "" {
+		version = "dev"
+	}
 
 	gd, err := gitDirOf(root)
 	if err != nil {
@@ -156,17 +173,19 @@ func New(root string, opts Options) (*Daemon, error) {
 	}
 
 	d := &Daemon{
-		root:     root,
-		dir:      dir,
-		machine:  machine,
-		leaseTTL: ttl,
-		log:      logger,
-		store:    st,
-		batcher:  store.NewBatcher(st, opts.Quiet),
-		replay:   core.NewReplayer(),
-		lockFile: lockFile,
-		entropy:  ulid.Monotonic(rand.Reader, 0),
-		done:     make(chan struct{}),
+		root:         root,
+		dir:          dir,
+		machine:      machine,
+		leaseTTL:     ttl,
+		mcpKeepAlive: keepAlive,
+		version:      version,
+		log:          logger,
+		store:        st,
+		batcher:      store.NewBatcher(st, opts.Quiet),
+		replay:       core.NewReplayer(),
+		lockFile:     lockFile,
+		entropy:      ulid.Monotonic(rand.Reader, 0),
+		done:         make(chan struct{}),
 	}
 	d.sync = syncer.New(g, syncer.Options{
 		Ref:      opts.Ref,

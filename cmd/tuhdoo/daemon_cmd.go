@@ -18,7 +18,7 @@ func runDaemon() int {
 		fmt.Fprintln(os.Stderr, "tuhdoo daemon:", err)
 		return 1
 	}
-	d, err := daemon.New(root, daemon.Options{})
+	d, err := daemon.New(root, daemon.Options{Version: version})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo daemon:", err)
 		return 1

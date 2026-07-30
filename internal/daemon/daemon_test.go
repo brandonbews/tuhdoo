@@ -68,13 +68,20 @@ func shortTempDir(t *testing.T) string {
 // it with a client that speaks HTTP over the daemon's unix socket.
 func startDaemon(t *testing.T) (*Daemon, *http.Client) {
 	t.Helper()
-	setGitEnv(t)
-	root := shortTempDir(t)
-	runGit(t, root, "init", "--quiet", "-b", "main")
-	d, err := New(root, Options{
+	return startDaemonOpts(t, Options{
 		Quiet: 50 * time.Millisecond,
 		Log:   log.New(io.Discard, "", 0),
 	})
+}
+
+// startDaemonOpts is startDaemon with explicit Options, for tests that
+// shorten lease TTLs or keepalive intervals.
+func startDaemonOpts(t *testing.T, opts Options) (*Daemon, *http.Client) {
+	t.Helper()
+	setGitEnv(t)
+	root := shortTempDir(t)
+	runGit(t, root, "init", "--quiet", "-b", "main")
+	d, err := New(root, opts)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

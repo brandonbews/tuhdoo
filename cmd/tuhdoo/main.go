@@ -43,6 +43,8 @@ func run(args []string) int {
 		return runEscalations()
 	case "watch":
 		return runWatch()
+	case "mcp":
+		return runMCP(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "tuhdoo: unknown command %q\n\n", args[0])
 		usage()
@@ -61,6 +63,8 @@ usage: tuhdoo <command>
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
   watch         live auto-refreshing read-only dashboard (q quits)
+  mcp --as <p>  stdio MCP shim for agent harnesses; <p> is the acting
+                principal, "human" or "human/agent" (e.g. brandon/impl-1)
   daemon        run the per-repo daemon in the foreground
   version       print the version
 `)
