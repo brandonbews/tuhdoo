@@ -37,7 +37,22 @@ func topSnapshot() *snapshot {
 		tasks: map[string]hydratedTask{
 			"t-parser": {Task: taskJSON{ID: "t-parser", Title: "write the parser"}},
 			"t-floor":  {Task: taskJSON{ID: "t-floor", Title: "sweep the floor"}},
-			"t-flake":  {Task: taskJSON{ID: "t-flake", Title: "investigate the flake"}},
+			"t-flake": {
+			Task: taskJSON{
+				ID: "t-flake", Title: "investigate the flake",
+				Description: "The parser test flakes on CI.\nFind out why.",
+				Priority:    3,
+			},
+			Notes: []noteJSON{{
+				ID: "01N1", Task: "t-flake", Actor: "brandon/a1",
+				Text:    "Repros only under -race.",
+				AddedAt: time.Date(2026, 7, 29, 15, 0, 0, 0, time.UTC),
+			}},
+			Runs: []runJSON{{
+				ID: "01R1", Task: "t-flake", Actor: "brandon/a1",
+				Outcome: "interrupted", Summary: "Bisecting the flake.",
+			}},
+		},
 			"t-lic":    {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
 			"t-chore":  {Task: taskJSON{ID: "t-chore", Title: "old chore"}},
 		},
@@ -149,7 +164,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"In progress (1)", "investigate the flake", "brandon/a1",
 		"Blocked (1)", "choose a license", "waiting:",
 		"▸ Which license?", // cursor starts on the first row
-		"j/k move · a answer · p priority · c cancel · q quit",
+		"j/k move · enter open · a answer · p priority · c cancel · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("view missing %q; view:\n%s", want, v)
@@ -425,7 +440,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "j/k move · q quit"} {
+	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "j/k move · enter open · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
@@ -434,6 +449,135 @@ func TestWatchModeDisarmed(t *testing.T) {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
+	}
+	// The detail screen is read-only, so watch mode keeps it.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail {
+		t.Errorf("enter in watch mode: mode %d, want modeDetail", m.mode)
+	}
+}
+
+// The detail screen: enter opens the row's task in place — for an
+// escalation row, the task it hangs off — rendered like `tuhdoo task`.
+func TestTopEnterOpensDetail(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	// Cursor starts on the escalation row: enter opens its parent task.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Fatalf("enter on escalation row: mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+
+	// A task row opens itself, with description and history visible.
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flake
+		keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-flake" {
+		t.Fatalf("enter on task row: mode %d detail %q, want modeDetail t-flake", m.mode, m.detailID)
+	}
+	v := m.View()
+	for _, want := range []string{
+		"t-flake — investigate the flake",
+		"Description", "The parser test flakes on CI.",
+		"History", "note by brandon/a1", "Repros only under -race.",
+		"run by brandon/a1", "interrupted", "Bisecting the flake.",
+		"j/k scroll · esc back · q quit",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("detail view missing %q; view:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, "enter open") {
+		t.Errorf("detail view leaked the list footer; view:\n%s", v)
+	}
+}
+
+func TestTopDetailEscReturnsAndQQuits(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
+	if m.mode != modeDetail {
+		t.Fatalf("mode = %d, want modeDetail", m.mode)
+	}
+	m, cmd := press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav || cmd != nil {
+		t.Fatalf("esc from detail: mode %d cmd %v, want modeNav nil", m.mode, cmd)
+	}
+	if m.cursor != 1 {
+		t.Errorf("cursor after esc = %d, want 1 (unchanged)", m.cursor)
+	}
+	m, cmd = press(t, m, keyOf(tea.KeyEnter), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	if cmd == nil {
+		t.Fatal("q in detail should quit")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Errorf("q in detail produced %T, want tea.QuitMsg", cmd())
+	}
+}
+
+// The detail screen renders from the polled snapshot, so a refresh
+// that adds a note shows up without leaving the screen.
+func TestTopDetailStaysLiveAcrossRefresh(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter)) // t-flake
+	fresh := topSnapshot()
+	h := fresh.tasks["t-flake"]
+	h.Notes = append(h.Notes, noteJSON{
+		ID: "01N2", Task: "t-flake", Actor: "brandon/a1",
+		Text:    "Found it: unsynchronized map.",
+		AddedAt: time.Date(2026, 7, 29, 16, 0, 0, 0, time.UTC),
+	})
+	fresh.tasks["t-flake"] = h
+	mm, _ := m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if m.mode != modeDetail {
+		t.Fatalf("refresh knocked the model out of detail: mode %d", m.mode)
+	}
+	if v := m.View(); !strings.Contains(v, "unsynchronized map") {
+		t.Errorf("refreshed note missing from live detail; view:\n%s", v)
+	}
+}
+
+// With a known terminal height the body renders a sliding window:
+// j walks to the tail and clamps, k walks back to the top.
+func TestTopDetailScrollClamps(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter)) // t-flake: the longest biography
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
+	m = mm.(topModel)
+	body := m.detailBody()
+	if len(body) <= m.detailWindow() {
+		t.Fatalf("seed too short to scroll: %d lines, window %d", len(body), m.detailWindow())
+	}
+	first, last := body[0], body[len(body)-1]
+	if v := m.View(); !strings.Contains(v, first) || strings.Contains(v, last) {
+		t.Fatalf("unscrolled window wrong; view:\n%s", v)
+	}
+	for i := 0; i < 100; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	if want := m.detailMaxScroll(); m.detailScroll != want {
+		t.Errorf("j past the end: scroll %d, want clamp at %d", m.detailScroll, want)
+	}
+	if v := m.View(); !strings.Contains(v, last) || strings.Contains(v, first) {
+		t.Errorf("scrolled-to-tail window wrong; view:\n%s", v)
+	}
+	for i := 0; i < 100; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	}
+	if m.detailScroll != 0 {
+		t.Errorf("k past the top: scroll %d, want 0", m.detailScroll)
 	}
 }
 

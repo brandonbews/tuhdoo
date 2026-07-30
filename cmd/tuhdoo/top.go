@@ -124,12 +124,14 @@ func buildRows(s *snapshot) []topRow {
 // ---- the model ----
 
 // Input modes. Nav is the resting state; the others capture keys until
-// enter/esc (or y/n for the cancel confirmation).
+// enter/esc (or y/n for the cancel confirmation). Detail is the
+// in-place task screen: read-only, esc steps back to the list.
 const (
 	modeNav = iota
 	modeAnswer
 	modePriority
 	modeConfirmCancel
+	modeDetail
 )
 
 // actionMsg is the result of one steering write.
@@ -154,6 +156,10 @@ type topModel struct {
 	input  string
 	target topRow // row a pending answer/priority/cancel applies to
 	status string // one-line result of the last action
+
+	detailID     string // task shown by modeDetail
+	detailScroll int    // first visible body line in modeDetail
+	height       int    // terminal rows; 0 (no WindowSizeMsg yet) renders all
 }
 
 func (m topModel) Init() tea.Cmd {
@@ -163,10 +169,16 @@ func (m topModel) Init() tea.Cmd {
 func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.mode == modeNav {
+		switch m.mode {
+		case modeNav:
 			return m.updateNav(msg)
+		case modeDetail:
+			return m.updateDetail(msg)
 		}
 		return m.updateInput(msg)
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		return m, nil
 	case tickMsg:
 		return m, tea.Batch(fetchCmd(m.c), tickCmd())
 	case snapMsg:
@@ -215,6 +227,14 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.cursor > 0 {
 			m.cursor--
 		}
+	case "enter":
+		if r, ok := m.selected(); ok {
+			id := r.task.ID
+			if r.kind == rowEscalation {
+				id = r.esc.Task // an escalation opens its task's biography
+			}
+			m.mode, m.detailID, m.detailScroll, m.status = modeDetail, id, 0, ""
+		}
 	case "a":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowEscalation {
 			m.mode, m.target, m.input, m.status = modeAnswer, r, "", ""
@@ -259,6 +279,26 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	default:
 		if k.Type == tea.KeyRunes {
 			m.input += string(k.Runes)
+		}
+	}
+	return m, nil
+}
+
+// updateDetail: the detail screen is read-only — j/k scroll, esc steps
+// back to the list, q and ctrl+c quit (one meaning per key, T7).
+func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch k.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	case "esc":
+		m.mode, m.detailID, m.detailScroll = modeNav, "", 0
+	case "j", "down":
+		if m.detailScroll < m.detailMaxScroll() {
+			m.detailScroll++
+		}
+	case "k", "up":
+		if m.detailScroll > 0 {
+			m.detailScroll--
 		}
 	}
 	return m, nil
@@ -325,7 +365,73 @@ func (m topModel) badge() string {
 	return fmt.Sprintf("acting as %s%s%s", col.bold, m.actor, col.reset)
 }
 
+// detailBody renders the full task biography (the same rendering as
+// `tuhdoo task <id>`) as lines, or nil if the task vanished.
+func (m topModel) detailBody() []string {
+	if m.snap == nil {
+		return nil
+	}
+	h, ok := m.snap.tasks[m.detailID]
+	if !ok {
+		return nil
+	}
+	var b strings.Builder
+	printTask(&b, m.col, h)
+	return strings.Split(strings.TrimRight(b.String(), "\n"), "\n")
+}
+
+// detailWindow is how many body lines fit: terminal height minus the
+// header and footer lines detailView prints around the body.
+func (m topModel) detailWindow() int {
+	w := m.height - 4
+	if w < 1 {
+		w = 1
+	}
+	return w
+}
+
+// detailMaxScroll is the largest offset that still shows a full window
+// (or the tail). Zero until the first WindowSizeMsg: with no known
+// height everything renders and scrolling is meaningless.
+func (m topModel) detailMaxScroll() int {
+	if m.height <= 0 {
+		return 0
+	}
+	max := len(m.detailBody()) - m.detailWindow()
+	if max < 0 {
+		return 0
+	}
+	return max
+}
+
+func (m topModel) detailView(body []string) string {
+	col := m.col
+	var w strings.Builder
+	fmt.Fprintf(&w, "%stuhdoo%s · sync: %s · %s\n\n", col.bold, col.reset,
+		syncLine(m.snap.state.Sync), m.badge())
+	scroll := m.detailScroll
+	if max := m.detailMaxScroll(); scroll > max {
+		scroll = max // content shrank under a live refresh
+	}
+	if m.height > 0 {
+		end := scroll + m.detailWindow()
+		if end > len(body) {
+			end = len(body)
+		}
+		body = body[scroll:end]
+	}
+	w.WriteString(strings.Join(body, "\n"))
+	fmt.Fprintf(&w, "\n\n%sj/k scroll · esc back · q quit%s\n", col.dim, col.reset)
+	return w.String()
+}
+
 func (m topModel) View() string {
+	if m.mode == modeDetail {
+		if body := m.detailBody(); body != nil {
+			return m.detailView(body)
+		}
+		// The task vanished under a refresh: fall through to the list.
+	}
 	col := m.col
 	var w strings.Builder
 	sync := "..."
@@ -444,9 +550,9 @@ func (m topModel) footer() string {
 			col.bold, col.reset, m.target.task.ID, oneLine(m.target.task.Title))
 	}
 	if !m.armed {
-		return fmt.Sprintf("%sj/k move · q quit%s\n", col.dim, col.reset)
+		return fmt.Sprintf("%sj/k move · enter open · q quit%s\n", col.dim, col.reset)
 	}
-	return fmt.Sprintf("%sj/k move · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
+	return fmt.Sprintf("%sj/k move · enter open · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
 }
 
 // ---- entry point ----
