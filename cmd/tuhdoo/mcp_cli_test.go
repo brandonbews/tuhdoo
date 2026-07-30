@@ -6,12 +6,17 @@ package main
 // launch the shim.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -101,6 +106,77 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 	if !res.IsError {
 		t.Fatal("get_task(t-nope) should be a tool error")
 	}
+}
+
+// The crash contract (mcp_cmd.go): if the daemon session dies while the
+// harness is still attached, the shim exits 1 loudly — silently serving
+// a dead session would let the harness think its leases still renew.
+func TestMCPShimExitsWhenDaemonDies(t *testing.T) {
+	repo := newRepo(t)
+
+	// IOTransport over pipes we own, not CommandTransport: its Close
+	// calls cmd.Wait itself, and the exit status is what this test is
+	// about.
+	cmd := exec.Command(binPath, "mcp", "--as", "test/agent")
+	cmd.Dir = repo
+	cmd.Env = cliEnv()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatalf("stdin pipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("stdout pipe: %v", err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start shim: %v", err)
+	}
+	exited := false
+	t.Cleanup(func() {
+		if !exited { // don't leak the shim if an assertion fails first
+			cmd.Process.Kill()
+			cmd.Wait()
+		}
+	})
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "harness", Version: "0"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.IOTransport{Reader: stdout, Writer: stdin}, nil)
+	if err != nil {
+		t.Fatalf("connect through shim: %v", err)
+	}
+	defer cs.Close()
+
+	// The handshake auto-spawned a daemon; kill it out from under the
+	// live session, with no chance to clean up.
+	discPath := filepath.Join(repo, ".git", "tuhdoo", "daemon.json")
+	pid, _, err := readDiscovery(discPath)
+	if err != nil {
+		t.Fatalf("read daemon.json: %v", err)
+	}
+	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		t.Fatalf("kill daemon %d: %v", pid, err)
+	}
+
+	// The shim's client retries the broken connection briefly before
+	// declaring the session dead, so give it room.
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case <-done:
+		exited = true
+	case <-time.After(30 * time.Second):
+		t.Fatal("shim still running 30s after the daemon died; want exit 1")
+	}
+	if code := cmd.ProcessState.ExitCode(); code != 1 {
+		t.Fatalf("shim exit code = %d, want 1; stderr:\n%s", code, stderr.String())
+	}
+	mustContain(t, stderr.String(), "daemon session ended")
+
+	// SIGKILL left the discovery file behind; remove it so newRepo's
+	// stopDaemon cleanup doesn't wait out its shutdown deadline.
+	os.Remove(discPath)
 }
 
 func TestMCPShimRejectsBadPrincipal(t *testing.T) {

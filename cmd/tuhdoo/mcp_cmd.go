@@ -79,6 +79,12 @@ func bridgeMCP(socket, principal string) error {
 	sess, err := client.Connect(ctx, &mcp.StreamableClientTransport{
 		Endpoint:   "http://tuhdoo/mcp",
 		HTTPClient: hc,
+		// The SDK default of 5 reconnect attempts (~20s of backoff) is
+		// sized for flaky networks. This is a unix socket: a refused
+		// connection means the daemon is gone, and there is no
+		// supervisor to bring it back mid-retry — so retry briefly,
+		// then fail loudly (see the sess.Wait goroutine below).
+		MaxRetries: 2,
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("connect to daemon MCP endpoint: %w", err)
