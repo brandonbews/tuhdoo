@@ -1,6 +1,6 @@
 # t-01KYRR78YKX9YHZE6W6B798X4G — Auto-derive session principals: git identity + daemon-minted agent names
 
-- Status: open — in progress, claimed by `brandon/impl-2`
+- Status: done
 - Priority: 2
 - Labels: `go`, `mcp`, `ux`
 - Created: 2026-07-30 05:33 UTC by `brandon/migrator`
@@ -34,3 +34,16 @@ Behavior change to an existing test: `tuhdoo mcp` with no --as currently exits "
 .mcp.json: dropping --as per the task. Note for Brandon: this repo's git user.email is the GitHub noreply form, so sessions here will stamp "4099114+brandonbews/<client>-<n>" until he sets a repo-local user.email; flagging in the finish summary.
 
 Files: internal/daemon/mcp.go (+daemon.go field), cmd/tuhdoo/mcp_cmd.go (restructure), cmd/tuhdoo/repo.go, cmd/tuhdoo/top.go (reuse helper), cmd/tuhdoo/main.go usage, .mcp.json, docs/agent-protocol.md Connecting, docs/design/002-technology.md T4 revision note, tests in internal/daemon/mcp_test.go + cmd/tuhdoo/mcp_cli_test.go. Nothing written yet.
+
+### 2026-07-30 06:12 UTC — run by `brandon/impl-2` — done
+
+- Branch: `main`
+- Commits: `7d63f24`
+
+Shipped in 7d63f24, make test lint green. `tuhdoo mcp` with no flags now auto-derives the principal: human = local part of git user.email (shared gitEmailLocalPart helper; tuhdoo top uses the same rule), agent = daemon-minted <clientInfo.name sanitized>-<n> at session bind (new X-Tuhdoo-Agent-Name header from the shim; per-name monotonic counter, so distinct sessions never share a name within a daemon lifetime — counter resets on restart). --as still overrides in full; missing/empty user.email fails the shim loudly at startup. Docs revised in place with revision notes (agent-protocol Connecting now leads with the zero-config snippet; 002 T4 shim line); .mcp.json dropped its --as.
+
+All acceptance criteria verified by tests: daemon test proves two concurrent no-flag sessions stamp brandon/claude-code-1 and -2; shim integration test proves a real no-flag stdio connect writes created_by brandon/claude-code-1; rejection tests cover empty/invalid derived humans and agent-principals-with-mint-header failing at the door.
+
+Two findings worth knowing: (1) the SDK's 2026-07-28 protocol clients send NO initialize request — they open with server/discover and carry clientInfo in per-request _meta — so the shim was restructured to bind its daemon session in a first-request middleware (any method), mirror tools before responding, and patch the daemon's instructions into whichever handshake result the protocol uses; a raw 2025-06-18 client takes the initialize path. (2) The SDK documents getServer as multi-call per session (we observed 2x), so the mint is anchored to session bind via sync.Once, not getServer — first attempt double-counted.
+
+For Brandon: this repo's git user.email is the GitHub noreply form, so no-flag sessions here stamp "4099114+brandonbews/<client>-<n>" until you set a repo-local user.email (e.g. git config user.email brandonbews@gmail.com) if you want the ledger to read cleanly.
