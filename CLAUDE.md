@@ -37,3 +37,4 @@ Design phase complete through two cycles; **no application code exists yet**. Th
 - The human (Brandon, a TS dev deliberately learning Go) steers by reviewing; write code and explanations accordingly.
 - Task descriptions in the backlog are written as prompts with acceptance criteria — the same convention tuhdoo itself will enforce. Keep it when adding tasks.
 - Once v0 is dogfoodable, this markdown backlog migrates into tuhdoo itself (final backlog task).
+- **Workflow files are the exception to machine-driven review.** Anything under `.github/workflows/` executes unattended with the repo's CI credentials, and no test suite covers it. Any change there must be called out explicitly and separately in the session summary for Brandon's eyes-on diff review — never folded silently into a larger commit.
