@@ -1,6 +1,6 @@
 # t-01KYT80CP4JKAM3V2C4DNGF1Y3 — TUI readability: short display IDs, width-aware wrapping, list scrolling
 
-- Status: open — ready
+- Status: done
 - Priority: 2
 - Labels: `cli`, `tui`
 - Created: 2026-07-30 19:28 UTC by `4099114+brandonbews`
@@ -15,4 +15,9 @@ Acceptance: no rendered line wider than the terminal; cursor row always on scree
 
 ## History
 
-_No activity yet._
+### 2026-07-30 19:33 UTC — run by `4099114+brandonbews` — done
+
+- Branch: `main`
+- Commits: `e1c9ff8`, `8c2d61a`
+
+Both pieces landed and pushed, make test lint green. (1) TUI rows display IDs as t- prefix + lowercase last-4 of the ULID (tail, not prefix — same-batch ULIDs share their timestamp prefix); applied to rows, waiting: reasons, edge markers, and escalation task refs; detail screen and all one-shots keep full IDs (blockedReasonDisp keeps backlog byte-identical). (2) All TUI output wraps ANSI-aware to terminal width via charmbracelet/x/ansi (promoted indirect→direct, same version); detail body wraps before line-windowing; list body gets a cursor-following vertical window (cursor pinned to bottom edge when scrolled); blank line between rows. Tests assert no line exceeds width, frame fits height, cursor always visible, tail reachable by scroll. Not verified in a real TTY — Brandon should eyeball bare `tuhdoo` in tmux.
