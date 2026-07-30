@@ -5,6 +5,7 @@ package main
 // speaks over the unix socket.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -70,6 +71,41 @@ func (c *client) get(path string, dst any) error {
 		return fmt.Errorf("GET %s: status %d", path, resp.StatusCode)
 	}
 	return json.Unmarshal(body, dst)
+}
+
+// write performs one write request stamped with the acting principal
+// (X-Tuhdoo-Actor, D7). Non-200 responses surface the daemon's error
+// message.
+func (c *client) write(method, path, actor string, body any) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(method, "http://tuhdoo"+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tuhdoo-Actor", actor)
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		var e struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(respBody, &e) == nil && e.Error != "" {
+			return errors.New(e.Error)
+		}
+		return fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
+	}
+	return nil
 }
 
 // ensureDaemon returns a client for the repo's daemon, spawning one

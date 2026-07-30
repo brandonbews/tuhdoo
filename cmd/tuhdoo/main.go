@@ -43,6 +43,8 @@ func run(args []string) int {
 		return runEscalations()
 	case "watch":
 		return runWatch()
+	case "top":
+		return runTop(args[1:])
 	case "mcp":
 		return runMCP(args[1:])
 	default:
@@ -63,6 +65,8 @@ usage: tuhdoo <command>
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
   watch         live auto-refreshing read-only dashboard (q quits)
+  top           interactive steering: answer escalations, reprioritize,
+                cancel tasks; acts as you (--as <human> to override)
   mcp --as <p>  stdio MCP shim for agent harnesses; <p> is the acting
                 principal, "human" or "human/agent" (e.g. brandon/impl-1)
   daemon        run the per-repo daemon in the foreground
