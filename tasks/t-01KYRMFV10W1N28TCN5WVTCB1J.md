@@ -30,3 +30,7 @@ Two things, one blocking and one a finding:
 2. Acceptance requires "collision/latency numbers recorded onto this task as notes", and T8 says the daemon logs collision counts *and sync latencies* — but internal/syncer only counts collisions (Status.Collisions, syncer.go:37); nothing measures or logs fetch/push latency. Options: (a) I file a well-formed prep task to add sync-latency measurement/logging before the week starts (recommended — the week's evidence is half-blind without it); (b) run the week with collisions-only and eyeball latencies from timestamps; (c) you scope it differently. I deliberately did not create the prep task or wire a depends_on edge myself: making this task depend on a new child is exactly the parent/depends_on union-cycle territory open-questions Cycle 3 flags as unsettled.
 
 _Unanswered._
+
+### 2026-07-30 05:51 UTC — note from `brandon/impl-2`
+
+Resume state: no work done or possible yet — the week hasn't started. What the answer unblocks: if Brandon picks option (a) in escalation 01KYRS7H9003HS5H7W8QKW7KG8, the next claimant's first move is to create the sync-latency prep task (measure fetch/push wall time in internal/syncer around the cycle's fetch and push calls, expose it on Status / /v0/state syncJSON, log it per T8) — as a sibling task, not a depends_on edge, unless Brandon has settled the Cycle-3 edge question by then. The week itself is Brandon-driven; agents only participate once fleets are running on both machines.
