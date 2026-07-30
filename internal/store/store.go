@@ -174,6 +174,29 @@ func (s *Store) AppendBatch(b Batch) error {
 	}
 }
 
+// ReadFile returns the blob at path in the current head tree, or nil
+// when the path does not exist there.
+func (s *Store) ReadFile(path string) ([]byte, error) {
+	head, err := s.git.ReadRef(s.ref)
+	if err != nil {
+		return nil, fmt.Errorf("store: read %s: %w", path, err)
+	}
+	entries, err := s.git.LsTree(head)
+	if err != nil {
+		return nil, fmt.Errorf("store: read %s: %w", path, err)
+	}
+	for _, entry := range entries {
+		if entry.Path == path {
+			data, err := s.git.CatFile(entry.OID)
+			if err != nil {
+				return nil, fmt.Errorf("store: read %s: %w", path, err)
+			}
+			return data, nil
+		}
+	}
+	return nil, nil
+}
+
 // LoadEvents reads and decodes every event blob under events/ at the
 // current head, in path order (which is ULID-date order).
 func (s *Store) LoadEvents() ([]event.Event, error) {

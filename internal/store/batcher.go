@@ -31,6 +31,7 @@ type Batcher struct {
 
 	mu      sync.Mutex
 	pending []event.Event
+	files   map[string][]byte
 	timer   *time.Timer
 	lastErr error
 }
@@ -53,6 +54,21 @@ func (b *Batcher) Add(e event.Event) {
 		b.timer = time.AfterFunc(b.quiet, b.background)
 	} else {
 		b.timer.Reset(b.quiet)
+	}
+}
+
+// AddFiles stages file blobs (views, T6) to ride the next commit, event
+// or timer driven. Later stagings of the same path win, so the batch
+// always carries the freshest render. Files never restart the quiet
+// timer — they accompany events, they don't cause commits of their own.
+func (b *Batcher) AddFiles(files map[string][]byte) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.files == nil {
+		b.files = make(map[string][]byte, len(files))
+	}
+	for path, data := range files {
+		b.files[path] = data
 	}
 }
 
@@ -88,12 +104,13 @@ func (b *Batcher) background() {
 // the events remain pending for a later retry and the error is recorded
 // for LastError.
 func (b *Batcher) flushLocked() error {
-	if len(b.pending) == 0 {
+	if len(b.pending) == 0 && len(b.files) == 0 {
 		return nil
 	}
-	err := b.store.AppendBatch(Batch{Events: b.pending})
+	err := b.store.AppendBatch(Batch{Events: b.pending, Files: b.files})
 	if err == nil {
 		b.pending = nil
+		b.files = nil
 	}
 	b.lastErr = err
 	return err

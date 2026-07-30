@@ -405,3 +405,45 @@ func TestAppendBatchRequiresInit(t *testing.T) {
 		t.Fatalf("AppendBatch without Init: err = %v, want ErrRefNotFound", err)
 	}
 }
+
+// Files staged with AddFiles ride the next commit alongside events —
+// the mechanism views (T6) travel on — and ReadFile reads them back.
+func TestFilesRideBatchesAndReadFile(t *testing.T) {
+	s, dir := newStore(t)
+	b := NewBatcher(s, 50*time.Millisecond)
+
+	b.Add(newEvent(t, 0))
+	b.AddFiles(map[string][]byte{"backlog.md": []byte("stale")})
+	b.AddFiles(map[string][]byte{"backlog.md": []byte("fresh"), "README.md": []byte("hello")})
+	before := commitCount(t, dir)
+	if err := b.Flush(); err != nil {
+		t.Fatalf("Flush: %v", err)
+	}
+	if got := commitCount(t, dir); got != before+1 {
+		t.Errorf("event + files landed in %d commits, want exactly 1", got-before)
+	}
+
+	got, err := s.ReadFile("backlog.md")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(got) != "fresh" {
+		t.Errorf("backlog.md = %q, want %q (later staging must win)", got, "fresh")
+	}
+	if got, err := s.ReadFile("README.md"); err != nil || string(got) != "hello" {
+		t.Errorf("README.md = %q, %v; want %q, nil", got, err, "hello")
+	}
+	if got, err := s.ReadFile("absent.md"); err != nil || got != nil {
+		t.Errorf("ReadFile(absent) = %q, %v; want nil, nil", got, err)
+	}
+
+	// A drained batcher stays drained: flushing again commits nothing.
+	if err := b.Flush(); err != nil {
+		t.Fatalf("second Flush: %v", err)
+	}
+	if got := commitCount(t, dir); got != before+1 {
+		t.Errorf("drained Flush produced %d extra commits, want 0", got-before-1)
+	}
+
+	assertNoWorktreeFiles(t, dir)
+}

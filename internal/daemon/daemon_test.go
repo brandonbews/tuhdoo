@@ -26,6 +26,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"github.com/brandonbews/tuhdoo/internal/gitx"
 	"github.com/brandonbews/tuhdoo/internal/store"
+	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
 var testIdent = gitx.Identity{Name: "Test Bot", Email: "bot@example.com"}
@@ -455,4 +456,73 @@ func TestShutdownCleansUp(t *testing.T) {
 		t.Fatalf("successor New: %v", err)
 	}
 	d2.Shutdown("test cleanup")
+}
+
+// Test 7: views ride local writes (T6). After ordinary daemon writes —
+// no sync merge anywhere — the data branch carries the four rendered
+// views alongside the events. The escalate call is eager, so this also
+// proves staged views ride an eager flush, not just the debounce.
+func TestViewsRideLocalWrites(t *testing.T) {
+	d, c := startDaemon(t)
+
+	id := createOne(t, c, "brandon", map[string]any{"title": "make views ride"})
+	mustDo(t, c, "POST", "/v0/escalations", "brandon/a1",
+		map[string]any{"task": id, "question": "do views ride?"}, http.StatusOK)
+
+	checks := map[string]string{
+		"README.md":          "",
+		"backlog.md":         "make views ride",
+		"escalations.md":     "do views ride?",
+		"tasks/" + id + ".md": "make views ride",
+		views.MetaPath:       "",
+	}
+	for path, want := range checks {
+		data, err := d.store.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile(%s): %v", path, err)
+		}
+		if data == nil {
+			t.Errorf("%s missing from the data branch after local writes", path)
+			continue
+		}
+		if want != "" && !strings.Contains(string(data), want) {
+			t.Errorf("%s does not mention %q:\n%s", path, want, data)
+		}
+	}
+}
+
+// Test 8: highest version wins (B8). Views stamped by a newer generator
+// are never overwritten by this daemon's local writes — events flow,
+// views stay exactly as the newer peer left them.
+func TestViewsGuardRefusesNewerStamp(t *testing.T) {
+	d, c := startDaemon(t)
+
+	newer := []byte("{\"format\":99}\n")
+	err := d.store.AppendBatch(store.Batch{Files: map[string][]byte{views.MetaPath: newer}})
+	if err != nil {
+		t.Fatalf("stamping newer format: %v", err)
+	}
+
+	createOne(t, c, "brandon", map[string]any{"title": "guarded"})
+	if err := d.batcher.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	events, err := d.store.LoadEvents()
+	if err != nil {
+		t.Fatalf("LoadEvents: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("event count = %d, want 1 (events must still flow)", len(events))
+	}
+	meta, err := d.store.ReadFile(views.MetaPath)
+	if err != nil {
+		t.Fatalf("ReadFile(meta): %v", err)
+	}
+	if !bytes.Equal(meta, newer) {
+		t.Errorf("meta = %q, want the newer peer's %q untouched", meta, newer)
+	}
+	if backlog, _ := d.store.ReadFile("backlog.md"); backlog != nil {
+		t.Errorf("backlog.md written despite newer stamp:\n%s", backlog)
+	}
 }

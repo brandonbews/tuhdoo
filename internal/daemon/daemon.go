@@ -28,6 +28,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/gitx"
 	"github.com/brandonbews/tuhdoo/internal/store"
 	"github.com/brandonbews/tuhdoo/internal/syncer"
+	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
 // DefaultLeaseTTL is the claim lease lifetime (T8).
@@ -345,6 +346,13 @@ func (d *Daemon) stageLocked(evs ...event.Event) {
 // refreshes cached state. Caller holds d.mu.
 func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 	d.stageLocked(evs...)
+	// Refresh before flushing so the views staged below render the state
+	// these events produce; a fail-safe refresh skips views but must not
+	// strand the events themselves.
+	refreshErr := d.refreshLocked(time.Now())
+	if refreshErr == nil {
+		d.stageViewsLocked()
+	}
 	if eager {
 		if err := d.batcher.Flush(); err != nil {
 			return fmt.Errorf("daemon: flush: %w", err)
@@ -353,7 +361,26 @@ func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 		// loop for an immediate pass.
 		d.sync.Poke()
 	}
-	return d.refreshLocked(time.Now())
+	return refreshErr
+}
+
+// stageViewsLocked renders the four views from current replayed state
+// and stages them to ride the next batch commit (T6: views land
+// alongside their events). Highest version wins (B8): views stamped by
+// a newer generator are never overwritten — events still flow, and the
+// newer peer keeps regenerating. Caller holds d.mu.
+func (d *Daemon) stageViewsLocked() {
+	meta, err := d.store.ReadFile(views.MetaPath)
+	if err != nil {
+		d.log.Printf("daemon: views: reading stamp: %v", err)
+		return
+	}
+	if !views.CanWrite(meta) {
+		d.log.Printf("daemon: views stamped by a newer tuhdoo (format %d > %d); writing events only",
+			views.Format(meta), views.FormatVersion)
+		return
+	}
+	d.batcher.AddFiles(views.Render(d.state))
 }
 
 // newEventLocked mints an event at the daemon layer (core stays pure):
