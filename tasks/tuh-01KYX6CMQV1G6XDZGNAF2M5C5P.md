@@ -1,6 +1,6 @@
 # tuh-01KYX6CMQV1G6XDZGNAF2M5C5P — Slash command /drain-backlog: the reusable drain-the-backlog prompt
 
-- Status: open — ready
+- Status: done
 - Priority: 0
 - Labels: `dx`, `docs`
 - Created: 2026-07-31 22:58 UTC by `brandon/claude-code-1`
@@ -11,4 +11,6 @@ Context: Brandon has re-derived the "work the backlog until claim_next returns c
 
 ## History
 
-_No activity yet._
+### 2026-07-31 22:59 UTC — run by `brandon/claude-code-1` — done
+
+.claude/commands/drain-backlog.md landed via PR https://github.com/brandonbews/tuhdoo/pull/2 (squash commit d48ebed on main). The command is the paste-ready drain loop: claim_next → work per acceptance criteria → land per the CLAUDE.md PR loop → finish_run only after merge → repeat until claimed:false, with the deploy-after-landing daemon-restart step (finish_run before restart — it kills the MCP session), escalate-rather-than-guess, and a context-budget stop condition. Points at CLAUDE.md and docs/agent-protocol.md for semantics rather than restating them. No changes outside .claude/commands/. No binary change — no daemon restart needed.
