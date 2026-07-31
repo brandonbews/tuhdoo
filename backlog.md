@@ -2,9 +2,7 @@
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
+_None._
 
 ## In progress
 
@@ -27,6 +25,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform |
+| [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
 
 ## Inbox
 
