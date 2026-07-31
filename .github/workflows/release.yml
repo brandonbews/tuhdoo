@@ -109,7 +109,23 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           node npm/prepare.js "$version" dist npm-out
           echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$HOME/.npmrc"
+          # Idempotent per package: a partial failure (token scope, network)
+          # must be recoverable by re-running this job, so "this exact
+          # version is already on the registry" is a skip, not an error.
+          # Matched on npm's E403 message text rather than a pre-publish
+          # `npm view`, which lags behind fresh publishes.
+          publish() {
+            local out
+            if out=$(npm publish "$1" --access public 2>&1); then
+              printf '%s\n' "$out" | tail -n 3
+            elif printf '%s' "$out" | grep -q 'previously published'; then
+              echo "already published, skipping: $1"
+            else
+              printf '%s\n' "$out"
+              return 1
+            fi
+          }
           for p in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
-            npm publish "./npm-out/$p" --access public
+            publish "./npm-out/$p"
           done
-          npm publish ./npm-out/tuhdoo --access public
+          publish ./npm-out/tuhdoo
