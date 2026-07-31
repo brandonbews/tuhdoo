@@ -88,7 +88,7 @@ func newWatchModel() topModel {
 type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
-	cancelled  []string
+	archived   []string
 	err        error
 }
 
@@ -112,11 +112,11 @@ func (f *fakeSteering) setPriority(task string, priority int) error {
 	return nil
 }
 
-func (f *fakeSteering) cancelTask(task string) error {
+func (f *fakeSteering) archiveTask(task string) error {
 	if f.err != nil {
 		return f.err
 	}
-	f.cancelled = append(f.cancelled, task)
+	f.archived = append(f.archived, task)
 	return nil
 }
 
@@ -177,7 +177,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (1)", "choose a license", "waiting:",
 		"▸ t-lic   !   Which license?", // cursor starts on the first row
-		"↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit",
+		"↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -384,22 +384,28 @@ func TestTopPriorityFlow(t *testing.T) {
 	}
 }
 
-func TestTopCancelFlow(t *testing.T) {
+func TestTopArchiveFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
-	if m.mode != modeConfirmCancel {
-		t.Fatalf("mode = %d, want modeConfirmCancel", m.mode)
+	if m.mode != modeConfirmArchive {
+		t.Fatalf("mode = %d, want modeConfirmArchive", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "cancel t-pars") || !strings.Contains(v, "y/n") {
+	v := m.View()
+	if !strings.Contains(v, "archive t-pars") || !strings.Contains(v, "y/n") ||
+		!strings.Contains(v, "history stays on the ledger") {
 		t.Errorf("confirm prompt missing; view:\n%s", v)
+	}
+	// The human verb never says cancel — that word belongs to esc.
+	if strings.Contains(v, "cancel t-pars") {
+		t.Errorf("confirm prompt still says cancel; view:\n%s", v)
 	}
 	// n backs out without a call.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	if m.mode != modeNav || len(fake.cancelled) != 0 {
-		t.Fatalf("n did not back out cleanly: mode %d cancelled %v", m.mode, fake.cancelled)
+	if m.mode != modeNav || len(fake.archived) != 0 {
+		t.Fatalf("n did not back out cleanly: mode %d archived %v", m.mode, fake.archived)
 	}
 	// y confirms.
 	m, cmd := press(t, m,
@@ -408,11 +414,18 @@ func TestTopCancelFlow(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("confirm produced no command")
 	}
-	if am := cmd().(actionMsg); am.err != nil {
+	am := cmd().(actionMsg)
+	if am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-pars" {
-		t.Errorf("cancelled %v, want [t-pars]", fake.cancelled)
+	if len(fake.archived) != 1 || fake.archived[0] != "t-pars" {
+		t.Errorf("archived %v, want [t-pars]", fake.archived)
+	}
+	// The confirmation names the human verb.
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if m.status != "archived t-pars" {
+		t.Errorf("status = %q, want %q", m.status, "archived t-pars")
 	}
 }
 
@@ -768,7 +781,9 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 // the snapshot carry status and title (done and cancelled tasks are in
 // the state listing even though they render no rows — the annotation
 // is what proves such an edge isn't dangling); unresolvable IDs render
-// bare — never an invented status; long titles are ellipsized.
+// bare — never an invented status; long titles are ellipsized. The
+// status word is the human-facing one: the plumbing value "cancelled"
+// renders as "archived" (T7, 2026-07-31).
 func TestSnapshotTaskRef(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks, stateTask{
@@ -781,7 +796,7 @@ func TestSnapshotTaskRef(t *testing.T) {
 		{"t-chor", "t-chor (done — old chore)"}, // done: no row anywhere, still resolves
 		{"t-epic", "t-epic"},                    // unresolvable: bare, no status
 		{"t-01KYT63MB28Z535SMJC9B0D83W",
-			"t-d83w (cancelled — wide wide wide wide wide wide wide wide…)"},
+			"t-d83w (archived — wide wide wide wide wide wide wide wide…)"},
 	}
 	for _, tt := range tests {
 		if got := s.taskRef(tt.id); got != tt.want {

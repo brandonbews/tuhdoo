@@ -93,13 +93,23 @@ func TestCreateUpdateAnswer(t *testing.T) {
 		t.Errorf("labels not fully replaced:\n%s", out)
 	}
 
-	// update --status is the curation path (done/cancelled).
-	out, code = runCLI(t, repo, "update", docs, "--status", "cancelled")
+	// update --status is the curation path (done/archived). "archived"
+	// is the human word (T7, 2026-07-31): the CLI maps it to the
+	// "cancelled" plumbing status the API and ledger speak.
+	out, code = runCLI(t, repo, "update", docs, "--status", "archived")
 	if code != 0 {
 		t.Fatalf("update --status exit %d; output:\n%s", code, out)
 	}
 	out, _ = runCLI(t, repo, "status")
-	mustContain(t, out, "1 cancelled")
+	mustContain(t, out, "1 archived")
+	out, _ = runCLI(t, repo, "task", docs)
+	mustContain(t, out, "status      archived")
+	// The machine surface is untouched: the API JSON still says
+	// cancelled.
+	hc := apiClient(t, repo)
+	if got := string(api(t, hc, "GET", "/v0/tasks/"+docs, "", nil)); !strings.Contains(got, `"status":"cancelled"`) {
+		t.Errorf("API status vocabulary changed; body:\n%s", got)
+	}
 
 	// update with no field flags is an error, not a silent no-op.
 	out, code = runCLI(t, repo, "update", parser)
@@ -116,7 +126,6 @@ func TestCreateUpdateAnswer(t *testing.T) {
 
 	// answer, addressed by the blocked task's ID (what `tuhdoo
 	// escalations` prints); the answer is the rest of the line.
-	hc := apiClient(t, repo)
 	api(t, hc, "POST", "/v0/escalations", "brandon/a1", map[string]any{
 		"task": parser, "question": "Which encoding?", "blocking": true,
 	})

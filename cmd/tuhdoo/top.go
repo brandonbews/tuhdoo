@@ -2,7 +2,7 @@ package main
 
 // The interactive TUI (002 T7, revised by Cycle 4): the single live
 // human surface. Reads poll the daemon on a tick; the three steering
-// writes (answer an escalation, reprioritize, cancel) go through the
+// writes (answer an escalation, reprioritize, archive) go through the
 // daemon HTTP API only, stamped with the acting human principal.
 // Watch mode is the same screen disarmed: steering keys dead, fixed at
 // launch — no keypress can re-arm a disarmed pane.
@@ -62,7 +62,7 @@ func fetchCmd(c *client) tea.Cmd {
 type steeringAPI interface {
 	answerEscalation(escalation, answer string) error
 	setPriority(task string, priority int) error
-	cancelTask(task string) error
+	archiveTask(task string) error
 }
 
 // httpSteering implements steeringAPI over the daemon's JSON HTTP API,
@@ -82,9 +82,11 @@ func (s httpSteering) setPriority(task string, priority int) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"priority": priority})
 }
 
-// cancelTask is "cancel/archive": the task model has no separate
-// archived state (D5), so cancelled is the terminal curation status.
-func (s httpSteering) cancelTask(task string) error {
+// archiveTask is the human archive verb over the plumbing status
+// vocabulary (T7, 2026-07-31): the task model has no separate archived
+// state (D5) — "cancelled" is the terminal curation status the ledger
+// records, and "archive" is what humans read and type for it.
+func (s httpSteering) archiveTask(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": "cancelled"})
 }
 
@@ -136,13 +138,13 @@ func buildRows(s *snapshot) []topRow {
 // ---- the model ----
 
 // Input modes. Nav is the resting state; the others capture keys until
-// enter/esc (or y/n for the cancel confirmation). Detail is the
+// enter/esc (or y/n for the archive confirmation). Detail is the
 // in-place task screen: read-only, esc steps back to the list.
 const (
 	modeNav = iota
 	modeAnswer
 	modePriority
-	modeConfirmCancel
+	modeConfirmArchive
 	modeDetail
 )
 
@@ -166,7 +168,7 @@ type topModel struct {
 
 	mode   int
 	input  string
-	target topRow // row a pending answer/priority/cancel applies to
+	target topRow // row a pending answer/priority/archive applies to
 	status string // one-line result of the last action
 
 	detailID     string // task shown by modeDetail
@@ -198,7 +200,7 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		if msg.snap != nil {
 			// Keep the selection on the same row across refreshes; a row
-			// that vanished (answered, cancelled, claimed…) drops the
+			// that vanished (answered, archived, claimed…) drops the
 			// cursor to the top.
 			var sel string
 			if m.cursor < len(m.rows) {
@@ -258,14 +260,14 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "c":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
-			m.mode, m.target, m.input, m.status = modeConfirmCancel, r, "", ""
+			m.mode, m.target, m.input, m.status = modeConfirmArchive, r, "", ""
 		}
 	}
 	return m, nil
 }
 
 func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.mode == modeConfirmCancel {
+	if m.mode == modeConfirmArchive {
 		switch k.String() {
 		case "y":
 			return m.submit()
@@ -354,13 +356,13 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			}
 			return actionMsg{desc: fmt.Sprintf("set %s to p%d", shortID(target.task.ID), p)}
 		}
-	case modeConfirmCancel:
-		m.mode, m.input, m.status = modeNav, "", "cancelling…"
+	case modeConfirmArchive:
+		m.mode, m.input, m.status = modeNav, "", "archiving…"
 		return m, func() tea.Msg {
-			if err := api.cancelTask(target.task.ID); err != nil {
+			if err := api.archiveTask(target.task.ID); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "cancelled " + shortID(target.task.ID)}
+			return actionMsg{desc: "archived " + shortID(target.task.ID)}
 		}
 	}
 	return m, nil
@@ -508,7 +510,7 @@ var topSections = []topSection{
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "a answer"},
-	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c cancel"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c archive"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
 }
@@ -782,17 +784,22 @@ func (m topModel) footerView(width int) string {
 		return wrapTo(fmt.Sprintf("%spriority%s %s (%s) > %s█  %senter submits · esc cancels%s\n",
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			m.input, col.dim, col.reset), m.width)
-	case modeConfirmCancel:
-		return wrapTo(fmt.Sprintf("%scancel%s %s (%s)? y/n\n",
-			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title)), m.width)
+	case modeConfirmArchive:
+		return wrapTo(fmt.Sprintf("%sarchive%s %s (%s)? y/n %s— history stays on the ledger%s\n",
+			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
+			col.dim, col.reset), m.width)
 	}
 	legend := " ↑/↓ (j/k) move · enter open · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit"
+		legend = " ↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit"
 	}
+	// No trailing margin space on the tally: the armed legend plus
+	// "N done " is one rune over 80 columns since cancel became archive
+	// (T7, 2026-07-31), and barLine would drop the tally entirely at
+	// the design width. The bar still pads to full width either way.
 	done := ""
 	if m.snap != nil {
-		done = fmt.Sprintf("%d done ", len(m.snap.classify().done))
+		done = fmt.Sprintf("%d done", len(m.snap.classify().done))
 	}
 	return barLine(col, col.rev+col.dim, legend, done, width) + "\n"
 }

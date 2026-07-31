@@ -329,7 +329,8 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"escalation": esc.ID, "answer": "ASCII first.",
 	})
 
-	// backlog: buckets, holders, blocked reasons, done/cancelled counts.
+	// backlog: buckets, holders, blocked reasons, done/archived counts
+	// (the cancelled plumbing status renders as archived — T7).
 	out, code := runCLI(t, repo, "backlog")
 	if code != 0 {
 		t.Fatalf("backlog exit %d; output:\n%s", code, out)
@@ -339,7 +340,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"investigate the flake", "brandon/a1",
 		"ship the docs", "depends on "+parser,
 		"choose a license", "escalation: Which license do we ship under?",
-		"Done 1", "Cancelled 1",
+		"Done 1", "Archived 1",
 	)
 	// Ready is priority-ordered: p5 parser before p1 floor-sweeping.
 	if strings.Index(out, "write the parser") > strings.Index(out, "sweep the floor") {
@@ -410,7 +411,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		t.Fatalf("status exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, "local-only",
-		"2 ready", "1 in progress", "2 blocked", "1 done", "1 cancelled",
+		"2 ready", "1 in progress", "2 blocked", "1 done", "1 archived",
 		"1 question open", "brandon/a1")
 	_ = docs
 }

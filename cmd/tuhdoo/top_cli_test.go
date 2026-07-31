@@ -4,8 +4,9 @@ package main
 // messages against a real auto-spawned daemon (cli_test.go harness) —
 // everything except the terminal itself. Covers the acceptance loop:
 // a blocking escalation answered from the TUI returns the task to the
-// ready pool; a reprioritize is visible to the next claim; a cancel
-// lands on the data branch stamped with the acting human principal.
+// ready pool; a reprioritize is visible to the next claim; an archive
+// lands on the data branch (as the task.cancelled plumbing event)
+// stamped with the acting human principal.
 
 import (
 	"encoding/json"
@@ -150,7 +151,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Errorf("priority = %d, want 7", next.Task.Priority)
 	}
 
-	// ---- cancel from the TUI ----
+	// ---- archive from the TUI ----
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
 	m, cmd = press(t, m,
@@ -166,7 +167,8 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Fatalf("status = %q, want cancelled", h.Task.Status)
 	}
 
-	// The cancel event lands on the data branch stamped with the acting
+	// The task.cancelled event — archive's plumbing form, which never
+	// changes (T3) — lands on the data branch stamped with the acting
 	// human principal. Non-eager writes ride the 2s debounce, so poll.
 	deadline := time.Now().Add(8 * time.Second)
 	var line string
@@ -176,15 +178,15 @@ func TestTopSteersRealDaemon(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("cancel event never committed to the data branch")
+			t.Fatal("task.cancelled event never committed to the data branch")
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	if !strings.Contains(line, `"actor":"brandon"`) {
-		t.Errorf("cancel event not stamped with the acting human; event:\n%s", line)
+		t.Errorf("task.cancelled event not stamped with the acting human; event:\n%s", line)
 	}
 	if !strings.Contains(line, `"task":"`+wrong+`"`) {
-		t.Errorf("cancel event not on task %s; event:\n%s", wrong, line)
+		t.Errorf("task.cancelled event not on task %s; event:\n%s", wrong, line)
 	}
 
 	// The interactive session ends cleanly from nav mode.

@@ -63,6 +63,17 @@ func stamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04 UTC")
 }
 
+// humanStatus maps a plumbing status value to the human-facing word
+// (T7, 2026-07-31): the ledger event and API value stay "cancelled"
+// (T3), but humans read "archived" — the verb that says curation, not
+// deletion, because nothing is deleted and history stays on the ledger.
+func humanStatus(s string) string {
+	if s == "cancelled" {
+		return "archived"
+	}
+	return s
+}
+
 // oneLine flattens text for a single-line rendering.
 func oneLine(s string) string {
 	s = strings.ReplaceAll(s, "\r\n", " ")

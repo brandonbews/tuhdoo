@@ -77,7 +77,7 @@ usage: tuhdoo [-w|--watch] [--as <human>]   the TUI (needs a terminal)
        tuhdoo <command>
 
 Bare tuhdoo opens the interactive TUI: answer escalations, reprioritize,
-cancel tasks, drill into any task. It acts as you (--as overrides).
+archive tasks, drill into any task. It acts as you (--as overrides).
 -w/--watch opens the same screen read-only: steering keys are dead for
 the life of the pane — the dashboard that sits beside a working agent.
 

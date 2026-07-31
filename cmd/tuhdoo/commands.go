@@ -103,7 +103,7 @@ func printStatus(w io.Writer, col colors, head string, s *snapshot) {
 	if s.state.Degraded != "" {
 		fmt.Fprintf(w, "%sDEGRADED%s     %s\n", col.red, col.reset, s.state.Degraded)
 	}
-	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d cancelled\n",
+	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d archived\n",
 		col.bold, col.reset,
 		col.green, len(b.ready), col.reset,
 		col.yellow, len(b.inProgress), col.reset,
@@ -145,7 +145,7 @@ func printBacklog(w io.Writer, col colors, s *snapshot) {
 	fmt.Fprintln(w)
 	renderBlocked(w, col, s, b.blocked)
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "%sDone%s %d · %sCancelled%s %d\n",
+	fmt.Fprintf(w, "%sDone%s %d · %sArchived%s %d\n",
 		col.dim, col.reset, len(b.done), col.dim, col.reset, len(b.cancelled))
 }
 
@@ -239,7 +239,7 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, shortID(t.ID), col.reset, oneLine(t.Title))
 		fmt.Fprintf(w, "  %sid          %s%s\n", col.dim, t.ID, col.reset)
 	}
-	status := t.Status
+	status := humanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
 		if h.Claim.Expires != nil {
