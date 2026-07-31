@@ -7,7 +7,6 @@
 | [t-01KYVD31CNTR1EVCDHPC5973KW](tasks/t-01KYVD31CNTR1EVCDHPC5973KW.md) | Needs Input: enter answers in place; blocked rows stop repeating the question | 1 | cli, tui, ux |
 | [t-01KYVE848CJZNG5VFWZ9J3WRKM](tasks/t-01KYVE848CJZNG5VFWZ9J3WRKM.md) | Brand the task IDs: mint tuh-, accept both prefixes, age out t- | 1 | cli, tui, ux, design |
 | [t-01KYVJ5NABEKX72KNE006MBBMC](tasks/t-01KYVJ5NABEKX72KNE006MBBMC.md) | Inbox and held: capture without scoping pressure, pause without pretending | 1 | core, mcp, cli, tui, design |
-| [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) | finish_run accepts a claimless finish: opFinishRun never checks holdership | 1 | daemon, protocol, bug |
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform, parked |
 | [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
 | [t-01KYVMD4PS9NMQVP1K5M1PVRD8](tasks/t-01KYVMD4PS9NMQVP1K5M1PVRD8.md) | Shim died once: 'stdio session: invalid trailing data at the end of stream' | 0 | mcp, daemon, investigation |
@@ -46,6 +45,7 @@ _None._
 - [t-01KYVD31CNTR1EVCDHPJGSQAGH](tasks/t-01KYVD31CNTR1EVCDHPJGSQAGH.md) — Align MCP tool descriptions with the revised notes doctrine
 - [t-01KYVEXK2BX040KJ244S2WP213](tasks/t-01KYVEXK2BX040KJ244S2WP213.md) — CLI write verbs: a paved path when no MCP session exists
 - [t-01KYVJ2607S5S390CVYSF3PVG4](tasks/t-01KYVJ2607S5S390CVYSF3PVG4.md) — TUI dashboard visual redesign: section bars + fixed column grid (mock-a)
+- [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) — finish_run accepts a claimless finish: opFinishRun never checks holdership
 
 ## Cancelled
 

@@ -1,6 +1,6 @@
 # t-01KYVMD4PS9NMQVP1K5HQ8769X — finish_run accepts a claimless finish: opFinishRun never checks holdership
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `daemon`, `protocol`, `bug`
 - Created: 2026-07-31 08:24 UTC by `brandon/claude-fable`
@@ -19,4 +19,9 @@ Constraints: boring Go; deterministic core untouched; stored events untouched.
 
 ## History
 
-_No activity yet._
+### 2026-07-31 09:21 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `7d46356`
+
+opFinishRun now refreshes leases at the current instant (same posture as release_claim) and runs a new finishGuardLocked before writing run.finished. DELIBERATE DEVIATION from the literal ask, flagged for review: a strict live-claim-only check would break the settled blocking protocol (T5 / agent-protocol.md: escalate → release_claim → finish_run blocked arrives with NO live claim), so the rule is "close only your own attempt, once" — admitted shapes: (1) actor holds the live claim; (2) actor's latest claim on the task ended released and no later run of theirs closed it; (3) same for voided (race loser recording superseded while the winner holds — the replay.go:267-blessed flow). Rejected: no claim history (409 — kills the reported bug, run 01KYVM8KY1...), live claim held by another (403 naming the holder), expired claim (409 — replay already synthesized interrupted), double-close (409), unknown task (404 — mistyped IDs fabricate nothing). Lease-expiry interrupted runs are synthesized purely at replay time in internal/core and never pass through opFinishRun (only callers: api.go, mcp.go), so synthesis is untouched; MCP outcome filter composes (runs first). internal/core zero-diff, so replay of the existing claimless run.finished on the ledger stays green — write-side validation only (T3). New table-driven TestFinishRunGuard (9 rows incl. blocked protocol, race-loser superseded, expired-lease synthesis) + TestReplayAcceptsStoredClaimlessRun. Known residual: a released-claim close accepts any catalog outcome, not just blocked — outcome/status coupling deliberately not added; tighten later if wanted. make test lint green; commit 7d46356 on main, pushed. Daemon NOT restarted yet — the running binary still accepts claimless finishes until the end-of-night redeploy.
