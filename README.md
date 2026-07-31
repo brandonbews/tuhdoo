@@ -11,8 +11,8 @@ views are derived from the log — never edit them by hand. The design lives in
 
 | | Count |
 |---|---:|
-| Open tasks | 15 |
-| — ready | 4 |
+| Open tasks | 17 |
+| — ready | 6 |
 | — in progress | 0 |
 | — blocked / waiting | 11 |
 | Done tasks | 13 |
