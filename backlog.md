@@ -32,6 +32,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) — Make it clearer when it item is selected in the list (maybe dimmed bg or something)
+- [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
 
 ## Done
 
