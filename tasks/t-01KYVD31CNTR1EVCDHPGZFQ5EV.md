@@ -7,10 +7,10 @@
 
 ## Description
 
-Context: dogfood steering feedback (Brandon, 2026-07-30): in the TUI, `c cancel` read first as cancelling a UI action, then as deleting the task — it took real use to learn it means "we are not doing this task". Nothing is ever deleted: task.cancelled is an immutable ledger event and full history stays on the data branch. But the word collides with esc-cancels-input on the same screen and under-communicates that history is preserved. Direction (recommended by the 2026-07-30 session, subject to Brandon's confirmation on the word before implementing): follow the T7 plumbing/porcelain pattern — the event vocabulary (task.cancelled; status value `cancelled` in events and API JSON) is plumbing and never changes (T3), while the human-facing verb becomes **archive** everywhere humans read or type.
+Context: dogfood steering feedback (Brandon, 2026-07-30): in the TUI, `c cancel` read first as cancelling a UI action, then as deleting the task — it took real use to learn it means "we are not doing this task". Nothing is ever deleted: task.cancelled is an immutable ledger event and full history stays on the data branch. But the word collides with esc-cancels-input on the same screen and under-communicates that history is preserved. Decision CONFIRMED by Brandon (2026-07-30): follow the T7 plumbing/porcelain pattern — the event vocabulary (task.cancelled; status value `cancelled` in events and API JSON) is plumbing and never changes (T3), while the human-facing verb becomes **archive** everywhere humans read or type.
 
 The ask:
-1. TUI: footer `c archive`; confirm copy `archive t-xxxx (title)? y/n — history stays on the ledger`; status message `archived t-xxxx`; cancelled tasks render as `archived` wherever a human-facing status appears (e.g. edge annotations: `(archived — title)`).
+1. TUI: footer `c archive`; confirm copy `archive tuh-xxxx (title)? y/n — history stays on the ledger`; status message `archived tuh-xxxx`; cancelled tasks render as `archived` wherever a human-facing status appears (e.g. edge annotations: `(archived — title)`).
 2. One-shot output: same rename in human-readable renderings (status sections, task biography status line) — this changes exact-format CLI tests; update them deliberately and say so in the run summary. API/JSON field values stay `cancelled` (machine surface), and the MCP update_task status vocabulary is unchanged.
 3. Docs: dated note in 002 T7 recording the porcelain↔plumbing word mapping (archive ↔ task.cancelled).
 
