@@ -35,9 +35,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) — confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
+_None._
 
 ## Done
 
@@ -71,3 +69,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [tuh-01KYWE39DD1VWJVZZT3KHAKTQ0](tasks/tuh-01KYWE39DD1VWJVZZT3KHAKTQ0.md) — just a test
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
+- [tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) — confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
