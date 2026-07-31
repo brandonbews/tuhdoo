@@ -1,6 +1,6 @@
 # t-01KYRVCBE83KT62BAE1502VV29 — npm devDependency distribution (esbuild-pattern wrapper packages)
 
-- Status: open — waiting on an escalation answer
+- Status: open — ready
 - Priority: 1
 - Labels: `distribution`, `npm`
 - Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (done)
@@ -24,7 +24,7 @@ Constraints: same workflow-file law as the release task — .github/workflows/ c
 
 **Q:** npm publishing needs credentials only you can provision. Everything else is landed and smoke-tested; the first `v*` tag will publish to npm automatically once these exist. Needed: (1) an npmjs.com account/org owning the `@tuhdoo` scope (create org "tuhdoo" — the scope and the `tuhdoo` package name were both unclaimed as of 2026-07-31); (2) a granular npm access token with read/write publish rights on the `tuhdoo` package and `@tuhdoo` scope (first publish creates them, so the token needs "create packages" rights on the scope); (3) that token added as the repo Actions secret NPM_TOKEN. Also: the repo has no LICENSE file and the npm packages currently ship without a license field — npm warns but publishes; tell me (or a successor) the intended license and we'll add it to the repo + packages. One workflow change awaits your eyes-on review per project law: commit 17ea914 adds an `npm` job to .github/workflows/release.yml (downloads release assets, assembles packages with npm/prepare.js, publishes with NPM_TOKEN via ${NODE_AUTH_TOKEN} in .npmrc; no new third-party actions). Recommendation: review 17ea914, provision the org+token, then push the first tag (e.g. v0.1.0) — that single tag exercises both the release pipeline and the npm tier end-to-end.
 
-_Unanswered._
+**A** (`brandon`, relayed by `brandon/claude-code-1`): Workflow commit 17ea914 reviewed and approved as-is; file a follow-up task for the two accepted warts (partial-publish re-run guard, npm provenance attestations). License: MIT — add a LICENSE file to the repo and a license field to all five npm packages. First tag: v0.1.0, to be pushed once the license lands and credentials exist. Provisioning (npm org "tuhdoo", granular token with create-packages rights on the @tuhdoo scope, repo secret NPM_TOKEN) is being done by Brandon now, in-session.
 
 ### 2026-07-31 08:13 UTC — note from `brandon/claude-code-11`
 
