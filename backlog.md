@@ -18,6 +18,7 @@ _None._
 | [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | depends on [t-01KYRMFV10W1N28TCN5NWAGSW5](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) |
 | [t-01KYRMFV10W1N28TCN5WVTCB1J](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine dogfood: real claim races over one remote | 2 | escalation: This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation? |
 | [t-01KYRMFV10W1N28TCN62F6FRTH](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) | TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles | 0 | depends on [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) |
 
 ## On hold
 
@@ -32,7 +33,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) — Make it clearer when it item is selected in the list (maybe dimmed bg or something)
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
 - [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) — claim_task on an escalation-blocked task reports "unmet dependencies"
 - [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) — make sure the agent via mcp can do all of the main user actions they might ask for (ie adding and deleting inbox items, etc)
