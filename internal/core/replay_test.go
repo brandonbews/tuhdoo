@@ -266,6 +266,62 @@ func TestReadyRespectsDependenciesAndPriority(t *testing.T) {
 	}
 }
 
+// ClaimBlockers names Ready's dependency and escalation clauses
+// (task tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): unmet dep IDs and open
+// blocking escalation IDs in stored order, reported regardless of the
+// task's status or claim state — those cases carry their own words at
+// the call site.
+func TestClaimBlockers(t *testing.T) {
+	st := func(s string) *string { return &s }
+	esc1, esc2 := tick(t, 10), tick(t, 11)
+	claim := tick(t, 12)
+	events := []event.Event{
+		taskCreated(t, 1, "t-dep1", "unfinished dep one"),
+		taskCreated(t, 2, "t-dep2", "unfinished dep two"),
+		taskCreated(t, 3, "t-done", "finished dep"),
+		taskCreated(t, 4, "t-esc", "escalation-only"),
+		taskCreated(t, 5, "t-deps", "deps-only", "t-dep1", "t-dep2", "t-done", "t-ghost"),
+		taskCreated(t, 6, "t-both", "deps and escalation", "t-dep1"),
+		taskCreated(t, 7, "t-held", "parked with a dep", "t-dep1"),
+		taskCreated(t, 8, "t-claimed", "claimed with a dep", "t-dep1"),
+		// t-done completes; the shelved task pauses; t-claimed is held.
+		evt(t, 9, event.TypeClaimMade, "brandon/impl-1", "t-done", event.ClaimMade{}),
+		evt(t, 10, event.TypeEscalationRaised, "brandon/impl-1", "t-esc",
+			event.EscalationRaised{Question: "which way?", Blocking: true}),
+		evt(t, 11, event.TypeEscalationRaised, "brandon/impl-1", "t-both",
+			event.EscalationRaised{Question: "and this?", Blocking: true}),
+		evt(t, 12, event.TypeClaimMade, "brandon/impl-2", "t-claimed", event.ClaimMade{}),
+		evt(t, 13, event.TypeRunFinished, "brandon/impl-1", "t-done",
+			event.RunFinished{Outcome: event.OutcomeDone}),
+		evt(t, 14, event.TypeTaskUpdated, "brandon", "t-held",
+			event.TaskUpdated{Status: st(StatusHeld)}),
+	}
+	s := replay(t, events, aliveLease(claim))
+	tests := []struct {
+		name, task string
+		deps, escs []string
+	}{
+		{"escalation-only", "t-esc", nil, []string{esc1}},
+		// Done deps and deps unknown to state drop out; unmet ones keep
+		// their stored order.
+		{"deps-only", "t-deps", []string{"t-dep1", "t-dep2"}, nil},
+		{"both at once", "t-both", []string{"t-dep1"}, []string{esc2}},
+		{"not open still reports its dep", "t-held", []string{"t-dep1"}, nil},
+		{"actively claimed still reports its dep", "t-claimed", []string{"t-dep1"}, nil},
+		{"ready task has no blockers", "t-dep1", nil, nil},
+		{"unknown task", "t-nope", nil, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps, escs := s.ClaimBlockers(tt.task)
+			if !reflect.DeepEqual(deps, tt.deps) || !reflect.DeepEqual(escs, tt.escs) {
+				t.Errorf("ClaimBlockers(%s) = %v, %v; want %v, %v",
+					tt.task, deps, escs, tt.deps, tt.escs)
+			}
+		})
+	}
+}
+
 func TestEscalationLifecycle(t *testing.T) {
 	esc := tick(t, 2)
 	events := []event.Event{

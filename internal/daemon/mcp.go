@@ -426,7 +426,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "claim_task",
 		Description: "Claim one specific task (the human-directed path) and return it hydrated. " +
-			"Fails if the task is already claimed, not open, or has unmet dependencies.",
+			"Fails if the task is already claimed, not open, blocked by unmet dependencies, " +
+			"or blocked by an open blocking escalation; the error names the specific blockers.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimTaskInput) (*mcp.CallToolResult, hydratedTask, error) {
 		h, oe := d.opClaimTask(s.principal(), in.Task)
 		if oe != nil {

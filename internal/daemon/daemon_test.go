@@ -272,6 +272,68 @@ func TestClaimNeverServesInboxOrHeld(t *testing.T) {
 	}
 }
 
+// claim_task's not-ready conflict names the actual blockers
+// (tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): the open blocking escalation's ID
+// for an escalation-blocked task — never the old catch-all "unmet
+// dependencies" — the unmet dep IDs for a dep-blocked one, and both
+// when both hold.
+func TestClaimTaskConflictNamesBlockers(t *testing.T) {
+	_, c := startDaemon(t)
+
+	dep := createOne(t, c, "brandon", map[string]any{"title": "the unfinished dep"})
+	depBlocked := createOne(t, c, "brandon", map[string]any{
+		"title": "dep-blocked", "depends_on": []string{dep}})
+	escBlocked := createOne(t, c, "brandon", map[string]any{"title": "escalation-blocked"})
+	dual := createOne(t, c, "brandon", map[string]any{
+		"title": "double-blocked", "depends_on": []string{dep}})
+
+	raise := func(task string) string {
+		t.Helper()
+		var resp struct {
+			ID string `json:"id"`
+		}
+		unmarshalInto(t, mustDo(t, c, "POST", "/v0/escalations", "brandon/a1",
+			map[string]any{"task": task, "question": "which way?", "blocking": true},
+			http.StatusOK), &resp)
+		return resp.ID
+	}
+	escID := raise(escBlocked)
+	dualEscID := raise(dual)
+
+	// Escalation-only: the conflict names the escalation so the caller
+	// can act on it, and the old misdiagnosis stays dead.
+	body := string(mustDo(t, c, "POST", "/v0/claims", "brandon/a2",
+		map[string]any{"task": escBlocked}, http.StatusConflict))
+	if !strings.Contains(body, "blocked by open escalation "+escID) {
+		t.Errorf("escalation-blocked conflict does not name the escalation: %s", body)
+	}
+	if strings.Contains(body, "unmet dependencies") {
+		t.Errorf("escalation-blocked conflict still says unmet dependencies: %s", body)
+	}
+
+	// Deps-only names the dep IDs and invents no escalation.
+	body = string(mustDo(t, c, "POST", "/v0/claims", "brandon/a2",
+		map[string]any{"task": depBlocked}, http.StatusConflict))
+	if !strings.Contains(body, "unmet dependencies "+dep) {
+		t.Errorf("dep-blocked conflict does not name the dep: %s", body)
+	}
+	if strings.Contains(body, "escalation") {
+		t.Errorf("dep-blocked conflict invents an escalation: %s", body)
+	}
+
+	// Both at once: both named.
+	body = string(mustDo(t, c, "POST", "/v0/claims", "brandon/a2",
+		map[string]any{"task": dual}, http.StatusConflict))
+	for _, want := range []string{
+		"unmet dependencies " + dep,
+		"blocked by open escalation " + dualEscID,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("double-blocked conflict missing %q: %s", want, body)
+		}
+	}
+}
+
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 
