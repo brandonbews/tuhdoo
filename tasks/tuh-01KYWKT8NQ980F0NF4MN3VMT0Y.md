@@ -1,6 +1,6 @@
 # tuh-01KYWKT8NQ980F0NF4MN3VMT0Y — claim_task on an escalation-blocked task reports "unmet dependencies"
 
-- Status: open — ready
+- Status: done
 - Priority: 0
 - Labels: `mcp`, `dx`
 - Created: 2026-07-31 17:33 UTC by `brandon/claude-code-1`
@@ -22,4 +22,10 @@ Constraints: deterministic core stays pure — data in, data out (T1). No MCP su
 
 ## History
 
-_No activity yet._
+### 2026-07-31 23:31 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-mt0y/claim-task-names-blockers`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/5>
+- Commits: `649e758`
+
+Merged (squash) to main via PR #5 and deployed. New pure helper core.State.ClaimBlockers returns unmet dep IDs and open blocking escalation IDs in stored order; Ready now consumes it so predicate and diagnostic cannot disagree. opClaimTask's not-ready conflict names the actual blockers: 'blocked by open escalation <id>' / 'unmet dependencies <ids>' / both joined with ';'. claim_task tool description updated to say the error names the specific blockers. views/CLI renderers untouched. Covered by table-driven core TestClaimBlockers (escalation-only, deps-only, both, not-open, actively-claimed, ready, unknown) and daemon-level TestClaimTaskConflictNamesBlockers over the HTTP claims surface. make test lint green.
