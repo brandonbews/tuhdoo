@@ -1,6 +1,6 @@
 # t-01KYRVCBE83KT62BAE1502VV29 — npm devDependency distribution (esbuild-pattern wrapper packages)
 
-- Status: open — in progress, claimed by `brandon/claude-code-11`
+- Status: open — waiting on an escalation answer
 - Priority: 1
 - Labels: `distribution`, `npm`
 - Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (done)
@@ -29,3 +29,7 @@ _Unanswered._
 ### 2026-07-31 08:13 UTC — note from `brandon/claude-code-11`
 
 Resume state: all code/docs landed on main (2c57b6e npm packaging + docs, 17ea914 workflow job). Local validation: npm/smoke.sh passes end-to-end on darwin/arm64 (fresh-repo install from tarballs, launcher output byte-identical to the binary, init + status local-only, all eleven MCP verbs served through the launcher, SIGTERM forwarded to the binary). What the escalation answer unblocks: nothing to build — after NPM_TOKEN + @tuhdoo org exist and Brandon pushes the first v* tag, CI publishes; the successor's only job is to verify the published packages against the task's acceptance (npm i -D tuhdoo in a clean repo, npx tuhdoo init/status, .mcp.json npx form) and fold in the license decision if one was made. Gotcha for local testing: run npm/smoke.sh from a short path — the daemon's unix socket dies loudly past 103 bytes, which is why the script pins its workdir under /tmp.
+
+### 2026-07-31 08:13 UTC — run by `brandon/claude-code-11` — blocked
+
+All buildable work landed on main: commit 2c57b6e (npm/ packaging: dependency-free launcher, prepare.js assembler, smoke.sh end-to-end test, README + agent-protocol docs, /bin gitignore fix) and commit 17ea914 (release.yml npm publish job — WORKFLOW CHANGE, isolated for eyes-on review). Smoke test passes locally on darwin/arm64. Blocked on escalation 01KYVKR3D1RCVGFEWFPQXFB4AY: npm org/scope + NPM_TOKEN provisioning and the license decision are Brandon's; after that, the first v* tag publishes automatically and a successor verifies published-registry acceptance.
