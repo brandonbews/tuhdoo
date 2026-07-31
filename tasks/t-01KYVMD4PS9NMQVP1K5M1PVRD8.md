@@ -19,4 +19,6 @@ Constraints: boring Go; no protocol or verb changes.
 
 ## History
 
-_No activity yet._
+### 2026-07-31 08:37 UTC — note from `brandon/claude-fable`
+
+Second occurrence, richer evidence. Setup: shim on a fifo (bin/tuhdoo mcp --as brandon/claude-fable < fifo), a `sleep 86400 > fifo` holding the write end. Timeline (local): 01:24 session up, 01:25 claim_next round-trips fine (out mtime 01:25), then NOTHING is written to the fifo; 01:31 the shim dies with the same one-line stderr (err mtime 01:31) — six minutes after the last write, with the sleep writer STILL ALIVE (verified via ps afterwards) and the fifo intact. The 01:31 window coincides with `go test ./cmd/tuhdoo` running the CLI/MCP integration suites (they spawn their own daemons and shims in temp repos and SIGKILL their own pids — no obvious cross-talk, but the coincidence repeated across both occurrences). A byte-identical replay of the pending request against a fresh fifo shim did NOT reproduce. Since the SDK error fires only when a decoded JSON value is followed by a non-newline byte in the stdin decoder buffer (go-sdk v1.7.0 mcp/transport.go:474 newIOConn), something delivered non-newline bytes after a value — or the decode path misfired on an idle stream. Also worth checking: whether srv.Run's error here can originate from the DAEMON-side bridge rather than stdin, which would re-frame all of this. One-shot sessions (printf lines | shim) have never failed across ~8 uses.
