@@ -1,0 +1,23 @@
+{
+  "name": "tuhdoo",
+  "version": "0.0.0-dev",
+  "description": "A coordination fabric for agent fleets, steered by humans: a shared backlog, work queue, and activity ledger living in a git orphan branch inside the repo it plans.",
+  "keywords": ["agents", "backlog", "mcp", "git", "coordination"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brandonbews/tuhdoo.git"
+  },
+  "bin": {
+    "tuhdoo": "bin/tuhdoo.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": ["darwin", "linux"],
+  "optionalDependencies": {
+    "@tuhdoo/darwin-arm64": "0.0.0-dev",
+    "@tuhdoo/darwin-x64": "0.0.0-dev",
+    "@tuhdoo/linux-arm64": "0.0.0-dev",
+    "@tuhdoo/linux-x64": "0.0.0-dev"
+  }
+}

@@ -9,6 +9,23 @@ accounts.
 
 tuhdoo is a single static binary; pick whichever path suits you.
 
+### npm (recommended for TS/JS projects)
+
+```sh
+npm i -D tuhdoo
+npx tuhdoo init
+```
+
+The `tuhdoo` package is a thin launcher; the real binary ships in a
+per-platform `@tuhdoo/*` package that npm selects via `os`/`cpu` fields
+(the esbuild pattern — no postinstall downloads). Installing as a
+devDependency pins the binary version per project through your lockfile.
+The MCP stdio shim runs through it unchanged:
+
+```json
+{ "mcpServers": { "tuhdoo": { "command": "npx", "args": ["tuhdoo", "mcp"] } } }
+```
+
 ### Release binaries
 
 Every tagged release publishes checksummed archives for

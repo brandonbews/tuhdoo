@@ -14,6 +14,11 @@ Access is **through the stdio shim only**. The zero-config form is the primary o
 { "mcpServers": { "tuhdoo": { "command": "tuhdoo", "args": ["mcp"] } } }
 ```
 
+If tuhdoo came in as an npm devDependency, the npx form works unchanged —
+`{ "command": "npx", "args": ["tuhdoo", "mcp"] }` — the npm launcher is a
+transparent pass-through (stdio inherited, signals forwarded, no output of
+its own).
+
 - With no flags, your principal is **auto-derived at connect** *(revised 2026-07-30; --as was previously required)*: the human half is the local part of `git config user.email` in the repository (`brandonbews@gmail.com` → `brandonbews`), and the daemon mints the agent half at session bind from your harness's MCP `clientInfo.name` plus a per-daemon counter — e.g. `brandonbews/claude-code-3`, unique among the daemon's sessions (the counter resets when the daemon restarts). Every session gets its own name; nothing is hand-configured, so the ledger records sessions, not one eternal alias. If `user.email` is unset or unusable, the shim fails loudly at connect instead of inventing a name.
 - `--as <principal>` overrides the whole identity for the session — for shared machines, scripted actors, or tests. Principals are `human` or `human/agent` (no spaces, at most one `/`); every event you write is stamped with it. One principal per session — identity is bound at connect, not per call.
 - The shim bridges stdio to the daemon over a repo-local unix socket and auto-spawns the daemon if it isn't running. Run it from inside the repository.
