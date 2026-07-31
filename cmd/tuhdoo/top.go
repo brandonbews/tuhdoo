@@ -451,110 +451,307 @@ func (m topModel) View() string {
 		// The task vanished under a refresh: fall through to the list.
 	}
 	col := m.col
-	var head strings.Builder
+	width := m.width
+	if width <= 0 {
+		width = 80 // no WindowSizeMsg yet: the mockup's design width
+	}
 	sync := "..."
 	if m.snap != nil {
 		sync = syncLine(m.snap.state.Sync)
 	}
-	fmt.Fprintf(&head, "%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset, sync, m.badge())
-	if m.status != "" {
-		fmt.Fprintf(&head, "%s\n", m.status)
+	badge := "watch mode"
+	if m.armed {
+		badge = "acting as " + m.actor
 	}
-	head.WriteString("\n")
-	hs := wrapTo(head.String(), m.width)
+	head := barLine(col, col.rev+col.bold, " tuhdoo · "+sync, badge+" ", width) + "\n"
+	if m.status != "" {
+		head += m.status + "\n"
+	}
+	head += "\n"
 	if m.err != nil {
-		return hs + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
+		return head + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
 			col.red, col.reset, m.err, col.dim, col.reset), m.width)
 	}
 	if m.snap == nil {
-		return hs + "loading...\n"
+		return head + "loading...\n"
 	}
-	s := m.snap
-	var body strings.Builder
-	if s.state.Degraded != "" {
-		fmt.Fprintf(&body, "%sDEGRADED (read-only):%s %s\n\n", col.red, col.reset, s.state.Degraded)
-	}
-	b := s.classify()
-	fmt.Fprintf(&body, "%s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d cancelled · %s open\n\n",
-		col.green, len(b.ready), col.reset,
-		col.yellow, len(b.inProgress), col.reset,
-		col.red, len(b.blocked), col.reset,
-		len(b.done), len(b.cancelled),
-		plural(len(s.state.OpenEscalations), "escalation"))
-	renderTopRows(&body, col, s, m.rows, m.cursor)
-	foot := "\n" + wrapTo(m.footer(), m.width)
-	list := m.windowList(wrapTo(body.String(), m.width),
-		strings.Count(hs, "\n"), strings.Count(foot, "\n"))
-	return hs + list + foot
+	foot := "\n" + m.footerView(width)
+	body := windowChunks(m.listChunks(width), m.height,
+		strings.Count(head, "\n"), strings.Count(foot, "\n"))
+	return head + body + foot
 }
 
-// windowList slides a window over the wrapped list body so the cursor
-// row is always on screen (pinned to the bottom edge once the list
-// outgrows the terminal). Unknown height renders everything.
-func (m topModel) windowList(body string, headLines, footLines int) string {
-	body = strings.TrimRight(body, "\n")
-	if m.height <= 0 {
-		return body + "\n"
+// ---- the list screen (mock-a, 2026-07-31): bars and one column grid ----
+
+// The shared column grid: mark(2) + id(6) + gap(2) + badge(2) + gap(2).
+// Titles start at gridTitleCol; second lines indent to it.
+const (
+	gridIDW      = 6
+	gridBadgeW   = 2
+	gridTitleCol = 2 + gridIDW + 2 + gridBadgeW + 2
+)
+
+// topSection describes one dashboard section: which rows it collects,
+// its bar color, and the steering keys the bar advertises when the pane
+// is armed. Sections are data so the growing status list (inbox,
+// on-hold are being designed) adds entries here, not rendering code.
+type topSection struct {
+	key   string
+	label string
+	bg    func(colors) string
+	hint  string
+}
+
+var topSections = []topSection{
+	// "NEEDS INPUT", not "open escalations" (T7, 2026-07-30): the
+	// entity keeps its name; the header alone softens the severity the
+	// word overstates, and names no answerer — a future one may not be
+	// a human.
+	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "a answer"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c cancel"},
+	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
+	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
+}
+
+// chunk is one atomic display unit — a bar, a one- or two-line row, a
+// blank — that windowing never splits across the screen edge.
+type chunk struct {
+	text   string // lines joined by \n, no trailing newline
+	cursor bool
+}
+
+func (c chunk) lines() int { return strings.Count(c.text, "\n") + 1 }
+
+// sgr wraps text in one style, or returns it bare for zero-value
+// colors (the NO_COLOR / non-TTY discipline).
+func sgr(col colors, style, text string) string {
+	if style == "" || text == "" {
+		return text
 	}
-	lines := strings.Split(body, "\n")
-	avail := m.height - headLines - footLines
-	if avail < 1 {
-		avail = 1
+	return style + text + col.reset
+}
+
+// padTo left-justifies s in n cells (rune-counted).
+func padTo(s string, n int) string {
+	if d := n - len([]rune(s)); d > 0 {
+		return s + strings.Repeat(" ", d)
 	}
-	if len(lines) <= avail {
-		return body + "\n"
+	return s
+}
+
+// barLine renders one full-width bar: left text, space fill, right
+// text, the whole line under one style. Zero-value colors degrade to
+// the plain text with the same geometry — no fill styling, layout
+// intact. The right text is dropped before the left is truncated.
+func barLine(col colors, style, left, right string, width int) string {
+	l, r := []rune(left), []rune(right)
+	if len(r) > 0 && len(l)+len(r)+1 > width {
+		r = nil
 	}
-	scroll := 0
-	for i, l := range lines {
-		if strings.Contains(l, "▸ ") {
-			if i >= avail {
-				scroll = i - avail + 1
-			}
-			break
+	if len(l) > width {
+		l = []rune(ellipsize(string(l), width))
+	}
+	pad := width - len(l) - len(r)
+	if pad < 0 {
+		pad = 0
+	}
+	return sgr(col, style, string(l)+strings.Repeat(" ", pad)+string(r))
+}
+
+// fitTitle fits a title plus an optional suffix into width runes. The
+// suffix loses first — dropped outright when the title is near-full,
+// ellipsized into the remainder otherwise; the title wins and is
+// ellipsized only once nothing else fits.
+func fitTitle(title, suffix string, width int) (string, string) {
+	t, s := []rune(title), []rune(suffix)
+	if len(t)+len(s) <= width {
+		return title, suffix
+	}
+	if len(t) >= width-10 {
+		return ellipsize(title, width), ""
+	}
+	return title, ellipsize(suffix, width-len(t))
+}
+
+// gridRow renders one line on the shared column grid. suffix renders in
+// suffixStyle (dim for labels and edges, yellow for holders) and is
+// sacrificed for the title when the line is tight.
+func gridRow(col colors, cursor bool, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
+	mark, markStyle, titleStyle := "  ", "", ""
+	if cursor {
+		mark, markStyle, titleStyle = "▸ ", col.bold, col.bold
+	}
+	title, suffix = fitTitle(oneLine(title), suffix, width-gridTitleCol)
+	return sgr(col, markStyle, mark) +
+		sgr(col, col.dim, padTo(id, gridIDW)) + "  " +
+		sgr(col, badgeStyle, padTo(badge, gridBadgeW)) + "  " +
+		sgr(col, titleStyle, title) + sgr(col, suffixStyle, suffix)
+}
+
+// secondLine renders a row's indented second line: an optional colored
+// lead ("waiting: ", "blocking") and dim text, ellipsized to the width.
+func secondLine(col colors, lead, leadStyle, text string, width int) string {
+	budget := width - gridTitleCol - len([]rune(lead))
+	if budget < 2 {
+		budget = 2
+	}
+	return strings.Repeat(" ", gridTitleCol) +
+		sgr(col, leadStyle, lead) + sgr(col, col.dim, ellipsize(oneLine(text), budget))
+}
+
+// edgeText marks that a task is part of a structure — containment
+// (parents) and scheduling (depends_on) — without imposing a tree on
+// the flat list: edge semantics are still an open question, so rows
+// only mark that edges exist.
+func edgeText(s *snapshot, id string) string {
+	t := s.tasks[id].Task
+	var parts []string
+	if n := len(t.Parents); n > 0 {
+		p := "in " + shortID(t.Parents[0])
+		if n > 1 {
+			p += fmt.Sprintf(" +%d", n-1)
+		}
+		parts = append(parts, p)
+	}
+	if n := len(t.DependsOn); n > 0 {
+		parts = append(parts, plural(n, "dep"))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "  · " + strings.Join(parts, " · ")
+}
+
+// rowChunk renders one selectable row as an unsplittable chunk.
+func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
+	if r.kind == rowEscalation {
+		e := r.esc
+		badge, style := "", ""
+		lead, leadStyle := "", ""
+		if e.Blocking {
+			badge, style = "!", col.red+col.bold
+			lead, leadStyle = "blocking", col.red
+		}
+		meta := fmt.Sprintf(" · %s · %s", e.Actor, stamp(e.RaisedAt))
+		if !e.Blocking {
+			meta = fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
+		}
+		return chunk{
+			gridRow(col, cursor, shortID(e.Task), badge, style, e.Question, "", "", width) +
+				"\n" + secondLine(col, lead, leadStyle, meta, width),
+			cursor,
 		}
 	}
-	if scroll+avail > len(lines) {
-		scroll = len(lines) - avail
+	t := r.task
+	suffix := labelSuffix(t.Labels) + edgeText(s, t.ID)
+	switch r.section {
+	case "ready":
+		badgeStyle := col.dim
+		if t.Priority == 0 {
+			badgeStyle = col.yellow
+		}
+		return chunk{gridRow(col, cursor, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+			badgeStyle, t.Title, suffix, col.dim, width), cursor}
+	case "inprogress":
+		return chunk{gridRow(col, cursor, shortID(t.ID), "", "",
+			t.Title, "  ← "+t.Holder, col.yellow, width), cursor}
+	default: // blocked
+		return chunk{
+			gridRow(col, cursor, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
+				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonDisp(t.ID, s.taskRef), width),
+			cursor,
+		}
 	}
-	return strings.Join(lines[scroll:scroll+avail], "\n") + "\n"
 }
 
-// renderTopRows renders the selectable sections with the cursor marker.
-func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor int) {
-	secs := []struct {
-		key, title, color string
-	}{
-		// "Needs Input", not "Open escalations" (T7, 2026-07-30): the
-		// entity keeps its name; the header alone softens the severity
-		// the word overstates, and names no answerer — a future one may
-		// not be a human.
-		{"escalations", "Needs Input", ""},
-		{"ready", "Ready", col.green},
-		{"inprogress", "In progress", col.yellow},
-		{"blocked", "Blocked", col.red},
+// listChunks builds the section bars and rows. The old summary-counts
+// line is gone — the bars carry the counts.
+func (m topModel) listChunks(width int) []chunk {
+	col, s := m.col, m.snap
+	var out []chunk
+	if s.state.Degraded != "" {
+		deg := wrapTo(fmt.Sprintf("%sDEGRADED (read-only):%s %s", col.red, col.reset, s.state.Degraded), width)
+		out = append(out, chunk{text: strings.TrimRight(deg, "\n")}, chunk{})
 	}
-	for si, sec := range secs {
+	for si, sec := range topSections {
 		if si > 0 {
-			fmt.Fprintln(w)
+			out = append(out, chunk{}) // blank line between sections
 		}
 		var idx []int
-		for i, r := range rows {
+		for i, r := range m.rows {
 			if r.section == sec.key {
 				idx = append(idx, i)
 			}
 		}
-		fmt.Fprintf(w, "%s%s%s%s (%d)\n", col.bold, sec.color, sec.title, col.reset, len(idx))
+		right := ""
+		if m.armed && sec.hint != "" {
+			right = sec.hint + " "
+		}
+		out = append(out, chunk{text: barLine(col, sec.bg(col),
+			fmt.Sprintf(" %s (%d)", sec.label, len(idx)), right, width)})
 		if len(idx) == 0 {
-			fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
+			out = append(out, chunk{text: "  " + sgr(col, col.dim, "none")})
 			continue
 		}
-		for n, i := range idx {
-			if n > 0 {
-				fmt.Fprintln(w) // breathing room: rows wrap to multiple lines
-			}
-			renderTopRow(w, col, s, rows[i], i == cursor)
+		for _, i := range idx {
+			out = append(out, rowChunk(col, s, m.rows[i], i == m.cursor, width))
 		}
 	}
+	return out
+}
+
+// windowChunks slides a window over the chunks so the cursor's chunk is
+// fully on screen (pinned toward the bottom edge once the list outgrows
+// the terminal); chunks never split across the window edge. Unknown
+// height renders everything.
+func windowChunks(chunks []chunk, height, headLines, footLines int) string {
+	join := func(cs []chunk) string {
+		var b strings.Builder
+		for _, c := range cs {
+			b.WriteString(c.text)
+			b.WriteString("\n")
+		}
+		return b.String()
+	}
+	total, cursorIdx := 0, 0
+	for i, c := range chunks {
+		total += c.lines()
+		if c.cursor {
+			cursorIdx = i
+		}
+	}
+	if height <= 0 {
+		return join(chunks)
+	}
+	avail := height - headLines - footLines
+	if avail < 1 {
+		avail = 1
+	}
+	if total <= avail {
+		return join(chunks)
+	}
+	linesThrough := func(from, to int) int {
+		n := 0
+		for i := from; i <= to; i++ {
+			n += chunks[i].lines()
+		}
+		return n
+	}
+	start := 0
+	for start < cursorIdx && linesThrough(start, cursorIdx) > avail {
+		start++
+	}
+	var out []chunk
+	used := 0
+	for i := start; i < len(chunks); i++ {
+		n := chunks[i].lines()
+		if used+n > avail && i > start {
+			break
+		}
+		out = append(out, chunks[i])
+		used += n
+	}
+	return join(out)
 }
 
 // shortID abbreviates a task ID for TUI display: the type prefix plus
@@ -573,84 +770,31 @@ func shortID(id string) string {
 	return id[:i+1] + strings.ToLower(tail[len(tail)-4:])
 }
 
-// edgeSuffix surfaces that a task is part of a structure — containment
-// (parents) and scheduling (depends_on) — without imposing a tree on
-// the flat, status-grouped list: edge semantics are still an open
-// question, so the list only marks that edges exist.
-func edgeSuffix(col colors, s *snapshot, id string) string {
-	t := s.tasks[id].Task
-	var parts []string
-	if n := len(t.Parents); n > 0 {
-		p := "in " + shortID(t.Parents[0])
-		if n > 1 {
-			p += fmt.Sprintf(" +%d", n-1)
-		}
-		parts = append(parts, p)
-	}
-	if n := len(t.DependsOn); n > 0 {
-		parts = append(parts, plural(n, "dep"))
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("  %s· %s%s", col.dim, strings.Join(parts, " · "), col.reset)
-}
-
-func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool) {
-	mark := "  "
-	if selected {
-		mark = "▸ "
-	}
-	if r.kind == rowEscalation {
-		e := r.esc
-		blocking := ""
-		if e.Blocking {
-			blocking = fmt.Sprintf("  %s[blocking]%s", col.red, col.reset)
-		}
-		title := ""
-		if h, ok := s.tasks[e.Task]; ok {
-			title = " (" + oneLine(h.Task.Title) + ")"
-		}
-		fmt.Fprintf(w, "%s%s%s%s%s\n", mark, col.bold, oneLine(e.Question), col.reset, blocking)
-		fmt.Fprintf(w, "      task %s%s · asked by %s · raised %s\n",
-			shortID(e.Task), title, e.Actor, stamp(e.RaisedAt))
-		return
-	}
-	t := r.task
-	edges := edgeSuffix(col, s, t.ID)
-	switch r.section {
-	case "ready":
-		fmt.Fprintf(w, "%s%s%s%s  p%d  %s%s%s\n",
-			mark, col.dim, shortID(t.ID), col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), edges)
-	case "inprogress":
-		fmt.Fprintf(w, "%s%s%s%s  %s  %s← %s%s%s\n",
-			mark, col.dim, shortID(t.ID), col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset, edges)
-	default: // blocked
-		fmt.Fprintf(w, "%s%s%s%s  %s%s\n      %swaiting:%s %s\n",
-			mark, col.dim, shortID(t.ID), col.reset, oneLine(t.Title), edges, col.red, col.reset,
-			s.blockedReasonDisp(t.ID, s.taskRef))
-	}
-}
-
-// footer is the key legend, or the active input prompt.
-func (m topModel) footer() string {
+// footerView is the footer bar (key legend left, done tally right), or
+// the active input prompt, full-width like the header.
+func (m topModel) footerView(width int) string {
 	col := m.col
 	switch m.mode {
 	case modeAnswer:
-		return fmt.Sprintf("%sanswer%s %s > %s█  %senter submits · esc cancels%s\n",
-			col.bold, col.reset, oneLine(m.target.esc.Question), m.input, col.dim, col.reset)
+		return wrapTo(fmt.Sprintf("%sanswer%s %s > %s█  %senter submits · esc cancels%s\n",
+			col.bold, col.reset, oneLine(m.target.esc.Question), m.input, col.dim, col.reset), m.width)
 	case modePriority:
-		return fmt.Sprintf("%spriority%s %s (%s) > %s█  %senter submits · esc cancels%s\n",
+		return wrapTo(fmt.Sprintf("%spriority%s %s (%s) > %s█  %senter submits · esc cancels%s\n",
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
-			m.input, col.dim, col.reset)
+			m.input, col.dim, col.reset), m.width)
 	case modeConfirmCancel:
-		return fmt.Sprintf("%scancel%s %s (%s)? y/n\n",
-			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title))
+		return wrapTo(fmt.Sprintf("%scancel%s %s (%s)? y/n\n",
+			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title)), m.width)
 	}
-	if !m.armed {
-		return fmt.Sprintf("%s↑/↓ (j/k) move · enter open · q quit%s\n", col.dim, col.reset)
+	legend := " ↑/↓ (j/k) move · enter open · q quit"
+	if m.armed {
+		legend = " ↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit"
 	}
-	return fmt.Sprintf("%s↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
+	done := ""
+	if m.snap != nil {
+		done = fmt.Sprintf("%d done ", len(m.snap.classify().done))
+	}
+	return barLine(col, col.rev+col.dim, legend, done, width) + "\n"
 }
 
 // ---- entry point ----

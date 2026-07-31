@@ -171,14 +171,14 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	v := m.View()
 	for _, want := range []string{
-		"tuhdoo · sync: local-only", "acting as brandon",
-		"2 ready · 1 in progress · 1 blocked · 1 done · 0 cancelled · 1 escalation open",
-		"Needs Input (1)", "Which license?", "[blocking]", "asked by brandon/a2",
-		"Ready (2)", "write the parser", "sweep the floor",
-		"In progress (1)", "investigate the flake", "brandon/a1",
-		"Blocked (1)", "choose a license", "waiting:",
-		"▸ Which license?", // cursor starts on the first row
+		"tuhdoo · local-only", "acting as brandon",
+		"NEEDS INPUT (1)", "Which license?", "blocking · brandon/a2",
+		"READY (2)", "write the parser", "sweep the floor",
+		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
+		"BLOCKED (1)", "choose a license", "waiting:",
+		"▸ t-lic   !   Which license?", // cursor starts on the first row
 		"↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit",
+		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("view missing %q; view:\n%s", want, v)
@@ -489,7 +489,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "↑/↓ (j/k) move · enter open · q quit"} {
+	for _, want := range []string{"watch mode", "BLOCKED (1)", "waiting:", "↑/↓ (j/k) move · enter open · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
@@ -731,7 +731,7 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"t-rqjm  p0  its dependency  · in t-d83w", // ready row + parent marker
-		"t-d83w  the long one",                    // blocked row
+		"t-d83w      the long one",                // blocked row: blank badge cell
 		// The waiting: reason annotates its dep with status and title.
 		"waiting: depends on t-rqjm (open — its dependency)",
 	} {

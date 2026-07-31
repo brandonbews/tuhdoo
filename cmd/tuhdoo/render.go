@@ -12,9 +12,12 @@ import (
 
 // colors holds ANSI escape codes, or all-empty strings for plain
 // output. Color is on only when out is a terminal and NO_COLOR is unset
-// (https://no-color.org).
+// (https://no-color.org). 16-color ANSI only — user themes must
+// survive. The bg* codes are black-on-color section bars (TUI only);
+// their zero values degrade bars to plain text with the same geometry.
 type colors struct {
-	reset, bold, dim, green, yellow, red string
+	reset, bold, dim, rev, green, yellow, red string
+	bgMagenta, bgGreen, bgYellow, bgRed       string
 }
 
 // isTTY reports whether f is a character device (a real terminal).
@@ -28,8 +31,10 @@ func newColors(out *os.File) colors {
 		return colors{}
 	}
 	return colors{
-		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m",
+		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
 		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m",
+		bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
+		bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
 	}
 }
 
