@@ -4,11 +4,11 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) | Escalation ergonomics: resolve answered-out-of-band, and the name itself | 2 | mcp, design, escalations |
 | [t-01KYRMFV10W1N28TCN5ZZ9Z2C1](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) | Retire full-replay-per-write and the grow-forever event overlay | 1 | go, performance |
 | [t-01KYRVCBE83KT62BAE11W3TAM8](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) | Release pipeline: tagged, cross-compiled binaries | 1 | distribution, ci |
 | [t-01KYTQTEQYGXVQ0QY7F95CHXVV](tasks/t-01KYTQTEQYGXVQ0QY7F95CHXVV.md) | Principal identity override: stop deriving ugly actors from noreply emails | 1 | daemon, identity, ux |
 | [t-01KYTQTEQYGXVQ0QY7FCTAZ3G6](tasks/t-01KYTQTEQYGXVQ0QY7FCTAZ3G6.md) | Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record | 1 | docs, protocol |
-| [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) | Escalation ergonomics: resolve answered-out-of-band, and the name itself | 1 | mcp, design, escalations |
 | [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) | Short IDs are the human contract: display everywhere, accept as input, annotate edges | 1 | cli, tui, ux, design |
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform, parked |
 | [t-01KYT63MB28Z535SMJCA63RQJM](tasks/t-01KYT63MB28Z535SMJCA63RQJM.md) | Arm the TUI detail screen (a/p/c on the viewed task) | 0 | cli, tui |
