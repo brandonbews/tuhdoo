@@ -11,9 +11,7 @@
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) | Short IDs are the human contract: display everywhere, accept as input, annotate edges | 1 | `4099114+brandonbews/claude-code-2` |
+_None._
 
 ## Blocked / waiting
 
@@ -36,6 +34,7 @@
 - [t-01KYTQTEQYGXVQ0QY7F95CHXVV](tasks/t-01KYTQTEQYGXVQ0QY7F95CHXVV.md) — Principal identity override: stop deriving ugly actors from noreply emails
 - [t-01KYTQTEQYGXVQ0QY7FCTAZ3G6](tasks/t-01KYTQTEQYGXVQ0QY7FCTAZ3G6.md) — Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
 - [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) — Escalation ergonomics: resolve answered-out-of-band, and the name itself
+- [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) — Short IDs are the human contract: display everywhere, accept as input, annotate edges
 
 ## Cancelled
 

@@ -1,6 +1,6 @@
 # t-01KYTSQDQJWM8YQQ8FWMHBZ5DW — Short IDs are the human contract: display everywhere, accept as input, annotate edges
 
-- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`, `design`
 - Created: 2026-07-31 00:38 UTC by `4099114+brandonbews`
@@ -21,4 +21,9 @@ Constraints: boring Go; display/input only — no event, API, or stored-ID chang
 
 ## History
 
-_No activity yet._
+### 2026-07-31 05:31 UTC — run by `4099114+brandonbews/claude-code-2` — done
+
+- Branch: `main`
+- Commits: `5bf8eaf`
+
+All four asks landed. Display: TUI detail screen leads with the short form, shows the full ULID exactly once (dimmed canonical `id` line), and shortens parents/depends_on, waiting: reasons, and priority/cancel footers+status messages (API calls still send full IDs). Edge annotation: new snapshot.taskRef renders `t-d83w (done — old chore)` for any ID resolvable in the state listing — which does include done/cancelled tasks, killing the dangling-edge illusion; unresolvable IDs render bare, never an invented status; titles ellipsized at 40 runes. Input: `tuhdoo task <id>` resolves full IDs (outright), short forms, or any case-insensitive unambiguous fragment of the ULID tail (optional t- prefix); ambiguity errors listing each candidate as short + title + full ID; unknown keeps the "unknown task" contract. MCP verbs untouched. One-shot output verified byte-identical via a before/after fixture dump diff during development, pinned going forward by TestPrintTaskOneShotKeepsFullIDs plus the untouched exact-format CLI tests. Rendering is printTaskRef(ref) where nil ref = the old one-shot bytes and the TUI passes snapshot.taskRef. Model-driven tests cover resolved/done/cancelled/unresolvable refs, detail annotations, full-ULID-appears-once counting, and the resolver table; real-daemon CLI tests cover short-form lookup and ambiguous t-0. Contract documented as a dated paragraph in 002 T7 (canonical IDs remain ULIDs; display/input sugar only; stored bytes untouched).
