@@ -382,12 +382,19 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	mustContain(t, out, flake, "investigate the flake", "claimed by brandon/a1")
 
 	// task with an ambiguous fragment (every ULID starts with 0): an
-	// error listing the candidates, never a guess.
-	out, code = runCLI(t, repo, "task", "t-0")
+	// error listing the candidates, never a guess. The old-era prefix on
+	// the same fragment matches nothing here — these tasks are all
+	// tuh-minted, and a fragment's prefix is literal (T7, 2026-07-31).
+	out, code = runCLI(t, repo, "task", "tuh-0")
 	if code == 0 {
 		t.Errorf("ambiguous fragment exited 0; output:\n%s", out)
 	}
 	mustContain(t, out, "ambiguous", shortID(parser), shortID(flake))
+	out, code = runCLI(t, repo, "task", "t-0")
+	if code == 0 {
+		t.Errorf("old-era fragment matched tuh- tasks; output:\n%s", out)
+	}
+	mustContain(t, out, "unknown task")
 
 	// escalations: open with absolute age and blocking mark, answered
 	// compactly.

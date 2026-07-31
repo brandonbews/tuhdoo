@@ -212,6 +212,11 @@ func resolveTaskID(frag string, tasks []stateTask) (string, error) {
 // idMatches reports whether frag — case-insensitive, with or without
 // the type prefix — is a substring of id's tail. The short form is one
 // such substring (the tail's last four), so it needs no special case.
+// Only the ID's own prefix is stripped from the fragment, which is the
+// cross-prefix rule for the tuh-/t- era split (T7, 2026-07-31): a
+// prefixed fragment matches its own era literally (`t-d83w` never
+// matches a `tuh-` task and vice versa — a leftover hyphen can't occur
+// in a ULID tail), while a bare fragment (`d83w`) matches both eras.
 func idMatches(id, frag string) bool {
 	f, l := strings.ToLower(frag), strings.ToLower(id)
 	i := strings.Index(l, "-") + 1

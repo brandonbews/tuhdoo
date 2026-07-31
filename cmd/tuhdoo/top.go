@@ -1035,8 +1035,10 @@ func joinChunks(cs []chunk) string {
 	return b.String()
 }
 
-// shortID abbreviates a task ID for TUI display: the type prefix plus
-// the ULID's last four characters, lowercased (`t-d83w`). The tail is
+// shortID abbreviates a task ID for TUI display: the ID's own type
+// prefix (everything through the first hyphen — `tuh-` for tasks
+// minted after the 2026-07-31 rebrand, `t-` for older ones) plus the
+// ULID's last four characters, lowercased (`tuh-d83w`). The tail is
 // where same-batch ULIDs actually differ — their timestamp prefixes
 // match — so abbreviation comes from the right-hand end. Display and
 // input sugar only (T7): stored and transmitted IDs stay full-length,

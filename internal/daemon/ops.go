@@ -94,6 +94,12 @@ type escalateReq struct {
 	Blocking bool   `json:"blocking,omitempty"`
 }
 
+// taskIDPrefix brands newly minted task IDs (T7, 2026-07-31): tuh- is
+// uniquely tuhdoo. Tasks minted before the rebrand carry t- and are
+// never rewritten (T3) — every surface derives the prefix from the ID
+// itself (first hyphen), so both eras coexist until t- ages out.
+const taskIDPrefix = "tuh-"
+
 // ---- operations ----
 
 // opCreateTasks is batch create with intra-batch tmp refs (T5
@@ -148,7 +154,7 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 		if err != nil {
 			return nil, nil, opErrf(http.StatusInternalServerError, "%v", err)
 		}
-		ids[i] = "t-" + u
+		ids[i] = taskIDPrefix + u
 	}
 	resolve := func(refs []string) []string {
 		if len(refs) == 0 {

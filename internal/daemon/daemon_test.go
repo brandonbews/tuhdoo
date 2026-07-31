@@ -307,8 +307,8 @@ func TestBatchCreateTmpRefs(t *testing.T) {
 		t.Fatalf("got %d ids, %d tmp mappings, want 5 and 5", len(resp.IDs), len(resp.Tmp))
 	}
 	for name, id := range resp.Tmp {
-		if !strings.HasPrefix(id, "t-") {
-			t.Fatalf("tmp %q resolved to %q, want a t- id", name, id)
+		if !strings.HasPrefix(id, "tuh-") {
+			t.Fatalf("tmp %q resolved to %q, want a tuh- id", name, id)
 		}
 	}
 

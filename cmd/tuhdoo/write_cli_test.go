@@ -31,7 +31,7 @@ func runCLIStdin(t *testing.T, repo, stdin string, args ...string) (string, int)
 func createdID(t *testing.T, out string) string {
 	t.Helper()
 	fields := strings.Fields(out)
-	if len(fields) < 2 || fields[0] != "created" || !strings.HasPrefix(fields[1], "t-") {
+	if len(fields) < 2 || fields[0] != "created" || !strings.HasPrefix(fields[1], "tuh-") {
 		t.Fatalf("cannot parse create output:\n%s", out)
 	}
 	return fields[1]

@@ -740,6 +740,10 @@ func TestShortID(t *testing.T) {
 		{"t-lic", "t-lic"},
 		{"t-epic", "t-epic"},
 		{"01KYT63MB28Z535SMJC9B0D83W", "d83w"}, // no type prefix
+		// Post-rebrand IDs shorten with their own tuh- prefix; the two
+		// eras coexist side by side (T7, 2026-07-31).
+		{"tuh-01KYT63MB28Z535SMJC9B0D83W", "tuh-d83w"},
+		{"tuh-01KYT63MB28Z535SMJCA63RQJM", "tuh-rqjm"},
 	}
 	for _, tt := range tests {
 		if got := shortID(tt.in); got != tt.want {
@@ -916,6 +920,59 @@ func TestResolveTaskID(t *testing.T) {
 							t.Errorf("ambiguity error missing candidate %q: %v", cand, err)
 						}
 					}
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("resolveTaskID(%q) = %q, want %q", tt.frag, got, tt.want)
+			}
+		})
+	}
+}
+
+// The cross-prefix rule for the tuh-/t- era split (T7, 2026-07-31): a
+// fragment's prefix is matched literally against the ID, so t-d83w and
+// tuh-d83w name distinct tasks even with identical tails; a bare
+// fragment matches both eras and turns ambiguous when the tails
+// collide. Neither prefix is ever rejected.
+func TestResolveTaskIDCrossPrefix(t *testing.T) {
+	oldID := "t-01KYT63MB28Z535SMJC9B0D83W"   // pre-rebrand era
+	newID := "tuh-01KYT63MB28Z535SMJC9B0D83W" // same tail, tuh- era
+	other := "tuh-01KYT63MB28Z535SMJCA63RQJM"
+	tasks := []stateTask{
+		{ID: oldID, Title: "the old-era one"},
+		{ID: newID, Title: "the new-era twin"},
+		{ID: other, Title: "the new-era loner"},
+	}
+	tests := []struct {
+		name, frag, want, wantErr string
+	}{
+		{name: "old full ID", frag: oldID, want: oldID},
+		{name: "new full ID", frag: newID, want: newID},
+		{name: "old short form stays in its era", frag: "t-d83w", want: oldID},
+		{name: "new short form stays in its era", frag: "tuh-d83w", want: newID},
+		{name: "new short form, unique tail", frag: "tuh-rqjm", want: other},
+		{name: "bare tail spans both eras", frag: "d83w", wantErr: "ambiguous"},
+		{name: "bare unique tail resolves", frag: "rqjm", want: other},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveTaskID(tt.frag, tasks)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("err = %v, want containing %q", err, tt.wantErr)
+				}
+				// Both eras' twins are listed as candidates.
+				for _, cand := range []string{oldID, newID} {
+					if !strings.Contains(err.Error(), cand) {
+						t.Errorf("ambiguity error missing candidate %q: %v", cand, err)
+					}
+				}
+				if strings.Contains(err.Error(), other) {
+					t.Errorf("ambiguity error lists non-matching task: %v", err)
 				}
 				return
 			}
