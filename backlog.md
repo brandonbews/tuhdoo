@@ -33,6 +33,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) — Make it clearer when it item is selected in the list (maybe dimmed bg or something)
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
+- [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) — blocked and needs input items appearring in both lists is visually confusing. maybe dont show escalated/needs input items in blocked
 
 ## Done
 
