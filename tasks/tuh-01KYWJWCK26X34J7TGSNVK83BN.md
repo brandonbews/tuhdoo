@@ -1,6 +1,6 @@
 # tuh-01KYWJWCK26X34J7TGSNVK83BN — Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows)
 
-- Status: open — ready
+- Status: open — in progress, claimed by `brandon/claude-code-1`
 - Priority: 0
 - Labels: `cli`, `tui`
 - Created: 2026-07-31 17:17 UTC by `brandon`
