@@ -37,6 +37,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — Do we still need the one-shot backlog/escalations commands?
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — create proper developmet branch flow. assumption is dev branch as default with main being where release branches off dev merge to create release and features start becoming branches off dev that then pr and then merge
+- [tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) — confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
 
 ## Done
 
