@@ -43,7 +43,7 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"  t-lic       choose a license",
 		"              waiting: needs input (above)",
 		"",
-		" HELD (1)                                                             c archive ",
+		" ON HOLD (1)                                                          c archive ",
 		"  t-park  p2  polish the docs",
 		"",
 		" INBOX (1)                                                i capture · c archive ",
@@ -81,7 +81,7 @@ func TestTopGoldenBars(t *testing.T) {
 			"\x1b[30;41m" + pad(" BLOCKED (1)", "") + "\x1b[0m",
 			// The shelves (2026-07-31): reverse-dim bars, no section color
 			// — present but never claiming the eye.
-			"\x1b[7m\x1b[2m" + pad(" HELD (1)", "c archive ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c archive ") + "\x1b[0m",
 			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c archive ") + "\x1b[0m",
 			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit", "1 done ") + "\x1b[0m",
 		} {

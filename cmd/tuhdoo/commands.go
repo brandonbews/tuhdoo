@@ -103,7 +103,7 @@ func printStatus(w io.Writer, col colors, head string, s *snapshot) {
 	if s.state.Degraded != "" {
 		fmt.Fprintf(w, "%sDEGRADED%s     %s\n", col.red, col.reset, s.state.Degraded)
 	}
-	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d held · %d inbox · %d done · %d archived\n",
+	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d on hold · %d inbox · %d done · %d archived\n",
 		col.bold, col.reset,
 		col.green, len(b.ready), col.reset,
 		col.yellow, len(b.inProgress), col.reset,

@@ -207,15 +207,15 @@ func TestCreateCaptureAndPromote(t *testing.T) {
 	}
 	mustContain(t, out, "invalid status")
 
-	// The shelves render: backlog sections (Held above Inbox), status
+	// The shelves render: backlog sections (On hold above Inbox), status
 	// counts, and the task biography's status line.
 	out, _ = runCLI(t, repo, "backlog")
-	mustContain(t, out, "Held (1)", parked, "p3", "Inbox (1)", idea, "idea: dark mode")
-	if strings.Index(out, "Held (1)") > strings.Index(out, "Inbox (1)") {
-		t.Errorf("Held must render above Inbox:\n%s", out)
+	mustContain(t, out, "On hold (1)", parked, "p3", "Inbox (1)", idea, "idea: dark mode")
+	if strings.Index(out, "On hold (1)") > strings.Index(out, "Inbox (1)") {
+		t.Errorf("On hold must render above Inbox:\n%s", out)
 	}
 	out, _ = runCLI(t, repo, "status")
-	mustContain(t, out, "0 ready", "1 held", "1 inbox")
+	mustContain(t, out, "0 ready", "1 on hold", "1 inbox")
 	out, _ = runCLI(t, repo, "task", idea)
 	mustContain(t, out, "status      inbox")
 
@@ -235,7 +235,7 @@ func TestCreateCaptureAndPromote(t *testing.T) {
 		t.Fatalf("pause exit %d; output:\n%s", code, out)
 	}
 	out, _ = runCLI(t, repo, "status")
-	mustContain(t, out, "1 ready", "1 held", "0 inbox")
+	mustContain(t, out, "1 ready", "1 on hold", "0 inbox")
 	out, _ = runCLI(t, repo, "task", idea)
 	mustContain(t, out, "status      open", "Context, ask, acceptance.")
 }

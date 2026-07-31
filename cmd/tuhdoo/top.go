@@ -825,7 +825,7 @@ var topSections = []topSection{
 	// The shelves (2026-07-31): held above inbox, both dim — parked and
 	// captured work sits below the live queue and never claims the eye.
 	// No colored bars: reverse-dim reads as "present but not active".
-	{"held", "HELD", func(c colors) string { return c.rev + c.dim }, true, "c archive"},
+	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "c archive"},
 	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c archive"},
 }
 

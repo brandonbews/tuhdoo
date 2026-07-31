@@ -20,7 +20,7 @@
 | [t-flaky](tasks/t-flaky.md) | Fix flaky TestFoo | 8 | escalation: TestFoo depends on wall-clock timing — rewrite or delete? |
 | [t-routr](tasks/t-routr.md) | Route claims by label | 0 | depends on [t-idea](tasks/t-idea.md) |
 
-## Held
+## On hold
 
 Triaged, deliberately paused — never served to agents until reopened.
 

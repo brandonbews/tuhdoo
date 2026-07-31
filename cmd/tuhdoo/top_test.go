@@ -841,7 +841,7 @@ func TestSnapshotTaskRef(t *testing.T) {
 		{"t-epic", "t-epic"},                    // unresolvable: bare, no status
 		// The shelves annotate with their own words (2026-07-31): a dep
 		// waiting on an inbox/held task says exactly why it waits.
-		{"t-park", "t-park (held — polish the docs)"},
+		{"t-park", "t-park (on hold — polish the docs)"},
 		{"t-idea", "t-idea (inbox — idea: dark mode)"},
 		{"t-01KYT63MB28Z535SMJC9B0D83W",
 			"t-d83w (archived — wide wide wide wide wide wide wide wide…)"},
@@ -1756,7 +1756,7 @@ func TestTopBlockedOnShelvedDependency(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"depends on t-idea (inbox — idea: dark mode)",
-		"depends on t-park (held — polish the docs)",
+		"depends on t-park (on hold — polish the docs)",
 	} {
 		if !strings.Contains(wrapForSearch(v), want) {
 			t.Errorf("waiting reason missing %q; view:\n%s", want, v)

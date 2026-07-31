@@ -67,9 +67,15 @@ func stamp(t time.Time) string {
 // (T7, 2026-07-31): the ledger event and API value stay "cancelled"
 // (T3), but humans read "archived" — the verb that says curation, not
 // deletion, because nothing is deleted and history stays on the ledger.
+// Same split for "held": stored value and --status flag stay "held",
+// humans read "on hold" — the phrase says paused-on-purpose where the
+// bare participle read ambiguously.
 func humanStatus(s string) string {
-	if s == "cancelled" {
+	switch s {
+	case "cancelled":
 		return "archived"
+	case "held":
+		return "on hold"
 	}
 	return s
 }
@@ -154,7 +160,7 @@ func renderBlocked(w io.Writer, col colors, s *snapshot, tasks []stateTask) {
 // headers — parked and captured work sits below the live queue in both
 // the one-shot output and the TUI.
 func renderHeld(w io.Writer, col colors, tasks []stateTask) {
-	fmt.Fprintf(w, "%sHeld%s (%d)\n", col.dim, col.reset, len(tasks))
+	fmt.Fprintf(w, "%sOn hold%s (%d)\n", col.dim, col.reset, len(tasks))
 	if len(tasks) == 0 {
 		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
 		return

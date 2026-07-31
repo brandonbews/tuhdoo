@@ -83,7 +83,7 @@ the life of the pane — the dashboard that sits beside a working agent.
 
   init          set up the data branch in this repository (idempotent)
   status        one-screen overview: sync state, counts, active claims
-  backlog       ready / in-progress / blocked / held / inbox work, from
+  backlog       ready / in-progress / blocked / on-hold / inbox work, from
                 live daemon state
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
