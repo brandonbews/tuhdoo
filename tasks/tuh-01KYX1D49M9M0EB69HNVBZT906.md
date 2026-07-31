@@ -1,6 +1,6 @@
 # tuh-01KYX1D49M9M0EB69HNVBZT906 — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 
-- Status: open — ready
+- Status: done
 - Priority: 0
 - Labels: `process`, `docs`
 - Created: 2026-07-31 21:31 UTC by `brandon`
@@ -31,4 +31,6 @@ Constraints: no dev branch — main stays the only long-lived code branch. Relea
 
 ## History
 
-_No activity yet._
+### 2026-07-31 22:43 UTC — run by `brandon/claude-code-1` — done
+
+All three parts landed, PR flow proven on itself. (1) Settings, applied via gh api with Brandon's in-session permission lift and verified live: squash-only merges (merge commits and rebase disabled, squash message = PR title + body), auto-merge enabled, merged branches auto-delete; ruleset 20155938 on main (PRs only, required green "test" check, deletion + force-push blocked, no bypass — current_user_can_bypass: never); ruleset 20155957 on the tuhdoo data branch (force-push and deletion blocked). Probe: direct empty-commit push to main rejected with GH013 naming both rules; the probe commit never landed anywhere. Data-branch rule verified by read-back only, per constraints. (2) CLAUDE.md "Building tasks" rewritten: one PR per task, branch tuh-<short-id>/<slug>, PR title = task title, body opens with task ID, gh pr merge --auto --squash, finish_run only after merge; agent-protocol.md and .github/workflows/ untouched. (3) Test gating verified binding: PR #1 required the "test" check (make test lint) and auto-merged only after it passed. Proof-of-loop: this task's own change landed as PR https://github.com/brandonbews/tuhdoo/pull/1, squash commit cd262d9 on main titled after the task with (#1) back-reference; head branch auto-deleted. Note for Brandon: the temporary Administration permission on the PAT can be dropped now — nothing in the ongoing flow needs it.
