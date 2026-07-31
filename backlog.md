@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | distribution, npm |
 | [t-01KYVD31CNTR1EVCDHPG0G4GMZ](tasks/t-01KYVD31CNTR1EVCDHPG0G4GMZ.md) | TUI navigation: up/down arrows move the cursor; footer says so | 1 | cli, tui, ux |
 | [t-01KYVD31CNTR1EVCDHPJGSQAGH](tasks/t-01KYVD31CNTR1EVCDHPJGSQAGH.md) | Align MCP tool descriptions with the revised notes doctrine | 1 | protocol, docs, mcp |
 | [t-01KYVEXK2BX040KJ244S2WP213](tasks/t-01KYVEXK2BX040KJ244S2WP213.md) | CLI write verbs: a paved path when no MCP session exists | 1 | cli, dx |
@@ -14,7 +13,9 @@
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | `brandon/claude-code-11` |
 
 ## Blocked / waiting
 
