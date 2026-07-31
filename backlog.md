@@ -5,8 +5,13 @@
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | distribution, npm |
+| [t-01KYT63MB28Z535SMJCA63RQJM](tasks/t-01KYT63MB28Z535SMJCA63RQJM.md) | Arm the TUI detail screen: selectable escalation, enter to answer; p/c on the viewed task | 1 | cli, tui |
+| [t-01KYVD31CNTR1EVCDHPC5973KW](tasks/t-01KYVD31CNTR1EVCDHPC5973KW.md) | Needs Input: enter answers in place; blocked rows stop repeating the question | 1 | cli, tui, ux |
+| [t-01KYVD31CNTR1EVCDHPG0G4GMZ](tasks/t-01KYVD31CNTR1EVCDHPG0G4GMZ.md) | TUI navigation: up/down arrows move the cursor; footer says so | 1 | cli, tui, ux |
+| [t-01KYVD31CNTR1EVCDHPGZFQ5EV](tasks/t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) | Rename the cancel interaction: archive as the human verb, task.cancelled stays the plumbing | 1 | cli, tui, ux, design |
+| [t-01KYVD31CNTR1EVCDHPHJEV9VK](tasks/t-01KYVD31CNTR1EVCDHPHJEV9VK.md) | TUI mouse support: click selects, click again acts as enter | 1 | cli, tui, ux |
+| [t-01KYVD31CNTR1EVCDHPJGSQAGH](tasks/t-01KYVD31CNTR1EVCDHPJGSQAGH.md) | Align MCP tool descriptions with the revised notes doctrine | 1 | protocol, docs, mcp |
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform, parked |
-| [t-01KYT63MB28Z535SMJCA63RQJM](tasks/t-01KYT63MB28Z535SMJCA63RQJM.md) | Arm the TUI detail screen (a/p/c on the viewed task) | 0 | cli, tui |
 | [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
 
 ## In progress
