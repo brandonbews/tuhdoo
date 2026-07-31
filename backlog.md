@@ -35,7 +35,9 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-_None._
+Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
+
+- [tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) — Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions)
 
 ## Done
 
