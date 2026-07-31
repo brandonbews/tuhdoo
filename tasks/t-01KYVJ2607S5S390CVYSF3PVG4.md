@@ -1,6 +1,6 @@
 # t-01KYVJ2607S5S390CVYSF3PVG4 — TUI dashboard visual redesign: section bars + fixed column grid (mock-a)
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`, `design`
 - Created: 2026-07-31 07:43 UTC by `brandon/claude-code-6`
@@ -73,4 +73,8 @@ direct for style definitions — one named-styles block, not scattered escapes.
 
 ## History
 
-_No activity yet._
+### 2026-07-31 08:49 UTC — run by `brandon/claude-fable` — done
+
+- Commits: `e74280a`
+
+Commit e74280a on main. Mock-a reproduced in the real TUI: reverse-video header bar (sync left, acting-as/watch badge right), per-section 16-color bars (magenta/green/yellow/red, black text) carrying counts on the left edge and armed-only steering hints on the right, reverse+dim footer bar with the key legend and the done tally; the old summary-counts line removed. All rows share the mark(2)+id(6)+gap+badge(2)+gap grid, titles at column 14: p<n> badges (p0 yellow, others dim), red bold ! for blocking escalations, escalation rows show their task's short id, second lines (blocking meta, waiting:) indent to the title column, rows never wrap — fitTitle ellipsizes the title and sacrifices the dim label/edge suffix first. Sections are a data slice (topSections) so the coming inbox/on-hold statuses are new entries, not code. Windowing rewritten over atomic chunks (windowChunks) so two-line rows never split at the screen edge. Zero-value colors degrade every bar to plain text with byte-identical geometry. Kept: detail screen, one-shot CLI renders, c cancel naming (archive rename stays with t-…q5ev). Golden tests in top_golden_test.go: byte-exact plain 80-col golden, exact bar composition with real SGR at 80 and 120, watch-mode hint suppression, ellipsis/label-drop rules, chunk-safe windowing; stale assertions in top_test.go updated. make test lint green; bin/tuhdoo rebuilt (daemon untouched — no restart needed; an open TUI shows the new layout after its next launch, not mid-run).
