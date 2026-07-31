@@ -8,6 +8,7 @@
 | [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) | claim_task on an escalation-blocked task reports "unmet dependencies" | 0 | mcp, dx |
 | [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
 | [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
+| [tuh-01KYX6CMQV1G6XDZGNAF2M5C5P](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) | Slash command /drain-backlog: the reusable drain-the-backlog prompt | 0 | dx, docs |
 
 ## In progress
 
