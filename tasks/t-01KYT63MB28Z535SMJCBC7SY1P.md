@@ -1,6 +1,6 @@
 # t-01KYT63MB28Z535SMJCBC7SY1P — Tree/parent-grouped rendering in the TUI list
 
-- Status: held — deliberately paused
+- Status: on hold — deliberately paused
 - Priority: 0
 - Labels: `cli`, `tui`, `design`
 - Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done)
