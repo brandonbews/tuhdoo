@@ -1,0 +1,20 @@
+# t-01KYVEXK2BX040KJ244S2WP213 — CLI write verbs: a paved path when no MCP session exists
+
+- Status: open — ready
+- Priority: 1
+- Labels: `cli`, `dx`
+- Created: 2026-07-31 06:48 UTC by `brandon/claude-code-4`
+
+## Description
+
+Context: observed during the 2026-07-30 dogfood session: deploy-after-landing restarts the daemon, which kills every live MCP session — including the deploying agent's — and the wrap-up acts (filing follow-up tasks, claiming newly-unblocked work, recording finish_run) come after deploy. Harnesses bind MCP at session start and do not reconnect, so the agent had to hand-roll a JSON-RPC script against the stdio shim to file tickets. This exact loop (agent rebuilds+restarts the daemon it is using) is mostly specific to developing tuhdoo itself, but the gap is broader: anything without a live MCP session — shell humans who prefer commands to the TUI, cron jobs, scripts — has no sanctioned write path today.
+
+The ask: expose the write verbs through the CLI portal against the same daemon HTTP API the TUI steer mode uses — at minimum create_task (title, description from stdin or flag, priority, labels), update_task, and answer (escalations). Claim-lifecycle verbs (claim/finish_run) are optional and may be deliberately excluded — decide and document: the lease model is session-oriented and a CLI claim with no session to renew it may be wrong by design (if excluded, say so in the help text, do not leave it implied).
+
+Acceptance: `tuhdoo create`/`tuhdoo update`/`tuhdoo answer` (or equivalent naming consistent with existing CLI verbs) perform the writes through the daemon with the same validation and actor derivation as the TUI (tuhdoo.principal override honored, --as wins); one-shot output conventions kept; CLI tests per cli_test.go patterns; docs: short section in 002 T7 or the CLI docs; make test lint green.
+
+Constraints: the daemon stays the sole writer (D2) — the CLI talks HTTP to it, never touches the data branch; the eleven-verb MCP surface is unchanged (this is the human portal growing, not the agent surface); boring Go.
+
+## History
+
+_No activity yet._
