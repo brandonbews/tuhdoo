@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -178,6 +179,87 @@ func TestMCPShimExitsWhenDaemonDies(t *testing.T) {
 	// SIGKILL left the discovery file behind; remove it so newRepo's
 	// stopDaemon cleanup doesn't wait out its shutdown deadline.
 	os.Remove(discPath)
+}
+
+// A stdio-stream death must say which stream ended and what stdin
+// actually delivered (field incident 2026-07-31: the SDK's bare
+// "invalid trailing data at the end of stream" named neither). Both
+// cases reproduce the field mechanism: the ndjson decoder emits that
+// error only when a decoded JSON value is immediately followed by a
+// non-newline byte, which is what any digit-led junk on the stream
+// produces. The "dormant digit" case is the nastier shape: the decoder
+// parks on a bare digit mid-number, and the next well-formed line —
+// arbitrarily much later — both terminates the number and becomes the
+// "trailing data", so the session dies on a line that replays cleanly.
+func TestMCPShimStdinDeathNamesStreamAndBytes(t *testing.T) {
+	initLine := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"harness","version":"0"}}}` + "\n"
+	cases := []struct {
+		name   string
+		writes []string // written in order, a beat apart
+		tail   string   // must appear in the %q-quoted stdin excerpt
+	}{
+		{
+			name:   "dormant digit then well-formed line",
+			writes: []string{"7", initLine},
+			tail:   `"7{\"jsonrpc\"`,
+		},
+		{
+			name:   "digit-led junk in one chunk",
+			writes: []string{"2026/07/31 01:31:00 stray log line\n"},
+			tail:   `"2026/07/31`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newRepo(t)
+			cmd := exec.Command(binPath, "mcp", "--as", "test/agent")
+			cmd.Dir = repo
+			cmd.Env = cliEnv()
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			stdin, err := cmd.StdinPipe()
+			if err != nil {
+				t.Fatalf("stdin pipe: %v", err)
+			}
+			if err := cmd.Start(); err != nil {
+				t.Fatalf("start shim: %v", err)
+			}
+			exited := false
+			t.Cleanup(func() {
+				if !exited {
+					cmd.Process.Kill()
+					cmd.Wait()
+				}
+			})
+
+			total := 0
+			for _, w := range tc.writes {
+				if _, err := io.WriteString(stdin, w); err != nil {
+					t.Fatalf("write stdin: %v", err)
+				}
+				total += len(w)
+				time.Sleep(50 * time.Millisecond)
+			}
+
+			done := make(chan error, 1)
+			go func() { done <- cmd.Wait() }()
+			select {
+			case <-done:
+				exited = true
+			case <-time.After(30 * time.Second):
+				t.Fatal("shim still running 30s after junk on stdin; want exit 1")
+			}
+			if code := cmd.ProcessState.ExitCode(); code != 1 {
+				t.Fatalf("shim exit code = %d, want 1; stderr:\n%s", code, stderr.String())
+			}
+			mustContain(t, stderr.String(),
+				"invalid trailing data",
+				"harness stdin, not the daemon bridge",
+				fmt.Sprintf("delivered %d bytes", total),
+				tc.tail,
+			)
+		})
+	}
 }
 
 func TestMCPShimRejectsBadPrincipal(t *testing.T) {

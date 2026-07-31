@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -167,7 +168,7 @@ func bridgeMCP(socket, override, human string) error {
 			c := closing
 			mu.Unlock()
 			if !c {
-				fmt.Fprintln(os.Stderr, "tuhdoo mcp: daemon session ended:", werr)
+				fmt.Fprintln(os.Stderr, "tuhdoo mcp: daemon session ended (the bridge to the daemon, not harness stdin):", werr)
 				os.Exit(1)
 			}
 		}()
@@ -202,8 +203,14 @@ func bridgeMCP(socket, override, human string) error {
 
 	// Serve stdio until the harness closes it, then release the daemon
 	// session cleanly so the daemon stops renewing this agent's leases
-	// right away instead of waiting for keepalive to notice.
-	runErr := srv.Run(context.Background(), &mcp.StdioTransport{})
+	// right away instead of waiting for keepalive to notice. The
+	// recorder wraps stdin so a stream error can say what actually
+	// arrived (see stdinRecorder).
+	rec := &stdinRecorder{}
+	runErr := srv.Run(context.Background(), &mcp.IOTransport{
+		Reader: rec,
+		Writer: nopCloseWriter{os.Stdout},
+	})
 	mu.Lock()
 	closing = true
 	ds := sess
@@ -212,10 +219,61 @@ func bridgeMCP(socket, override, human string) error {
 		ds.Close()
 	}
 	if runErr != nil {
-		return fmt.Errorf("stdio session: %w", runErr)
+		total, tail := rec.snapshot()
+		return fmt.Errorf("stdio session (harness stdin, not the daemon bridge): %w; stdin delivered %d bytes this session, most recent %q",
+			runErr, total, tail)
 	}
 	return nil
 }
+
+// stdinTailCap is how many recent stdin bytes the shim retains for the
+// death message.
+const stdinTailCap = 256
+
+// stdinRecorder wraps the shim's stdin so a stdio-session death can say
+// what the stream actually delivered. Field incident (2026-07-31, twice
+// while dogfooding on a fifo): the SDK's ndjson decoder fails with
+// "invalid trailing data at the end of stream" only when a decoded JSON
+// value is immediately followed by a non-newline byte in its buffer —
+// so a stray non-protocol write (a bare digit is enough; the decoder
+// parks on it mid-number and the *next* well-formed line both completes
+// the number and becomes the "trailing data") kills the session at a
+// moment far removed from the guilty write, and the SDK's one-line
+// error names neither the stream nor the bytes. The recorder makes the
+// death message name both.
+type stdinRecorder struct {
+	mu    sync.Mutex
+	total int64
+	tail  []byte
+}
+
+func (r *stdinRecorder) Read(p []byte) (int, error) {
+	n, err := os.Stdin.Read(p)
+	if n > 0 {
+		r.mu.Lock()
+		r.total += int64(n)
+		r.tail = append(r.tail, p[:n]...)
+		if len(r.tail) > stdinTailCap {
+			r.tail = r.tail[len(r.tail)-stdinTailCap:]
+		}
+		r.mu.Unlock()
+	}
+	return n, err
+}
+
+func (r *stdinRecorder) Close() error { return os.Stdin.Close() }
+
+func (r *stdinRecorder) snapshot() (int64, []byte) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.total, append([]byte(nil), r.tail...)
+}
+
+// nopCloseWriter keeps the transport's Close from closing os.Stdout,
+// matching what the SDK's StdioTransport does internally.
+type nopCloseWriter struct{ io.Writer }
+
+func (nopCloseWriter) Close() error { return nil }
 
 // metaClientName extracts clientInfo.name from a _meta map. The value
 // arrives typed when built in-process and as a generic JSON map after
