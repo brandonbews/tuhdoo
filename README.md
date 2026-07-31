@@ -11,11 +11,11 @@ views are derived from the log — never edit them by hand. The design lives in
 
 | | Count |
 |---|---:|
-| Open tasks | 13 |
-| — ready | 6 |
+| Open tasks | 12 |
+| — ready | 5 |
 | — in progress | 0 |
 | — blocked / waiting | 7 |
-| Done tasks | 17 |
+| Done tasks | 18 |
 | Cancelled tasks | 0 |
 | Open escalations | 3 |
 
