@@ -6,6 +6,7 @@
 |---|---|---:|---|
 | [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) | Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows) | 0 | cli, tui |
 | [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) | claim_task on an escalation-blocked task reports "unmet dependencies" | 0 | mcp, dx |
+| [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
 
 ## In progress
 
@@ -34,7 +35,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) — make sure the agent via mcp can do all of the main user actions they might ask for (ie adding and deleting inbox items, etc)
 - [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — Do we still need the one-shot backlog/escalations commands?
 
 ## Done
