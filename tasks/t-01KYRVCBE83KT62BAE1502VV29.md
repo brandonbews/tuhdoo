@@ -1,9 +1,9 @@
 # t-01KYRVCBE83KT62BAE1502VV29 — npm devDependency distribution (esbuild-pattern wrapper packages)
 
-- Status: open — blocked on dependencies
+- Status: open — ready
 - Priority: 1
 - Labels: `distribution`, `npm`
-- Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (open)
+- Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (done)
 - Created: 2026-07-30 06:28 UTC by `brandon/impl-2`
 
 ## Description

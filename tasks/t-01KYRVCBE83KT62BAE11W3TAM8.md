@@ -1,6 +1,6 @@
 # t-01KYRVCBE83KT62BAE11W3TAM8 — Release pipeline: tagged, cross-compiled binaries
 
-- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
+- Status: done
 - Priority: 1
 - Labels: `distribution`, `ci`
 - Created: 2026-07-30 06:28 UTC by `brandon/impl-2`
@@ -19,4 +19,9 @@ Constraints: PROJECT LAW — anything under .github/workflows/ executes unattend
 
 ## History
 
-_No activity yet._
+### 2026-07-31 05:30 UTC — run by `4099114+brandonbews/claude-code-2` — done
+
+- Branch: `main`
+- Commits: `0d386a2`, `3ed9847`
+
+Release pipeline landed as .github/workflows/release.yml — ISOLATED IN ITS OWN COMMIT (0d386a2) for Brandon's eyes-on review per project law; README install docs are the separate commit 3ed9847. Design: hand-rolled over goreleaser so every executing line is visible in the one reviewed file. Tag-only trigger (v*) so the tuhdoo data branch can never fire it; permissions limited to contents:write; only third-party code is actions/checkout and actions/setup-go, pinned by commit SHA (verified against the upstream tags via git ls-remote, independently re-verified by the orchestrator). Runs make test lint, cross-compiles the four targets (darwin/linux × arm64/amd64) with CGO_ENABLED=0 and -X main.version=$GITHUB_REF_NAME (env var, never ${{ }} interpolation in script text), tars each binary, emits sha256 checksums.txt, publishes with runner-native `gh release create --verify-tag --generate-notes`. Validated without pushing a tag: the exact build loop run locally for all four targets (static ELF/Mach-O confirmed), version stamping verified on the darwin/arm64 binary. Homebrew tap skipped (not nearly-free without goreleaser). Known caveat, documented in README: `go install ...@latest` binaries print `tuhdoo dev` — stamping via runtime/debug.ReadBuildInfo is a possible follow-up task. NOT YET EXERCISED END-TO-END: no tag has been pushed; the first real release (e.g. v0.1.0) is the live test.
