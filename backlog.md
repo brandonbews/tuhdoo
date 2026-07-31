@@ -4,11 +4,13 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | distribution, npm |
+| [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) | Release npm job hardening: idempotent re-runs and provenance attestations | 0 | distribution, ci, npm |
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | `brandon/claude-code-1` |
 
 ## Blocked / waiting
 
@@ -35,6 +37,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) — Make it clearer when it item is selected in the list (maybe dimmed bg or something)
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
 - [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) — blocked and needs input items appearring in both lists is visually confusing. maybe dont show escalated/needs input items in blocked
+- [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) — claim_task on an escalation-blocked task reports "unmet dependencies"
 
 ## Done
 

@@ -1,6 +1,6 @@
 # t-01KYRVCBE83KT62BAE1502VV29 — npm devDependency distribution (esbuild-pattern wrapper packages)
 
-- Status: open — ready
+- Status: open — in progress, claimed by `brandon/claude-code-1`
 - Priority: 1
 - Labels: `distribution`, `npm`
 - Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (done)
