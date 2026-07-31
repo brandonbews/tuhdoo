@@ -89,6 +89,19 @@ func newWatchModel() topModel {
 	return topModel{snap: s, rows: buildRows(s)}
 }
 
+// newTopModelWithDep reseeds t-lic with an unmet dependency before
+// building the model. Escalation-only blockage earns no task row (the
+// Needs Input row is its single home, 2026-07-31), and an armed enter
+// on that row answers — so tests that open t-lic's detail from the
+// list walk to the BLOCKED row its unmet dep earns.
+func newTopModelWithDep(api steeringAPI) topModel {
+	s := topSnapshot()
+	h := s.tasks["t-lic"]
+	h.Task.DependsOn = []string{"t-flor"}
+	s.tasks["t-lic"] = h
+	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+}
+
 // fakeSteering records calls; err, when set, fails every call.
 type fakeSteering struct {
 	answers    map[string]string
@@ -168,7 +181,8 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 		{rowTask, "ready", "t-pars"}, // p5 before p1
 		{rowTask, "ready", "t-flor"},
 		{rowTask, "inprogress", "t-flak"},
-		{rowTask, "blocked", "t-lic"},
+		// t-lic is blocked by its escalation alone: its Needs Input row
+		// is its single representation — no blocked row (2026-07-31).
 		{rowTask, "held", "t-park"},  // the shelves close the list,
 		{rowTask, "inbox", "t-idea"}, // held above inbox (2026-07-31)
 	}
@@ -188,11 +202,11 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"tuhdoo · local-only", "acting as brandon",
-		"NEEDS INPUT (1)", "Which license?", "blocking · brandon/a2",
+		"NEEDS INPUT (1)", "question: Which license?", "brandon/a2 · 2026-07-29 14:03 UTC",
 		"READY (2)", "write the parser", "sweep the floor",
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
-		"BLOCKED (1)", "choose a license", "waiting: needs input (above)",
-		"▸ t-lic   !   Which license?", // cursor starts on the first row
+		"BLOCKED (0)",
+		"▸ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
 		"↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
@@ -203,14 +217,21 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	if strings.Contains(v, "old chore") {
 		t.Errorf("done task should not render a steerable row; view:\n%s", v)
 	}
-	// The question renders once — its Needs Input row — never repeated
-	// in the blocked row's waiting: reason (steering feedback,
-	// 2026-07-30).
+	// The escalation-blocked task renders exactly once — its task-shaped
+	// Needs Input row — and the question exactly once, on that row's
+	// question: line. No BLOCKED row, no "needs input (above)" pointer,
+	// no "blocking" word: the ! badge carries it (grill cycle,
+	// 2026-07-31).
 	if n := strings.Count(v, "Which license?"); n != 1 {
 		t.Errorf("question renders %d times, want exactly 1; view:\n%s", n, v)
 	}
-	if strings.Contains(v, "waiting: escalation:") {
-		t.Errorf("blocked row still repeats the escalation; view:\n%s", v)
+	if n := strings.Count(v, "choose a license"); n != 1 {
+		t.Errorf("escalation-blocked task renders %d times, want exactly 1; view:\n%s", n, v)
+	}
+	for _, reject := range []string{"waiting:", "needs input", "blocking"} {
+		if strings.Contains(v, reject) {
+			t.Errorf("view still contains %q; view:\n%s", reject, v)
+		}
 	}
 }
 
@@ -546,7 +567,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "BLOCKED (1)", "waiting:", "↑/↓ (j/k) move · enter open · q quit"} {
+	for _, want := range []string{"watch mode", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
@@ -1025,7 +1046,7 @@ func openDetail(t *testing.T, m topModel, id string) topModel {
 // as answering from the list — and the flow returns to the detail.
 func TestTopDetailAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-lic")
+	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
 	v := m.View()
 	if !strings.Contains(v, "▸ unanswered — enter to answer") {
 		t.Fatalf("open escalation not rendered as the focused item; view:\n%s", v)
@@ -1099,7 +1120,7 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 // the list; esc again reaches the list.
 func TestTopDetailInputEscReturnsToDetail(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-lic")
+	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
 	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEsc))
 	if m.mode != modeDetail || m.detailID != "t-lic" {
 		t.Fatalf("esc from detail answer: mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
@@ -1126,7 +1147,7 @@ func TestTopDetailInputEscReturnsToDetail(t *testing.T) {
 // prompt as the list, returning to the detail after submit.
 func TestTopDetailPriorityFlow(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-lic")
+	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if m.mode != modePriority {
 		t.Fatalf("p in detail: mode %d, want modePriority", m.mode)
@@ -1154,7 +1175,7 @@ func TestTopDetailPriorityFlow(t *testing.T) {
 // task's new archived status once the refresh lands.
 func TestTopDetailArchiveFlow(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-lic")
+	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
 	if m.mode != modeConfirmArchive {
 		t.Fatalf("c in detail: mode %d, want modeConfirmArchive", m.mode)
@@ -1220,7 +1241,11 @@ func multiEscSnapshot() *snapshot {
 		Question: "Second question?", RaisedAt: raised}
 	return &snapshot{
 		state: stateResp{
-			Tasks:           []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open"}},
+			// The holder keeps t-two an in-progress task row: with the
+			// blocking escalation its single home in Needs Input
+			// (2026-07-31), an unclaimed escalation-blocked task has no
+			// task row to open detail from.
+			Tasks:           []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open", Holder: "brandon/a1"}},
 			OpenEscalations: []escalationJSON{e1, e2},
 		},
 		tasks: map[string]hydratedTask{
@@ -1377,10 +1402,10 @@ func TestTopListWrapsAndScrolls(t *testing.T) {
 		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	}
 	v = m.View()
-	if !strings.Contains(v, "▸") || !strings.Contains(v, "choose a license") {
-		t.Errorf("cursor row (blocked t-lic) not visible after scrolling; view:\n%s", v)
+	if !strings.Contains(v, "▸") || !strings.Contains(v, "idea: dark mode") {
+		t.Errorf("cursor row (inbox t-idea) not visible after scrolling; view:\n%s", v)
 	}
-	if strings.Contains(v, "Which license?") {
+	if strings.Contains(v, "question:") {
 		t.Errorf("top of list should have scrolled off; view:\n%s", v)
 	}
 	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 12 {
@@ -1426,8 +1451,8 @@ func screenLineOf(t *testing.T, m topModel, sub string) int {
 }
 
 // A single click moves the cursor to the row under the pointer, across
-// the variable-height layout: one-line ready rows, two-line escalation
-// and blocked rows (either line hits), and chrome (bars, blanks, the
+// the variable-height layout: one-line ready rows, the three-line
+// escalation row (any line hits), and chrome (bars, blanks, the
 // header, the footer) hitting nothing.
 func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 	m := newTopModel(newFakeSteering())
@@ -1439,9 +1464,10 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 	}{
 		{"one-line ready row", "sweep the floor", 2},
 		{"in-progress row", "investigate the flake", 3},
-		{"blocked row first line", "choose a license", 4},
-		{"blocked row second line", "waiting: needs input (above)", 4},
-		{"escalation second line", "blocking · brandon/a2", 0},
+		{"escalation title line", "choose a license", 0},
+		{"escalation question line", "question: Which license?", 0},
+		{"escalation meta line", "brandon/a2", 0},
+		{"held row", "polish the docs", 4},
 		{"section bar", "READY (2)", -1},
 		{"header bar", "acting as brandon", -1},
 		{"footer bar", "1 done", -1},
@@ -1504,23 +1530,23 @@ func TestTopClickHitsScrolledRows(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = mm.(topModel)
-	for i := 0; i < 4; i++ {
-		m, _ = press(t, m, keyOf(tea.KeyDown)) // to t-lic; top scrolls off
+	for i := 0; i < 5; i++ {
+		m, _ = press(t, m, keyOf(tea.KeyDown)) // to t-idea; top scrolls off
 	}
-	if v := m.View(); strings.Contains(v, "Which license?") {
+	if v := m.View(); strings.Contains(v, "question:") {
 		t.Fatalf("test needs the top scrolled off; view:\n%s", v)
 	}
-	// The blocked row's second line, at its scrolled screen position,
-	// still resolves to the selected row — so the click acts as enter.
-	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "waiting: needs input (above)")))
-	if m2.mode != modeDetail || m2.detailID != "t-lic" {
-		t.Errorf("click on scrolled selected row: mode %d detail %q, want modeDetail t-lic",
+	// The inbox row, at its scrolled screen position, still resolves to
+	// the selected row — so the click acts as enter.
+	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "idea: dark mode")))
+	if m2.mode != modeDetail || m2.detailID != "t-idea" {
+		t.Errorf("click on scrolled selected row: mode %d detail %q, want modeDetail t-idea",
 			m2.mode, m2.detailID)
 	}
-	// The BLOCKED bar above it stays chrome.
-	m3, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "BLOCKED (1)")))
-	if m3.mode != modeNav || m3.cursor != 4 {
-		t.Errorf("click on scrolled bar: mode %d cursor %d, want modeNav 4", m3.mode, m3.cursor)
+	// The INBOX bar above it stays chrome.
+	m3, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "INBOX (1)")))
+	if m3.mode != modeNav || m3.cursor != 5 {
+		t.Errorf("click on scrolled bar: mode %d cursor %d, want modeNav 5", m3.mode, m3.cursor)
 	}
 }
 
@@ -1761,6 +1787,86 @@ func TestTopBlockedOnShelvedDependency(t *testing.T) {
 		if !strings.Contains(wrapForSearch(v), want) {
 			t.Errorf("waiting reason missing %q; view:\n%s", want, v)
 		}
+	}
+}
+
+// ---- Needs Input as the single home (task tuh-…VK83BN, 2026-07-31) ----
+
+// A task blocked by both unmet deps and an open blocking escalation
+// keeps rows in both sections; its waiting: line names only the deps —
+// "needs input (above)" is dead — and the BLOCKED bar count equals its
+// rendered rows (the escalation-only t-lic renders none).
+func TestTopBlockedRowNamesOnlyUnmetDeps(t *testing.T) {
+	s := topSnapshot()
+	esc := escalationJSON{
+		ID: "01E9", Task: "t-dual", Actor: "brandon/a3",
+		Question: "Proceed with v2?", Blocking: true,
+		RaisedAt: time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
+	}
+	s.state.Tasks = append(s.state.Tasks, stateTask{ID: "t-dual", Title: "port the daemon", Status: "open"})
+	s.state.OpenEscalations = append(s.state.OpenEscalations, esc)
+	s.tasks["t-dual"] = hydratedTask{
+		Task:        taskJSON{ID: "t-dual", Title: "port the daemon", DependsOn: []string{"t-flor"}},
+		Escalations: []escalationJSON{esc},
+	}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 120, height: 60}
+	v := m.View()
+	for _, want := range []string{
+		"NEEDS INPUT (2)",
+		"question: Proceed with v2?",
+		"BLOCKED (1)",
+		"waiting: depends on t-flor (open — sweep the floor)",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("view missing %q; view:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, "needs input") {
+		t.Errorf("waiting: line still points at the Needs Input section; view:\n%s", v)
+	}
+	// The bar count is the rendered row count: exactly one waiting: line.
+	if n := strings.Count(v, "waiting:"); n != 1 {
+		t.Errorf("%d waiting: lines, want 1; view:\n%s", n, v)
+	}
+	// Both of t-dual's rows carry the task title — they state different
+	// truths (a question waits; a dep is unmet) and that is accepted.
+	if n := strings.Count(v, "port the daemon"); n != 2 {
+		t.Errorf("dual-blocked title renders %d times, want 2; view:\n%s", n, v)
+	}
+}
+
+// A non-blocking escalation renders the same task-shaped three-liner
+// with an empty badge cell — no ! — and its task keeps its ordinary
+// status row: claimability is untouched, and the title appearing in
+// both places is accepted (the rows state different truths).
+func TestTopNonBlockingEscalationRow(t *testing.T) {
+	s := topSnapshot()
+	esc := escalationJSON{
+		ID: "01E8", Task: "t-flor", Actor: "brandon/a4",
+		Question: "Mop or broom?",
+		RaisedAt: time.Date(2026, 7, 30, 11, 0, 0, 0, time.UTC),
+	}
+	s.state.OpenEscalations = append(s.state.OpenEscalations, esc)
+	h := s.tasks["t-flor"]
+	h.Escalations = append(h.Escalations, esc)
+	s.tasks["t-flor"] = h
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 60}
+	v := m.View()
+	for _, want := range []string{
+		"NEEDS INPUT (2)",
+		"  t-flor      sweep the floor", // empty badge cell on the grid
+		"              question: Mop or broom?",
+		"              brandon/a4 · 2026-07-30 11:00 UTC",
+		"READY (2)",
+		"  t-flor  p1  sweep the floor", // still rowed under its status section
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("view missing %q; view:\n%s", want, v)
+		}
+	}
+	// Exactly one ! badge on screen: the blocking t-lic escalation's.
+	if n := strings.Count(v, "!"); n != 1 {
+		t.Errorf("%d ! badges, want 1 (non-blocking rows carry none); view:\n%s", n, v)
 	}
 }
 

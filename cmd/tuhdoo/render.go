@@ -16,8 +16,8 @@ import (
 // survive. The bg* codes are black-on-color section bars (TUI only);
 // their zero values degrade bars to plain text with the same geometry.
 type colors struct {
-	reset, bold, dim, rev, green, yellow, red string
-	bgMagenta, bgGreen, bgYellow, bgRed       string
+	reset, bold, dim, rev, green, yellow, red, magenta string
+	bgMagenta, bgGreen, bgYellow, bgRed                string
 }
 
 // isTTY reports whether f is a character device (a real terminal).
@@ -32,7 +32,7 @@ func newColors(out *os.File) colors {
 	}
 	return colors{
 		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
-		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m",
+		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 		bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 		bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
 	}
