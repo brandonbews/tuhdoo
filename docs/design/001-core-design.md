@@ -53,7 +53,7 @@ The orphan branch beats the alternatives: an in-tree directory ties plan state t
 2. **No drive-by intake.** Contributors without write access cannot file into tuhdoo. It is the maintainer/committer team's planning brain, not a public issue tracker. Public intake (e.g., a bridge from GitHub Issues) is a possible later add-on, never a core capability.
 3. **Host friction is onboarding, not architecture.** CI triggers firing on data-branch pushes, branch-protection rules blocking the daemon — all mitigated by a good `tuhdoo init` and docs.
 
-### D5. Entities: five, DAG-shaped, nothing more
+### D5. Entities: five, DAG-shaped, nothing more *(revised 2026-07-31 — the status model grew inbox and held; note below)*
 
 | Entity | Role |
 |---|---|
@@ -64,6 +64,13 @@ The orphan branch beats the alternatives: an in-tree directory ties plan state t
 | **Note** | Comments/context on a task, from humans or agents. |
 
 **Deliberately excluded from v1:** sprints/cycles, custom fields and configurable workflows (Jira disease), docs/wiki, time tracking, OKRs. Each is a possible bolt-on *if* real usage demands it; each included now permanently doubles the schema burden of an append-only log.
+
+**The status model** *(revised 2026-07-31, grill cycle — inbox and held join open/done/cancelled)*: five statuses — `open`, `inbox`, `held`, `done`, `cancelled`. The pressure this relieves: a queue that prices every entry at commission rates (prompt-quality description, priority, scope) forces idea capture into premature quantification, so ideas either don't get captured or get captured badly. The two additions split "not being worked" into its two honest kinds:
+
+- **`inbox`** — never triaged; the chuck-it-in tier. Capture minimum is title-only; fragment descriptions are legitimate **for inbox items only**; carries inherent review debt by definition.
+- **`held`** — passed triage, workable, deliberately paused. Absorbs and kills the parked-`p0`-label convention.
+
+`open` remains the only status the claim verbs ever serve. Transitions are **mechanically permissive** — the deterministic core validates status vocabulary but never transition paths (no rejected-event edge cases; see `002` T3) — with the semantics carried by `docs/agent-protocol.md`: promote inbox→open by supplying a prompt-quality description; pause/resume is open↔held; anyone (human or agent) may promote — the quality bar is documentation, not schema. Inbox/held items are ordinary shared state on the data branch: labels and edges are allowed at capture (dependencies on inbox/held tasks block naturally — they are not `done`), and priority is stored but inert until `open`. "Archived" remains the porcelain word for `cancelled` (see `002` T7) and archive works on every non-terminal status, which is what makes cheap capture reversible.
 
 ### D6. Claim semantics: optimistic, deterministic, no prevention machinery
 

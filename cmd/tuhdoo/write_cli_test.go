@@ -177,6 +177,69 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	mustContain(t, out, "no open escalation")
 }
 
+// Capture and the shelves over the CLI (2026-07-31): title-only
+// create --status inbox, park with --status held, promote/pause/resume
+// with update --status — the same round trips the MCP surface has.
+func TestCreateCaptureAndPromote(t *testing.T) {
+	repo := newRepo(t)
+	runGit(t, repo, "config", "user.email", "brandon@example.com")
+	if out, code := runCLI(t, repo, "init"); code != 0 {
+		t.Fatalf("init exit %d; output:\n%s", code, out)
+	}
+
+	// Title-only capture: no description, no priority — legitimate for
+	// inbox, and the daemon accepts it as-is.
+	out, code := runCLI(t, repo, "create", "idea: dark mode", "--status", "inbox")
+	if code != 0 {
+		t.Fatalf("capture exit %d; output:\n%s", code, out)
+	}
+	idea := createdID(t, out)
+	out, code = runCLI(t, repo, "create", "polish docs", "--status", "held", "--priority", "3")
+	if code != 0 {
+		t.Fatalf("held create exit %d; output:\n%s", code, out)
+	}
+	parked := createdID(t, out)
+
+	// Born-terminal or garbage statuses are loud.
+	out, code = runCLI(t, repo, "create", "stillborn", "--status", "done")
+	if code == 0 {
+		t.Fatalf("create --status done exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, "invalid status")
+
+	// The shelves render: backlog sections (Held above Inbox), status
+	// counts, and the task biography's status line.
+	out, _ = runCLI(t, repo, "backlog")
+	mustContain(t, out, "Held (1)", parked, "p3", "Inbox (1)", idea, "idea: dark mode")
+	if strings.Index(out, "Held (1)") > strings.Index(out, "Inbox (1)") {
+		t.Errorf("Held must render above Inbox:\n%s", out)
+	}
+	out, _ = runCLI(t, repo, "status")
+	mustContain(t, out, "0 ready", "1 held", "1 inbox")
+	out, _ = runCLI(t, repo, "task", idea)
+	mustContain(t, out, "status      inbox")
+
+	// Promote the capture (with the description promotion deserves);
+	// pause and resume the other. All plain update --status.
+	out, code = runCLI(t, repo, "update", idea, "--status", "open",
+		"--desc", "Context, ask, acceptance.")
+	if code != 0 {
+		t.Fatalf("promotion exit %d; output:\n%s", code, out)
+	}
+	out, code = runCLI(t, repo, "update", parked, "--status", "open")
+	if code != 0 {
+		t.Fatalf("resume exit %d; output:\n%s", code, out)
+	}
+	out, code = runCLI(t, repo, "update", parked, "--status", "held")
+	if code != 0 {
+		t.Fatalf("pause exit %d; output:\n%s", code, out)
+	}
+	out, _ = runCLI(t, repo, "status")
+	mustContain(t, out, "1 ready", "1 held", "0 inbox")
+	out, _ = runCLI(t, repo, "task", idea)
+	mustContain(t, out, "status      open", "Context, ask, acceptance.")
+}
+
 // The write commands are the human portal: they act as a root human
 // principal, never an agent, and tuhdoo.principal overrides the email
 // derivation exactly as in the TUI.

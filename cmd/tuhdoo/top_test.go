@@ -15,7 +15,8 @@ import (
 
 // topSnapshot seeds every section: one blocking escalation (on an
 // unclaimed task, so that task classifies blocked), two ready tasks,
-// one in-progress task, one done task.
+// one in-progress task, one held task, one inbox capture, one done
+// task.
 func topSnapshot() *snapshot {
 	raised := time.Date(2026, 7, 29, 14, 3, 0, 0, time.UTC)
 	esc := escalationJSON{
@@ -30,6 +31,8 @@ func topSnapshot() *snapshot {
 				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: 1},
 				{ID: "t-flak", Title: "investigate the flake", Status: "open", Holder: "brandon/a1"},
 				{ID: "t-lic", Title: "choose a license", Status: "open"},
+				{ID: "t-park", Title: "polish the docs", Status: "held", Priority: 2},
+				{ID: "t-idea", Title: "idea: dark mode", Status: "inbox"},
 				{ID: "t-chor", Title: "old chore", Status: "done"},
 			},
 			OpenEscalations: []escalationJSON{esc},
@@ -68,6 +71,8 @@ func topSnapshot() *snapshot {
 				}},
 			},
 			"t-lic":  {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
+			"t-park": {Task: taskJSON{ID: "t-park", Title: "polish the docs", Priority: 2}},
+			"t-idea": {Task: taskJSON{ID: "t-idea", Title: "idea: dark mode"}},
 			"t-chor": {Task: taskJSON{ID: "t-chor", Title: "old chore"}},
 		},
 	}
@@ -89,6 +94,7 @@ type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
 	archived   []string
+	captured   []string // quick-capture titles, in order
 	err        error
 }
 
@@ -117,6 +123,14 @@ func (f *fakeSteering) archiveTask(task string) error {
 		return f.err
 	}
 	f.archived = append(f.archived, task)
+	return nil
+}
+
+func (f *fakeSteering) captureTask(title string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.captured = append(f.captured, title)
 	return nil
 }
 
@@ -155,6 +169,8 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 		{rowTask, "ready", "t-flor"},
 		{rowTask, "inprogress", "t-flak"},
 		{rowTask, "blocked", "t-lic"},
+		{rowTask, "held", "t-park"},  // the shelves close the list,
+		{rowTask, "inbox", "t-idea"}, // held above inbox (2026-07-31)
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("got %d rows, want %d: %+v", len(rows), len(want), rows)
@@ -217,8 +233,9 @@ func TestTopNavigationMovesAndClamps(t *testing.T) {
 	if want := len(m.rows) - 2; m.cursor != want {
 		t.Errorf("k moved cursor to %d, want %d", m.cursor, want)
 	}
-	if v := m.View(); !strings.Contains(v, "▸ t-flak") {
-		t.Errorf("cursor marker not on t-flak; view:\n%s", v)
+	// len-2 is the held row: the shelves are ordinary cursor stops.
+	if v := m.View(); !strings.Contains(v, "▸ t-park") {
+		t.Errorf("cursor marker not on t-park; view:\n%s", v)
 	}
 }
 
@@ -500,7 +517,7 @@ func TestTopQuitKeys(t *testing.T) {
 // it; this is the one deliberate behavior change).
 func TestWatchModeDisarmed(t *testing.T) {
 	m := newWatchModel()
-	for _, r := range []rune{'a', 'p', 'c'} {
+	for _, r := range []rune{'a', 'p', 'c', 'i'} {
 		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		if mm.mode != modeNav {
 			t.Errorf("%q in watch mode entered mode %d", r, mm.mode)
@@ -822,6 +839,10 @@ func TestSnapshotTaskRef(t *testing.T) {
 		{"t-lic", "t-lic (open — choose a license)"},
 		{"t-chor", "t-chor (done — old chore)"}, // done: no row anywhere, still resolves
 		{"t-epic", "t-epic"},                    // unresolvable: bare, no status
+		// The shelves annotate with their own words (2026-07-31): a dep
+		// waiting on an inbox/held task says exactly why it waits.
+		{"t-park", "t-park (held — polish the docs)"},
+		{"t-idea", "t-idea (inbox — idea: dark mode)"},
 		{"t-01KYT63MB28Z535SMJC9B0D83W",
 			"t-d83w (archived — wide wide wide wide wide wide wide wide…)"},
 	}
@@ -1624,4 +1645,128 @@ func TestTopDetailWrapsToWidth(t *testing.T) {
 	if v := m.View(); !strings.Contains(v, "Bisecting the flake.") {
 		t.Errorf("tail not reachable by scrolling; view:\n%s", v)
 	}
+}
+
+// ---- inbox and held (2026-07-31): quick capture and the shelves ----
+
+// The full capture flow: i opens a single-line input, typing builds the
+// title, enter creates a title-only inbox item through the steering API
+// — no y/n anywhere (capture is reversible via archive).
+func TestTopQuickCaptureFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	if m.mode != modeCapture {
+		t.Fatalf("i: mode = %d, want modeCapture", m.mode)
+	}
+	v := m.View()
+	if !strings.Contains(v, "capture") || !strings.Contains(v, "to inbox") {
+		t.Errorf("capture prompt missing; view:\n%s", v)
+	}
+	if strings.Contains(v, "y/n") {
+		t.Errorf("capture must be y/n-free; view:\n%s", v)
+	}
+	m, cmd := press(t, m, append(runes("idea: sparkline history"), keyOf(tea.KeyEnter))...)
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if len(fake.captured) != 1 || fake.captured[0] != "idea: sparkline history" {
+		t.Fatalf("captured %v, want the typed title", fake.captured)
+	}
+	if m.mode != modeNav {
+		t.Errorf("mode after submit = %d, want modeNav", m.mode)
+	}
+	mm, _ := m.Update(am)
+	if m = mm.(topModel); !strings.Contains(m.status, "captured") {
+		t.Errorf("status = %q, want a captured confirmation", m.status)
+	}
+}
+
+// Empty titles are rejected in place; esc abandons the capture without
+// any write.
+func TestTopQuickCaptureRejectsEmptyAndEscCancels(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake)
+	m, cmd := press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}},
+		keyOf(tea.KeyEnter))
+	if cmd != nil || len(fake.captured) != 0 {
+		t.Fatal("empty capture must not produce a write")
+	}
+	if m.mode != modeCapture || m.status != "title cannot be empty" {
+		t.Fatalf("mode %d status %q, want in-place rejection", m.mode, m.status)
+	}
+	m, _ = press(t, m, append(runes("half a thou"), keyOf(tea.KeyEsc))...)
+	if m.mode != modeNav || len(fake.captured) != 0 {
+		t.Fatalf("esc did not abandon capture: mode %d captured %v", m.mode, fake.captured)
+	}
+}
+
+// Capture is fully absent in watch mode: i is dead (covered in
+// TestWatchModeDisarmed) and no bar or footer advertises it.
+func TestWatchModeNeverAdvertisesCapture(t *testing.T) {
+	m := newWatchModel()
+	if v := m.View(); strings.Contains(v, "i capture") {
+		t.Errorf("watch mode advertises capture; view:\n%s", v)
+	}
+}
+
+// Shelf rows are ordinary rows: enter opens the biography, c archives —
+// on both held and inbox.
+func TestTopShelfRowsOpenDetailAndArchive(t *testing.T) {
+	for _, id := range []string{"t-park", "t-idea"} {
+		fake := newFakeSteering()
+		m := newTopModel(fake)
+		m = moveTo(t, m, id)
+		m, _ = press(t, m, keyOf(tea.KeyEnter))
+		if m.mode != modeDetail || m.detailID != id {
+			t.Fatalf("enter on %s: mode %d detail %q, want its detail", id, m.mode, m.detailID)
+		}
+		m, _ = press(t, m, keyOf(tea.KeyEsc))
+		m, cmd := press(t, m,
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+		if cmd == nil {
+			t.Fatalf("archive on %s produced no command", id)
+		}
+		if am := cmd().(actionMsg); am.err != nil {
+			t.Fatalf("archive %s: %v", id, am.err)
+		}
+		if len(fake.archived) != 1 || fake.archived[0] != id {
+			t.Fatalf("archived %v, want [%s]", fake.archived, id)
+		}
+	}
+}
+
+// A task blocked on an inbox or held dependency names that status in
+// its waiting: reason, through the existing taskRef annotation.
+func TestTopBlockedOnShelvedDependency(t *testing.T) {
+	s := topSnapshot()
+	s.state.Tasks = append(s.state.Tasks,
+		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open"})
+	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
+		ID: "t-wait", Title: "build on the idea",
+		DependsOn: []string{"t-idea", "t-park"},
+	}}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 160, height: 60}
+	v := m.View()
+	for _, want := range []string{
+		"depends on t-idea (inbox — idea: dark mode)",
+		"depends on t-park (held — polish the docs)",
+	} {
+		if !strings.Contains(wrapForSearch(v), want) {
+			t.Errorf("waiting reason missing %q; view:\n%s", want, v)
+		}
+	}
+}
+
+// wrapForSearch flattens a rendered view so assertions survive line
+// wrapping: newlines plus their indentation collapse to nothing.
+func wrapForSearch(v string) string {
+	out := strings.ReplaceAll(v, "\n", "")
+	return strings.Join(strings.Fields(out), " ")
 }

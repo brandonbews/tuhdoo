@@ -29,9 +29,16 @@ func tick(t *testing.T, n int) string {
 	return id
 }
 
+// evt mints an event at the version this binary writes, like the
+// daemon does; oldEvt pins an explicit version for evolution tests.
 func evt(t *testing.T, n int, typ, actor, task string, payload any) event.Event {
 	t.Helper()
-	e, err := event.New(tick(t, n), typ, 1, actor, "m-test", task, payload)
+	return oldEvt(t, n, typ, event.Versions[typ], actor, task, payload)
+}
+
+func oldEvt(t *testing.T, n int, typ string, v int, actor, task string, payload any) event.Event {
+	t.Helper()
+	e, err := event.New(tick(t, n), typ, v, actor, "m-test", task, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,6 +374,162 @@ func TestBlockingEscalationGatesReadiness(t *testing.T) {
 		event.EscalationAnswered{Answer: "oauth", Escalation: esc}))
 	if s3 := replay(t, events, nil); !s3.Ready("t1") {
 		t.Fatal("answered escalation must return the task to the pool")
+	}
+}
+
+// The status model (2026-07-31): inbox and held join open/done/cancelled.
+// Only open is claimable; transitions are mechanically permissive —
+// replay validates vocabulary, never paths.
+func TestCreateWithStatus(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  string // payload status on task.created
+		want    string // replayed task status
+		ready   bool
+		wantErr error // non-nil: replay must stop with this sentinel
+	}{
+		{"default open", "", StatusOpen, true, nil},
+		{"explicit open", StatusOpen, StatusOpen, true, nil},
+		{"inbox capture", StatusInbox, StatusInbox, false, nil},
+		{"born held", StatusHeld, StatusHeld, false, nil},
+		// Permissive vocabulary: replay accepts any known status at
+		// create (the write surfaces gate what gets written).
+		{"born done", StatusDone, StatusDone, false, nil},
+		{"unknown status", "someday", "", false, ErrMalformedEvent},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			events := []event.Event{evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
+				event.TaskCreated{Title: "captured", Status: tt.status})}
+			s, err := NewReplayer().Replay(Input{Events: events, Now: testNow})
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("err = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+			if got := s.Tasks["t1"].Status; got != tt.want {
+				t.Errorf("status = %q, want %q", got, tt.want)
+			}
+			if got := s.Ready("t1"); got != tt.ready {
+				t.Errorf("Ready = %v, want %v", got, tt.ready)
+			}
+		})
+	}
+}
+
+// A v1 task.created (no status field) still replays as open through the
+// identity upcaster — the payload's absent status is the v1 reading.
+func TestV1TaskCreatedReplaysOpen(t *testing.T) {
+	old := event.Event{ID: tick(t, 1), Type: event.TypeTaskCreated, V: 1,
+		Actor: "brandon", Machine: "m-test", Task: "t1",
+		Data: json.RawMessage(`{"title":"pre-inbox era"}`)}
+	s := replay(t, []event.Event{old}, nil)
+	if got := s.Tasks["t1"].Status; got != StatusOpen {
+		t.Fatalf("v1 task status = %q, want open", got)
+	}
+	if !s.Ready("t1") {
+		t.Fatal("v1 task should be ready")
+	}
+}
+
+// Promote/pause/resume round-trips: inbox→open→held→open, all through
+// ordinary task.updated events, with readiness following the status.
+func TestStatusRoundTrips(t *testing.T) {
+	st := func(s string) *string { return &s }
+	events := []event.Event{
+		evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
+			event.TaskCreated{Title: "an idea", Status: StatusInbox}),
+	}
+	s := replay(t, events, nil)
+	if s.Ready("t1") || len(s.ReadyTasks()) != 0 {
+		t.Fatal("inbox task must not be ready or served")
+	}
+
+	events = append(events, evt(t, 2, event.TypeTaskUpdated, "brandon", "t1",
+		event.TaskUpdated{Status: st(StatusOpen), Description: st("Context, ask, acceptance.")}))
+	if s = replay(t, events, nil); !s.Ready("t1") {
+		t.Fatal("promoted task must be ready")
+	}
+
+	events = append(events, evt(t, 3, event.TypeTaskUpdated, "brandon", "t1",
+		event.TaskUpdated{Status: st(StatusHeld)}))
+	if s = replay(t, events, nil); s.Ready("t1") {
+		t.Fatal("held task must not be ready")
+	}
+
+	events = append(events, evt(t, 4, event.TypeTaskUpdated, "brandon", "t1",
+		event.TaskUpdated{Status: st(StatusOpen)}))
+	if s = replay(t, events, nil); !s.Ready("t1") {
+		t.Fatal("resumed task must be ready again")
+	}
+}
+
+// A dependency sitting in inbox or held blocks its dependents exactly
+// like any other not-done task — captures participate in the DAG.
+func TestInboxHeldDependenciesBlock(t *testing.T) {
+	st := func(s string) *string { return &s }
+	events := []event.Event{
+		evt(t, 1, event.TypeTaskCreated, "brandon", "t-idea",
+			event.TaskCreated{Title: "the idea", Status: StatusInbox}),
+		taskCreated(t, 2, "t-build", "build on the idea", "t-idea"),
+	}
+	if s := replay(t, events, nil); s.Ready("t-build") {
+		t.Fatal("task depending on an inbox capture must not be ready")
+	}
+	events = append(events, evt(t, 3, event.TypeTaskUpdated, "brandon", "t-idea",
+		event.TaskUpdated{Status: st(StatusHeld)}))
+	if s := replay(t, events, nil); s.Ready("t-build") {
+		t.Fatal("task depending on a held task must not be ready")
+	}
+	events = append(events,
+		evt(t, 4, event.TypeTaskUpdated, "brandon", "t-idea", event.TaskUpdated{Status: st(StatusOpen)}),
+		evt(t, 5, event.TypeClaimMade, "brandon/impl-1", "t-idea", event.ClaimMade{}),
+		evt(t, 6, event.TypeRunFinished, "brandon/impl-1", "t-idea",
+			event.RunFinished{Outcome: event.OutcomeDone}))
+	if s := replay(t, events, nil); !s.Ready("t-build") {
+		t.Fatal("dependent must be ready once the promoted dependency is done")
+	}
+}
+
+// An unknown status in task.updated stops replay as malformed — the
+// same fail-safe posture the pre-inbox binary had (verified 2026-07-31),
+// now paired with the v2 schema bump so old binaries stop with "upgrade
+// tuhdoo" instead of "malformed" when they meet the new values.
+func TestUnknownStatusUpdateStopsReplay(t *testing.T) {
+	st := "someday"
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Status: &st}),
+	}
+	_, err := NewReplayer().Replay(Input{Events: events, Now: testNow})
+	if !errors.Is(err, ErrMalformedEvent) {
+		t.Fatalf("err = %v, want ErrMalformedEvent", err)
+	}
+}
+
+// What a v1-only binary sees when a v2 binary has written: the exact
+// old-binary fail-safe this cycle's version bump exists to guarantee. A
+// replayer stripped of the standard v1→v2 upcasters stands in for the
+// old binary meeting bytes from the future — replay stops with
+// ErrCannotReplay ("upgrade tuhdoo"), never a mis-bucketed open task.
+func TestV2EventsFailSafeWithoutUpcasters(t *testing.T) {
+	v2 := evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
+		event.TaskCreated{Title: "captured", Status: StatusInbox})
+	if v2.V != 2 {
+		t.Fatalf("task.created writes v%d, want v2", v2.V)
+	}
+	// An old binary has no idea v2 exists: its Versions map says 1, so
+	// upcast refuses upward. Simulate by asking this binary about v3 —
+	// the same "version above mine" gate the old binary hits at v2.
+	future := v2
+	future.V = 3
+	_, err := NewReplayer().Replay(Input{Events: []event.Event{future}, Now: testNow})
+	if !errors.Is(err, ErrCannotReplay) {
+		t.Fatalf("err = %v, want ErrCannotReplay", err)
 	}
 }
 

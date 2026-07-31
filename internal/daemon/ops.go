@@ -56,17 +56,18 @@ func (d *Daemon) writeErrLocked(err error) *opError {
 type createTaskItem struct {
 	Tmp         string   `json:"tmp,omitempty" jsonschema:"optional name other items in this batch can reference as 'tmp:<name>' in parents/depends_on; resolved to the real task ID on commit"`
 	Title       string   `json:"title" jsonschema:"short imperative summary of the work (required)"`
-	Description string   `json:"description,omitempty" jsonschema:"the task body — write it like a prompt: acceptance criteria, constraints, file pointers; output quality of whoever claims this is bounded by what you put here"`
-	Priority    int      `json:"priority,omitempty" jsonschema:"higher claims first; 0 is the default"`
+	Description string   `json:"description,omitempty" jsonschema:"the task body — write it like a prompt: acceptance criteria, constraints, file pointers; output quality of whoever claims this is bounded by what you put here. For status inbox only, a fragment (or nothing) is legitimate: the prompt bar applies at promotion, not capture"`
+	Status      string   `json:"status,omitempty" jsonschema:"initial status: open (default — claimable), inbox (untriaged capture; title-only is fine), or held (triaged but deliberately paused). Only open tasks are ever served to claim_next/claim_task"`
+	Priority    int      `json:"priority,omitempty" jsonschema:"higher claims first; 0 is the default. Stored but inert while the task is inbox or held"`
 	Labels      []string `json:"labels,omitempty" jsonschema:"free-form capability/topic tags, matchable by claim_next"`
 	Parents     []string `json:"parents,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) this task is a child of; epics are just tasks"`
-	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) that must be done before this task is claimable"`
+	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) that must be done before this task is claimable; a dependency in inbox or held blocks like any other not-done task"`
 }
 
 type updateTaskReq struct {
 	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
 	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
-	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, done, or cancelled; omit to leave unchanged"`
+	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
 	Parents     *[]string `json:"parents,omitempty" jsonschema:"full replacement parent-edge list (task IDs); omit to leave unchanged"`
@@ -113,6 +114,14 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 	for i, it := range items {
 		if it.Title == "" {
 			return nil, nil, opErrf(http.StatusBadRequest, "item %d: title is required", i)
+		}
+		// Tasks are born open (default), inbox, or held. Born-terminal
+		// tasks (done/cancelled at create) are always a caller mistake.
+		switch it.Status {
+		case "", core.StatusOpen, core.StatusInbox, core.StatusHeld:
+		default:
+			return nil, nil, opErrf(http.StatusBadRequest,
+				"item %d: invalid status %q: tasks are created open, inbox, or held", i, it.Status)
 		}
 		if it.Tmp != "" {
 			if _, dup := byTmp[it.Tmp]; dup {
@@ -172,9 +181,14 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 	}
 	evs := make([]event.Event, len(items))
 	for i, it := range items {
+		status := it.Status
+		if status == "" {
+			status = core.StatusOpen
+		}
 		ev, err := d.newEventLocked(event.TypeTaskCreated, actor, ids[i], event.TaskCreated{
 			Title:       it.Title,
 			Description: it.Description,
+			Status:      status,
 			Priority:    it.Priority,
 			Labels:      it.Labels,
 			Parents:     resolve(it.Parents),
@@ -201,9 +215,11 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 	}
 	if req.Status != nil {
 		switch *req.Status {
-		case core.StatusOpen, core.StatusDone, core.StatusCancelled:
+		case core.StatusOpen, core.StatusInbox, core.StatusHeld,
+			core.StatusDone, core.StatusCancelled:
 		default:
-			return taskJSON{}, opErrf(http.StatusBadRequest, "invalid status %q: want open, done, or cancelled", *req.Status)
+			return taskJSON{}, opErrf(http.StatusBadRequest,
+				"invalid status %q: want open, inbox, held, done, or cancelled", *req.Status)
 		}
 	}
 
@@ -577,23 +593,35 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 }
 
 // opBacklog lists claimable tasks, highest priority first (T5
-// get_backlog: ready-filtered and dependency-aware, not a raw dump).
-// Lease verdicts move with the clock, so replay at the current instant
+// get_backlog: ready-filtered and dependency-aware, not a raw dump),
+// plus the inbox and held shelves (2026-07-31) in creation order so
+// agents can orient on parked and captured work without ever being
+// served it — claim_next/claim_task take from ready alone. Lease
+// verdicts move with the clock, so replay at the current instant
 // first — a stale expiry must not hide a ready task.
-func (d *Daemon) opBacklog() ([]taskJSON, *opError) {
+func (d *Daemon) opBacklog() (ready, inbox, held []taskJSON, oe *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.degraded == nil {
 		if err := d.refreshLocked(now); err != nil {
-			return nil, d.writeErrLocked(err)
+			return nil, nil, nil, d.writeErrLocked(err)
 		}
 	}
-	ready := []taskJSON{}
+	ready = []taskJSON{}
 	for _, t := range d.state.ReadyTasks() {
 		ready = append(ready, taskJSONOf(t))
 	}
-	return ready, nil
+	inbox, held = []taskJSON{}, []taskJSON{}
+	for _, id := range d.state.TaskOrder {
+		switch t := d.state.Tasks[id]; t.Status {
+		case core.StatusInbox:
+			inbox = append(inbox, taskJSONOf(t))
+		case core.StatusHeld:
+			held = append(held, taskJSONOf(t))
+		}
+	}
+	return ready, inbox, held, nil
 }
 
 // holderClaimLocked resolves the active claim on taskID and enforces

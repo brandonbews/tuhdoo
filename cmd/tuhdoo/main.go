@@ -83,13 +83,17 @@ the life of the pane — the dashboard that sits beside a working agent.
 
   init          set up the data branch in this repository (idempotent)
   status        one-screen overview: sync state, counts, active claims
-  backlog       ready / in-progress / blocked work, from live daemon state
+  backlog       ready / in-progress / blocked / held / inbox work, from
+                live daemon state
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
   create <t>    add a task: --desc <text|-> --priority <n> --labels a,b
                 --parents <ids> --depends-on <ids> (- reads stdin)
+                --status inbox|held captures without opening the task
+                (inbox: title-only is fine; agents never get served it)
   update <id>   change fields: --title --desc --priority --status
-                --labels --parents --depends-on (lists replace in full)
+                (open|inbox|held|done|archived) --labels --parents
+                --depends-on (lists replace in full)
   answer <id>   answer an open escalation by its ID or its task's ID;
                 the rest of the line is the answer text
   mcp           stdio MCP shim for agent harnesses. The principal is

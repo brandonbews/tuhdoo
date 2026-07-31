@@ -1,6 +1,6 @@
 # t-sync — Sync loop \| app-level merge
 
-- Status: open — blocked on dependencies
+- Status: held — deliberately paused
 - Priority: 2
 - Depends on: [t-views](t-views.md) (open)
 - Created: 2026-07-29 12:04 UTC by `brandon`

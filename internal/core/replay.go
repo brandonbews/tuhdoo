@@ -58,7 +58,21 @@ type Replayer struct {
 }
 
 func NewReplayer() *Replayer {
-	return &Replayer{upcasters: make(map[upKey]Upcaster)}
+	r := &Replayer{upcasters: make(map[upKey]Upcaster)}
+	registerCatalogUpcasters(r)
+	return r
+}
+
+// knownStatus reports whether s is a status this binary understands.
+// An unknown value is a malformed event, never best-effort-bucketed:
+// mis-filing a status a newer binary wrote is exactly the divergence T3
+// forbids (the writer bumps the schema version instead — see upcast.go).
+func knownStatus(s string) bool {
+	switch s {
+	case StatusOpen, StatusInbox, StatusHeld, StatusDone, StatusCancelled:
+		return true
+	}
+	return false
 }
 
 // Replay computes state from an event set. Events are treated as a set:
@@ -147,11 +161,22 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		if _, exists := s.Tasks[e.Task]; exists {
 			return malformed("task %s already exists", e.Task)
 		}
+		// Empty status is the v1 reading: every task minted before the
+		// field existed (v2, 2026-07-31) was born open. Anything else
+		// must be a known status — vocabulary is validated, transitions
+		// never are (T3: no rejected-event edge cases).
+		status := p.Status
+		if status == "" {
+			status = StatusOpen
+		}
+		if !knownStatus(status) {
+			return malformed("unknown task status %q", p.Status)
+		}
 		s.Tasks[e.Task] = &Task{
 			ID: e.Task, Title: p.Title, Description: p.Description,
 			Priority: p.Priority, Labels: p.Labels,
 			Parents: p.Parents, DependsOn: p.DependsOn,
-			Status: StatusOpen, CreatedBy: e.Actor, CreatedAt: when,
+			Status: status, CreatedBy: e.Actor, CreatedAt: when,
 		}
 		s.TaskOrder = append(s.TaskOrder, e.Task)
 
@@ -173,12 +198,13 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			t.Description = *p.Description
 		}
 		if p.Status != nil {
-			switch *p.Status {
-			case StatusOpen, StatusDone, StatusCancelled:
-				t.Status = *p.Status
-			default:
+			// Any known status may follow any other: transitions are
+			// mechanically permissive (2026-07-31) — promote/pause
+			// semantics are protocol, not replay rules.
+			if !knownStatus(*p.Status) {
 				return malformed("unknown task status %q", *p.Status)
 			}
+			t.Status = *p.Status
 		}
 		if p.Priority != nil {
 			t.Priority = *p.Priority

@@ -37,7 +37,7 @@ func tick(t *testing.T, n int) string {
 
 func evt(t *testing.T, n int, typ, actor, task string, payload any) event.Event {
 	t.Helper()
-	e, err := event.New(tick(t, n), typ, 1, actor, "m-test", task, payload)
+	e, err := event.New(tick(t, n), typ, event.Versions[typ], actor, "m-test", task, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,6 +132,27 @@ func goldenInput(t *testing.T) core.Input {
 			AnsweredBy: "sarah",
 			Escalation: tick(t, 18),
 		}),
+		// The shelves (2026-07-31): a held task (paused after triage, via
+		// an update), a task born held, and a title-only inbox capture —
+		// plus a task depending on the capture, so the dep-status
+		// annotation covers a not-done, not-open dependency.
+		evt(t, 20, event.TypeTaskUpdated, "brandon", "t-sync", event.TaskUpdated{
+			Status: ptr(core.StatusHeld),
+		}),
+		evt(t, 21, event.TypeTaskCreated, "brandon", "t-web", event.TaskCreated{
+			Title:    "Browser UI spike",
+			Status:   core.StatusHeld,
+			Priority: 3,
+			Labels:   []string{"v2"},
+		}),
+		evt(t, 22, event.TypeTaskCreated, "brandon", "t-idea", event.TaskCreated{
+			Title:  "Idea: label-based claim routing",
+			Status: core.StatusInbox,
+		}),
+		evt(t, 23, event.TypeTaskCreated, "brandon", "t-routr", event.TaskCreated{
+			Title:     "Route claims by label",
+			DependsOn: []string{"t-idea"},
+		}),
 	}
 	leases := map[string]time.Time{
 		tick(t, 14): testNow.Add(time.Hour),     // t-daemon claim alive
@@ -224,7 +245,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":2}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":3}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -282,9 +303,9 @@ func TestCanWrite(t *testing.T) {
 		{"garbage", []byte("not json at all"), true},
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
-		{"lower", []byte(`{"format":1}`), true},
-		{"equal", []byte(`{"format":2}`), true},
-		{"higher", []byte(`{"format":3}`), false},
+		{"lower", []byte(`{"format":2}`), true},
+		{"equal", []byte(`{"format":3}`), true},
+		{"higher", []byte(`{"format":4}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

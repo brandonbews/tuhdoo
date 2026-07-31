@@ -9,7 +9,9 @@ package main
 // stamped with the acting human principal.
 
 import (
+	"bytes"
 	"encoding/json"
+	"net/http"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -200,5 +202,83 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 	if _, ok := quit().(tea.QuitMsg); !ok {
 		t.Errorf("q produced %T, want tea.QuitMsg", quit())
+	}
+}
+
+// Quick capture against the real daemon (2026-07-31): i → title →
+// enter creates a real inbox task as the steering actor, it renders in
+// the INBOX section on the next poll, and the v2 task.created event —
+// status in the payload — lands on the data branch.
+func TestTopQuickCaptureRealDaemon(t *testing.T) {
+	repo := newRepo(t)
+	if out, code := runCLI(t, repo, "init"); code != 0 {
+		t.Fatalf("init exit %d; output:\n%s", code, out)
+	}
+	_, socket, err := readDiscovery(filepath.Join(repo, ".git", "tuhdoo", "daemon.json"))
+	if err != nil {
+		t.Fatalf("read daemon.json: %v", err)
+	}
+	c := newClient(socket)
+	m := topModel{c: c, api: httpSteering{c: c, actor: "brandon"}, actor: "brandon", armed: true}
+	m = refreshTop(t, m)
+
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	if m.mode != modeCapture {
+		t.Fatalf("i: mode = %d, want modeCapture", m.mode)
+	}
+	m, cmd := press(t, m, append(runes("idea: sparkline history"), keyOf(tea.KeyEnter))...)
+	m = act(t, m, cmd)
+
+	// The capture is a real task: inbox status, steering actor, shown in
+	// the dim section on the next poll — and never claimable.
+	m = refreshTop(t, m)
+	var captured stateTask
+	for _, task := range m.snap.state.Tasks {
+		if task.Title == "idea: sparkline history" {
+			captured = task
+		}
+	}
+	if captured.ID == "" || captured.Status != "inbox" {
+		t.Fatalf("captured task = %+v, want an inbox task", captured)
+	}
+	if h := m.snap.tasks[captured.ID]; h.Task.CreatedBy != "brandon" {
+		t.Fatalf("captured task created_by = %q, want the steering actor", h.Task.CreatedBy)
+	}
+	if v := m.View(); !strings.Contains(v, "INBOX (1)") {
+		t.Errorf("capture not rendered in the INBOX section; view:\n%s", v)
+	}
+	body, _ := json.Marshal(map[string]any{"next": true})
+	req, err := http.NewRequest("POST", "http://tuhdoo/v0/claims", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Tuhdoo-Actor", "brandon/a1")
+	resp, err := apiClient(t, repo).Do(req)
+	if err != nil {
+		t.Fatalf("claim_next: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("claim_next with only a capture: status %d, want 409", resp.StatusCode)
+	}
+
+	// End to end means the branch: the capture syncs as an ordinary v2
+	// event (debounced, so poll).
+	deadline := time.Now().Add(8 * time.Second)
+	var line string
+	for {
+		if out, ok := grepDataBranch(repo, `"status":"inbox"`); ok {
+			line = out
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("capture event never committed to the data branch")
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	for _, want := range []string{`"actor":"brandon"`, `"type":"task.created"`, `"v":2`} {
+		if !strings.Contains(line, want) {
+			t.Errorf("capture event missing %s; event:\n%s", want, line)
+		}
 	}
 }

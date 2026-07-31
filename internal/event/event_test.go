@@ -10,7 +10,11 @@ import (
 // both envelope level ("trace") and payload level ("estimate", "kind"),
 // with values our binary cannot interpret. Keys are in sorted order and
 // the encoding is canonical, exactly as a conforming writer stores it.
-const futureEvent = `{"actor":"brandon/impl-2","data":{"depends_on":null,"description":"","estimate":{"unit":"pomodoro","value":3.5},"kind":["deep","risky"],"labels":null,"parents":null,"priority":2,"title":"From the future"},"id":"01BX5ZZKBKACTAV9WEVGEMMVRY","machine":"m-3f9a","sig":null,"task":"t-01BX5ZZKBKACTAV9WEVGEMMVRX","trace":"otel-4711","type":"task.created","v":1}`
+// The payload is v2-shaped (status present — the version this binary
+// writes): the payload structs carry no omitempty, so a struct
+// round-trip only preserves bytes for payloads of its own version;
+// older payloads are lifted by upcasters before any typed decode.
+const futureEvent = `{"actor":"brandon/impl-2","data":{"depends_on":null,"description":"","estimate":{"unit":"pomodoro","value":3.5},"kind":["deep","risky"],"labels":null,"parents":null,"priority":2,"status":"open","title":"From the future"},"id":"01BX5ZZKBKACTAV9WEVGEMMVRY","machine":"m-3f9a","sig":null,"task":"t-01BX5ZZKBKACTAV9WEVGEMMVRX","trace":"otel-4711","type":"task.created","v":2}`
 
 func TestDecodeEncodePreservesUnknownFields(t *testing.T) {
 	e, err := Decode([]byte(futureEvent))

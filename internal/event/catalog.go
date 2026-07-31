@@ -5,9 +5,12 @@ import (
 	"fmt"
 )
 
-// The v1 event-type catalog (T3, T5). Every type is at schema version 1;
-// additive payload changes never bump a version, so these only move on a
-// breaking change (rare by design).
+// The event-type catalog (T3, T5). Additive payload changes never bump
+// a version, so these only move on a breaking change (rare by design).
+// "Additive" means an old reader ignoring the field still computes
+// correct state — a field whose absence implied a default that its
+// presence can contradict (task.created's status, 2026-07-31) is
+// breaking in additive clothing, and bumps.
 const (
 	TypeTaskCreated        = "task.created"
 	TypeTaskUpdated        = "task.updated"
@@ -21,9 +24,18 @@ const (
 
 // Versions maps each catalog type to the schema version this binary
 // writes and fully understands.
+//
+// task.created/task.updated moved to v2 on 2026-07-31 (inbox/held task
+// statuses): v2 task.created carries a status field, and v2 task.updated
+// may carry the new status values. v1-only binaries would mint a
+// status-carrying task.created as open-and-claimable (unknown fields are
+// ignored — verified mis-bucketing) and reject an inbox/held
+// task.updated as malformed rather than as needing an upgrade; at v2
+// they instead fail safe with "upgrade tuhdoo" (T3 read-only mode). The
+// v1→v2 upcasters are the identity (internal/core/upcast.go).
 var Versions = map[string]int{
-	TypeTaskCreated:        1,
-	TypeTaskUpdated:        1,
+	TypeTaskCreated:        2,
+	TypeTaskUpdated:        2,
 	TypeClaimMade:          1,
 	TypeClaimReleased:      1,
 	TypeRunFinished:        1,
@@ -55,9 +67,12 @@ const (
 
 // TaskCreated is the payload of "task.created". Parents and DependsOn
 // are DAG edges: task IDs of parent tasks and prerequisite tasks.
+// Status (v2, 2026-07-31) is the task's initial status; empty means
+// "open", the only reading v1 events could carry.
 type TaskCreated struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
+	Status      string   `json:"status"`
 	Priority    int      `json:"priority"`
 	Labels      []string `json:"labels"`
 	Parents     []string `json:"parents"`

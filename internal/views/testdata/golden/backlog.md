@@ -17,8 +17,23 @@
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
-| [t-sync](tasks/t-sync.md) | Sync loop \| app-level merge | 2 | depends on [t-views](tasks/t-views.md) |
 | [t-flaky](tasks/t-flaky.md) | Fix flaky TestFoo | 8 | escalation: TestFoo depends on wall-clock timing — rewrite or delete? |
+| [t-routr](tasks/t-routr.md) | Route claims by label | 0 | depends on [t-idea](tasks/t-idea.md) |
+
+## Held
+
+Triaged, deliberately paused — never served to agents until reopened.
+
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [t-sync](tasks/t-sync.md) | Sync loop \| app-level merge | 2 |  |
+| [t-web](tasks/t-web.md) | Browser UI spike | 3 | v2 |
+
+## Inbox
+
+Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
+
+- [t-idea](tasks/t-idea.md) — Idea: label-based claim routing
 
 ## Done
 

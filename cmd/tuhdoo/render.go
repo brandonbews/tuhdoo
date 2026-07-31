@@ -150,6 +150,33 @@ func renderBlocked(w io.Writer, col colors, s *snapshot, tasks []stateTask) {
 	}
 }
 
+// renderHeld and renderInbox are the shelf sections (2026-07-31): dim
+// headers — parked and captured work sits below the live queue in both
+// the one-shot output and the TUI.
+func renderHeld(w io.Writer, col colors, tasks []stateTask) {
+	fmt.Fprintf(w, "%sHeld%s (%d)\n", col.dim, col.reset, len(tasks))
+	if len(tasks) == 0 {
+		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
+		return
+	}
+	for _, t := range tasks {
+		fmt.Fprintf(w, "  %s%s  p%d  %s%s%s\n",
+			col.dim, t.ID, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), col.reset)
+	}
+}
+
+func renderInbox(w io.Writer, col colors, tasks []stateTask) {
+	fmt.Fprintf(w, "%sInbox%s (%d)\n", col.dim, col.reset, len(tasks))
+	if len(tasks) == 0 {
+		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
+		return
+	}
+	for _, t := range tasks {
+		fmt.Fprintf(w, "  %s%s  %s%s%s\n",
+			col.dim, t.ID, oneLine(t.Title), labelSuffix(t.Labels), col.reset)
+	}
+}
+
 func renderOpenEscalations(w io.Writer, col colors, s *snapshot, escs []escalationJSON) {
 	// Same header as the TUI's escalations section (T7, 2026-07-30):
 	// "Needs Input" softens the severity without renaming the entity.

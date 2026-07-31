@@ -261,6 +261,103 @@ func TestMCPFullLoop(t *testing.T) {
 	}
 }
 
+// Inbox and held over the MCP surface (2026-07-31): title-only capture
+// through create_task lands as a real inbox event; get_backlog shows
+// the shelves as their own arrays; claim_next skips them; and the full
+// promote round trip runs through update_task — fields, not verbs.
+func TestMCPInboxCaptureAndPromotion(t *testing.T) {
+	d, _ := startDaemon(t)
+	const actor = "brandon/impl-1"
+	cs := mcpConnect(t, d, actor, nil)
+
+	// Title-only capture: the minimum capture demands. A held create
+	// works too (create-into-held is deliberately permitted).
+	var created createTasksResult
+	mustToolOK(t, cs, "create_task", map[string]any{
+		"tasks": []map[string]any{
+			{"title": "idea: dark mode", "status": "inbox"},
+			{"title": "polish docs", "status": "held", "priority": 9},
+		},
+	}, &created)
+	if len(created.IDs) != 2 {
+		t.Fatalf("create_task ids = %v, want two", created.IDs)
+	}
+	idea, parked := created.IDs[0], created.IDs[1]
+
+	// get_backlog: the shelves are their own arrays, ready is empty.
+	var backlog backlogResult
+	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
+	if len(backlog.Ready) != 0 {
+		t.Fatalf("ready = %+v, want empty", backlog.Ready)
+	}
+	if len(backlog.Inbox) != 1 || backlog.Inbox[0].ID != idea {
+		t.Fatalf("inbox = %+v, want just %s", backlog.Inbox, idea)
+	}
+	if len(backlog.Held) != 1 || backlog.Held[0].ID != parked {
+		t.Fatalf("held = %+v, want just %s", backlog.Held, parked)
+	}
+
+	// claim_next never serves a shelf, even a p9 held task.
+	var claimed claimNextResult
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &claimed)
+	if claimed.Claimed {
+		t.Fatalf("claim_next served a shelved task: %+v", claimed)
+	}
+	// claim_task refuses by status, as a tool error the model can read.
+	res := callTool(t, cs, "claim_task", map[string]any{"task": idea})
+	if !res.IsError || !strings.Contains(contentText(res), "status is inbox") {
+		t.Fatalf("claim_task(inbox) = isError %v %q, want status-is-inbox error", res.IsError, contentText(res))
+	}
+
+	// Promotion is update_task with a real description — no new verb.
+	mustToolOK(t, cs, "update_task", map[string]any{
+		"task": idea, "status": "open",
+		"description": "Context, the ask, acceptance criteria.",
+	}, nil)
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &claimed)
+	if !claimed.Claimed || claimed.Task.Task.ID != idea {
+		t.Fatalf("claim_next after promotion = %+v, want %s", claimed, idea)
+	}
+	// Pause the claimed-and-released work mid-flight: open→held→open.
+	mustToolOK(t, cs, "release_claim", map[string]any{"task": idea, "reason": "testing pause"}, nil)
+	var updated taskJSON
+	mustToolOK(t, cs, "update_task", map[string]any{"task": idea, "status": "held"}, &updated)
+	if updated.Status != "held" {
+		t.Fatalf("paused status = %q, want held", updated.Status)
+	}
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &claimed)
+	if claimed.Claimed {
+		t.Fatalf("claim_next served a paused task: %+v", claimed)
+	}
+	mustToolOK(t, cs, "update_task", map[string]any{"task": idea, "status": "open"}, &updated)
+	if updated.Status != "open" {
+		t.Fatalf("resumed status = %q, want open", updated.Status)
+	}
+
+	// The ledger: the capture landed as a v2 task.created carrying its
+	// status — synced shared state, not a local nicety.
+	events := flushedEvents(t, d)
+	var capture *event.Event
+	for i := range events {
+		if events[i].Type == event.TypeTaskCreated && events[i].Task == idea {
+			capture = &events[i]
+		}
+	}
+	if capture == nil {
+		t.Fatal("no task.created event for the capture")
+	}
+	if capture.V != 2 {
+		t.Errorf("task.created v = %d, want 2 (old binaries must fail safe, not mis-bucket)", capture.V)
+	}
+	var p event.TaskCreated
+	if err := json.Unmarshal(capture.Data, &p); err != nil {
+		t.Fatalf("decode capture payload: %v", err)
+	}
+	if p.Status != "inbox" || p.Title != "idea: dark mode" {
+		t.Errorf("capture payload = status %q title %q, want inbox / idea: dark mode", p.Status, p.Title)
+	}
+}
+
 // relay_answer (T5, 2026-07-30 revision): an agent records an
 // out-of-band answer; the event's actor is the agent, the payload
 // attributes the answer to the session's root principal, and the task

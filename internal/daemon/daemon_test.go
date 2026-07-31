@@ -215,6 +215,63 @@ func TestConcurrentCreatesLinearHistory(t *testing.T) {
 // Test 2: the claim lifecycle over the API — claim_next hydrates and
 // leases, renewal extends, holder checks bite, release returns the
 // task to the pool.
+// Inbox and held (2026-07-31): captures and paused tasks are ordinary
+// shared state, but the claim verbs never serve them — open is the only
+// claimable status. Title-only capture works; promote/pause/resume
+// round-trips run through the ordinary update surface.
+func TestClaimNeverServesInboxOrHeld(t *testing.T) {
+	_, c := startDaemon(t)
+
+	// Title-only capture: the minimum the capture tier demands.
+	idea := createOne(t, c, "brandon", map[string]any{"title": "idea: dark mode", "status": "inbox"})
+	parked := createOne(t, c, "brandon", map[string]any{"title": "polish docs", "status": "held", "priority": 9})
+
+	// Born-terminal creates are caller mistakes.
+	mustDo(t, c, "POST", "/v0/tasks", "brandon",
+		[]map[string]any{{"title": "stillborn", "status": "done"}}, http.StatusBadRequest)
+	mustDo(t, c, "POST", "/v0/tasks", "brandon",
+		[]map[string]any{{"title": "nonsense", "status": "someday"}}, http.StatusBadRequest)
+
+	// claim_next with only shelved tasks: the pool is empty — even
+	// though the held task carries the highest priority on the board.
+	mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"next": true}, http.StatusConflict)
+
+	// claim_task on a shelf is a conflict that names the status.
+	body := mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"task": idea}, http.StatusConflict)
+	if !strings.Contains(string(body), "status is inbox") {
+		t.Fatalf("claim of inbox task: %s, want a status-is-inbox conflict", body)
+	}
+	body = mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"task": parked}, http.StatusConflict)
+	if !strings.Contains(string(body), "status is held") {
+		t.Fatalf("claim of held task: %s, want a status-is-held conflict", body)
+	}
+
+	// Promote the capture (description supplied in the same breath, as
+	// the protocol asks) and pause/resume the other: ordinary updates.
+	mustDo(t, c, "PATCH", "/v0/tasks/"+idea, "brandon",
+		map[string]any{"status": "open", "description": "Context, ask, acceptance."}, http.StatusOK)
+	mustDo(t, c, "PATCH", "/v0/tasks/"+parked, "brandon", map[string]any{"status": "open"}, http.StatusOK)
+	mustDo(t, c, "PATCH", "/v0/tasks/"+parked, "brandon", map[string]any{"status": "held"}, http.StatusOK)
+
+	// Now the pool serves exactly the promoted task.
+	var h hydratedTask
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a1",
+		map[string]any{"next": true}, http.StatusOK), &h)
+	if h.Task.ID != idea {
+		t.Fatalf("claim_next served %s, want the promoted %s", h.Task.ID, idea)
+	}
+	mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"next": true}, http.StatusConflict)
+
+	// The stored task.created carries the status in its payload.
+	var st stateResp
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+	for _, task := range st.Tasks {
+		if task.ID == parked && task.Status != "held" {
+			t.Fatalf("parked task status = %q, want held", task.Status)
+		}
+	}
+}
+
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 

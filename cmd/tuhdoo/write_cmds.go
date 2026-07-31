@@ -82,8 +82,10 @@ func resolveRefs(refs []string, tasks []stateTask) ([]string, error) {
 
 func runCreate(args []string) int {
 	const use = `usage: tuhdoo create <title> [--desc <text>|--desc -] [--priority <n>]
-                     [--labels a,b] [--parents <ids>] [--depends-on <ids>]
-                     [--as <human>]`
+                     [--status open|inbox|held] [--labels a,b]
+                     [--parents <ids>] [--depends-on <ids>] [--as <human>]
+(--status inbox is capture: title-only is fine, agents are never served it;
+ --status held parks a triaged task; both promote later via update --status open)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(os.Stderr, use)
 		return 1
@@ -91,9 +93,10 @@ func runCreate(args []string) int {
 	title := args[0]
 	fs := flag.NewFlagSet("tuhdoo create", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var desc, labels, parents, dependsOn, as string
+	var desc, status, labels, parents, dependsOn, as string
 	var priority int
 	fs.StringVar(&desc, "desc", "", "")
+	fs.StringVar(&status, "status", "", "")
 	fs.IntVar(&priority, "priority", 0, "")
 	fs.StringVar(&labels, "labels", "", "")
 	fs.StringVar(&parents, "parents", "", "")
@@ -120,6 +123,9 @@ func runCreate(args []string) int {
 	item := map[string]any{"title": title, "priority": priority}
 	if description != "" {
 		item["description"] = description
+	}
+	if status != "" {
+		item["status"] = status // daemon validates: open, inbox, or held
 	}
 	if labels != "" {
 		item["labels"] = splitList(labels)
@@ -161,10 +167,12 @@ func runCreate(args []string) int {
 
 func runUpdate(args []string) int {
 	const use = `usage: tuhdoo update <id> [--title <t>] [--desc <text>|--desc -]
-                     [--priority <n>] [--status open|done|archived]
+                     [--priority <n>] [--status open|inbox|held|done|archived]
                      [--labels a,b] [--parents <ids>] [--depends-on <ids>]
                      [--as <human>]
-(list flags are full replacements; an empty value clears the list)`
+(list flags are full replacements; an empty value clears the list;
+ --status open promotes/resumes, --status held pauses — promotion from
+ inbox deserves a real description in the same breath)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(os.Stderr, use)
 		return 1

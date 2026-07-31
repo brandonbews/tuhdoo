@@ -290,6 +290,8 @@ type getBacklogInput struct{}
 
 type backlogResult struct {
 	Ready []taskJSON `json:"ready" jsonschema:"claimable tasks: open, unclaimed, dependencies done, no blocking escalation; highest priority first"`
+	Inbox []taskJSON `json:"inbox" jsonschema:"untriaged captures (status inbox), creation order — never served by claim_next/claim_task; promoting one to open means supplying a prompt-quality description first"`
+	Held  []taskJSON `json:"held" jsonschema:"triaged but deliberately paused tasks (status held), creation order — never served by claim_next/claim_task; resume by setting status open"`
 }
 
 type getTaskInput struct {
@@ -362,7 +364,7 @@ type updateTaskInput struct {
 	Task        string    `json:"task" jsonschema:"the task ID to update"`
 	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
 	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
-	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, done, or cancelled; omit to leave unchanged"`
+	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
 	Parents     *[]string `json:"parents,omitempty" jsonschema:"full replacement parent-edge list (task IDs); omit to leave unchanged"`
@@ -379,13 +381,15 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "get_backlog",
 		Description: "The claimable backlog: open tasks with met dependencies and no active claim, " +
-			"highest priority first. Orientation only — use claim_next to actually take work.",
+			"highest priority first — plus the inbox (untriaged captures) and held (deliberately " +
+			"paused) shelves, which claim verbs never serve. Orientation only — use claim_next " +
+			"to actually take work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in getBacklogInput) (*mcp.CallToolResult, backlogResult, error) {
-		ready, oe := d.opBacklog()
+		ready, inbox, held, oe := d.opBacklog()
 		if oe != nil {
 			return nil, backlogResult{}, oe
 		}
-		return nil, backlogResult{Ready: ready}, nil
+		return nil, backlogResult{Ready: ready, Inbox: inbox, Held: held}, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -520,7 +524,9 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "create_task",
 		Description: "Create tasks in one atomic batch — a whole plan (epic, children, dependency " +
 			"edges) using tmp: refs between items, or a single task as a batch of one. Task " +
-			"descriptions are prompts: include acceptance criteria, constraints, and file pointers.",
+			"descriptions are prompts: include acceptance criteria, constraints, and file pointers " +
+			"— except for status inbox, the chuck-it-in capture tier, where title-only is legitimate " +
+			"and the prompt bar applies at promotion instead.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in createTasksInput) (*mcp.CallToolResult, createTasksResult, error) {
 		ids, tmp, oe := d.opCreateTasks(s.principal(), in.Tasks)
 		if oe != nil {

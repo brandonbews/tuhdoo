@@ -103,11 +103,12 @@ func printStatus(w io.Writer, col colors, head string, s *snapshot) {
 	if s.state.Degraded != "" {
 		fmt.Fprintf(w, "%sDEGRADED%s     %s\n", col.red, col.reset, s.state.Degraded)
 	}
-	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d done · %d archived\n",
+	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d held · %d inbox · %d done · %d archived\n",
 		col.bold, col.reset,
 		col.green, len(b.ready), col.reset,
 		col.yellow, len(b.inProgress), col.reset,
 		col.red, len(b.blocked), col.reset,
+		len(b.held), len(b.inbox),
 		len(b.done), len(b.cancelled))
 	fmt.Fprintf(w, "%sescalations%s  %s open\n", col.bold, col.reset, plural(len(s.state.OpenEscalations), "question"))
 	if len(b.inProgress) == 0 {
@@ -144,6 +145,10 @@ func printBacklog(w io.Writer, col colors, s *snapshot) {
 	renderInProgress(w, col, b.inProgress)
 	fmt.Fprintln(w)
 	renderBlocked(w, col, s, b.blocked)
+	fmt.Fprintln(w)
+	renderHeld(w, col, b.held)
+	fmt.Fprintln(w)
+	renderInbox(w, col, b.inbox)
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "%sDone%s %d · %sArchived%s %d\n",
 		col.dim, col.reset, len(b.done), col.dim, col.reset, len(b.cancelled))

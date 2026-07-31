@@ -1,6 +1,6 @@
 # tuhdoo agent protocol
 
-**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). Revised again 2026-07-30 (steering): notes reframed — the typed transition events carry continuity, `add_note` is optional garnish (step 4); the dangling-pointer anti-pattern named; interactive sessions addressed (escalation section). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
+**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). Revised again 2026-07-30 (steering): notes reframed — the typed transition events carry continuity, `add_note` is optional garnish (step 4); the dangling-pointer anti-pattern named; interactive sessions addressed (escalation section). Revised 2026-07-31 (grill cycle): the status model grew `inbox` and `held` — capture cheap, promote deliberate (new section below). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
 
 This is the instruction text a harness loads for any agent working a tuhdoo-managed project. It is the agent's half of the contract; the daemon's half (leases, serialization, sync) is automatic. The protocol exists because the ledger is **agent memory before it is human audit trail**: sessions end and contexts compact, and the only continuity between today's agent and tomorrow's is what landed on the ledger — chiefly the typed transition events the loop below already requires *(revised 2026-07-30; see step 4)*.
 
@@ -66,6 +66,16 @@ Write escalations so a human can answer from the escalation alone, without readi
 
 **Answered out of band?** Sometimes the human answers your question in your own live session instead of a steering surface. Record it with `relay_answer` (escalation ID + the answer as given) — otherwise the settled question lingers open in the inbox, polluting the signal escalations exist to provide. The answer lands exactly like a steering-surface answer: attribution goes to your root principal (the daemon derives it; you cannot attribute to anyone else), the ledger marks you as the relay, and a blocking escalation returns its task to the pool immediately — if you still hold the claim, just keep working; the handoff dance is only for answers that haven't arrived. You are the scribe, not the decider: relay only a decision a human actually made, verbatim, never an answer you inferred. Open escalations only — amending a settled answer is curation, human work on the steering surfaces.
 
+## Capture cheap, promote deliberate: inbox and held *(2026-07-31)*
+
+Tasks have five statuses: `open`, `inbox`, `held`, `done`, `cancelled`. Only `open` tasks are ever served by `claim_next`/`claim_task`; `get_backlog` returns `inbox` and `held` as their own arrays so you can orient on them without ever being handed one.
+
+- **`inbox` is the chuck-it-in tier.** When an idea surfaces mid-work — a refactor you noticed, a bug you stepped around, a "we should eventually…" — capture it *now* with `create_task` and `status: "inbox"`. Title-only is legitimate; a fragment description is legitimate **for inbox items only**. Do not stop to scope it, price it, or write acceptance criteria: the whole point of the tier is that capture must not cost a planning session. An uncaptured idea dies with your context (the dangling-pointer anti-pattern's quieter sibling).
+- **`held` is deliberately paused.** It passed triage and is workable, but a human (or an agent with reason) has parked it. Pause and resume are `update_task` with `status: "held"` / `"open"`. Creating directly into `held` is allowed.
+- **Promotion (`inbox` → `open`) is where the bar applies.** Anyone — human or agent — may promote, by setting `status: "open"` **and supplying a prompt-quality description in the same call** (context, ask, acceptance criteria, pointers, constraints — the "descriptions are prompts" section below). The schema will not stop you from promoting a bare title; the protocol does: **promoting a task to sneak it past scoping is the same failure as writing a bad task**, and the claimant it burns will file the same blocking escalation.
+- **Shelved tasks are ordinary shared state.** Labels and edges are allowed at capture; a dependency on an inbox/held task blocks its dependents naturally (it is not `done` — nothing pretends parked work is finished). Priority is stored but inert until the task is `open`.
+- **Never archive a capture you merely disagree with** — curation stays human work; the no-delete rule above applies unchanged.
+
 ## Decomposition
 
 When a task is too large, decompose it: one batch `create_task` call with the child tasks, parent edges pointing at the task you hold, and dependency edges between children (use `tmp:<name>` refs within the batch — the whole DAG lands atomically or not at all). Then work the children through the normal loop. Decomposition is itself checkpoint-worthy — note why you split it the way you did.
@@ -74,7 +84,7 @@ When a task is too large, decompose it: one batch `create_task` call with the ch
 
 ## Writing tasks: descriptions are prompts
 
-Task quality bounds output quality. A well-formed task description contains:
+Task quality bounds output quality. This bar applies to every task created as (or promoted to) `open`; inbox captures are exempt until promotion — that exemption is the capture tier's entire purpose, not a loophole for open tasks. A well-formed task description contains:
 
 - **Context** — why this exists, links to design docs or prior tasks.
 - **The ask** — what to build or change, concretely.

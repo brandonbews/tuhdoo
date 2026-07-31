@@ -64,6 +64,7 @@ type steeringAPI interface {
 	answerEscalation(escalation, answer string) error
 	setPriority(task string, priority int) error
 	archiveTask(task string) error
+	captureTask(title string) error
 }
 
 // httpSteering implements steeringAPI over the daemon's JSON HTTP API,
@@ -91,6 +92,16 @@ func (s httpSteering) archiveTask(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": "cancelled"})
 }
 
+// captureTask is TUI quick-capture (2026-07-31): a title-only inbox
+// item, created as the steering human. Capture is deliberately cheap —
+// no priority, no description, no confirm (archive reverses it); the
+// scoping work happens at promotion, which is an agent/CLI
+// conversation, never a TUI key.
+func (s httpSteering) captureTask(title string) error {
+	return s.c.write("POST", "/v0/tasks", s.actor,
+		[]map[string]any{{"title": title, "status": "inbox"}})
+}
+
 // ---- rows: what the cursor moves over ----
 
 const (
@@ -116,8 +127,11 @@ func (r topRow) id() string {
 }
 
 // buildRows flattens a snapshot into the selectable rows in render
-// order: open escalations, then ready, in-progress, and blocked tasks.
-// Done and cancelled tasks are not steerable and get no rows.
+// order: open escalations, then ready, in-progress, and blocked tasks,
+// then the dim shelves — held above inbox (2026-07-31; held passed
+// triage, so it sits closer to workable than raw captures). Done and
+// cancelled tasks are not steerable and get no rows; held and inbox
+// rows are ordinary rows — enter opens detail, c archives.
 func buildRows(s *snapshot) []topRow {
 	var rows []topRow
 	for _, e := range s.state.OpenEscalations {
@@ -132,6 +146,12 @@ func buildRows(s *snapshot) []topRow {
 	}
 	for _, t := range b.blocked {
 		rows = append(rows, topRow{kind: rowTask, section: "blocked", task: t})
+	}
+	for _, t := range b.held {
+		rows = append(rows, topRow{kind: rowTask, section: "held", task: t})
+	}
+	for _, t := range b.inbox {
+		rows = append(rows, topRow{kind: rowTask, section: "inbox", task: t})
 	}
 	return rows
 }
@@ -148,6 +168,7 @@ const (
 	modeAnswer
 	modePriority
 	modeConfirmArchive
+	modeCapture // quick-capture: one line of title, straight to inbox
 	modeDetail
 )
 
@@ -260,6 +281,13 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "c":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.back, m.target, m.input, m.status = modeConfirmArchive, modeNav, r, "", ""
+		}
+	case "i":
+		// Quick capture (2026-07-31): armed only — a watch pane never
+		// writes. No row target: capture is about the idea in your head,
+		// not the row under the cursor.
+		if m.armed {
+			m.mode, m.back, m.target, m.input, m.status = modeCapture, modeNav, topRow{}, "", ""
 		}
 	}
 	return m, nil
@@ -537,6 +565,18 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			}
 			return actionMsg{desc: "archived " + shortID(target.task.ID)}
 		}
+	case modeCapture:
+		if input == "" {
+			m.status = "title cannot be empty"
+			return m, nil
+		}
+		m.mode, m.input, m.status = m.back, "", "capturing…"
+		return m, func() tea.Msg {
+			if err := api.captureTask(input); err != nil {
+				return actionMsg{err: err}
+			}
+			return actionMsg{desc: fmt.Sprintf("captured %q to inbox", input)}
+		}
 	}
 	return m, nil
 }
@@ -763,13 +803,13 @@ const (
 )
 
 // topSection describes one dashboard section: which rows it collects,
-// its bar color, and the steering keys the bar advertises when the pane
-// is armed. Sections are data so the growing status list (inbox,
-// on-hold are being designed) adds entries here, not rendering code.
+// its bar color, whether its rows render dim, and the steering keys the
+// bar advertises when the pane is armed.
 type topSection struct {
 	key   string
 	label string
 	bg    func(colors) string
+	dim   bool // shelf sections: dim bar, dim rows
 	hint  string
 }
 
@@ -778,10 +818,15 @@ var topSections = []topSection{
 	// entity keeps its name; the header alone softens the severity the
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
-	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "enter answer"},
-	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c archive"},
-	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
-	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
+	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, false, "enter answer"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · c archive"},
+	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, false, ""},
+	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
+	// The shelves (2026-07-31): held above inbox, both dim — parked and
+	// captured work sits below the live queue and never claims the eye.
+	// No colored bars: reverse-dim reads as "present but not active".
+	{"held", "HELD", func(c colors) string { return c.rev + c.dim }, true, "c archive"},
+	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c archive"},
 }
 
 // chunk is one atomic display unit — a bar, a one- or two-line row, a
@@ -850,9 +895,14 @@ func fitTitle(title, suffix string, width int) (string, string) {
 
 // gridRow renders one line on the shared column grid. suffix renders in
 // suffixStyle (dim for labels and edges, yellow for holders) and is
-// sacrificed for the title when the line is tight.
-func gridRow(col colors, cursor bool, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
+// sacrificed for the title when the line is tight. dim rows (the held
+// and inbox shelves) dim the title too — except under the cursor, where
+// bold wins: a selection you cannot read is no selection.
+func gridRow(col colors, cursor, dim bool, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
 	mark, markStyle, titleStyle := "  ", "", ""
+	if dim {
+		titleStyle = col.dim
+	}
 	if cursor {
 		mark, markStyle, titleStyle = "▸ ", col.bold, col.bold
 	}
@@ -912,7 +962,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 			meta = fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
 		}
 		return chunk{
-			text: gridRow(col, cursor, shortID(e.Task), badge, style, e.Question, "", "", width) +
+			text: gridRow(col, cursor, false, shortID(e.Task), badge, style, e.Question, "", "", width) +
 				"\n" + secondLine(col, lead, leadStyle, meta, width),
 			cursor: cursor,
 		}
@@ -925,14 +975,23 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 		if t.Priority == 0 {
 			badgeStyle = col.yellow
 		}
-		return chunk{text: gridRow(col, cursor, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+		return chunk{text: gridRow(col, cursor, false, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
 			badgeStyle, t.Title, suffix, col.dim, width), cursor: cursor}
 	case "inprogress":
-		return chunk{text: gridRow(col, cursor, shortID(t.ID), "", "",
+		return chunk{text: gridRow(col, cursor, false, shortID(t.ID), "", "",
 			t.Title, "  ← "+t.Holder, col.yellow, width), cursor: cursor}
+	case "held":
+		// Priority is stored but inert while held (it bites again at
+		// resume), so the badge renders — dim, like the row.
+		return chunk{text: gridRow(col, cursor, true, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+			col.dim, t.Title, suffix, col.dim, width), cursor: cursor}
+	case "inbox":
+		// No priority badge: an untriaged capture has no meaningful one.
+		return chunk{text: gridRow(col, cursor, true, shortID(t.ID), "", "",
+			t.Title, suffix, col.dim, width), cursor: cursor}
 	default: // blocked
 		return chunk{
-			text: gridRow(col, cursor, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
+			text: gridRow(col, cursor, false, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
 				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width),
 			cursor: cursor,
 		}
@@ -1070,6 +1129,10 @@ func (m topModel) inputFooter() string {
 		return wrapTo(fmt.Sprintf("%sarchive%s %s (%s)? y/n %s— history stays on the ledger%s\n",
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			col.dim, col.reset), m.width)
+	case modeCapture:
+		// No y/n: capture is cheap by design, and archive reverses it.
+		return wrapTo(fmt.Sprintf("%scapture%s (to inbox) > %s█  %senter captures · esc cancels%s\n",
+			col.bold, col.reset, m.input, col.dim, col.reset), m.width)
 	}
 	return ""
 }

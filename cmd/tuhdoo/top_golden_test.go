@@ -43,6 +43,12 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"  t-lic       choose a license",
 		"              waiting: needs input (above)",
 		"",
+		" HELD (1)                                                             c archive ",
+		"  t-park  p2  polish the docs",
+		"",
+		" INBOX (1)                                                i capture · c archive ",
+		"  t-idea      idea: dark mode",
+		"",
 		" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit    1 done ",
 		"",
 	}, "\n")
@@ -73,6 +79,10 @@ func TestTopGoldenBars(t *testing.T) {
 			"\x1b[30;42m" + pad(" READY (2)", "p priority · c archive ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
 			"\x1b[30;41m" + pad(" BLOCKED (1)", "") + "\x1b[0m",
+			// The shelves (2026-07-31): reverse-dim bars, no section color
+			// — present but never claiming the eye.
+			"\x1b[7m\x1b[2m" + pad(" HELD (1)", "c archive ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c archive ") + "\x1b[0m",
 			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit", "1 done ") + "\x1b[0m",
 		} {
 			if !strings.Contains(v, bar) {
@@ -82,6 +92,16 @@ func TestTopGoldenBars(t *testing.T) {
 		// The blocking badge is red+bold in its own cell.
 		if !strings.Contains(v, "\x1b[31m\x1b[1m! \x1b[0m") {
 			t.Errorf("width %d: blocking badge not red+bold; view:\n%s", width, v)
+		}
+		// Shelf rows are dim: id, badge, and title all under col.dim —
+		// unless the cursor lands there (bold wins; tested elsewhere).
+		for _, row := range []string{
+			"\x1b[2mt-park\x1b[0m  \x1b[2mp2\x1b[0m  \x1b[2mpolish the docs\x1b[0m",
+			"\x1b[2mt-idea\x1b[0m      \x1b[2midea: dark mode\x1b[0m",
+		} {
+			if !strings.Contains(v, row) {
+				t.Errorf("width %d: shelf row not dim %q; view:\n%q", width, row, v)
+			}
 		}
 	}
 }
@@ -94,7 +114,7 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.width, m.height = 80, 40
 	v := m.View()
 	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · q quit")
-	for _, absent := range []string{"enter answer", "p priority", "c archive"} {
+	for _, absent := range []string{"enter answer", "p priority", "c archive", "i capture"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}

@@ -55,11 +55,15 @@ func fetchSnapshot(c *client) (*snapshot, error) {
 }
 
 // buckets partitions tasks exactly like internal/views' classify: every
-// open task lands in exactly one of ready / inProgress / blocked.
+// open task lands in exactly one of ready / inProgress / blocked, and
+// held/inbox tasks (2026-07-31) shelve separately — parked and captured
+// work, never claimable.
 type buckets struct {
 	ready      []stateTask // claimable now, highest priority first
 	inProgress []stateTask // actively claimed, creation order
 	blocked    []stateTask // open but not claimable, creation order
+	held       []stateTask // triaged, deliberately paused; creation order
+	inbox      []stateTask // untriaged captures; creation order
 	done       []stateTask
 	cancelled  []stateTask
 }
@@ -72,6 +76,10 @@ func (s *snapshot) classify() buckets {
 			b.done = append(b.done, t)
 		case "cancelled":
 			b.cancelled = append(b.cancelled, t)
+		case "held":
+			b.held = append(b.held, t)
+		case "inbox":
+			b.inbox = append(b.inbox, t)
 		default: // open
 			switch {
 			case t.Holder != "":

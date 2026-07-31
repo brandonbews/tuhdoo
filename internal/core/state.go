@@ -11,8 +11,19 @@ import "time"
 // Task statuses stored in state. "Claimed" is deliberately not a status:
 // whether a task is being worked on is derived from claims (D6), so a
 // crashed agent can never wedge a task in a stuck status.
+//
+// Only StatusOpen is ever claimable (Ready below). Inbox and held
+// (2026-07-31 grill cycle) are the capture and pause tiers: "inbox" is
+// never-triaged capture carrying inherent review debt; "held" passed
+// triage and is workable but deliberately paused. Transitions between
+// statuses are mechanically permissive — replay validates the
+// vocabulary, never the path (no rejected-event edge cases, T3); the
+// semantics (promote deliberately, the tasks-are-prompts bar applies at
+// promotion) live in docs/agent-protocol.md, not in code.
 const (
 	StatusOpen      = "open"
+	StatusInbox     = "inbox"
+	StatusHeld      = "held"
 	StatusDone      = "done"
 	StatusCancelled = "cancelled"
 )
@@ -123,8 +134,10 @@ func (s *State) ActiveClaim(taskID string) *Claim {
 	return nil
 }
 
-// Ready reports whether a task can be claimed right now: open, not
-// actively claimed, every dependency done, and no open blocking
+// Ready reports whether a task can be claimed right now: open (the only
+// claimable status — inbox and held tasks are never served), not
+// actively claimed, every dependency done (a dependency sitting in
+// inbox or held blocks naturally: it is not done), and no open blocking
 // escalation. The escalation clause closes the protocol loop: escalate →
 // release → finish_run(blocked) returns the task to the pool, and it is
 // the *answer* that makes it claimable again — serving it earlier would

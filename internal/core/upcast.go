@@ -26,6 +26,27 @@ func (r *Replayer) RegisterUpcaster(typ string, from int, fn Upcaster) {
 	r.upcasters[upKey{typ, from}] = fn
 }
 
+// registerCatalogUpcasters installs the standard ladder every replayer
+// carries — NewReplayer calls it, so no caller can forget it and
+// compute a different truth from the same log.
+//
+// task.created/task.updated v1→v2 (2026-07-31, inbox/held statuses):
+// the payload shapes are forward-compatible — a v1 task.created has no
+// status field (read as "open"; replay defaults the empty value), and a
+// v1 task.updated carries only status values v2 also knows — so both
+// lifts are the identity. The bump exists for the OLD side, not this
+// one: a v1-only binary decoding a task.created that carries
+// status:"inbox" would silently drop the unknown field and mint the
+// task open and claimable (verified 2026-07-31), which is mis-bucketing,
+// not additive reading. Writing such payloads at v2 turns that into the
+// honest T3 outcome — "schema version above this binary's — upgrade
+// tuhdoo", fail-safe read-only mode.
+func registerCatalogUpcasters(r *Replayer) {
+	identity := func(data json.RawMessage) (json.RawMessage, error) { return data, nil }
+	r.RegisterUpcaster(event.TypeTaskCreated, 1, identity)
+	r.RegisterUpcaster(event.TypeTaskUpdated, 1, identity)
+}
+
 // upcast brings one event to the current schema version of its type, or
 // fails with ErrCannotReplay. This is the fail-safe gate (T3): events
 // from a newer daemon (unknown type, or version above ours) and old
