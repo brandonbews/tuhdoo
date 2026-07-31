@@ -1,6 +1,6 @@
 # t-01KYVE848CJZNG5VFWZ9J3WRKM — Brand the task IDs: mint tuh-, accept both prefixes, age out t-
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`, `design`
 - Depends on: [t-01KYVD31CNTR1EVCDHPGZFQ5EV](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
@@ -22,4 +22,9 @@ Constraints: boring Go; no event rewrites, no migration of existing IDs; the ele
 
 ## History
 
-_No activity yet._
+### 2026-07-31 15:21 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `27bca13`
+
+Landed in commit 27bca13. Audit found exactly one non-test code path pinning the prefix: the mint site in internal/daemon/ops.go, now a taskIDPrefix constant set to "tuh-" with a T7/T3 comment. API routes resolve IDs by pure map lookup (no shape validation), MCP arg validation has no task-ID shape check, shortID() and idMatches() were already prefix-agnostic via the ID's own first hyphen — verified with new tests rather than changed. Cross-prefix rule implemented as recommended and it fell out of the existing generic code with zero code changes: a prefixed fragment matches its era literally (t-d83w never matches a tuh- task — a leftover hyphen can't occur in a ULID tail), bare d83w matches both eras with ambiguity errors on tail collisions (TestResolveTaskIDCrossPrefix seeds identical tails across eras). End-to-end verified in a scratch repo with a scratch-built binary and its own daemon (created tuh-01… via API, backlog/task/short-form resolution all correct, event bytes and view filenames carry tuh-; scratch daemon killed and dir removed — the live daemon was never touched and is still the original pid). Dated T7 note extends the short-ID contract with the branding decision and the mint-forward mixed-prefix window. cli_test.go's ambiguous-fragment probe deliberately split: tuh-0 ambiguous, t-0 now asserts unknown against an all-tuh- repo. make test lint green. NOTE: the live daemon still mints t- until the wrap-up deploy (rebuild + restart) happens at the end of this drain session. Possible follow-up if dogfood friction appears: a "did you mean tuh-…?" hint when a t- fragment misses.
