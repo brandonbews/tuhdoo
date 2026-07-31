@@ -150,17 +150,33 @@ func (s *State) Ready(taskID string) bool {
 	if s.ActiveClaim(taskID) != nil {
 		return false
 	}
+	deps, escs := s.ClaimBlockers(taskID)
+	return len(deps) == 0 && len(escs) == 0
+}
+
+// ClaimBlockers names the dependency and escalation clauses of Ready
+// for one task: the not-yet-done dependency IDs and the open blocking
+// escalation IDs, each in stored order. It reports these blockers
+// regardless of the task's status or claim state — not-open and
+// already-claimed have their own words, owned by the caller — and
+// returns nothing for an unknown task. Ready consumes it, so the two
+// can never disagree about what blocks a claim.
+func (s *State) ClaimBlockers(taskID string) (unmetDeps, blockingEscalations []string) {
+	t, ok := s.Tasks[taskID]
+	if !ok {
+		return nil, nil
+	}
 	for _, dep := range t.DependsOn {
 		if d, ok := s.Tasks[dep]; ok && d.Status != StatusDone {
-			return false
+			unmetDeps = append(unmetDeps, dep)
 		}
 	}
 	for _, id := range s.EscOrder {
 		if e := s.Escalations[id]; e.Task == taskID && e.Blocking && !e.Answered {
-			return false
+			blockingEscalations = append(blockingEscalations, id)
 		}
 	}
-	return true
+	return unmetDeps, blockingEscalations
 }
 
 // ReadyTasks returns claimable tasks, highest priority first, ULID order

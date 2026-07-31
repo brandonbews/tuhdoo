@@ -285,7 +285,18 @@ func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
 		case t.Status != core.StatusOpen:
 			return hydratedTask{}, opErrf(http.StatusConflict, "task %s is not ready: status is %s", taskID, t.Status)
 		default:
-			return hydratedTask{}, opErrf(http.StatusConflict, "task %s is not ready: unmet dependencies", taskID)
+			// Name the actual blockers so the caller can act on them:
+			// which dependency to finish, which escalation to answer.
+			deps, escs := d.state.ClaimBlockers(taskID)
+			var parts []string
+			if len(deps) > 0 {
+				parts = append(parts, "unmet dependencies "+strings.Join(deps, ", "))
+			}
+			if len(escs) > 0 {
+				parts = append(parts, "blocked by open escalation "+strings.Join(escs, ", "))
+			}
+			return hydratedTask{}, opErrf(http.StatusConflict, "task %s is not ready: %s",
+				taskID, strings.Join(parts, "; "))
 		}
 	}
 	return d.claimTargetLocked(actor, t, now)
