@@ -1,6 +1,6 @@
 # t-01KYVD31CNTR1EVCDHPJGSQAGH — Align MCP tool descriptions with the revised notes doctrine
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `protocol`, `docs`, `mcp`
 - Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
@@ -17,4 +17,6 @@ Constraints: text only — no schema, verb, or behavior changes; stored events u
 
 ## History
 
-_No activity yet._
+### 2026-07-31 08:21 UTC — run by `brandon/claude-fable` — done
+
+Commit 5f417d0 on main. All five stale strings revised to the 2026-07-30 doctrine: mcpInstructions (transitions are the record, add_note optional), add_note input schema description, add_note tool description, release_claim description (the reason is the handoff), and the NoteAdded doc comment in internal/event/catalog.go. grep confirms no letter-to-the-next phrasing remains in live code; mcp_cli_test pins only tool names, so no test edits were needed; make test lint green. Left alone deliberately: 002-technology.md (quotes the old framing inside its revision note) and open-questions.md historical entry. The new text ships in tools/list at the next daemon rebuild+restart, done immediately after this run closed.
