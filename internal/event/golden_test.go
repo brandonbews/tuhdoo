@@ -70,6 +70,7 @@ func goldenEvents(t *testing.T) map[string]Event {
 		}},
 		TypeEscalationAnswered: {0x07, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", EscalationAnswered{
 			Answer:     "No — additions only in v1; removal is a Cycle 3 question.",
+			AnsweredBy: "brandon", // relayed: the envelope actor below is the scribe
 			Escalation: "01BX5ZZKBKACTAV9WEVGEMMVS0",
 		}},
 		TypeNoteAdded: {0x08, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", NoteAdded{

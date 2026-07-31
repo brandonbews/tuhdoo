@@ -259,7 +259,7 @@ func historyOf(col colors, h hydratedTask) []histEntry {
 			fmt.Fprintf(&b, "%s\n", indent(e.Context, "       "))
 		}
 		if e.Answered {
-			fmt.Fprintf(&b, "    A (%s): %s\n", e.AnsweredBy, oneLine(e.Answer))
+			fmt.Fprintf(&b, "    A (%s): %s\n", answererLabel(e), oneLine(e.Answer))
 		} else {
 			fmt.Fprintf(&b, "    %sunanswered%s\n", col.dim, col.reset)
 		}
@@ -312,6 +312,15 @@ func printEscalations(w io.Writer, col colors, s *snapshot) {
 	}
 	for _, e := range answered {
 		fmt.Fprintf(w, "  %s (%s, raised %s) — %s: %s\n",
-			oneLine(e.Question), e.Task, stamp(e.RaisedAt), e.AnsweredBy, oneLine(e.Answer))
+			oneLine(e.Question), e.Task, stamp(e.RaisedAt), answererLabel(e), oneLine(e.Answer))
 	}
+}
+
+// answererLabel attributes an answer, marking the out-of-band path
+// where an agent relayed it on the answerer's behalf.
+func answererLabel(e escalationJSON) string {
+	if e.RelayedBy == "" {
+		return e.AnsweredBy
+	}
+	return fmt.Sprintf("%s, relayed by %s", e.AnsweredBy, e.RelayedBy)
 }

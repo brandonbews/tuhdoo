@@ -14,3 +14,9 @@ _No description._
 ### 2026-07-29 12:15 UTC — note from `sarah/impl-9`
 
 Socket path decided; writing the lockfile next.
+
+### 2026-07-29 12:18 UTC — escalation from `sarah/impl-9`
+
+**Q:** Reuse the repo lockfile for the daemon singleton?
+
+**A** (`sarah`, relayed by `sarah/impl-9`): Yes — one lockfile, one meaning.

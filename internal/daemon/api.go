@@ -86,6 +86,7 @@ type escalationJSON struct {
 	Answered   bool      `json:"answered"`
 	Answer     string    `json:"answer"`
 	AnsweredBy string    `json:"answered_by"`
+	RelayedBy  string    `json:"relayed_by"`
 }
 
 type noteJSON struct {
@@ -414,6 +415,7 @@ func escalationJSONOf(e *core.Escalation) escalationJSON {
 		ID: e.ID, Task: e.Task, Actor: e.Actor, Question: e.Question,
 		Context: e.Context, Blocking: e.Blocking, RaisedAt: e.RaisedAt,
 		Answered: e.Answered, Answer: e.Answer, AnsweredBy: e.AnsweredBy,
+		RelayedBy: e.RelayedBy,
 	}
 }
 

@@ -121,6 +121,17 @@ func goldenInput(t *testing.T) core.Input {
 			Context:  "It races a 10ms sleep against the scheduler. Rewriting means faking the clock.",
 			Blocking: true,
 		}),
+		// An out-of-band answer relayed by an agent (T5 relay_answer):
+		// envelope actor is the scribe, answered_by the attribution.
+		evt(t, 18, event.TypeEscalationRaised, "sarah/impl-9", "t-daemon", event.EscalationRaised{
+			Question: "Reuse the repo lockfile for the daemon singleton?",
+			Blocking: false,
+		}),
+		evt(t, 19, event.TypeEscalationAnswered, "sarah/impl-9", "t-daemon", event.EscalationAnswered{
+			Answer:     "Yes — one lockfile, one meaning.",
+			AnsweredBy: "sarah",
+			Escalation: tick(t, 18),
+		}),
 	}
 	leases := map[string]time.Time{
 		tick(t, 14): testNow.Add(time.Hour),     // t-daemon claim alive
@@ -213,7 +224,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":1}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":2}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -271,9 +282,9 @@ func TestCanWrite(t *testing.T) {
 		{"garbage", []byte("not json at all"), true},
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
-		{"lower", []byte(`{"format":0}`), true},
-		{"equal", []byte(`{"format":1}`), true},
-		{"higher", []byte(`{"format":2}`), false},
+		{"lower", []byte(`{"format":1}`), true},
+		{"equal", []byte(`{"format":2}`), true},
+		{"higher", []byte(`{"format":3}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

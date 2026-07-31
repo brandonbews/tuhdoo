@@ -86,7 +86,8 @@ type Escalation struct {
 	Blocking   bool
 	RaisedAt   time.Time
 	Answer     string
-	AnsweredBy string
+	AnsweredBy string // whom the answer is attributed to
+	RelayedBy  string // actor that recorded it, when not AnsweredBy themselves
 	Answered   bool
 }
 

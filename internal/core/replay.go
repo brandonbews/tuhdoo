@@ -292,8 +292,19 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			return malformed("answer to unknown escalation %s", p.Escalation)
 		}
 		// Last answer wins: answers are human amendments, unlike claims.
+		// Attribution goes to the payload's answered_by when present (a
+		// relayed answer's envelope actor is the scribe, not the
+		// answerer); events from before the field existed fall back to
+		// the envelope actor.
 		esc.Answer = p.Answer
 		esc.AnsweredBy = e.Actor
+		esc.RelayedBy = ""
+		if p.AnsweredBy != "" {
+			esc.AnsweredBy = p.AnsweredBy
+			if p.AnsweredBy != e.Actor {
+				esc.RelayedBy = e.Actor
+			}
+		}
 		esc.Answered = true
 
 	case event.TypeNoteAdded:

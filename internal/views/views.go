@@ -20,7 +20,8 @@ import (
 // FormatVersion is the view-format contract of T3's three-contract
 // taxonomy: a single integer, bumped whenever rendered output changes.
 // Peers compare it via CanWrite before regenerating (highest wins).
-const FormatVersion = 1
+// 2: relayed escalation answers carry "(relayed by ...)" attribution.
+const FormatVersion = 2
 
 // MetaPath is where the view-format stamp lives. T6 named "views/.meta",
 // but the views render at the branch root (README.md and friends), so
@@ -250,9 +251,9 @@ func escalations(s *core.State) []byte {
 			continue
 		}
 		answered++
-		fmt.Fprintf(&w, "- **%s** (%s, asked by `%s`, %s) — answered by `%s`: %s\n",
+		fmt.Fprintf(&w, "- **%s** (%s, asked by `%s`, %s) — answered by `%s`%s: %s\n",
 			inline(e.Question), rootLink(e.Task), e.Actor, stamp(e.RaisedAt),
-			e.AnsweredBy, inline(e.Answer))
+			e.AnsweredBy, relaySuffix(e), inline(e.Answer))
 	}
 	if answered == 0 {
 		w.WriteString("_None._\n")
@@ -392,11 +393,20 @@ func escEntry(e *core.Escalation) string {
 		writeBlock(&w, e.Context)
 	}
 	if e.Answered {
-		fmt.Fprintf(&w, "\n**A** (`%s`): %s\n", e.AnsweredBy, e.Answer)
+		fmt.Fprintf(&w, "\n**A** (`%s`%s): %s\n", e.AnsweredBy, relaySuffix(e), e.Answer)
 	} else {
 		w.WriteString("\n_Unanswered._\n")
 	}
 	return w.String()
+}
+
+// relaySuffix marks an answer recorded on the answerer's behalf — the
+// out-of-band path, where an agent is the scribe (T5 relay_answer).
+func relaySuffix(e *core.Escalation) string {
+	if e.RelayedBy == "" {
+		return ""
+	}
+	return fmt.Sprintf(", relayed by `%s`", e.RelayedBy)
 }
 
 // rootLink links a task from a branch-root view.

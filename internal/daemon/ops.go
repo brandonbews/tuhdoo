@@ -461,18 +461,35 @@ func (d *Daemon) opEscalate(actor string, req escalateReq) (string, *opError) {
 	return ev.ID, nil
 }
 
-// opAnswerEscalation is HTTP-only (T5: no admin verbs on the agent
-// surface); it lives here so api.go stays a uniform thin layer.
+// opAnswerEscalation is the steering-surface path (TUI/CLI over HTTP):
+// the actor is the answerer, and answering again amends — last answer
+// wins in replay. It lives here so api.go stays a uniform thin layer.
 func (d *Daemon) opAnswerEscalation(actor, escalation, answer string) (string, *opError) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.answerLocked(actor, actor, escalation, answer, false)
+}
+
+// opRelayAnswer is the agent path (T5 relay_answer, 2026-07-30
+// revision): the agent records an answer given out of band, attributed
+// to the session principal's root — derived here, never agent-supplied,
+// so a session can only attribute an answer to its own root. Open
+// escalations only: amending a settled answer stays steering work.
+func (d *Daemon) opRelayAnswer(actor, escalation, answer string) (string, *opError) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.answerLocked(actor, rootPrincipal(actor), escalation, answer, true)
+}
+
+// answerLocked writes one escalation.answered event: actor on the
+// envelope, answeredBy in the payload. Callers hold d.mu.
+func (d *Daemon) answerLocked(actor, answeredBy, escalation, answer string, openOnly bool) (string, *opError) {
 	if escalation == "" {
 		return "", opErrf(http.StatusBadRequest, "%q is required", "escalation")
 	}
 	if answer == "" {
 		return "", opErrf(http.StatusBadRequest, "%q is required", "answer")
 	}
-
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
 		return "", oe
 	}
@@ -480,8 +497,14 @@ func (d *Daemon) opAnswerEscalation(actor, escalation, answer string) (string, *
 	if !ok {
 		return "", opErrf(http.StatusNotFound, "unknown escalation %s", escalation)
 	}
+	if openOnly && esc.Answered {
+		return "", opErrf(http.StatusConflict,
+			"escalation %s is already answered by %s; amending an answer is steering work (TUI/CLI)",
+			escalation, esc.AnsweredBy)
+	}
 	ev, err := d.newEventLocked(event.TypeEscalationAnswered, actor, esc.Task, event.EscalationAnswered{
 		Answer:     answer,
+		AnsweredBy: answeredBy,
 		Escalation: escalation,
 	})
 	if err != nil {
@@ -492,6 +515,13 @@ func (d *Daemon) opAnswerEscalation(actor, escalation, answer string) (string, *
 		return "", d.writeErrLocked(err)
 	}
 	return ev.ID, nil
+}
+
+// rootPrincipal is the human half of a D7 principal: "brandon/impl-2"
+// roots to "brandon"; a root principal roots to itself.
+func rootPrincipal(actor string) string {
+	root, _, _ := strings.Cut(actor, "/")
+	return root
 }
 
 func (d *Daemon) opAddNote(actor, task, text string) (string, *opError) {

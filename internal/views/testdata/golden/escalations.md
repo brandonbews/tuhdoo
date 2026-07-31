@@ -16,3 +16,4 @@ It races a 10ms sleep against the scheduler. Rewriting means faking the clock.
 ## Answered
 
 - **Should upcasters live in core or in a separate package?** ([t-core](tasks/t-core.md), asked by `brandon/impl-1`, 2026-07-29 12:10 UTC) — answered by `brandon`: Keep them in core; they are part of honest replay.
+- **Reuse the repo lockfile for the daemon singleton?** ([t-daemon](tasks/t-daemon.md), asked by `sarah/impl-9`, 2026-07-29 12:18 UTC) — answered by `sarah`, relayed by `sarah/impl-9`: Yes — one lockfile, one meaning.

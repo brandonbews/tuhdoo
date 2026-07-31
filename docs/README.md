@@ -5,7 +5,7 @@ Working documents for the design and development of tuhdoo.
 ## Layout
 
 - [`design/001-core-design.md`](design/001-core-design.md) — the founding design record: vision, principles, and the eleven decisions from the first design grilling (2026-07-28), with rationale and accepted consequences.
-- [`design/002-technology.md`](design/002-technology.md) — the technology decisions from Cycle 2 (2026-07-29): Go daemon, subprocess git plumbing, canonical-JSON event format and the three version contracts, per-repo daemon topology, the ten-verb MCP surface and agent protocol, views, CLI-portal/TUI surfaces, cadence defaults.
+- [`design/002-technology.md`](design/002-technology.md) — the technology decisions from Cycle 2 (2026-07-29): Go daemon, subprocess git plumbing, canonical-JSON event format and the three version contracts, per-repo daemon topology, the eleven-verb MCP surface (originally ten; relay_answer added 2026-07-30) and agent protocol, views, CLI-portal/TUI surfaces, cadence defaults.
 - [`design/open-questions.md`](design/open-questions.md) — unresolved questions, organized into candidate grilling cycles (the agent loop in practice is the next one up).
 - [`agent-protocol.md`](agent-protocol.md) — the instruction text a harness loads for agents working a tuhdoo project (draft; field-test pending B9).
 - [`plan/roadmap.md`](plan/roadmap.md) — v0/v1/v2+ phases, each with a definition of done.

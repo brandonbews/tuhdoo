@@ -22,9 +22,9 @@ Access is **through the stdio shim only**. The zero-config form is the primary o
 
 **Leases are session-bound — there is no heartbeat verb.** While your session is connected, the daemon auto-renews every claim you made through it (15 min TTL, renewed every 5). If your session dies, renewals stop, the lease lapses within the TTL, the task returns to the pool, and your run is auto-closed as `interrupted`. Session death costs you auto-renewal, not holdership: if you reconnect as the same principal before the lease lapses, you can still `add_note`, `finish_run`, or `release_claim` on the task you held — do that first, before claiming anything new.
 
-## The ten verbs
+## The eleven verbs
 
-Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_claim`, `finish_run` · Communicate: `escalate`, `add_note` · Decompose: `create_task`, `update_task`. That is the whole surface — no delete, no admin verbs; curation is human work.
+Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_claim`, `finish_run` · Communicate: `escalate`, `add_note`, `relay_answer` · Decompose: `create_task`, `update_task`. That is the whole surface — no delete, no admin verbs; curation is human work.
 
 ## The loop
 
@@ -55,6 +55,8 @@ Your question will usually be answered after your session is gone. Do not wait f
   Say each thing once: the full story lives in the escalation (that's what the human reads); the note adds only resume-state the escalation doesn't carry; the `blocked` summary can be one line pointing at the escalation. All three land on the same task and the next claimant hydrates all of them — three near-copies is ledger noise.
 
 Write escalations so a human can answer from the escalation alone, without reading your whole run: the question, the minimal context, the options you see, your recommendation if you have one.
+
+**Answered out of band?** Sometimes the human answers your question in your own live session instead of a steering surface. Record it with `relay_answer` (escalation ID + the answer as given) — otherwise the settled question lingers open in the inbox, polluting the signal escalations exist to provide. The answer lands exactly like a steering-surface answer: attribution goes to your root principal (the daemon derives it; you cannot attribute to anyone else), the ledger marks you as the relay, and a blocking escalation returns its task to the pool immediately — if you still hold the claim, just keep working; the handoff dance is only for answers that haven't arrived. You are the scribe, not the decider: relay only a decision a human actually made, verbatim, never an answer you inferred. Open escalations only — amending a settled answer is curation, human work on the steering surfaces.
 
 ## Decomposition
 

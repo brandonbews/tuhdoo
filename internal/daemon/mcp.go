@@ -1,8 +1,8 @@
 package daemon
 
 // The MCP surface (002 T5): streamable HTTP on the same unix socket,
-// exactly ten tools, projected from the same ops.go operations as the
-// HTTP API. One *mcp.Server is minted per session so tool closures can
+// exactly eleven tools, projected from the same ops.go operations as
+// the HTTP API. One *mcp.Server is minted per session so tool closures can
 // capture the session's actor (bound from the X-Tuhdoo-Actor header on
 // the initialize POST) and its claim set for lease auto-renewal —
 // session liveness, not agent diligence, is what keeps leases alive
@@ -28,7 +28,8 @@ import (
 const mcpInstructions = "tuhdoo is the shared work ledger for this repository. " +
 	"The loop: claim_next (or claim_task) to take work, add_note to checkpoint findings " +
 	"as you go — notes are letters to the next agent on this task — escalate when a human " +
-	"must decide, and always end with finish_run (or release_claim to stand down). " +
+	"must decide (relay_answer records their answer if it arrives out of band, in your own " +
+	"session), and always end with finish_run (or release_claim to stand down). " +
 	"Your claim's lease renews automatically while this session is connected; " +
 	"if the session drops, the task returns to the pool."
 
@@ -176,7 +177,7 @@ func sanitizeAgentName(client string) string {
 	return out
 }
 
-// newMCPServer builds the per-session server: the ten T5 tools plus
+// newMCPServer builds the per-session server: the eleven T5 tools plus
 // the lease-renewal machinery tied to session liveness. A non-empty
 // client name means the principal is auto-derived: actor is the root
 // human and the agent half is minted at session bind.
@@ -333,6 +334,11 @@ type escalateInput struct {
 	Blocking bool   `json:"blocking,omitempty" jsonschema:"true if the task cannot proceed until answered; a blocking escalation keeps the task out of the ready pool until a human answers"`
 }
 
+type relayAnswerInput struct {
+	Escalation string `json:"escalation" jsonschema:"the escalation being answered — its ID, from the task's hydration"`
+	Answer     string `json:"answer" jsonschema:"the answer as it was given — you are the scribe, not the decider"`
+}
+
 type addNoteInput struct {
 	Task string `json:"task" jsonschema:"the task to annotate"`
 	Text string `json:"text" jsonschema:"the checkpoint: findings, decisions, exactly where you stopped — a letter to the next agent on this task"`
@@ -364,9 +370,9 @@ type updateTaskInput struct {
 
 // ---- tool registration ----
 
-// addMCPTools registers exactly the ten T5 verbs. Op failures return as
-// Go errors, which the SDK packs into the result with IsError set — a
-// tool error the model can read and correct, never a protocol error.
+// addMCPTools registers exactly the eleven T5 verbs. Op failures return
+// as Go errors, which the SDK packs into the result with IsError set —
+// a tool error the model can read and correct, never a protocol error.
 // Additions to this list require a design-doc revision first.
 func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
@@ -474,6 +480,20 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		id, oe := d.opEscalate(s.principal(), escalateReq{
 			Task: in.Task, Question: in.Question, Context: in.Context, Blocking: in.Blocking,
 		})
+		if oe != nil {
+			return nil, eventIDResult{}, oe
+		}
+		return nil, eventIDResult{ID: id}, nil
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "relay_answer",
+		Description: "Record an answer to an escalation that a human gave out of band — in your " +
+			"own session rather than a steering surface. The answer is attributed to your root " +
+			"principal; the ledger marks you as the relay. Open escalations only: a settled " +
+			"answer can be amended only from a steering surface.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in relayAnswerInput) (*mcp.CallToolResult, eventIDResult, error) {
+		id, oe := d.opRelayAnswer(s.principal(), in.Escalation, in.Answer)
 		if oe != nil {
 			return nil, eventIDResult{}, oe
 		}

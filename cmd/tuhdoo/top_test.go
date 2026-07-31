@@ -56,6 +56,16 @@ func topSnapshot() *snapshot {
 					ID: "01R1", Task: "t-flak", Actor: "brandon/a1",
 					Outcome: "interrupted", Summary: "Bisecting the flake.",
 				}},
+				// Answered out of band and relayed (T5 relay_answer):
+				// settled, so it is not in OpenEscalations — it renders
+				// only in the task's history, attribution marked.
+				Escalations: []escalationJSON{{
+					ID: "01E2", Task: "t-flak", Actor: "brandon/a1",
+					Question: "Skip the flaky test until fixed?",
+					RaisedAt: time.Date(2026, 7, 29, 15, 30, 0, 0, time.UTC),
+					Answered: true, Answer: "Skip it, link the issue.",
+					AnsweredBy: "brandon", RelayedBy: "brandon/a1",
+				}},
 			},
 			"t-lic":  {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
 			"t-chor": {Task: taskJSON{ID: "t-chor", Title: "old chore"}},
@@ -487,6 +497,8 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"Description", "The parser test flakes on CI.",
 		"History", "note by brandon/a1", "Repros only under -race.",
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
+		"Skip the flaky test until fixed?",
+		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
 		"j/k scroll · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {

@@ -118,8 +118,13 @@ type EscalationRaised struct {
 
 // EscalationAnswered is the payload of "escalation.answered".
 // Escalation is the event ID of the escalation.raised being answered.
+// AnsweredBy is the principal the answer is attributed to — the
+// envelope actor's root when relayed through relay_answer (T5,
+// 2026-07-30 revision). Additive: events written before the field
+// existed carry none, and replay falls back to the envelope actor.
 type EscalationAnswered struct {
 	Answer     string `json:"answer"`
+	AnsweredBy string `json:"answered_by"`
 	Escalation string `json:"escalation"`
 
 	Unknown map[string]json.RawMessage `json:"-"`

@@ -286,6 +286,60 @@ func TestEscalationLifecycle(t *testing.T) {
 	}
 }
 
+// Attribution of answers (T5 relay_answer, 2026-07-30 revision): the
+// payload's answered_by wins over the envelope actor when present, and
+// an envelope actor differing from it is recorded as the relay. Events
+// from before the field existed (empty answered_by) keep attributing to
+// the envelope actor.
+func TestAnswerAttribution(t *testing.T) {
+	esc := tick(t, 2)
+	base := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeEscalationRaised, "brandon/impl-1", "t1",
+			event.EscalationRaised{Question: "which auth flow?", Blocking: true}),
+	}
+
+	// Relayed: agent on the envelope, root human in the payload.
+	relayed := append(base, evt(t, 3, event.TypeEscalationAnswered, "brandon/impl-1", "t1",
+		event.EscalationAnswered{Answer: "oauth", AnsweredBy: "brandon", Escalation: esc}))
+	s := replay(t, relayed, nil)
+	e := s.Escalations[esc]
+	if e.AnsweredBy != "brandon" || e.RelayedBy != "brandon/impl-1" {
+		t.Fatalf("relayed answer: answered_by=%q relayed_by=%q, want brandon / brandon/impl-1",
+			e.AnsweredBy, e.RelayedBy)
+	}
+	if !s.Ready("t1") {
+		t.Fatal("relayed answer must unblock readiness exactly like a steering answer")
+	}
+
+	// Steering surface: actor answers as themselves — no relay marker.
+	direct := append(base, evt(t, 3, event.TypeEscalationAnswered, "brandon", "t1",
+		event.EscalationAnswered{Answer: "oauth", AnsweredBy: "brandon", Escalation: esc}))
+	e = replay(t, direct, nil).Escalations[esc]
+	if e.AnsweredBy != "brandon" || e.RelayedBy != "" {
+		t.Fatalf("direct answer: answered_by=%q relayed_by=%q, want brandon / empty",
+			e.AnsweredBy, e.RelayedBy)
+	}
+
+	// Pre-field event: empty answered_by falls back to the envelope actor.
+	old := append(base, evt(t, 3, event.TypeEscalationAnswered, "brandon", "t1",
+		event.EscalationAnswered{Answer: "oauth", Escalation: esc}))
+	e = replay(t, old, nil).Escalations[esc]
+	if e.AnsweredBy != "brandon" || e.RelayedBy != "" {
+		t.Fatalf("legacy answer: answered_by=%q relayed_by=%q, want brandon / empty",
+			e.AnsweredBy, e.RelayedBy)
+	}
+
+	// A later direct amendment wins and clears the relay marker.
+	amended := append(relayed, evt(t, 4, event.TypeEscalationAnswered, "sarah", "t1",
+		event.EscalationAnswered{Answer: "saml, actually", AnsweredBy: "sarah", Escalation: esc}))
+	e = replay(t, amended, nil).Escalations[esc]
+	if e.Answer != "saml, actually" || e.AnsweredBy != "sarah" || e.RelayedBy != "" {
+		t.Fatalf("amended answer = %q by %q relayed %q, want the amendment by sarah, no relay",
+			e.Answer, e.AnsweredBy, e.RelayedBy)
+	}
+}
+
 func TestBlockingEscalationGatesReadiness(t *testing.T) {
 	esc := tick(t, 2)
 	events := []event.Event{

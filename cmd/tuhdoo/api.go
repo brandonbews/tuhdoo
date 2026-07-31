@@ -54,6 +54,7 @@ type escalationJSON struct {
 	Answered   bool      `json:"answered"`
 	Answer     string    `json:"answer"`
 	AnsweredBy string    `json:"answered_by"`
+	RelayedBy  string    `json:"relayed_by"`
 }
 
 type noteJSON struct {

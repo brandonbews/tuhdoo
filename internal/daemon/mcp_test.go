@@ -168,10 +168,11 @@ func flushedEvents(t *testing.T, d *Daemon) []event.Event {
 	return events
 }
 
-// mcpTools is the T5 surface: exactly these ten, nothing else.
+// mcpTools is the T5 surface: exactly these eleven, nothing else.
 var mcpTools = []string{
 	"add_note", "claim_next", "claim_task", "create_task", "escalate",
-	"finish_run", "get_backlog", "get_task", "release_claim", "update_task",
+	"finish_run", "get_backlog", "get_task", "relay_answer", "release_claim",
+	"update_task",
 }
 
 // Accept 1: a scripted client runs the full loop — create, claim_next,
@@ -182,7 +183,7 @@ func TestMCPFullLoop(t *testing.T) {
 	const actor = "brandon/impl-1"
 	cs := mcpConnect(t, d, actor, nil)
 
-	// The surface is exactly the ten T5 verbs.
+	// The surface is exactly the eleven T5 verbs.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {
 		if err != nil {
@@ -257,6 +258,120 @@ func TestMCPFullLoop(t *testing.T) {
 		if e.Task != task {
 			t.Errorf("event %d (%s) task = %s, want %s", i, e.Type, e.Task, task)
 		}
+	}
+}
+
+// relay_answer (T5, 2026-07-30 revision): an agent records an
+// out-of-band answer; the event's actor is the agent, the payload
+// attributes the answer to the session's root principal, and the task
+// unblocks exactly as a steering answer would unblock it.
+func TestMCPRelayAnswer(t *testing.T) {
+	d, hc := startDaemon(t)
+	task := createOne(t, hc, "brandon", map[string]any{"title": "needs a decision"})
+
+	const agent = "brandon/impl-1"
+	cs := mcpConnect(t, d, agent, nil)
+
+	// The blocking protocol, up to the point the human answers in chat:
+	// claim, escalate blocking, release.
+	var claimed claimNextResult
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &claimed)
+	if !claimed.Claimed {
+		t.Fatalf("claim_next = %+v, want a claim", claimed)
+	}
+	var raised eventIDResult
+	mustToolOK(t, cs, "escalate", map[string]any{
+		"task": task, "question": "which auth flow?", "blocking": true,
+	}, &raised)
+	mustToolOK(t, cs, "release_claim", map[string]any{
+		"task": task, "reason": "blocked on the auth-flow question",
+	}, nil)
+
+	// Blocked: the pool has nothing to serve.
+	var empty claimNextResult
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &empty)
+	if empty.Claimed {
+		t.Fatalf("claim_next served a task with an open blocking escalation: %+v", empty)
+	}
+
+	// The out-of-band answer lands through the agent.
+	mustToolOK(t, cs, "relay_answer", map[string]any{
+		"escalation": raised.ID, "answer": "oauth, device flow",
+	}, nil)
+
+	// Attribution: answered by the root principal, relayed by the agent.
+	d.mu.Lock()
+	esc := d.state.Escalations[raised.ID]
+	d.mu.Unlock()
+	if esc == nil || !esc.Answered {
+		t.Fatalf("escalation after relay = %+v, want answered", esc)
+	}
+	if esc.AnsweredBy != "brandon" || esc.RelayedBy != agent {
+		t.Fatalf("answered_by=%q relayed_by=%q, want brandon / %s", esc.AnsweredBy, esc.RelayedBy, agent)
+	}
+
+	// Readiness unblocks exactly like a TUI answer: the pool serves the
+	// task again.
+	var again claimNextResult
+	mustToolOK(t, cs, "claim_next", map[string]any{}, &again)
+	if !again.Claimed || again.Task.Task.ID != task {
+		t.Fatalf("claim_next after relay = %+v, want %s back in the pool", again, task)
+	}
+	mustToolOK(t, cs, "release_claim", map[string]any{"task": task, "reason": "test done"}, nil)
+
+	// The ledger: the answered event carries the agent on the envelope
+	// and the root in the payload — the scribe/decider split on record.
+	events := flushedEvents(t, d)
+	var found *event.Event
+	for i := range events {
+		if events[i].Type == event.TypeEscalationAnswered {
+			found = &events[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("no escalation.answered event on the ledger")
+	}
+	if found.Actor != agent {
+		t.Errorf("answered event actor = %q, want the relaying agent %s", found.Actor, agent)
+	}
+	var p event.EscalationAnswered
+	if err := json.Unmarshal(found.Data, &p); err != nil {
+		t.Fatalf("decode answered payload: %v", err)
+	}
+	if p.AnsweredBy != "brandon" {
+		t.Errorf("payload answered_by = %q, want brandon", p.AnsweredBy)
+	}
+
+	// Guard rails: a settled answer cannot be re-relayed…
+	res := callTool(t, cs, "relay_answer", map[string]any{
+		"escalation": raised.ID, "answer": "second thoughts",
+	})
+	if !res.IsError || !strings.Contains(contentText(res), "already answered") {
+		t.Fatalf("re-relay = isError %v %q, want already-answered tool error", res.IsError, contentText(res))
+	}
+	// …and an unknown escalation is a tool error, not a protocol one.
+	res = callTool(t, cs, "relay_answer", map[string]any{
+		"escalation": "01NOPE", "answer": "into the void",
+	})
+	if !res.IsError || !strings.Contains(contentText(res), "unknown escalation") {
+		t.Fatalf("unknown relay = isError %v %q, want unknown-escalation tool error", res.IsError, contentText(res))
+	}
+
+	// Non-blocking escalations relay too, and a root-principal session
+	// attributes to itself with no relay marker.
+	rootCS := mcpConnect(t, d, "brandon", nil)
+	var fyi eventIDResult
+	mustToolOK(t, rootCS, "escalate", map[string]any{
+		"task": task, "question": "rename the flag later?", "blocking": false,
+	}, &fyi)
+	mustToolOK(t, rootCS, "relay_answer", map[string]any{
+		"escalation": fyi.ID, "answer": "yes, in v1",
+	}, nil)
+	d.mu.Lock()
+	e2 := d.state.Escalations[fyi.ID]
+	d.mu.Unlock()
+	if e2 == nil || !e2.Answered || e2.AnsweredBy != "brandon" || e2.RelayedBy != "" {
+		t.Fatalf("root-session relay = %+v, want answered by brandon with no relay marker", e2)
 	}
 }
 
