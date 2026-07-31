@@ -16,9 +16,9 @@ views are derived from the log — never edit them by hand. The design lives in
 | — in progress | 0 |
 | — blocked / waiting | 5 |
 | On-hold tasks (paused) | 2 |
-| Inbox (untriaged) | 4 |
+| Inbox (untriaged) | 3 |
 | Done tasks | 25 |
-| Cancelled tasks | 1 |
+| Cancelled tasks | 2 |
 | Open escalations | 2 |
 
 - [backlog.md](backlog.md) — ready, in-progress, and blocked work, plus the on-hold and inbox shelves
