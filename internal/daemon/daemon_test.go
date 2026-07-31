@@ -470,11 +470,11 @@ func TestViewsRideLocalWrites(t *testing.T) {
 		map[string]any{"task": id, "question": "do views ride?"}, http.StatusOK)
 
 	checks := map[string]string{
-		"README.md":          "",
-		"backlog.md":         "make views ride",
-		"escalations.md":     "do views ride?",
+		"README.md":           "",
+		"backlog.md":          "make views ride",
+		"escalations.md":      "do views ride?",
 		"tasks/" + id + ".md": "make views ride",
-		views.MetaPath:       "",
+		views.MetaPath:        "",
 	}
 	for path, want := range checks {
 		data, err := d.store.ReadFile(path)
@@ -567,5 +567,272 @@ func TestOverlayTrimsAfterFlush(t *testing.T) {
 	}
 	if !inState {
 		t.Errorf("task %s vanished from state after overlay trim", id)
+	}
+}
+
+// The finish_run guard (t-01KYVMD4PS9NMQVP1K5HQ8769X): a run.finished
+// event only lands when the acting principal has an attempt of their
+// own to close — the live claim, or their own released/voided claim not
+// yet closed by a later run of theirs. Each row builds its own task and
+// history through the ops, then attempts one finish.
+func TestFinishRunGuard(t *testing.T) {
+	d, c := startDaemon(t)
+
+	claim := func(t *testing.T, actor, task string) claimJSON {
+		t.Helper()
+		h, oe := d.opClaimTask(actor, task)
+		if oe != nil {
+			t.Fatalf("claim %s as %s: %v", task, actor, oe)
+		}
+		return *h.Claim
+	}
+	release := func(t *testing.T, actor, task string) {
+		t.Helper()
+		if _, oe := d.opReleaseClaim(actor, task, "standing down"); oe != nil {
+			t.Fatalf("release %s as %s: %v", task, actor, oe)
+		}
+	}
+	finish := func(t *testing.T, actor, task, outcome string) *opError {
+		t.Helper()
+		_, oe := d.opFinishRun(actor, finishRunReq{Task: task, Outcome: outcome, Summary: "attempt closed"})
+		return oe
+	}
+	// mintClaim writes a claim.made event directly, the way a peer's
+	// claim arrives by sync — replay voids it when someone already holds.
+	mintClaim := func(t *testing.T, actor, task string) {
+		t.Helper()
+		d.mu.Lock()
+		ev, err := d.newEventLocked(event.TypeClaimMade, actor, task, event.ClaimMade{})
+		if err == nil {
+			err = d.commitLocked(false, ev)
+		}
+		d.mu.Unlock()
+		if err != nil {
+			t.Fatalf("mint claim by %s on %s: %v", actor, task, err)
+		}
+	}
+	// taskRuns returns the task's runs as (non-synthesized, synthesized)
+	// counts from freshly replayed state.
+	taskRuns := func(t *testing.T, task string) (real, synth int) {
+		t.Helper()
+		if err := d.Refresh(); err != nil {
+			t.Fatalf("Refresh: %v", err)
+		}
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		for i := range d.state.Runs {
+			if r := &d.state.Runs[i]; r.Task == task {
+				if r.Synthesized {
+					synth++
+				} else {
+					real++
+				}
+			}
+		}
+		return real, synth
+	}
+
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T, task string)
+		actor     string
+		outcome   string
+		noTask    bool // attempt against a task ID that does not exist
+		wantOK    bool
+		wantCode  int    // when !wantOK
+		wantErr   string // substring of the rejection
+		wantRuns  int    // non-synthesized runs on the task afterwards
+		wantSynth int    // synthesized runs on the task afterwards
+	}{
+		{
+			name:     "no claim on the task is rejected",
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeDone,
+			wantCode: http.StatusConflict,
+			wantErr:  "no claim by brandon/a1",
+		},
+		{
+			name: "live claim held by another principal is rejected",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+			},
+			actor:    "brandon/a2",
+			outcome:  event.OutcomeDone,
+			wantCode: http.StatusForbidden,
+			wantErr:  "held by brandon/a1",
+		},
+		{
+			name: "the caller's own live claim succeeds",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+			},
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeDone,
+			wantOK:   true,
+			wantRuns: 1,
+		},
+		{
+			name: "blocked protocol: finish after own release succeeds",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				release(t, "brandon/a1", task)
+			},
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeBlocked,
+			wantOK:   true,
+			wantRuns: 1,
+		},
+		{
+			name: "a released attempt closes once, not twice",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				release(t, "brandon/a1", task)
+				if oe := finish(t, "brandon/a1", task, event.OutcomeBlocked); oe != nil {
+					t.Fatalf("first finish after release: %v", oe)
+				}
+			},
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeBlocked,
+			wantCode: http.StatusConflict,
+			wantErr:  "already closed",
+			wantRuns: 1,
+		},
+		{
+			name: "a finished attempt cannot be finished again",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				if oe := finish(t, "brandon/a1", task, event.OutcomeDone); oe != nil {
+					t.Fatalf("first finish: %v", oe)
+				}
+			},
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeDone,
+			wantCode: http.StatusConflict,
+			wantErr:  "already closed",
+			wantRuns: 1,
+		},
+		{
+			name: "an expired claim is closed by its synthesized interrupted run",
+			setup: func(t *testing.T, task string) {
+				cl := claim(t, "brandon/a1", task)
+				// A missing lease counts as lapsed (core replay), so
+				// deleting it expires the claim deterministically.
+				if err := d.store.DeleteLease(cl.ID); err != nil {
+					t.Fatalf("DeleteLease: %v", err)
+				}
+			},
+			actor:     "brandon/a1",
+			outcome:   event.OutcomeDone,
+			wantCode:  http.StatusConflict,
+			wantErr:   "already closed",
+			wantSynth: 1,
+		},
+		{
+			name: "race loser with a voided claim records superseded while the winner holds",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				mintClaim(t, "brandon/a2", task)
+			},
+			actor:    "brandon/a2",
+			outcome:  event.OutcomeSuperseded,
+			wantOK:   true,
+			wantRuns: 1,
+		},
+		{
+			name:     "a mistyped task ID fabricates nothing",
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeDone,
+			noTask:   true,
+			wantCode: http.StatusNotFound,
+			wantErr:  "unknown task",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			task := "t-00000000000000000000000000"
+			if !tc.noTask {
+				task = createOne(t, c, "brandon", map[string]any{"title": tc.name})
+			}
+			if tc.setup != nil {
+				tc.setup(t, task)
+			}
+			oe := finish(t, tc.actor, task, tc.outcome)
+			if tc.wantOK {
+				if oe != nil {
+					t.Fatalf("finish_run = %v, want success", oe)
+				}
+			} else {
+				if oe == nil {
+					t.Fatalf("finish_run succeeded, want rejection %d %q", tc.wantCode, tc.wantErr)
+				}
+				if oe.code != tc.wantCode || !strings.Contains(oe.msg, tc.wantErr) {
+					t.Fatalf("finish_run = %d %q, want %d containing %q", oe.code, oe.msg, tc.wantCode, tc.wantErr)
+				}
+			}
+			if tc.noTask {
+				return
+			}
+			real, synth := taskRuns(t, task)
+			if real != tc.wantRuns || synth != tc.wantSynth {
+				t.Fatalf("runs after attempt = %d real, %d synthesized; want %d and %d",
+					real, synth, tc.wantRuns, tc.wantSynth)
+			}
+		})
+	}
+}
+
+// The guard is write-side only: a claimless run.finished already stored
+// on a ledger (the dogfood branch carries one) replays exactly as
+// before — recorded, tied to no claim, moving neither hold nor task
+// status. T3: stored events are never rewritten and never
+// retro-invalidated.
+func TestReplayAcceptsStoredClaimlessRun(t *testing.T) {
+	d, c := startDaemon(t)
+	task := createOne(t, c, "brandon", map[string]any{"title": "history happened"})
+
+	// Write the event the way a pre-guard daemon did: directly, with no
+	// claim anywhere in sight.
+	d.mu.Lock()
+	ev, err := d.newEventLocked(event.TypeRunFinished, "brandon/ghost", task, event.RunFinished{
+		Outcome: event.OutcomeDone, Summary: "claimless, accepted before the guard existed",
+	})
+	if err == nil {
+		err = d.commitLocked(false, ev)
+	}
+	degraded := d.degraded
+	d.mu.Unlock()
+	if err != nil {
+		t.Fatalf("write claimless run.finished: %v", err)
+	}
+	if degraded != nil {
+		t.Fatalf("daemon degraded on claimless run.finished: %v", degraded)
+	}
+
+	// Land it on the branch and replay from scratch.
+	if err := d.batcher.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	if err := d.Refresh(); err != nil {
+		t.Fatalf("Refresh over claimless run.finished: %v", err)
+	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	var run *runJSON
+	for i := range d.state.Runs {
+		if r := &d.state.Runs[i]; r.Task == task && r.ID == ev.ID {
+			rj := runJSONOf(r)
+			run = &rj
+		}
+	}
+	if run == nil {
+		t.Fatal("claimless run.finished not replayed into state")
+	}
+	if run.Claim != "" || run.Synthesized {
+		t.Fatalf("replayed run = %+v, want empty claim ref, not synthesized", run)
+	}
+	if got := d.state.Tasks[task].Status; got != "open" {
+		t.Fatalf("task status = %q, want open (a non-holder run moves nothing)", got)
 	}
 }

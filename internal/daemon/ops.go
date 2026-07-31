@@ -394,7 +394,10 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID string, o
 
 // opFinishRun records a run. It accepts every catalog outcome — the
 // MCP layer narrows to the agent-reported set before calling (T5:
-// interrupted and superseded are daemon-only verdicts).
+// interrupted and superseded are daemon-only verdicts). The finish
+// guard below enforces that the actor has an attempt of their own to
+// close; the two checks compose — the MCP filter runs first, then this
+// op guards both surfaces.
 func (d *Daemon) opFinishRun(actor string, req finishRunReq) (string, *opError) {
 	if req.Task == "" {
 		return "", opErrf(http.StatusBadRequest, "%q is required", "task")
@@ -406,13 +409,20 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (string, *opError) 
 		return "", opErrf(http.StatusBadRequest, "invalid outcome %q", req.Outcome)
 	}
 
+	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
 		return "", oe
 	}
-	if _, ok := d.state.Tasks[req.Task]; !ok {
-		return "", opErrf(http.StatusNotFound, "unknown task %s", req.Task)
+	// Holdership moves with the clock (a lease may have lapsed since the
+	// last refresh), so re-replay at the current instant before judging —
+	// the same posture as release_claim.
+	if err := d.refreshLocked(now); err != nil {
+		return "", d.writeErrLocked(err)
+	}
+	if oe := d.finishGuardLocked(req.Task, actor); oe != nil {
+		return "", oe
 	}
 	ev, err := d.newEventLocked(event.TypeRunFinished, actor, req.Task, event.RunFinished{
 		Outcome: req.Outcome,
@@ -594,6 +604,66 @@ func (d *Daemon) holderClaimLocked(taskID, actor string) (*core.Claim, *opError)
 		return nil, opErrf(http.StatusForbidden, "claim on task %s is held by %s, not %s", taskID, c.Actor, actor)
 	}
 	return c, nil
+}
+
+// finishGuardLocked enforces that actor has an attempt of their own to
+// close on taskID before a run.finished event is written. Three shapes
+// are admitted: the actor holds the live claim (the normal finish); the
+// actor's latest claim ended released and no later run of theirs has
+// closed it (the blocking protocol: escalate → release_claim →
+// finish_run blocked); or it ended voided and is likewise unclosed (a
+// race loser recording superseded work over HTTP, possibly while the
+// winner still holds). Everything else is rejected: no claim history,
+// a live claim held by someone else, an expired claim (replay already
+// synthesized its interrupted run), or a second close of the same
+// attempt. This is write-side validation only — replay never re-judges
+// stored run.finished events (T3), so the claimless runs already on
+// ledgers stand untouched. Caller holds d.mu with freshly replayed
+// state.
+func (d *Daemon) finishGuardLocked(taskID, actor string) *opError {
+	if _, ok := d.state.Tasks[taskID]; !ok {
+		return opErrf(http.StatusNotFound, "unknown task %s", taskID)
+	}
+	active := d.state.ActiveClaim(taskID)
+	if active != nil && active.Actor == actor {
+		return nil
+	}
+	// Not the live holder: the only closable attempt is the actor's own
+	// most recent claim on the task. ClaimsByTask is replay (ULID)
+	// order, so the last match is the most recent.
+	var latest *core.Claim
+	for _, cid := range d.state.ClaimsByTask[taskID] {
+		if c := d.state.Claims[cid]; c.Actor == actor {
+			latest = c
+		}
+	}
+	if latest != nil && (latest.Status == core.ClaimReleased || latest.Status == core.ClaimVoided) {
+		// One close per attempt: ULIDs order events in time, so any run
+		// by this actor minted after the claim already closed it.
+		closed := false
+		for i := range d.state.Runs {
+			if r := &d.state.Runs[i]; r.Task == taskID && r.Actor == actor && r.ID > latest.ID {
+				closed = true
+				break
+			}
+		}
+		if !closed {
+			return nil
+		}
+	}
+	switch {
+	case active != nil:
+		return opErrf(http.StatusForbidden,
+			"claim on task %s is held by %s, not %s", taskID, active.Actor, actor)
+	case latest == nil:
+		return opErrf(http.StatusConflict,
+			"no claim by %s on task %s: finish_run closes your own attempt — claim before finishing", actor, taskID)
+	default:
+		// Finished or expired claim, or a released/voided one a later
+		// run of the actor's already closed.
+		return opErrf(http.StatusConflict,
+			"%s's attempt on task %s (claim %s, %s) is already closed", actor, taskID, latest.ID, latest.Status)
+	}
 }
 
 // hydrateLocked builds the full picture of one task. Caller holds d.mu
