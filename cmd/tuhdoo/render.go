@@ -64,6 +64,15 @@ func oneLine(s string) string {
 	return strings.ReplaceAll(s, "\n", " ")
 }
 
+// ellipsize truncates s to at most n runes, marking the cut with "…".
+func ellipsize(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n-1]) + "…"
+}
+
 // indent prefixes every line of body.
 func indent(body, prefix string) string {
 	lines := strings.Split(strings.TrimRight(body, "\n"), "\n")

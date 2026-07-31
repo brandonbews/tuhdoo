@@ -352,7 +352,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.setPriority(target.task.ID, p); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: fmt.Sprintf("set %s to p%d", target.task.ID, p)}
+			return actionMsg{desc: fmt.Sprintf("set %s to p%d", shortID(target.task.ID), p)}
 		}
 	case modeConfirmCancel:
 		m.mode, m.input, m.status = modeNav, "", "cancelling…"
@@ -360,7 +360,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.cancelTask(target.task.ID); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "cancelled " + target.task.ID}
+			return actionMsg{desc: "cancelled " + shortID(target.task.ID)}
 		}
 	}
 	return m, nil
@@ -378,8 +378,9 @@ func (m topModel) badge() string {
 	return fmt.Sprintf("acting as %s%s%s", col.bold, m.actor, col.reset)
 }
 
-// detailBody renders the full task biography (the same rendering as
-// `tuhdoo task <id>`) as lines, or nil if the task vanished.
+// detailBody renders the full task biography (the same layout as
+// `tuhdoo task <id>`, with references shortened and annotated for the
+// screen) as lines, or nil if the task vanished.
 func (m topModel) detailBody() []string {
 	if m.snap == nil {
 		return nil
@@ -389,7 +390,7 @@ func (m topModel) detailBody() []string {
 		return nil
 	}
 	var b strings.Builder
-	printTask(&b, m.col, h)
+	printTaskRef(&b, m.col, h, m.snap.taskRef)
 	// Wrap before splitting so the scroll window counts screen lines,
 	// not logical ones.
 	return strings.Split(strings.TrimRight(wrapTo(b.String(), m.width), "\n"), "\n")
@@ -559,8 +560,10 @@ func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor i
 // shortID abbreviates a task ID for TUI display: the type prefix plus
 // the ULID's last four characters, lowercased (`t-d83w`). The tail is
 // where same-batch ULIDs actually differ — their timestamp prefixes
-// match — so abbreviation comes from the right-hand end. Display only:
-// stored, transmitted, and detail-screen IDs stay full-length.
+// match — so abbreviation comes from the right-hand end. Display and
+// input sugar only (T7): stored and transmitted IDs stay full-length,
+// and the detail screen keeps the full ULID once, on its canonical
+// `id` line.
 func shortID(id string) string {
 	i := strings.Index(id, "-")
 	tail := id[i+1:]
@@ -625,7 +628,7 @@ func renderTopRow(w io.Writer, col colors, s *snapshot, r topRow, selected bool)
 	default: // blocked
 		fmt.Fprintf(w, "%s%s%s%s  %s%s\n      %swaiting:%s %s\n",
 			mark, col.dim, shortID(t.ID), col.reset, oneLine(t.Title), edges, col.red, col.reset,
-			s.blockedReasonDisp(t.ID, shortID))
+			s.blockedReasonDisp(t.ID, s.taskRef))
 	}
 }
 
@@ -638,11 +641,11 @@ func (m topModel) footer() string {
 			col.bold, col.reset, oneLine(m.target.esc.Question), m.input, col.dim, col.reset)
 	case modePriority:
 		return fmt.Sprintf("%spriority%s %s (%s) > %s█  %senter submits · esc cancels%s\n",
-			col.bold, col.reset, m.target.task.ID, oneLine(m.target.task.Title),
+			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			m.input, col.dim, col.reset)
 	case modeConfirmCancel:
 		return fmt.Sprintf("%scancel%s %s (%s)? y/n\n",
-			col.bold, col.reset, m.target.task.ID, oneLine(m.target.task.Title))
+			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title))
 	}
 	if !m.armed {
 		return fmt.Sprintf("%sj/k move · enter open · q quit%s\n", col.dim, col.reset)

@@ -156,8 +156,21 @@ func runTask(id string) int {
 	if code != 0 {
 		return code
 	}
+	// Resolve short forms and fragments against the live task list
+	// before fetching — input sugar only (T7): a full ID passes through
+	// as itself and the rendered output is untouched.
+	st, err := fetchState(c)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
+		return 1
+	}
+	full, err := resolveTaskID(id, st.Tasks)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
+		return 1
+	}
 	var h hydratedTask
-	if err := c.get("/v0/tasks/"+id, &h); err != nil {
+	if err := c.get("/v0/tasks/"+full, &h); err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
 		return 1
 	}
@@ -165,9 +178,67 @@ func runTask(id string) int {
 	return 0
 }
 
+// resolveTaskID maps human input — a full ID, the short form, or any
+// unambiguous ID fragment — to one known task ID, the git model (T7):
+// the long ULID is plumbing, the short form is the human contract.
+// Ambiguity is an error that lists the candidates; nothing is guessed.
+func resolveTaskID(frag string, tasks []stateTask) (string, error) {
+	if frag == "" {
+		return "", fmt.Errorf("empty task id")
+	}
+	var cands []stateTask
+	for _, t := range tasks {
+		if strings.EqualFold(t.ID, frag) {
+			return t.ID, nil // exact full ID wins outright
+		}
+		if idMatches(t.ID, frag) {
+			cands = append(cands, t)
+		}
+	}
+	switch len(cands) {
+	case 1:
+		return cands[0].ID, nil
+	case 0:
+		return "", fmt.Errorf("unknown task %q — no task ID matches", frag)
+	}
+	lines := make([]string, len(cands))
+	for i, t := range cands {
+		lines[i] = fmt.Sprintf("  %s  %s  (%s)", shortID(t.ID), oneLine(t.Title), t.ID)
+	}
+	return "", fmt.Errorf("%q is ambiguous — %d tasks match:\n%s",
+		frag, len(cands), strings.Join(lines, "\n"))
+}
+
+// idMatches reports whether frag — case-insensitive, with or without
+// the type prefix — is a substring of id's tail. The short form is one
+// such substring (the tail's last four), so it needs no special case.
+func idMatches(id, frag string) bool {
+	f, l := strings.ToLower(frag), strings.ToLower(id)
+	i := strings.Index(l, "-") + 1
+	return strings.Contains(l[i:], strings.TrimPrefix(f, l[:i]))
+}
+
+// printTask renders one task's full biography the way the one-shot
+// `tuhdoo task <id>` prints it: full IDs throughout, the scriptable
+// plumbing form.
 func printTask(w io.Writer, col colors, h hydratedTask) {
+	printTaskRef(w, col, h, nil)
+}
+
+// printTaskRef is printTask with the task references — parents and
+// depends_on — passed through ref: the TUI shortens and annotates them
+// for display, and gets the full ULID exactly once, dimmed on its own
+// line as the copyable canonical form. A nil ref keeps the one-shot
+// rendering byte-identical.
+func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) string) {
 	t := h.Task
-	fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
+	if ref == nil {
+		ref = func(id string) string { return id }
+		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
+	} else {
+		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, shortID(t.ID), col.reset, oneLine(t.Title))
+		fmt.Fprintf(w, "  %sid          %s%s\n", col.dim, t.ID, col.reset)
+	}
 	status := t.Status
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
@@ -181,10 +252,10 @@ func printTask(w io.Writer, col colors, h hydratedTask) {
 		fmt.Fprintf(w, "  labels      %s\n", strings.Join(t.Labels, ", "))
 	}
 	if len(t.Parents) > 0 {
-		fmt.Fprintf(w, "  parents     %s\n", strings.Join(t.Parents, ", "))
+		fmt.Fprintf(w, "  parents     %s\n", joinRefs(t.Parents, ref))
 	}
 	if len(t.DependsOn) > 0 {
-		fmt.Fprintf(w, "  depends on  %s\n", strings.Join(t.DependsOn, ", "))
+		fmt.Fprintf(w, "  depends on  %s\n", joinRefs(t.DependsOn, ref))
 	}
 	fmt.Fprintf(w, "  created     %s by %s\n", stamp(t.CreatedAt), t.CreatedBy)
 
@@ -203,6 +274,15 @@ func printTask(w io.Writer, col colors, h hydratedTask) {
 	for _, e := range entries {
 		fmt.Fprint(w, e.text)
 	}
+}
+
+// joinRefs renders a list of task references through ref.
+func joinRefs(ids []string, ref func(string) string) string {
+	out := make([]string, len(ids))
+	for i, id := range ids {
+		out[i] = ref(id)
+	}
+	return strings.Join(out, ", ")
 }
 
 // histEntry is one history item; id is its event ULID, the

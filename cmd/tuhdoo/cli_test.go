@@ -372,6 +372,22 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	}
 	mustContain(t, out, "unknown task")
 
+	// task <short-form>: resolves to the same task — the short form is
+	// the human input contract (T7); output still carries the full ID.
+	out, code = runCLI(t, repo, "task", shortID(flake))
+	if code != 0 {
+		t.Fatalf("task %s exit %d; output:\n%s", shortID(flake), code, out)
+	}
+	mustContain(t, out, flake, "investigate the flake", "claimed by brandon/a1")
+
+	// task with an ambiguous fragment (every ULID starts with 0): an
+	// error listing the candidates, never a guess.
+	out, code = runCLI(t, repo, "task", "t-0")
+	if code == 0 {
+		t.Errorf("ambiguous fragment exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, "ambiguous", shortID(parser), shortID(flake))
+
 	// escalations: open with absolute age and blocking mark, answered
 	// compactly.
 	out, code = runCLI(t, repo, "escalations")

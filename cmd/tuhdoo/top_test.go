@@ -697,7 +697,8 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	for _, want := range []string{
 		"t-rqjm  p0  its dependency  · in t-d83w", // ready row + parent marker
 		"t-d83w  the long one",                    // blocked row
-		"waiting: depends on t-rqjm",
+		// The waiting: reason annotates its dep with status and title.
+		"waiting: depends on t-rqjm (open — its dependency)",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("view missing %q; view:\n%s", want, v)
@@ -706,10 +707,152 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	if strings.Contains(v, long) {
 		t.Errorf("full ULID leaked into the list; view:\n%s", v)
 	}
-	// The detail screen keeps the full ID.
+	// The detail screen leads with the short form and keeps the full ID
+	// exactly once: the dimmed canonical `id` line.
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // cursor on the ready row (dep)
-	if dv := m.View(); !strings.Contains(dv, dep+" — its dependency") {
-		t.Errorf("detail lost the full ID; view:\n%s", dv)
+	dv := m.View()
+	for _, want := range []string{
+		"t-rqjm — its dependency",
+		"id          " + dep,
+		// Its parent edge is short and annotated too.
+		"parents     t-d83w (open — the long one)",
+	} {
+		if !strings.Contains(dv, want) {
+			t.Errorf("detail view missing %q; view:\n%s", want, dv)
+		}
+	}
+	if n := strings.Count(dv, dep); n != 1 {
+		t.Errorf("full ULID appears %d times in detail, want exactly 1 (the canonical line); view:\n%s", n, dv)
+	}
+	if strings.Contains(dv, long) {
+		t.Errorf("another task's full ULID leaked into detail; view:\n%s", dv)
+	}
+}
+
+// taskRef is the edge annotation contract: references that resolve in
+// the snapshot carry status and title (done and cancelled tasks are in
+// the state listing even though they render no rows — the annotation
+// is what proves such an edge isn't dangling); unresolvable IDs render
+// bare — never an invented status; long titles are ellipsized.
+func TestSnapshotTaskRef(t *testing.T) {
+	s := topSnapshot()
+	s.state.Tasks = append(s.state.Tasks, stateTask{
+		ID:     "t-01KYT63MB28Z535SMJC9B0D83W",
+		Title:  strings.Repeat("wide ", 20), // 100 runes, ellipsized at 40
+		Status: "cancelled",
+	})
+	tests := []struct{ id, want string }{
+		{"t-lic", "t-lic (open — choose a license)"},
+		{"t-chor", "t-chor (done — old chore)"}, // done: no row anywhere, still resolves
+		{"t-epic", "t-epic"},                    // unresolvable: bare, no status
+		{"t-01KYT63MB28Z535SMJC9B0D83W",
+			"t-d83w (cancelled — wide wide wide wide wide wide wide wide…)"},
+	}
+	for _, tt := range tests {
+		if got := s.taskRef(tt.id); got != tt.want {
+			t.Errorf("taskRef(%q) = %q, want %q", tt.id, got, tt.want)
+		}
+	}
+}
+
+// The detail screen annotates dep/parent edges from the snapshot; an
+// edge to a task the snapshot has never heard of stays bare.
+func TestTopDetailAnnotatesEdges(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars
+		keyOf(tea.KeyEnter))
+	v := m.View()
+	for _, want := range []string{
+		"t-pars — write the parser",
+		"id          t-pars",
+		"parents     t-epic", // unknown to the snapshot: bare
+		"depends on  t-chor (done — old chore)",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("detail view missing %q; view:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, "t-epic (") {
+		t.Errorf("unresolvable edge grew an invented annotation; view:\n%s", v)
+	}
+}
+
+// The one-shot `tuhdoo task` rendering is plumbing and must not grow
+// display sugar: full IDs on the title and edge lines, no canonical
+// `id` line, no annotations.
+func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
+	long := "t-01KYT63MB28Z535SMJC9B0D83W"
+	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	parent := "t-01KYT63MB28Z535SMJCBC7SY1P"
+	var b strings.Builder
+	printTask(&b, colors{}, hydratedTask{Task: taskJSON{
+		ID: long, Title: "the long one",
+		Parents: []string{parent}, DependsOn: []string{dep},
+	}})
+	v := b.String()
+	for _, want := range []string{
+		long + " — the long one",
+		"parents     " + parent + "\n",
+		"depends on  " + dep + "\n",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("one-shot rendering missing %q; output:\n%s", want, v)
+		}
+	}
+	for _, reject := range []string{"t-d83w", "t-rqjm", "t-sy1p", "id          "} {
+		if strings.Contains(v, reject) {
+			t.Errorf("one-shot rendering grew TUI sugar %q; output:\n%s", reject, v)
+		}
+	}
+}
+
+// resolveTaskID is the input half of the short-ID contract: full IDs
+// pass through, short forms and unambiguous fragments resolve,
+// ambiguity errors listing every candidate, and nothing is guessed.
+func TestResolveTaskID(t *testing.T) {
+	long := "t-01KYT63MB28Z535SMJC9B0D83W"
+	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	tasks := []stateTask{
+		{ID: long, Title: "the long one"},
+		{ID: dep, Title: "its dependency"},
+	}
+	tests := []struct {
+		name, frag, want, wantErr string
+	}{
+		{name: "full ID", frag: long, want: long},
+		{name: "full ID lowercase", frag: strings.ToLower(long), want: long},
+		{name: "short form", frag: "t-d83w", want: long},
+		{name: "bare tail fragment", frag: "d83w", want: long},
+		{name: "uppercase fragment", frag: "63RQJM", want: dep},
+		{name: "long unique fragment", frag: "t-01KYT63MB28Z535SMJCA", want: dep},
+		{name: "ambiguous", frag: "t-01KYT63MB2", wantErr: "ambiguous"},
+		{name: "unknown", frag: "t-nope", wantErr: "unknown task"},
+		{name: "empty", frag: "", wantErr: "empty"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveTaskID(tt.frag, tasks)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("err = %v, want containing %q", err, tt.wantErr)
+				}
+				if tt.wantErr == "ambiguous" {
+					for _, cand := range []string{"t-d83w", "t-rqjm", long, dep} {
+						if !strings.Contains(err.Error(), cand) {
+							t.Errorf("ambiguity error missing candidate %q: %v", cand, err)
+						}
+					}
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("resolveTaskID(%q) = %q, want %q", tt.frag, got, tt.want)
+			}
+		})
 	}
 }
 

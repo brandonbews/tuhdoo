@@ -5,6 +5,7 @@ package main
 // blocked-with-reason / done / cancelled.
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -144,6 +145,21 @@ func (s *snapshot) blockedReasonDisp(id string, disp func(string) string) string
 		parts = append(parts, "escalation: "+oneLine(e.Question))
 	}
 	return strings.Join(parts, "; ")
+}
+
+// taskRef renders one task reference for TUI display: the short form,
+// annotated with status and title when the ID resolves in the snapshot.
+// The state listing carries every task including done and cancelled
+// ones — they render no rows, so the annotation is what proves an edge
+// pointing at them isn't dangling. Unresolvable IDs render bare —
+// never invent status.
+func (s *snapshot) taskRef(id string) string {
+	for _, t := range s.state.Tasks {
+		if t.ID == id {
+			return fmt.Sprintf("%s (%s — %s)", shortID(id), t.Status, ellipsize(oneLine(t.Title), 40))
+		}
+	}
+	return shortID(id)
 }
 
 // allEscalations returns every escalation across all tasks in raise
