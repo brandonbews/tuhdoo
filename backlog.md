@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYVD31CNTR1EVCDHPG0G4GMZ](tasks/t-01KYVD31CNTR1EVCDHPG0G4GMZ.md) | TUI navigation: up/down arrows move the cursor; footer says so | 1 | cli, tui, ux |
 | [t-01KYVD31CNTR1EVCDHPJGSQAGH](tasks/t-01KYVD31CNTR1EVCDHPJGSQAGH.md) | Align MCP tool descriptions with the revised notes doctrine | 1 | protocol, docs, mcp |
 | [t-01KYVEXK2BX040KJ244S2WP213](tasks/t-01KYVEXK2BX040KJ244S2WP213.md) | CLI write verbs: a paved path when no MCP session exists | 1 | cli, dx |
 | [t-01KYVJ2607S5S390CVYSF3PVG4](tasks/t-01KYVJ2607S5S390CVYSF3PVG4.md) | TUI dashboard visual redesign: section bars + fixed column grid (mock-a) | 1 | cli, tui, design |
@@ -44,6 +43,7 @@ _None._
 - [t-01KYTQTEQYGXVQ0QY7FCTAZ3G6](tasks/t-01KYTQTEQYGXVQ0QY7FCTAZ3G6.md) — Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
 - [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) — Escalation ergonomics: resolve answered-out-of-band, and the name itself
 - [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) — Short IDs are the human contract: display everywhere, accept as input, annotate edges
+- [t-01KYVD31CNTR1EVCDHPG0G4GMZ](tasks/t-01KYVD31CNTR1EVCDHPG0G4GMZ.md) — TUI navigation: up/down arrows move the cursor; footer says so
 
 ## Cancelled
 
