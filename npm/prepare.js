@@ -44,6 +44,10 @@ if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
 }
 
 const templateDir = path.join(__dirname, 'tuhdoo');
+const licenseSrc = path.join(__dirname, '..', 'LICENSE');
+if (!fs.existsSync(licenseSrc)) {
+  fail('missing LICENSE at repo root: ' + licenseSrc);
+}
 
 for (const p of PLATFORMS) {
   const binSrc = path.join(distDir, p.goos + '_' + p.goarch, 'tuhdoo');
@@ -62,6 +66,7 @@ for (const p of PLATFORMS) {
         name: '@tuhdoo/' + name,
         version: version,
         description: 'tuhdoo prebuilt binary for ' + p.os + '/' + p.cpu,
+        license: 'MIT',
         repository: REPOSITORY,
         os: [p.os],
         cpu: [p.cpu],
@@ -70,6 +75,7 @@ for (const p of PLATFORMS) {
       2
     ) + '\n'
   );
+  fs.copyFileSync(licenseSrc, path.join(pkgDir, 'LICENSE'));
   fs.writeFileSync(
     path.join(pkgDir, 'README.md'),
     '# @tuhdoo/' + name + '\n\nThe tuhdoo binary for ' + p.os + '/' + p.cpu +
@@ -83,6 +89,7 @@ for (const p of PLATFORMS) {
 // so a given tuhdoo version always pulls its own binaries).
 const mainDir = path.join(outDir, 'tuhdoo');
 fs.cpSync(templateDir, mainDir, { recursive: true });
+fs.copyFileSync(licenseSrc, path.join(mainDir, 'LICENSE'));
 const pkgPath = path.join(mainDir, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 pkg.version = version;
