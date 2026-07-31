@@ -1,6 +1,6 @@
 # t-01KYT63MB28Z535SMJCA63RQJM — Arm the TUI detail screen: selectable escalation, enter to answer; p/c on the viewed task
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`
 - Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done), [t-01KYVD31CNTR1EVCDHPC5973KW](t-01KYVD31CNTR1EVCDHPC5973KW.md) (done)
@@ -18,4 +18,9 @@ Constraints: boring Go; display/input only — no event or API changes.
 
 ## History
 
-_No activity yet._
+### 2026-07-31 15:06 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `4acfc07`
+
+Landed in commit 4acfc07. Armed detail (modeDetail) now steers in place: the viewed task's unanswered escalations render as focusable items (ULID order); enter opens the standard answer input targeting the focused escalation — same API call and refresh as the list path; p and c act on the viewed task with the same prompts/confirms as the list. New `back` field routes esc/submit back to whichever screen opened the input (list-opened prompts still return to the list, tested). Focus/scroll rule: j/k move focus when a further open escalation exists in that direction (window scrolls minimally to reveal it) and scroll one line otherwise — so with zero or one escalation, behavior is plain scrolling as before. Archive of the viewed task: y/n confirm; after archiving the detail stays open showing the archived status; esc returns to a list without its row. Watch mode fully disarmed: zero focusables by construction, read-only footer, enter/p/c dead (tested). One-shot `tuhdoo task` rendering byte-identical — the focus marker (string rewrite of the k-th "unanswered" line) applies only on the TUI path. Detail header now surfaces the status line (action results/errors were previously invisible from detail). make test lint green. Known edges (accepted, boring): p/c/answer on a task that reached terminal status under refresh aren't client-guarded — the daemon is the authority and errors surface in the status line; the focus marker anchors on the exact "unanswered" line historyOf emits (pinned by tests — a future wording change must move it); multi-escalation tasks trade some upward line-scrolling for focus jumps.
