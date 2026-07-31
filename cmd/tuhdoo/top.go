@@ -297,7 +297,7 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// updateDetail: the detail screen is read-only — j/k scroll, esc steps
+// updateDetail: the detail screen is read-only — ↑/↓ and j/k scroll, esc steps
 // back to the list, q and ctrl+c quit (one meaning per key, T7).
 func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch k.String() {
@@ -439,7 +439,7 @@ func (m topModel) detailView(body []string) string {
 	}
 	w.WriteString(strings.Join(body, "\n"))
 	w.WriteString("\n\n")
-	w.WriteString(wrapTo(fmt.Sprintf("%sj/k scroll · esc back · q quit%s\n", col.dim, col.reset), m.width))
+	w.WriteString(wrapTo(fmt.Sprintf("%s↑/↓ (j/k) scroll · esc back · q quit%s\n", col.dim, col.reset), m.width))
 	return w.String()
 }
 
@@ -648,9 +648,9 @@ func (m topModel) footer() string {
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title))
 	}
 	if !m.armed {
-		return fmt.Sprintf("%sj/k move · enter open · q quit%s\n", col.dim, col.reset)
+		return fmt.Sprintf("%s↑/↓ (j/k) move · enter open · q quit%s\n", col.dim, col.reset)
 	}
-	return fmt.Sprintf("%sj/k move · enter open · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
+	return fmt.Sprintf("%s↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit%s\n", col.dim, col.reset)
 }
 
 // ---- entry point ----

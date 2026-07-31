@@ -178,7 +178,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"In progress (1)", "investigate the flake", "brandon/a1",
 		"Blocked (1)", "choose a license", "waiting:",
 		"▸ Which license?", // cursor starts on the first row
-		"j/k move · enter open · a answer · p priority · c cancel · q quit",
+		"↑/↓ (j/k) move · enter open · a answer · p priority · c cancel · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("view missing %q; view:\n%s", want, v)
@@ -210,6 +210,41 @@ func TestTopNavigationMovesAndClamps(t *testing.T) {
 	}
 	if v := m.View(); !strings.Contains(v, "▸ t-flak") {
 		t.Errorf("cursor marker not on t-flak; view:\n%s", v)
+	}
+}
+
+// Arrows are the advertised keys; they mirror j/k exactly in both
+// cursored contexts — list move and detail scroll.
+func TestTopArrowKeysMirrorJK(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = press(t, m, keyOf(tea.KeyDown), keyOf(tea.KeyDown))
+	if m.cursor != 2 {
+		t.Errorf("two downs moved cursor to %d, want 2", m.cursor)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyUp))
+	if m.cursor != 1 {
+		t.Errorf("up moved cursor to %d, want 1", m.cursor)
+	}
+}
+
+func TestTopDetailArrowsScroll(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 8})
+	m = mm.(topModel)
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail {
+		t.Fatalf("mode = %d, want modeDetail", m.mode)
+	}
+	if m.detailMaxScroll() == 0 {
+		t.Fatal("detail fits in 8 rows; test needs scrollable content")
+	}
+	m, _ = press(t, m, keyOf(tea.KeyDown))
+	if m.detailScroll != 1 {
+		t.Errorf("down scrolled to %d, want 1", m.detailScroll)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyUp), keyOf(tea.KeyUp))
+	if m.detailScroll != 0 {
+		t.Errorf("up should clamp at 0, got %d", m.detailScroll)
 	}
 }
 
@@ -454,7 +489,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "j/k move · enter open · q quit"} {
+	for _, want := range []string{"watch mode", "Blocked (1)", "waiting:", "↑/↓ (j/k) move · enter open · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
@@ -499,7 +534,7 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		"j/k scroll · esc back · q quit",
+		"↑/↓ (j/k) scroll · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
