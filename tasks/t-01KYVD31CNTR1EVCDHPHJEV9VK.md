@@ -1,8 +1,9 @@
 # t-01KYVD31CNTR1EVCDHPHJEV9VK — TUI mouse support: click selects, click again acts as enter
 
-- Status: open — ready
+- Status: open — blocked on dependencies
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`
+- Depends on: [t-01KYT63MB28Z535SMJCA63RQJM](t-01KYT63MB28Z535SMJCA63RQJM.md) (open)
 - Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
 
 ## Description

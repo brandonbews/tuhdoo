@@ -1,9 +1,9 @@
 # t-01KYT63MB28Z535SMJCA63RQJM — Arm the TUI detail screen: selectable escalation, enter to answer; p/c on the viewed task
 
-- Status: open — ready
+- Status: open — blocked on dependencies
 - Priority: 1
 - Labels: `cli`, `tui`
-- Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done)
+- Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done), [t-01KYVD31CNTR1EVCDHPC5973KW](t-01KYVD31CNTR1EVCDHPC5973KW.md) (open)
 - Created: 2026-07-30 18:55 UTC by `4099114+brandonbews`
 
 ## Description
