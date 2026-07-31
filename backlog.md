@@ -8,9 +8,7 @@
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) | npm devDependency distribution (esbuild-pattern wrapper packages) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Blocked / waiting
 
@@ -46,6 +44,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [t-01KYRMVT1YC2929WSQ3W6YHHZM](tasks/t-01KYRMVT1YC2929WSQ3W6YHHZM.md) — Render markdown views on local daemon writes
 - [t-01KYRR78YKX9YHZE6W6B798X4G](tasks/t-01KYRR78YKX9YHZE6W6B798X4G.md) — Auto-derive session principals: git identity + daemon-minted agent names
 - [t-01KYRVCBE83KT62BAE11W3TAM8](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) — Release pipeline: tagged, cross-compiled binaries
+- [t-01KYRVCBE83KT62BAE1502VV29](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) — npm devDependency distribution (esbuild-pattern wrapper packages)
 - [t-01KYT63MB28Z535SMJC9B0D83W](tasks/t-01KYT63MB28Z535SMJC9B0D83W.md) — One TUI: bare tuhdoo is the interactive surface (Cycle 4)
 - [t-01KYT63MB28Z535SMJCA63RQJM](tasks/t-01KYT63MB28Z535SMJCA63RQJM.md) — Arm the TUI detail screen: selectable escalation, enter to answer; p/c on the viewed task
 - [t-01KYT80CP4JKAM3V2C4DNGF1Y3](tasks/t-01KYT80CP4JKAM3V2C4DNGF1Y3.md) — TUI readability: short display IDs, width-aware wrapping, list scrolling

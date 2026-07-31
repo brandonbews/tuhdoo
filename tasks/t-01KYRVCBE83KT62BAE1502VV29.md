@@ -1,6 +1,6 @@
 # t-01KYRVCBE83KT62BAE1502VV29 — npm devDependency distribution (esbuild-pattern wrapper packages)
 
-- Status: open — in progress, claimed by `brandon/claude-code-1`
+- Status: done
 - Priority: 1
 - Labels: `distribution`, `npm`
 - Depends on: [t-01KYRVCBE83KT62BAE11W3TAM8](t-01KYRVCBE83KT62BAE11W3TAM8.md) (done)
@@ -33,3 +33,10 @@ Resume state: all code/docs landed on main (2c57b6e npm packaging + docs, 17ea91
 ### 2026-07-31 08:13 UTC — run by `brandon/claude-code-11` — blocked
 
 All buildable work landed on main: commit 2c57b6e (npm/ packaging: dependency-free launcher, prepare.js assembler, smoke.sh end-to-end test, README + agent-protocol docs, /bin gitignore fix) and commit 17ea914 (release.yml npm publish job — WORKFLOW CHANGE, isolated for eyes-on review). Smoke test passes locally on darwin/arm64. Blocked on escalation 01KYVKR3D1RCVGFEWFPQXFB4AY: npm org/scope + NPM_TOKEN provisioning and the license decision are Brandon's; after that, the first v* tag publishes automatically and a successor verifies published-registry acceptance.
+
+### 2026-07-31 18:43 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `2c57b6e`, `17ea914`, `9712bb8`, `1dd21d6`, `610d611`
+
+v0.1.0 is live on npm: all five packages (tuhdoo launcher + @tuhdoo/darwin-arm64, darwin-x64, linux-arm64, linux-x64) published at 0.1.0, matching the re-cut v0.1.0 tag and GitHub Release. Acceptance verified against the real registry in a clean /tmp repo: npm i -D tuhdoo, npx tuhdoo version prints v0.1.0, npx tuhdoo init works, npx tuhdoo status reports local-only, and node_modules/.bin/tuhdoo mcp serves all eleven verbs over stdio with zero stderr bytes and every stdout line valid JSON-RPC. Rollout hit three sequential failures, each fixed with an eyes-on-reviewed workflow commit: (1) npm parsed publish paths without ./ as GitHub owner/repo shorthands (1dd21d6); (2) EOTP — account 2FA required OTP until Brandon enabled bypass-2FA on the token; (3) E403 on the unscoped tuhdoo package — the org-scoped token couldn't create it; Brandon broadened to all-packages read/write, and 610d611 added the publish() idempotency wrapper so the re-cut tag skipped the four already-published packages. License decided (MIT) and landed in 9712bb8: root LICENSE, license fields, LICENSE copied into all five tarballs, prepare.js fails without it. The v0.1.0 tag was deleted+re-cut twice during rollout (pre-consumer, deliberate). Follow-up tuh-01KYWKT8NQ980F0NF4MJ9W33H5 rewritten as the OIDC trusted-publishing switch: the bootstrap token is meant to be deleted (token + NPM_TOKEN secret) after Brandon configures trusted publishers on the five now-existing packages — verify that happened before the next v* tag.
