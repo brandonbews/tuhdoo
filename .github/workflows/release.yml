@@ -64,3 +64,52 @@ jobs:
             --title "tuhdoo $GITHUB_REF_NAME" \
             --verify-tag \
             --generate-notes
+
+  # npm tier: republishes the exact released bytes as the esbuild-pattern
+  # packages (tuhdoo launcher + @tuhdoo/<os>-<cpu> binaries). A separate
+  # job so an npm failure never blocks the GitHub Release, and a re-run
+  # after fixing credentials touches only this job. Uses the runner's own
+  # node/npm — no third-party actions beyond the pinned checkout.
+  # Requires the NPM_TOKEN repo secret (publish rights on the tuhdoo
+  # package and the @tuhdoo scope); without it this job fails loudly.
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # download the release assets; publishing goes to npm
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Fetch release binaries
+        # Download rather than rebuild: npm ships byte-identical binaries
+        # to the GitHub Release. Archive names look like
+        # tuhdoo_v0.1.0_darwin_arm64.tar.gz; unpack each into the
+        # dist/<os>_<arch>/tuhdoo layout npm/prepare.js expects.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$GITHUB_REF_NAME" --pattern 'tuhdoo_*.tar.gz' --dir dist
+          for f in dist/tuhdoo_*.tar.gz; do
+            base="${f##*/}"; base="${base%.tar.gz}"
+            arch="${base##*_}"; rest="${base%_*}"; os="${rest##*_}"
+            mkdir -p "dist/${os}_${arch}"
+            tar -xzf "$f" -C "dist/${os}_${arch}"
+          done
+
+      - name: Publish to npm
+        # Platform packages first so the launcher's optionalDependencies
+        # resolve the moment it lands. The token reaches npm through the
+        # ${NODE_AUTH_TOKEN} reference in .npmrc — the literal string is
+        # written to disk, never the secret itself.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          node npm/prepare.js "$version" dist npm-out
+          echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$HOME/.npmrc"
+          for p in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
+            npm publish "npm-out/$p" --access public
+          done
+          npm publish npm-out/tuhdoo --access public
