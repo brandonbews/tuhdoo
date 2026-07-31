@@ -34,6 +34,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
 - [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) — blocked and needs input items appearring in both lists is visually confusing. maybe dont show escalated/needs input items in blocked
 - [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) — claim_task on an escalation-blocked task reports "unmet dependencies"
+- [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) — make sure the agent via mcp can do all of the main user actions they might ask for (ie adding and deleting inbox items, etc)
 
 ## Done
 
