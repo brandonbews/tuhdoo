@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) | TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles | 0 | cli, tui |
 | [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) | claim_task on an escalation-blocked task reports "unmet dependencies" | 0 | mcp, dx |
 | [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
 | [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
@@ -65,6 +64,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [t-01KYVJ5NABEKX72KNE006MBBMC](tasks/t-01KYVJ5NABEKX72KNE006MBBMC.md) — Inbox and held: capture without scoping pressure, pause without pretending
 - [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) — finish_run accepts a claimless finish: opFinishRun never checks holdership
 - [t-01KYVMD4PS9NMQVP1K5M1PVRD8](tasks/t-01KYVMD4PS9NMQVP1K5M1PVRD8.md) — Shim died once: 'stdio session: invalid trailing data at the end of stream'
+- [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) — TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles
 - [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) — Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows)
 - [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md

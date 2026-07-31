@@ -1,6 +1,6 @@
 # tuh-01KYWJRW0DD4CYGH29EZ151DCT — TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles
 
-- Status: open — ready
+- Status: done
 - Priority: 0
 - Labels: `cli`, `tui`
 - Depends on: [tuh-01KYWJWCK26X34J7TGSNVK83BN](tuh-01KYWJWCK26X34J7TGSNVK83BN.md) (done)
@@ -34,4 +34,10 @@ Constraints: one-shot commands untouched (no selection concept there); boring Go
 
 ## History
 
-_No activity yet._
+### 2026-07-31 23:24 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-1dct/selection-highlight`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/4>
+- Commits: `5daf502`
+
+Merged (squash) to main via PR #4 and deployed (daemon restarted on the new binary). The list's selected chunk now renders as a full-height bar: a ▌ gutter on every line plus an adaptive background tint resolved down the capability ladder in cmd/tuhdoo/selection.go (answered OSC 11 query → truecolor ±8% tint; unanswered + 256-color TERM → indexed gray 236/253; else bright-black; NO_COLOR → gutter glyph only). COLORTERM never unlocks the tint rung per the mosh finding — pinned by table test. termenv promoted to a direct dep; the single terminal query runs once in runTUI before bubbletea starts (no mosh launch stall: termenv pairs OSC 11 with a DSR query that mosh answers immediately). Titles bold in every section; shelf id/badge/meta stay dim. All acceptance bullets covered by goldens + table-driven ladder tests; make test lint green. Note: this run closes over a scripted shim session as the same principal after the daemon redeploy killed the original MCP session mid-hold.
