@@ -1,0 +1,66 @@
+# Release pipeline: a pushed v* tag becomes a GitHub Release carrying
+# cross-compiled, checksummed binaries for the four supported platforms
+# (windows is parked). Hand-rolled rather than goreleaser: everything
+# that runs is visible in this one file, and the only third-party code
+# is actions/checkout and actions/setup-go, pinned by commit SHA.
+#
+# Host-agnosticism (T2) is untouched: this pipeline publishes artifacts;
+# the binary itself never learns about GitHub. Triggering is tag-only,
+# so the tuhdoo data branch can never fire it.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the release and upload its assets
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+
+      - name: Test and lint
+        run: make test lint
+
+      - name: Cross-compile
+        # GITHUB_REF_NAME is the tag (e.g. v0.1.0); using the runner's
+        # env var, not ${{ }} interpolation, keeps the value out of the
+        # script text. Each archive contains the single static binary.
+        run: |
+          set -euo pipefail
+          version="$GITHUB_REF_NAME"
+          mkdir -p dist
+          for target in darwin/arm64 darwin/amd64 linux/arm64 linux/amd64; do
+            os="${target%/*}"
+            arch="${target#*/}"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+              go build -trimpath -ldflags "-s -w -X main.version=${version}" \
+              -o "dist/${os}_${arch}/tuhdoo" ./cmd/tuhdoo
+            tar -czf "dist/tuhdoo_${version}_${os}_${arch}.tar.gz" \
+              -C "dist/${os}_${arch}" tuhdoo
+          done
+
+      - name: Checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum tuhdoo_*.tar.gz > checksums.txt
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            dist/*.tar.gz dist/checksums.txt \
+            --title "tuhdoo $GITHUB_REF_NAME" \
+            --verify-tag \
+            --generate-notes
