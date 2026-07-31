@@ -29,9 +29,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [tuh-01KYWE39DD1VWJVZZT3KHAKTQ0](tasks/tuh-01KYWE39DD1VWJVZZT3KHAKTQ0.md) — just a test
+_None._
 
 ## Done
 
@@ -61,4 +59,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 ## Cancelled
 
-_None._
+- [tuh-01KYWE39DD1VWJVZZT3KHAKTQ0](tasks/tuh-01KYWE39DD1VWJVZZT3KHAKTQ0.md) — just a test
