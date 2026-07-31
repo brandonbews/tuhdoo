@@ -32,12 +32,11 @@ Triaged, deliberately paused — never served to agents until reopened.
 |---|---|---:|---|
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform |
 | [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
+| [tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | docs, product |
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) — Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions)
+_None._
 
 ## Done
 
