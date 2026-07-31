@@ -4,7 +4,7 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) | Release npm job hardening: idempotent re-runs and provenance attestations | 0 | distribution, ci, npm |
+| [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) | Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN) | 0 | distribution, ci, npm |
 
 ## In progress
 

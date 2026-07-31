@@ -1,4 +1,4 @@
-# tuh-01KYWKT8NQ980F0NF4MJ9W33H5 — Release npm job hardening: idempotent re-runs and provenance attestations
+# tuh-01KYWKT8NQ980F0NF4MJ9W33H5 — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 
 - Status: open — ready
 - Priority: 0
@@ -7,15 +7,17 @@
 
 ## Description
 
-Context: the release.yml npm job (commit 17ea914, approved by Brandon 2026-07-31 with these two warts explicitly accepted as follow-ups) publishes five packages in sequence with `set -e`. Two accepted gaps: (1) if publish dies midway (e.g. after @tuhdoo/darwin-arm64), a re-run hits "version already exists" on the first package and the job fails — recovery today is bumping to the next patch tag; (2) packages publish without npm provenance attestations.
+Context: the original two warts are half-resolved — idempotent re-runs landed in commit 610d611 (publish() wrapper in release.yml, exercised successfully on the v0.1.0 rollout when a token-scope failure left 4 of 5 packages published and the re-cut tag recovered cleanly). Provenance is superseded by this task: npm trusted publishing (OIDC) gives provenance automatically and removes the long-lived token entirely.
 
-The ask: (1) make the publish loop idempotent — before each `npm publish`, check whether that exact name@version is already on the registry (e.g. `npm view <name>@<version> version`) and skip if so, so a re-run after a partial failure completes the remainder; (2) add `--provenance` to the publish commands plus `id-token: write` to the npm job's permissions, giving the packages verifiable build attestations tied to the workflow run.
+Gating (Brandon, browser-side, may already be done by the time you read this — verify): (1) on npmjs.com, add a trusted publisher to each of the five packages (tuhdoo, @tuhdoo/darwin-arm64, @tuhdoo/darwin-x64, @tuhdoo/linux-arm64, @tuhdoo/linux-x64): GitHub user brandonbews, repo tuhdoo, workflow release.yml, no environment; (2) delete the bootstrap npm token and the NPM_TOKEN repo secret.
 
-Acceptance: a re-run of the npm job after a simulated partial publish (some packages already at the version, some not) publishes only the missing ones and exits green; published packages show provenance on npmjs.com; the job's permissions gain only id-token: write; make test lint stays green.
+The ask: rework the npm job in .github/workflows/release.yml for OIDC — add id-token: write to the job permissions; ensure npm >= 11.5.1 on the runner (preinstalled npm is older; `npm install -g npm@11` or setup-node with a node that bundles it); remove the .npmrc/NODE_AUTH_TOKEN wiring entirely. Keep the publish() idempotency wrapper and the platform-before-launcher order. npm CLI auto-detects OIDC; no token config remains anywhere.
 
-Pointers: .github/workflows/release.yml npm job (lines ~68-115); npm/prepare.js; npm docs on `npm publish --provenance` (requires the registry to trust the GitHub OIDC issuer — works out of the box for public repos on npmjs.com).
+Acceptance: next v* tag publishes all five packages with no NPM_TOKEN secret in the repo; packages show provenance attestations on npmjs.com; a re-run of a partially-failed npm job still skips already-published versions; make test lint green.
 
-Constraints: PROJECT LAW — this is a .github/workflows/ change; isolate it in its own commit and call it out explicitly for Brandon's eyes-on diff review. Do not restructure the job otherwise; the download-not-rebuild byte-identity property and platform-before-launcher publish order stay.
+Pointers: .github/workflows/release.yml npm job; https://docs.npmjs.com/trusted-publishers (self-hosted runners unsupported; one publisher per package; requires npm >= 11.5.1 and node >= 22.14).
+
+Constraints: PROJECT LAW — workflow change: isolated commit, explicit call-out for Brandon's eyes-on diff review. Byte-identity stays: download release assets, never rebuild.
 
 ## History
 
