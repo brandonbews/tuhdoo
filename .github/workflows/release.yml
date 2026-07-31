@@ -68,15 +68,18 @@ jobs:
   # npm tier: republishes the exact released bytes as the esbuild-pattern
   # packages (tuhdoo launcher + @tuhdoo/<os>-<cpu> binaries). A separate
   # job so an npm failure never blocks the GitHub Release, and a re-run
-  # after fixing credentials touches only this job. Uses the runner's own
-  # node/npm — no third-party actions beyond the pinned checkout.
-  # Requires the NPM_TOKEN repo secret (publish rights on the tuhdoo
-  # package and the @tuhdoo scope); without it this job fails loudly.
+  # after a partial publish touches only this job. Uses the runner's own
+  # node — no third-party actions beyond the pinned checkout.
+  # Auth is OIDC trusted publishing: each of the five packages names this
+  # repo + workflow file as its trusted publisher on npmjs.com, and npm
+  # exchanges the job's identity token for a short-lived publish grant.
+  # No token secret exists anywhere; provenance attestations come free.
   npm:
     needs: release
     runs-on: ubuntu-latest
     permissions:
       contents: read # download the release assets; publishing goes to npm
+      id-token: write # mint the OIDC token npm exchanges for a publish grant
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -99,16 +102,15 @@ jobs:
 
       - name: Publish to npm
         # Platform packages first so the launcher's optionalDependencies
-        # resolve the moment it lands. The token reaches npm through the
-        # ${NODE_AUTH_TOKEN} reference in .npmrc — the literal string is
-        # written to disk, never the secret itself.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # resolve the moment it lands. Trusted publishing needs npm 11.5.1+
+        # (OIDC detection landed there); the runner's preinstalled npm is
+        # older, so upgrade it first — visible, no third-party action.
         run: |
           set -euo pipefail
+          sudo npm install -g npm@11
+          node --version && npm --version
           version="${GITHUB_REF_NAME#v}"
           node npm/prepare.js "$version" dist npm-out
-          echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$HOME/.npmrc"
           # Idempotent per package: a partial failure (token scope, network)
           # must be recoverable by re-running this job, so "this exact
           # version is already on the registry" is a skip, not an error.
