@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) | Escalation ergonomics: resolve answered-out-of-band, and the name itself | 2 | mcp, design, escalations |
 | [t-01KYRMFV10W1N28TCN5ZZ9Z2C1](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) | Retire full-replay-per-write and the grow-forever event overlay | 1 | go, performance |
 | [t-01KYRVCBE83KT62BAE11W3TAM8](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) | Release pipeline: tagged, cross-compiled binaries | 1 | distribution, ci |
 | [t-01KYTQTEQYGXVQ0QY7F95CHXVV](tasks/t-01KYTQTEQYGXVQ0QY7F95CHXVV.md) | Principal identity override: stop deriving ugly actors from noreply emails | 1 | daemon, identity, ux |
@@ -16,7 +15,9 @@
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) | Escalation ergonomics: resolve answered-out-of-band, and the name itself | 2 | `4099114+brandonbews` |
 
 ## Blocked / waiting
 

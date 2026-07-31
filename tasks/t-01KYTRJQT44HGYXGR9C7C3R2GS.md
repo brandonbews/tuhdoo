@@ -1,6 +1,6 @@
 # t-01KYTRJQT44HGYXGR9C7C3R2GS — Escalation ergonomics: resolve answered-out-of-band, and the name itself
 
-- Status: open — ready
+- Status: open — in progress, claimed by `4099114+brandonbews`
 - Priority: 2
 - Labels: `mcp`, `design`, `escalations`
 - Created: 2026-07-31 00:18 UTC by `4099114+brandonbews`
@@ -22,4 +22,6 @@ Constraints: boring Go; stored event bytes never rewritten (additive events only
 
 ## History
 
-_No activity yet._
+### 2026-07-31 00:59 UTC — note from `4099114+brandonbews`
+
+Design steered by Brandon and the T5 revision is landed + pushed (commit affb078, docs/design/002-technology.md + CLAUDE.md). Decisions: (1) new eleventh MCP verb `relay_answer` — rides the existing escalation.answered event, no new event type; (2) attribution via additive answered_by payload field, daemon-derived from the session principal's root (never agent-supplied); envelope actor stays the agent, replay marks "relayed by" when they differ, old events fall back to envelope actor; (3) guard rails: open escalations only on the agent surface, no claim required, any session may relay; (4) the name "escalation" stays everywhere — verb, events, docs; only the TUI inbox header softens to "Needs Input", deliberately not naming who answers (a future answerer may not be a human). Implementation not started yet. Remaining: catalog answered_by field + golden regen, replay handler + RelayedBy on core.Escalation, opRelayAnswer in ops.go (open-only guard, root derivation), MCP tool registration, escalationJSON relayed_by on both daemon and CLI sides, views relayed attribution (bump FormatVersion 1→2 — old generators would render relayed answers differently), CLI/TUI answered rendering, "Needs Input" header in top.go secs + render.go renderOpenEscalations, tests per mcp_cli_test style.
