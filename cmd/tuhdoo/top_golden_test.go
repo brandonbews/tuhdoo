@@ -15,7 +15,7 @@ import (
 // ansiColors is the real escape set, for tests that pin bar styling.
 var ansiColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
-	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m",
+	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
 }
@@ -29,8 +29,9 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
 		" NEEDS INPUT (1)                                                   enter answer ",
-		"▸ t-lic   !   Which license?",
-		"              blocking · brandon/a2 · 2026-07-29 14:03 UTC",
+		"▸ t-lic   !   choose a license",
+		"              question: Which license?",
+		"              brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
 		" READY (2)                                               p priority · c archive ",
 		"  t-pars  p5  write the parser  · in t-epic · 1 dep",
@@ -39,9 +40,8 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" IN PROGRESS (1)                                                                ",
 		"  t-flak      investigate the flake  ← brandon/a1",
 		"",
-		" BLOCKED (1)                                                                    ",
-		"  t-lic       choose a license",
-		"              waiting: needs input (above)",
+		" BLOCKED (0)                                                                    ",
+		"  none",
 		"",
 		" ON HOLD (1)                                                          c archive ",
 		"  t-park  p2  polish the docs",
@@ -78,7 +78,7 @@ func TestTopGoldenBars(t *testing.T) {
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + pad(" READY (2)", "p priority · c archive ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
-			"\x1b[30;41m" + pad(" BLOCKED (1)", "") + "\x1b[0m",
+			"\x1b[30;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
 			// The shelves (2026-07-31): reverse-dim bars, no section color
 			// — present but never claiming the eye.
 			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c archive ") + "\x1b[0m",
@@ -92,6 +92,11 @@ func TestTopGoldenBars(t *testing.T) {
 		// The blocking badge is red+bold in its own cell.
 		if !strings.Contains(v, "\x1b[31m\x1b[1m! \x1b[0m") {
 			t.Errorf("width %d: blocking badge not red+bold; view:\n%s", width, v)
+		}
+		// The question line's lead is foreground magenta — bgMagenta
+		// stays the bar style.
+		if !strings.Contains(v, "\x1b[35mquestion: \x1b[0m") {
+			t.Errorf("width %d: question lead not magenta; view:\n%s", width, v)
 		}
 		// Shelf rows are dim: id, badge, and title all under col.dim —
 		// unless the cursor lands there (bold wins; tested elsewhere).
@@ -161,29 +166,35 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	}
 }
 
-// Cursor-following windowing over chunks: two-line rows (escalations,
-// blocked) are atomic — they never split across the window edge.
+// Cursor-following windowing over chunks: multi-line rows (the 3-line
+// escalation row, blocked two-liners) are atomic — they never split
+// across the window edge.
 func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width = 80
-	// head(2) + foot(2) + 4 available body lines.
+	// head(2) + foot(2) + 4 available body lines: the NEEDS INPUT bar
+	// plus the 3-line escalation row exactly fill the window.
 	m.height = 8
-	for i := 0; i < 4; i++ {
-		m, _ = press(t, m, keyOf(tea.KeyDown))
-	}
 	v := m.View()
 	if !strings.Contains(v, "▸ t-lic ") {
 		t.Fatalf("cursor row not visible in window; view:\n%s", v)
 	}
-	if !strings.Contains(v, "waiting: needs input (above)") {
-		t.Errorf("blocked cursor row split: second line missing; view:\n%s", v)
-	}
-	// The escalation two-liner obeys the same rule wherever it appears:
-	// its first line present implies its second line present.
-	if strings.Contains(v, "Which license?\n") && !strings.Contains(v, "blocking · brandon/a2") {
-		if strings.Contains(v, "!   Which license?") {
-			t.Errorf("escalation row split across the window edge; view:\n%s", v)
+	for _, line := range []string{"question: Which license?", "brandon/a2 · 2026-07-29 14:03 UTC"} {
+		if !strings.Contains(v, line) {
+			t.Errorf("escalation row split: %q missing; view:\n%s", line, v)
 		}
+	}
+	// Walking to the bottom scrolls the escalation off whole: no
+	// orphaned question or meta line survives without its title line.
+	for i := 0; i < 5; i++ {
+		m, _ = press(t, m, keyOf(tea.KeyDown))
+	}
+	v = m.View()
+	if !strings.Contains(v, "▸ t-idea") {
+		t.Fatalf("cursor row not visible after scrolling; view:\n%s", v)
+	}
+	if strings.Contains(v, "question:") || strings.Contains(v, "choose a license") {
+		t.Errorf("escalation row partially visible after scrolling; view:\n%s", v)
 	}
 	// Window respects the height budget: head(2) + body(<=4) + foot(2).
 	if n := strings.Count(v, "\n"); n > 8 {

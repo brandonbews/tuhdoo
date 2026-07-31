@@ -102,12 +102,18 @@ func (s *snapshot) classify() buckets {
 // claimable mirrors core.State.Ready for an open, unclaimed task: every
 // dependency done and no open blocking escalation.
 func (s *snapshot) claimable(id string) bool {
+	return !s.hasUnmetDeps(id) && s.blockingEscalation(id) == nil
+}
+
+// hasUnmetDeps reports whether the task has any not-yet-done
+// dependency.
+func (s *snapshot) hasUnmetDeps(id string) bool {
 	for _, dep := range s.tasks[id].Task.DependsOn {
 		if st, ok := s.statusOf(dep); ok && st != "done" {
-			return false
+			return true
 		}
 	}
-	return s.blockingEscalation(id) == nil
+	return false
 }
 
 // statusOf looks a task's status up in the state listing. Linear scan:
@@ -146,16 +152,13 @@ func (s *snapshot) blockedReason(id string) string {
 }
 
 // blockedReasonTUI is the dashboard's blockedReason: dependency IDs
-// pass through disp (shortened and annotated for the screen), and the
-// escalation part names the Needs Input row above instead of repeating
-// its question — the same question rendering twice on one screen was
-// noise (steering feedback, 2026-07-30).
+// pass through disp (shortened and annotated for the screen), and only
+// unmet deps are named — never the escalation. On this screen the Needs
+// Input row is the single home for escalation blockage (grill cycle,
+// 2026-07-31), and a task blocked by escalation alone renders no
+// BLOCKED row at all (see buildRows).
 func (s *snapshot) blockedReasonTUI(id string, disp func(string) string) string {
-	parts := s.unmetDeps(id, disp)
-	if s.blockingEscalation(id) != nil {
-		parts = append(parts, "needs input (above)")
-	}
-	return strings.Join(parts, "; ")
+	return strings.Join(s.unmetDeps(id, disp), "; ")
 }
 
 // unmetDeps lists a task's not-yet-done dependencies as "depends on X"

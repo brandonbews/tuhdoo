@@ -145,6 +145,13 @@ func buildRows(s *snapshot) []topRow {
 		rows = append(rows, topRow{kind: rowTask, section: "inprogress", task: t})
 	}
 	for _, t := range b.blocked {
+		// A task whose only blocker is an open blocking escalation is
+		// represented by its Needs Input row alone (grill cycle,
+		// 2026-07-31); only unmet deps earn a BLOCKED row. The one-shot
+		// commands keep the full blocked bucket — their count may differ.
+		if !s.hasUnmetDeps(t.ID) {
+			continue
+		}
 		rows = append(rows, topRow{kind: rowTask, section: "blocked", task: t})
 	}
 	for _, t := range b.held {
@@ -950,20 +957,22 @@ func edgeText(s *snapshot, id string) string {
 // rowChunk renders one selectable row as an unsplittable chunk.
 func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 	if r.kind == rowEscalation {
+		// Task-shaped three-liner (grill cycle, 2026-07-31): title line
+		// like every other section, the question on its own line, dim
+		// meta. The red ! badge alone carries "blocking" — the word is
+		// gone.
 		e := r.esc
 		badge, style := "", ""
-		lead, leadStyle := "", ""
 		if e.Blocking {
 			badge, style = "!", col.red+col.bold
-			lead, leadStyle = "blocking", col.red
 		}
-		meta := fmt.Sprintf(" · %s · %s", e.Actor, stamp(e.RaisedAt))
-		if !e.Blocking {
-			meta = fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
-		}
+		et := s.tasks[e.Task].Task
+		suffix := labelSuffix(et.Labels) + edgeText(s, e.Task)
+		meta := fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
 		return chunk{
-			text: gridRow(col, cursor, false, shortID(e.Task), badge, style, e.Question, "", "", width) +
-				"\n" + secondLine(col, lead, leadStyle, meta, width),
+			text: gridRow(col, cursor, false, shortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
+				"\n" + secondLine(col, "question: ", col.magenta, e.Question, width) +
+				"\n" + secondLine(col, "", "", meta, width),
 			cursor: cursor,
 		}
 	}
