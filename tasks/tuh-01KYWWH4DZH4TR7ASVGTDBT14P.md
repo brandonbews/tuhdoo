@@ -1,15 +1,31 @@
-# tuh-01KYWWH4DZH4TR7ASVGTDBT14P — Do we still need the one-shot backlog/escalations commands?
+# tuh-01KYWWH4DZH4TR7ASVGTDBT14P — One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 
-- Status: inbox — untriaged capture
+- Status: open — ready
 - Priority: 0
 - Labels: `cli`, `design`
 - Created: 2026-07-31 20:05 UTC by `brandon/claude-code-1`
 
 ## Description
 
-Captured from the 2026-07-31 grill cycle: Brandon forgot these commands existed and is inclined to remove them. Counterpoint raised there: MCP get_backlog is deliberately claimable-only, so the one-shot `tuhdoo backlog` is currently the only complete read surface outside the TUI (piping, watch, pasting state into a conversation, laggy SSH); they also share snapshot/render code with the TUI, so deletion saves little. Decide deliberately — removal would touch docs and the agent protocol references.
+Context: Decided in the 2026-07-31 grill cycle. The original capture asked keep-or-kill on `tuhdoo backlog`/`tuhdoo escalations`; grilling dissolved that framing. The real complaint: run bare, these render a designed digest (sections, counts, waiting-prose) — a fossilized older cousin of the TUI, i.e. a second look at the same information that must be maintained and that every TUI grill has to rule on ("one-shot output untouched" clauses, twice on 2026-07-31 alone). Functionality stays; the second LOOK dies. The CLI surface already has a principled line documented in its help text: the work loop (claim/finish_run/release) is deliberately absent because leases are session-bound.
 
-Correction (2026-07-31 triage, code-verified): the "claimable-only" premise is stale — MCP get_backlog now returns ready + inbox + held (internal/daemon/mcp.go, get_backlog registration). It still omits in-progress/blocked/done, so the one-shot commands remain the only complete non-TUI read surface, but the argument is narrower than stated above. Related: the MCP-coverage audit task (tuh-01KYWVNF91Y7H9GK0X1RAE2SBW) probes that same read-surface gap; its findings feed this decision. This is a design decision (grill-cycle material, per docs conventions), not a build task — it stays in inbox until decided.
+The ask, two parts:
+
+1. Design-doc revision note (docs/design/002-technology.md near T5, or 001 if it fits the decision register better — follow the Cycle 2 in-place amendment pattern) stating the two-rule contract plus output contract:
+   - Rule 1 (steering parity): steering capabilities — read state, shape the backlog, create/update/answer — ship in both TUI and one-shot CLI form. A steering feature added to one without the other is a decision someone must make explicitly, not drift.
+   - Rule 2 (work loop is session-only): claim/finish_run/release are never one-shot commands; leases renew only while a live MCP session holds them (already in the help text — promote it to the design record).
+   - Output contract: one-shot output is serialization, not design — stable, plain, line-oriented; it changes when the data model changes, never because the TUI was redesigned. No future TUI design decision owes the one-shots a clause.
+2. Re-render `backlog` and `escalations` in that register: header row, aligned columns, one record per line, a STATE column instead of section headers (so `tuhdoo backlog | grep ready` works), no ANSI styling in the output at all (which also deletes the TTY-vs-pipe degradation surface for these commands). Everything shown today stays available — all states, priority, labels, blocked waiting-reasons (condensed to a column; dep IDs / escalation IDs rather than prose), escalation blocking flags, task/actor/timestamp attribution. Aim for the kubectl-get / git-branch -v register: readable to an eye, trivial for grep, zero opinions. `status` and `task <id>` are covered by the contract note but their output is out of scope here — reshape only if trivially cheap; otherwise leave for a follow-up capture.
+
+Acceptance:
+- The design revision note exists, in-place, following the established amendment pattern.
+- `tuhdoo backlog` and `tuhdoo escalations` emit the serialized form: golden tests replaced accordingly; identical bytes TTY vs piped; a grep for a state name selects exactly that state's rows.
+- No behavior change to the TUI, MCP surface, or internal/views (the committed markdown views are a different surface with their own contract).
+- CLI help text updated where it describes these commands; make test lint green from the repo root.
+
+Pointers: cmd/tuhdoo/commands.go, cmd/tuhdoo/snapshot.go (blockedReason — the prose reason-namer these columns condense), cmd/tuhdoo/render.go, cmd/tuhdoo/cli_test.go, main.go (help text), docs/design/002-technology.md (T5, Cycle 2 amendment pattern).
+
+Constraints: eleven MCP tools untouched (T5). internal/views untouched. Completeness is the non-negotiable: the serialized form must not show less than the digest did.
 
 ## History
 

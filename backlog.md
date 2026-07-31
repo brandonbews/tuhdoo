@@ -7,6 +7,7 @@
 | [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) | Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows) | 0 | cli, tui |
 | [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) | claim_task on an escalation-blocked task reports "unmet dependencies" | 0 | mcp, dx |
 | [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
+| [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
 | [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) | Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md | 0 | process, docs |
 
 ## In progress
@@ -36,7 +37,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — Do we still need the one-shot backlog/escalations commands?
 - [tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) — confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
 
 ## Done
