@@ -1,0 +1,35 @@
+[7m[1m tuhdoo · syncing with origin · fetched 2026-07-31 14:02 UTC  acting as brandon [0m
+
+[30;45m NEEDS INPUT (2)                                                       a answer [0m
+[1m▸ [0m[2mt-gsw5[0m  [31m[1m! [0m  [1mv0 definition-of-done check: did the dogfood week hold? Answer on…[0m
+              [31mblocking[0m[2m · brandon/migrator · 2026-07-30 04:28 UTC[0m
+  [2mt-cb1j[0m  [31m[1m! [0m  This task is human-paced — it needs you on a second machine runni…
+              [31mblocking[0m[2m · brandon/impl-2 · 2026-07-30 05:51 UTC[0m
+
+[30;42m READY (11)                                              p priority · c archive [0m
+  [2mt-vv29[0m  [2mp1[0m  npm devDependency distribution (esbuild-pattern wrapper packages)[2m[0m
+  [2mt-rqjm[0m  [2mp1[0m  Arm the TUI detail screen: selectable escalation, enter to answer…[2m[0m
+  [2mt-73kw[0m  [2mp1[0m  Needs Input: enter answers in place; blocked rows stop repeating …[2m[0m
+  [2mt-4gmz[0m  [2mp1[0m  TUI navigation: up/down arrows move the cursor; footer says so[2m[0m
+  [2mt-q5ev[0m  [2mp1[0m  Rename the cancel interaction: archive as the human verb, task.ca…[2m[0m
+  [2mt-v9vk[0m  [2mp1[0m  TUI mouse support: click selects, click again acts as enter[2m[0m
+  [2mt-qagh[0m  [2mp1[0m  Align MCP tool descriptions with the revised notes doctrine[2m[0m
+  [2mt-wrkm[0m  [2mp1[0m  Brand the task IDs: mint tuh-, accept both prefixes, age out t-[2m[0m
+  [2mt-p213[0m  [2mp1[0m  CLI write verbs: a paved path when no MCP session exists[2m[0m
+  [2mt-3a4d[0m  [33mp0[0m  Daemon portability: unix-only lock and the socket-path length lim…[2m[0m
+  [2mt-sy1p[0m  [33mp0[0m  Tree/parent-grouped rendering in the TUI list[2m  [cli, tui, design][0m
+
+[30;43m IN PROGRESS (0)                                                                [0m
+  [2mnone[0m
+
+[30;41m BLOCKED (4)                                                                    [0m
+  [2mt-gsw5[0m      v0 definition of done: the dogfood week holds[2m[0m
+              [31mwaiting: [0m[2mescalation: v0 definition-of-done check: did the dogfood…[0m
+  [2mt-qm7a[0m      v1 milestone: steering surface and a second machine[2m[0m
+              [31mwaiting: [0m[2mdepends on t-gsw5[0m
+  [2mt-cb1j[0m      Two-machine dogfood: real claim races over one remote[2m[0m
+              [31mwaiting: [0m[2mescalation: This task is human-paced — it needs you on a…[0m
+  [2mt-frth[0m      Epoch compaction (D9): snapshot event + in-commit deletion[2m[0m
+              [31mwaiting: [0m[2mdepends on t-qm7a[0m
+
+[7m[2m j/k move · enter open · a answer · p priority · c archive · q quit     11 done [0m

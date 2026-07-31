@@ -1,0 +1,35 @@
+ tuhdoo · syncing with origin · fetched 2026-07-31 14:02 UTC  acting as brandon 
+
+ NEEDS INPUT (2) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ a answer 
+▸ t-gsw5  !   v0 definition-of-done check: did the dogfood week hold? Answer on…
+              blocking · brandon/migrator · 2026-07-30 04:28 UTC
+  t-cb1j  !   This task is human-paced — it needs you on a second machine runni…
+              blocking · brandon/impl-2 · 2026-07-30 05:51 UTC
+
+ READY (11) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ p priority · c archive 
+  t-vv29  p1  npm devDependency distribution (esbuild-pattern wrapper packages)
+  t-rqjm  p1  Arm the TUI detail screen: selectable escalation, enter to answer…
+  t-73kw  p1  Needs Input: enter answers in place; blocked rows stop repeating …
+  t-4gmz  p1  TUI navigation: up/down arrows move the cursor; footer says so
+  t-q5ev  p1  Rename the cancel interaction: archive as the human verb, task.ca…
+  t-v9vk  p1  TUI mouse support: click selects, click again acts as enter
+  t-qagh  p1  Align MCP tool descriptions with the revised notes doctrine
+  t-wrkm  p1  Brand the task IDs: mint tuh-, accept both prefixes, age out t-
+  t-p213  p1  CLI write verbs: a paved path when no MCP session exists
+  t-3a4d  p0  Daemon portability: unix-only lock and the socket-path length lim…
+  t-sy1p  p0  Tree/parent-grouped rendering in the TUI list  [cli, tui, design]
+
+ IN PROGRESS (0) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 
+  none
+
+ BLOCKED (4) ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 
+  t-gsw5      v0 definition of done: the dogfood week holds
+              waiting: escalation: v0 definition-of-done check: did the dogfood…
+  t-qm7a      v1 milestone: steering surface and a second machine
+              waiting: depends on t-gsw5
+  t-cb1j      Two-machine dogfood: real claim races over one remote
+              waiting: escalation: This task is human-paced — it needs you on a…
+  t-frth      Epoch compaction (D9): snapshot event + in-commit deletion
+              waiting: depends on t-qm7a
+
+ j/k move · enter open · a answer · p priority · c archive · q quit ░░░ 11 done 

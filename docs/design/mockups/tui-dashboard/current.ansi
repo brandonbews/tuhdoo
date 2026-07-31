@@ -1,0 +1,20 @@
+[1mtuhdoo[0m · sync: syncing with "origin" · last fetch 2026-07-31 14:02 UTC · acting as [1mbrandon[0m
+
+[32m11 ready[0m · [33m0 in progress[0m · [31m4 blocked[0m · 11 done · 0 cancelled · 2 escalations
+
+[1mNeeds Input[0m (2)
+  [1mv0 definition-of-done check: did the dogfood week hold? Answer on or after …[0m[31m  [blocking][0m
+      task t-gsw5 (…title…) · asked by brandon/migrator · raised 2026-07-30 04:28 UTC
+
+  [1mThis task is human-paced — it needs you on a second machine running fleets …[0m[31m  [blocking][0m
+      task t-cb1j (…title…) · asked by brandon/impl-2 · raised 2026-07-30 05:51 UTC
+
+[1m[32mReady[0m (11)
+  [2mt-vv29[0m  p1  npm devDependency distribution (esbuild-pattern wrapper pac…  [distribution, npm]
+
+  [2mt-rqjm[0m  p1  Arm the TUI detail screen: selectable escalation, enter to …  [cli, tui]
+
+  [2mt-73kw[0m  p1  Needs Input: enter answers in place; blocked rows stop repe…  [cli, tui, ux]
+
+  [2mt-4gmz[0m  p1  TUI navigation: up/down arrows move the cursor; footer says…  [cli, tui, ux]
+[2m  …[0m

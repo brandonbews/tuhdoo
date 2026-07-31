@@ -1,0 +1,20 @@
+tuhdoo · sync: syncing with "origin" · last fetch 2026-07-31 14:02 UTC · acting as brandon
+
+11 ready · 0 in progress · 4 blocked · 11 done · 0 cancelled · 2 escalations
+
+Needs Input (2)
+  v0 definition-of-done check: did the dogfood week hold? Answer on or after …  [blocking]
+      task t-gsw5 (…title…) · asked by brandon/migrator · raised 2026-07-30 04:28 UTC
+
+  This task is human-paced — it needs you on a second machine running fleets …  [blocking]
+      task t-cb1j (…title…) · asked by brandon/impl-2 · raised 2026-07-30 05:51 UTC
+
+Ready (11)
+  t-vv29  p1  npm devDependency distribution (esbuild-pattern wrapper pac…  [distribution, npm]
+
+  t-rqjm  p1  Arm the TUI detail screen: selectable escalation, enter to …  [cli, tui]
+
+  t-73kw  p1  Needs Input: enter answers in place; blocked rows stop repe…  [cli, tui, ux]
+
+  t-4gmz  p1  TUI navigation: up/down arrows move the cursor; footer says…  [cli, tui, ux]
+  …
