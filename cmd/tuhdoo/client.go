@@ -77,6 +77,12 @@ func (c *client) get(path string, dst any) error {
 // (X-Tuhdoo-Actor, D7). Non-200 responses surface the daemon's error
 // message.
 func (c *client) write(method, path, actor string, body any) error {
+	return c.writeResp(method, path, actor, body, nil)
+}
+
+// writeResp is write, additionally decoding the 200 response body into
+// dst when dst is non-nil.
+func (c *client) writeResp(method, path, actor string, body, dst any) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -105,7 +111,10 @@ func (c *client) write(method, path, actor string, body any) error {
 		}
 		return fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
 	}
-	return nil
+	if dst == nil {
+		return nil
+	}
+	return json.Unmarshal(respBody, dst)
 }
 
 // ensureDaemon returns a client for the repo's daemon, spawning one

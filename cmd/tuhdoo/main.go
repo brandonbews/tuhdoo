@@ -46,6 +46,12 @@ func run(args []string) int {
 		return runTask(args[1])
 	case "escalations":
 		return runEscalations()
+	case "create":
+		return runCreate(args[1:])
+	case "update":
+		return runUpdate(args[1:])
+	case "answer":
+		return runAnswer(args[1:])
 	case "watch":
 		fmt.Fprintln(os.Stderr, "tuhdoo: watch is now a mode of the TUI; run: tuhdoo --watch")
 		return 1
@@ -80,6 +86,12 @@ the life of the pane — the dashboard that sits beside a working agent.
   backlog       ready / in-progress / blocked work, from live daemon state
   task <id>     one task fully hydrated, with its chronological history
   escalations   questions raised by agents, awaiting a human answer
+  create <t>    add a task: --desc <text|-> --priority <n> --labels a,b
+                --parents <ids> --depends-on <ids> (- reads stdin)
+  update <id>   change fields: --title --desc --priority --status
+                --labels --parents --depends-on (lists replace in full)
+  answer <id>   answer an open escalation by its ID or its task's ID;
+                the rest of the line is the answer text
   mcp           stdio MCP shim for agent harnesses. The principal is
                 auto-derived: git user.email local part + a session
                 name minted by the daemon; --as <p> overrides in full
@@ -87,5 +99,11 @@ the life of the pane — the dashboard that sits beside a working agent.
   daemon        run the per-repo daemon in the foreground
   help          print this help
   version       print the version
+
+The write commands act as you, like the TUI: --as wins, else the
+tuhdoo.principal git config, else the user.email local part. The work
+loop (claim, finish_run, release) is deliberately not here: leases
+renew only while a live MCP session holds them, and a claim taken by a
+one-shot command would just lapse. Agents work through: tuhdoo mcp
 `)
 }
