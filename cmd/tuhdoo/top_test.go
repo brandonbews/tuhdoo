@@ -1310,6 +1310,240 @@ func TestTopListWrapsAndScrolls(t *testing.T) {
 	}
 }
 
+// ---- mouse (task t-…HJEV9VK): click selects, click again acts as enter ----
+
+// clickAt is a left-button press at screen position (x, y).
+func clickAt(x, y int) tea.MouseMsg {
+	return tea.MouseMsg{X: x, Y: y, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress}
+}
+
+func wheelMsg(b tea.MouseButton) tea.MouseMsg {
+	return tea.MouseMsg{Button: b, Action: tea.MouseActionPress}
+}
+
+// mouseTo feeds mouse messages through Update.
+func mouseTo(t *testing.T, m topModel, msgs ...tea.MouseMsg) (topModel, tea.Cmd) {
+	t.Helper()
+	var cmd tea.Cmd
+	for _, msg := range msgs {
+		var mm tea.Model
+		mm, cmd = m.Update(msg)
+		m = mm.(topModel)
+	}
+	return m, cmd
+}
+
+// screenLineOf finds the 0-based screen row of the first rendered line
+// containing sub — clicks in these tests aim at what is actually drawn,
+// never at hand-counted coordinates.
+func screenLineOf(t *testing.T, m topModel, sub string) int {
+	t.Helper()
+	for i, l := range strings.Split(m.View(), "\n") {
+		if strings.Contains(l, sub) {
+			return i
+		}
+	}
+	t.Fatalf("no rendered line contains %q; view:\n%s", sub, m.View())
+	return -1
+}
+
+// A single click moves the cursor to the row under the pointer, across
+// the variable-height layout: one-line ready rows, two-line escalation
+// and blocked rows (either line hits), and chrome (bars, blanks, the
+// header, the footer) hitting nothing.
+func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	tests := []struct {
+		name, aim string
+		want      int // cursor after the click; -1 = unchanged
+	}{
+		{"one-line ready row", "sweep the floor", 2},
+		{"in-progress row", "investigate the flake", 3},
+		{"blocked row first line", "choose a license", 4},
+		{"blocked row second line", "waiting: needs input (above)", 4},
+		{"escalation second line", "blocking · brandon/a2", 0},
+		{"section bar", "READY (2)", -1},
+		{"header bar", "acting as brandon", -1},
+		{"footer bar", "1 done", -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := m
+			m.cursor = 1 // t-pars: nothing under test starts selected
+			m, cmd := mouseTo(t, m, clickAt(0, screenLineOf(t, m, tt.aim)))
+			want := tt.want
+			if want == -1 {
+				want = 1
+			}
+			if m.cursor != want || m.mode != modeNav || cmd != nil {
+				t.Errorf("click on %s: cursor %d mode %d cmd %v, want cursor %d modeNav nil",
+					tt.name, m.cursor, m.mode, cmd, want)
+			}
+		})
+	}
+	// A click past the rendered frame hits nothing.
+	m.cursor = 1
+	if m, _ := mouseTo(t, m, clickAt(0, 39)); m.cursor != 1 || m.mode != modeNav {
+		t.Errorf("click below the list: cursor %d mode %d, want 1 modeNav", m.cursor, m.mode)
+	}
+}
+
+// Click on the already-selected row acts as enter — and a double-click
+// is exactly that: press one selects, press two finds it selected. On
+// an armed escalation row that means answering; on a task row, detail.
+func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	// Double-click a task row: first press selects, second opens detail.
+	y := screenLineOf(t, m, "write the parser")
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.cursor != 1 || m.mode != modeNav {
+		t.Fatalf("first click: cursor %d mode %d, want 1 modeNav", m.cursor, m.mode)
+	}
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || m.detailID != "t-pars" {
+		t.Fatalf("second click: mode %d detail %q, want modeDetail t-pars", m.mode, m.detailID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Click the escalation row (cursor starts there after esc restores
+	// nav on row 1 — walk back first).
+	m, _ = press(t, m, keyOf(tea.KeyUp))
+	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "Which license?")))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E1" {
+		t.Fatalf("click on selected escalation row: mode %d target %q, want modeAnswer 01E1",
+			m.mode, m.target.esc.ID)
+	}
+}
+
+// Hit-testing replays the cursor-following window: with the list taller
+// than the terminal and the view scrolled to the bottom, clicks land on
+// the rows actually drawn at those screen lines, not the unscrolled
+// layout.
+func TestTopClickHitsScrolledRows(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
+	m = mm.(topModel)
+	for i := 0; i < 4; i++ {
+		m, _ = press(t, m, keyOf(tea.KeyDown)) // to t-lic; top scrolls off
+	}
+	if v := m.View(); strings.Contains(v, "Which license?") {
+		t.Fatalf("test needs the top scrolled off; view:\n%s", v)
+	}
+	// The blocked row's second line, at its scrolled screen position,
+	// still resolves to the selected row — so the click acts as enter.
+	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "waiting: needs input (above)")))
+	if m2.mode != modeDetail || m2.detailID != "t-lic" {
+		t.Errorf("click on scrolled selected row: mode %d detail %q, want modeDetail t-lic",
+			m2.mode, m2.detailID)
+	}
+	// The BLOCKED bar above it stays chrome.
+	m3, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "BLOCKED (1)")))
+	if m3.mode != modeNav || m3.cursor != 4 {
+		t.Errorf("click on scrolled bar: mode %d cursor %d, want modeNav 4", m3.mode, m3.cursor)
+	}
+}
+
+// Watch mode: a click may select and (on the selected row) open the
+// read-only detail — exactly enter's watch behavior — but never any
+// input mode, escalation rows included.
+func TestWatchModeClickNeverOpensInput(t *testing.T) {
+	m := newWatchModel()
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	y := screenLineOf(t, m, "Which license?")
+	m, cmd := mouseTo(t, m, clickAt(0, y)) // cursor starts on the escalation row
+	if m.mode != modeDetail || m.detailID != "t-lic" || cmd != nil {
+		t.Fatalf("click on selected escalation in watch mode: mode %d detail %q cmd %v, want read-only detail of t-lic",
+			m.mode, m.detailID, cmd)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Clicking every rendered line, twice each, never yields an input mode.
+	for y := 0; y < 40; y++ {
+		m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
+		if m.mode == modeAnswer || m.mode == modePriority || m.mode == modeConfirmArchive {
+			t.Fatalf("double-click at line %d in watch mode opened input mode %d", y, m.mode)
+		}
+		m, _ = press(t, m, keyOf(tea.KeyEsc)) // step back out of any detail
+	}
+}
+
+// The wheel scrolls: in the list it moves the cursor (the window
+// follows it), in the detail it moves the line window; both clamp.
+func TestTopWheelScrolls(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelUp))
+	if m.cursor != 0 {
+		t.Errorf("wheel up at top moved cursor to %d", m.cursor)
+	}
+	for i := 0; i < 10; i++ {
+		m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelDown))
+	}
+	if want := len(m.rows) - 1; m.cursor != want {
+		t.Errorf("wheel down past bottom left cursor at %d, want %d", m.cursor, want)
+	}
+	m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelUp))
+	if want := len(m.rows) - 2; m.cursor != want {
+		t.Errorf("wheel up moved cursor to %d, want %d", m.cursor, want)
+	}
+	// Detail: the wheel drives the same clamped line window as j/k.
+	m = openDetail(t, newTopModel(newFakeSteering()), "t-flak")
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 8})
+	m = mm.(topModel)
+	if m.detailMaxScroll() == 0 {
+		t.Fatal("detail fits in 8 rows; test needs scrollable content")
+	}
+	m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelDown))
+	if m.detailScroll != 1 {
+		t.Errorf("wheel down scrolled detail to %d, want 1", m.detailScroll)
+	}
+	for i := 0; i < 100; i++ {
+		m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelDown))
+	}
+	if want := m.detailMaxScroll(); m.detailScroll != want {
+		t.Errorf("wheel past the end: scroll %d, want clamp at %d", m.detailScroll, want)
+	}
+	for i := 0; i < 100; i++ {
+		m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelUp))
+	}
+	if m.detailScroll != 0 {
+		t.Errorf("wheel past the top: scroll %d, want 0", m.detailScroll)
+	}
+}
+
+// Input modes ignore the mouse: a stray click never disturbs a pending
+// answer or moves the cursor out from under it.
+func TestTopClickIgnoredDuringInput(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // answer the escalation
+	m, _ = press(t, m, runes("Use MIT.")...)
+	m, cmd := mouseTo(t, m,
+		clickAt(0, 10), clickAt(0, 10), wheelMsg(tea.MouseButtonWheelDown))
+	if m.mode != modeAnswer || m.input != "Use MIT." || m.cursor != 0 || cmd != nil {
+		t.Errorf("mouse during input: mode %d input %q cursor %d cmd %v, want untouched modeAnswer",
+			m.mode, m.input, m.cursor, cmd)
+	}
+}
+
+// Clicks before the first snapshot, or while the daemon is unreachable,
+// hit nothing and never panic.
+func TestTopClickBeforeSnapshotIsInert(t *testing.T) {
+	m := topModel{actor: "brandon", armed: true}
+	if m, _ := mouseTo(t, m, clickAt(0, 3)); m.mode != modeNav || m.cursor != 0 {
+		t.Errorf("click with no snapshot: mode %d cursor %d", m.mode, m.cursor)
+	}
+	m.err = errors.New("dial unix: no such file")
+	m.snap = topSnapshot()
+	m.rows = buildRows(m.snap)
+	if m, _ := mouseTo(t, m, clickAt(0, 3)); m.mode != modeNav || m.cursor != 0 {
+		t.Errorf("click while unreachable: mode %d cursor %d", m.mode, m.cursor)
+	}
+}
+
 // The detail body wraps to the width before the scroll window slices
 // it, so narrow terminals scroll real screen lines.
 func TestTopDetailWrapsToWidth(t *testing.T) {

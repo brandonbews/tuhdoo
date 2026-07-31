@@ -196,6 +196,8 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateDetail(msg)
 		}
 		return m.updateInput(msg)
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		return m, nil
@@ -249,21 +251,7 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		if r, ok := m.selected(); ok {
-			// Enter acts on what the row is for: a Needs Input row goes
-			// straight into answering (dogfood steering, 2026-07-30 — the
-			// old `a` key is gone, one documented behavior per action);
-			// task rows open their biography. A disarmed pane never opens
-			// input: watch mode falls through to the read-only detail of
-			// the escalation's task.
-			if m.armed && r.kind == rowEscalation {
-				m.mode, m.back, m.target, m.input, m.status = modeAnswer, modeNav, r, "", ""
-				return m, nil
-			}
-			id := r.task.ID
-			if r.kind == rowEscalation {
-				id = r.esc.Task
-			}
-			m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
+			return m.openRow(r)
 		}
 	case "p":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
@@ -275,6 +263,99 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// openRow is what enter — and a click on the already-selected row —
+// does. It acts on what the row is for: a Needs Input row goes straight
+// into answering (dogfood steering, 2026-07-30 — the old `a` key is
+// gone, one documented behavior per action); task rows open their
+// biography. A disarmed pane never opens input: watch mode falls
+// through to the read-only detail of the escalation's task.
+func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
+	if m.armed && r.kind == rowEscalation {
+		m.mode, m.back, m.target, m.input, m.status = modeAnswer, modeNav, r, "", ""
+		return m, nil
+	}
+	id := r.task.ID
+	if r.kind == rowEscalation {
+		id = r.esc.Task
+	}
+	m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
+	return m, nil
+}
+
+// updateMouse (dogfood steering, 2026-07-31): a single click moves the
+// cursor to the row under the pointer; a click on the already-selected
+// row acts as enter — which is also exactly what a double-click is: the
+// first press selects, the second finds the row selected. The wheel
+// falls out for free: the list scrolls by moving the cursor (windowing
+// follows it), the detail scrolls its line window. Input modes ignore
+// the mouse entirely, so a stray click never disturbs a pending answer
+// or confirm. Watch mode normally never sees a MouseMsg — tracking is
+// armed-only (see runTUI) — but if one arrives anyway, openRow keeps
+// the read-only contract: a disarmed pane opens detail, never input.
+func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	wheelUp := msg.Button == tea.MouseButtonWheelUp
+	wheelDown := msg.Button == tea.MouseButtonWheelDown
+	click := msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress
+	switch m.mode {
+	case modeNav:
+		switch {
+		case wheelUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case wheelDown:
+			if m.cursor < len(m.rows)-1 {
+				m.cursor++
+			}
+		case click:
+			if i := m.rowAt(msg.Y); i >= 0 && i < len(m.rows) {
+				if i == m.cursor {
+					return m.openRow(m.rows[i])
+				}
+				m.cursor = i
+			}
+		}
+	case modeDetail:
+		switch {
+		case wheelUp:
+			if m.detailScroll > 0 {
+				m.detailScroll--
+			}
+		case wheelDown:
+			if m.detailScroll < m.detailMaxScroll() {
+				m.detailScroll++
+			}
+		}
+	}
+	return m, nil
+}
+
+// rowAt maps a terminal row (0-based, from the top of the screen) to
+// the m.rows index rendered there, or -1 for chrome (header, bars,
+// blanks, footer) and misses. It replays the exact layout View draws —
+// the same header, the same chunks, the same cursor-following window —
+// so variable-height rows and scroll offsets can never drift from what
+// is on screen: the hit map IS the layout, not a re-derivation of it.
+func (m topModel) rowAt(y int) int {
+	if m.snap == nil || m.err != nil {
+		return -1
+	}
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	line := strings.Count(m.listHead(width), "\n")
+	footLines := strings.Count("\n"+m.footerView(width), "\n")
+	for _, c := range visibleChunks(m.listChunks(width), m.height, line, footLines) {
+		n := c.lines()
+		if y >= line && y < line+n {
+			return c.row
+		}
+		line += n
+	}
+	return -1
 }
 
 func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -636,6 +717,26 @@ func (m topModel) View() string {
 	if width <= 0 {
 		width = 80 // no WindowSizeMsg yet: the mockup's design width
 	}
+	head := m.listHead(width)
+	if m.err != nil {
+		return head + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
+			col.red, col.reset, m.err, col.dim, col.reset), m.width)
+	}
+	if m.snap == nil {
+		return head + "loading...\n"
+	}
+	foot := "\n" + m.footerView(width)
+	body := joinChunks(visibleChunks(m.listChunks(width), m.height,
+		strings.Count(head, "\n"), strings.Count(foot, "\n")))
+	return head + body + foot
+}
+
+// listHead renders the list screen's header block (header bar, optional
+// status line, blank separator). One function feeds both View and the
+// mouse hit test, so the body's first screen row is counted off the
+// same bytes that get drawn.
+func (m topModel) listHead(width int) string {
+	col := m.col
 	sync := "..."
 	if m.snap != nil {
 		sync = syncLine(m.snap.state.Sync)
@@ -648,18 +749,7 @@ func (m topModel) View() string {
 	if m.status != "" {
 		head += m.status + "\n"
 	}
-	head += "\n"
-	if m.err != nil {
-		return head + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
-			col.red, col.reset, m.err, col.dim, col.reset), m.width)
-	}
-	if m.snap == nil {
-		return head + "loading...\n"
-	}
-	foot := "\n" + m.footerView(width)
-	body := windowChunks(m.listChunks(width), m.height,
-		strings.Count(head, "\n"), strings.Count(foot, "\n"))
-	return head + body + foot
+	return head + "\n"
 }
 
 // ---- the list screen (mock-a, 2026-07-31): bars and one column grid ----
@@ -695,10 +785,14 @@ var topSections = []topSection{
 }
 
 // chunk is one atomic display unit — a bar, a one- or two-line row, a
-// blank — that windowing never splits across the screen edge.
+// blank — that windowing never splits across the screen edge. row is
+// the m.rows index a row chunk renders (-1 for chrome): it is stamped
+// in the same pass that renders the row, which is what lets rowAt map
+// a clicked line back to its row without re-deriving the layout.
 type chunk struct {
 	text   string // lines joined by \n, no trailing newline
 	cursor bool
+	row    int // index into m.rows, or -1 for bars, blanks, placeholders
 }
 
 func (c chunk) lines() int { return strings.Count(c.text, "\n") + 1 }
@@ -818,9 +912,9 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 			meta = fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
 		}
 		return chunk{
-			gridRow(col, cursor, shortID(e.Task), badge, style, e.Question, "", "", width) +
+			text: gridRow(col, cursor, shortID(e.Task), badge, style, e.Question, "", "", width) +
 				"\n" + secondLine(col, lead, leadStyle, meta, width),
-			cursor,
+			cursor: cursor,
 		}
 	}
 	t := r.task
@@ -831,16 +925,16 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 		if t.Priority == 0 {
 			badgeStyle = col.yellow
 		}
-		return chunk{gridRow(col, cursor, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
-			badgeStyle, t.Title, suffix, col.dim, width), cursor}
+		return chunk{text: gridRow(col, cursor, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+			badgeStyle, t.Title, suffix, col.dim, width), cursor: cursor}
 	case "inprogress":
-		return chunk{gridRow(col, cursor, shortID(t.ID), "", "",
-			t.Title, "  ← "+t.Holder, col.yellow, width), cursor}
+		return chunk{text: gridRow(col, cursor, shortID(t.ID), "", "",
+			t.Title, "  ← "+t.Holder, col.yellow, width), cursor: cursor}
 	default: // blocked
 		return chunk{
-			gridRow(col, cursor, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
+			text: gridRow(col, cursor, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
 				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width),
-			cursor,
+			cursor: cursor,
 		}
 	}
 }
@@ -852,11 +946,11 @@ func (m topModel) listChunks(width int) []chunk {
 	var out []chunk
 	if s.state.Degraded != "" {
 		deg := wrapTo(fmt.Sprintf("%sDEGRADED (read-only):%s %s", col.red, col.reset, s.state.Degraded), width)
-		out = append(out, chunk{text: strings.TrimRight(deg, "\n")}, chunk{})
+		out = append(out, chunk{text: strings.TrimRight(deg, "\n"), row: -1}, chunk{row: -1})
 	}
 	for si, sec := range topSections {
 		if si > 0 {
-			out = append(out, chunk{}) // blank line between sections
+			out = append(out, chunk{row: -1}) // blank line between sections
 		}
 		var idx []int
 		for i, r := range m.rows {
@@ -869,31 +963,26 @@ func (m topModel) listChunks(width int) []chunk {
 			right = sec.hint + " "
 		}
 		out = append(out, chunk{text: barLine(col, sec.bg(col),
-			fmt.Sprintf(" %s (%d)", sec.label, len(idx)), right, width)})
+			fmt.Sprintf(" %s (%d)", sec.label, len(idx)), right, width), row: -1})
 		if len(idx) == 0 {
-			out = append(out, chunk{text: "  " + sgr(col, col.dim, "none")})
+			out = append(out, chunk{text: "  " + sgr(col, col.dim, "none"), row: -1})
 			continue
 		}
 		for _, i := range idx {
-			out = append(out, rowChunk(col, s, m.rows[i], i == m.cursor, width))
+			c := rowChunk(col, s, m.rows[i], i == m.cursor, width)
+			c.row = i
+			out = append(out, c)
 		}
 	}
 	return out
 }
 
-// windowChunks slides a window over the chunks so the cursor's chunk is
-// fully on screen (pinned toward the bottom edge once the list outgrows
-// the terminal); chunks never split across the window edge. Unknown
-// height renders everything.
-func windowChunks(chunks []chunk, height, headLines, footLines int) string {
-	join := func(cs []chunk) string {
-		var b strings.Builder
-		for _, c := range cs {
-			b.WriteString(c.text)
-			b.WriteString("\n")
-		}
-		return b.String()
-	}
+// visibleChunks slides a window over the chunks so the cursor's chunk
+// is fully on screen (pinned toward the bottom edge once the list
+// outgrows the terminal); chunks never split across the window edge.
+// Unknown height shows everything. Returning chunks — not the joined
+// string — is what lets View and rowAt consume the identical window.
+func visibleChunks(chunks []chunk, height, headLines, footLines int) []chunk {
 	total, cursorIdx := 0, 0
 	for i, c := range chunks {
 		total += c.lines()
@@ -902,14 +991,14 @@ func windowChunks(chunks []chunk, height, headLines, footLines int) string {
 		}
 	}
 	if height <= 0 {
-		return join(chunks)
+		return chunks
 	}
 	avail := height - headLines - footLines
 	if avail < 1 {
 		avail = 1
 	}
 	if total <= avail {
-		return join(chunks)
+		return chunks
 	}
 	linesThrough := func(from, to int) int {
 		n := 0
@@ -932,7 +1021,18 @@ func windowChunks(chunks []chunk, height, headLines, footLines int) string {
 		out = append(out, chunks[i])
 		used += n
 	}
-	return join(out)
+	return out
+}
+
+// joinChunks renders a chunk window to screen bytes, one trailing
+// newline per chunk line.
+func joinChunks(cs []chunk) string {
+	var b strings.Builder
+	for _, c := range cs {
+		b.WriteString(c.text)
+		b.WriteString("\n")
+	}
+	return b.String()
 }
 
 // shortID abbreviates a task ID for TUI display: the type prefix plus
@@ -1060,7 +1160,18 @@ func runTUI(args []string) int {
 	if m.armed {
 		m.api = httpSteering{c: c, actor: m.actor}
 	}
-	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
+	// Mouse tracking is armed-only (T7, 2026-07-31): tracking captures
+	// the pointer, so terminal-native text selection needs shift-click
+	// while it is on — a real cost over SSH/tmux. The watch pane — the
+	// one left open to read and copy from — never enables it, keeping
+	// plain click-drag selection there; the model still guards clicks it
+	// would never see (updateMouse via openRow: select and read-only
+	// detail only, never input).
+	opts := []tea.ProgramOption{tea.WithAltScreen()}
+	if m.armed {
+		opts = append(opts, tea.WithMouseCellMotion())
+	}
+	if _, err := tea.NewProgram(m, opts...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo:", err)
 		return 1
 	}
