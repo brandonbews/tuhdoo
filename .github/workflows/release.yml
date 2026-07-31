@@ -110,6 +110,6 @@ jobs:
           node npm/prepare.js "$version" dist npm-out
           echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$HOME/.npmrc"
           for p in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
-            npm publish "npm-out/$p" --access public
+            npm publish "./npm-out/$p" --access public
           done
-          npm publish npm-out/tuhdoo --access public
+          npm publish ./npm-out/tuhdoo --access public
