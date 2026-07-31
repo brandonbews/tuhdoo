@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // ansiColors is the real escape set, for tests that pin bar styling.
@@ -29,9 +30,9 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
 		" NEEDS INPUT (1)                                                   enter answer ",
-		"▸ t-lic   !   choose a license",
-		"              question: Which license?",
-		"              brandon/a2 · 2026-07-29 14:03 UTC",
+		"▌ t-lic   !   choose a license",
+		"▌             question: Which license?",
+		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
 		" READY (2)                                               p priority · c archive ",
 		"  t-pars  p5  write the parser  · in t-epic · 1 dep",
@@ -98,15 +99,60 @@ func TestTopGoldenBars(t *testing.T) {
 		if !strings.Contains(v, "\x1b[35mquestion: \x1b[0m") {
 			t.Errorf("width %d: question lead not magenta; view:\n%s", width, v)
 		}
-		// Shelf rows are dim: id, badge, and title all under col.dim —
-		// unless the cursor lands there (bold wins; tested elsewhere).
+		// Shelf rows keep dim id and badge, but titles are bold in every
+		// section (2026-07-31) — the shelves recede less, accepted.
 		for _, row := range []string{
-			"\x1b[2mt-park\x1b[0m  \x1b[2mp2\x1b[0m  \x1b[2mpolish the docs\x1b[0m",
-			"\x1b[2mt-idea\x1b[0m      \x1b[2midea: dark mode\x1b[0m",
+			"\x1b[2mt-park\x1b[0m  \x1b[2mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+			"\x1b[2mt-idea\x1b[0m      \x1b[1midea: dark mode\x1b[0m",
+			"\x1b[2mt-pars\x1b[0m  \x1b[2mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
 		} {
 			if !strings.Contains(v, row) {
-				t.Errorf("width %d: shelf row not dim %q; view:\n%q", width, row, v)
+				t.Errorf("width %d: row styling wrong %q; view:\n%q", width, row, v)
 			}
+		}
+	}
+}
+
+// The selection bar (2026-07-31): every line of the selected chunk
+// opens with the bg code and the ▌ gutter, the bg re-applies after
+// each internal reset, and each line pads to the full width — one
+// continuous bar. Unselected rows carry neither bg nor gutter.
+func TestTopGoldenSelectionBar(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.col = ansiColors
+	m.col.selBG = "\x1b[48;5;236m"
+	m.width, m.height = 80, 40
+	v := m.View()
+	var sel, rest []string
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, "▌") {
+			sel = append(sel, l)
+		} else {
+			rest = append(rest, l)
+		}
+	}
+	if len(sel) != 3 {
+		t.Fatalf("selected escalation chunk has %d gutter lines, want 3; view:\n%q", len(sel), v)
+	}
+	for _, l := range sel {
+		if !strings.HasPrefix(l, "\x1b[48;5;236m▌ ") {
+			t.Errorf("selected line does not open with bg+gutter: %q", l)
+		}
+		if !strings.HasSuffix(l, "\x1b[0m") {
+			t.Errorf("selected line does not close with a reset: %q", l)
+		}
+		if w := ansi.StringWidth(l); w != 80 {
+			t.Errorf("selected line is %d cells, want the full 80: %q", w, l)
+		}
+	}
+	// The title line carries styled spans, so the bar must re-apply its
+	// bg after every internal reset or it drops out mid-line.
+	if !strings.Contains(sel[0], "\x1b[0m\x1b[48;5;236m") {
+		t.Errorf("bg not re-applied after an internal reset: %q", sel[0])
+	}
+	for _, l := range rest {
+		if strings.Contains(l, "48;5;236") {
+			t.Errorf("selection bg leaked onto an unselected line: %q", l)
 		}
 	}
 }
@@ -176,7 +222,7 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 	// plus the 3-line escalation row exactly fill the window.
 	m.height = 8
 	v := m.View()
-	if !strings.Contains(v, "▸ t-lic ") {
+	if !strings.Contains(v, "▌ t-lic ") {
 		t.Fatalf("cursor row not visible in window; view:\n%s", v)
 	}
 	for _, line := range []string{"question: Which license?", "brandon/a2 · 2026-07-29 14:03 UTC"} {
@@ -190,7 +236,7 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 		m, _ = press(t, m, keyOf(tea.KeyDown))
 	}
 	v = m.View()
-	if !strings.Contains(v, "▸ t-idea") {
+	if !strings.Contains(v, "▌ t-idea") {
 		t.Fatalf("cursor row not visible after scrolling; view:\n%s", v)
 	}
 	if strings.Contains(v, "question:") || strings.Contains(v, "choose a license") {

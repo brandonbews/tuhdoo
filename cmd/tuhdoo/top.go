@@ -902,22 +902,17 @@ func fitTitle(title, suffix string, width int) (string, string) {
 
 // gridRow renders one line on the shared column grid. suffix renders in
 // suffixStyle (dim for labels and edges, yellow for holders) and is
-// sacrificed for the title when the line is tight. dim rows (the held
-// and inbox shelves) dim the title too — except under the cursor, where
-// bold wins: a selection you cannot read is no selection.
-func gridRow(col colors, cursor, dim bool, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
-	mark, markStyle, titleStyle := "  ", "", ""
-	if dim {
-		titleStyle = col.dim
-	}
-	if cursor {
-		mark, markStyle, titleStyle = "▸ ", col.bold, col.bold
-	}
+// sacrificed for the title when the line is tight. Titles are bold in
+// every section (visual hierarchy, 2026-07-31) — shelf rows keep their
+// dim id, badge, and suffix but the title reads full-strength, an
+// accepted consequence. Selection is no longer per-line styling: the
+// chunk-level bar (selectedText) carries it.
+func gridRow(col colors, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
 	title, suffix = fitTitle(oneLine(title), suffix, width-gridTitleCol)
-	return sgr(col, markStyle, mark) +
+	return "  " +
 		sgr(col, col.dim, padTo(id, gridIDW)) + "  " +
 		sgr(col, badgeStyle, padTo(badge, gridBadgeW)) + "  " +
-		sgr(col, titleStyle, title) + sgr(col, suffixStyle, suffix)
+		sgr(col, col.bold, title) + sgr(col, suffixStyle, suffix)
 }
 
 // secondLine renders a row's indented second line: an optional colored
@@ -954,8 +949,11 @@ func edgeText(s *snapshot, id string) string {
 	return "  · " + strings.Join(parts, " · ")
 }
 
-// rowChunk renders one selectable row as an unsplittable chunk.
+// rowChunk renders one selectable row as an unsplittable chunk; the
+// selected chunk is re-rendered as the full-height bar in one place,
+// after its section shape is built.
 func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
+	var text string
 	if r.kind == rowEscalation {
 		// Task-shaped three-liner (grill cycle, 2026-07-31): title line
 		// like every other section, the question on its own line, dim
@@ -969,42 +967,39 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 		et := s.tasks[e.Task].Task
 		suffix := labelSuffix(et.Labels) + edgeText(s, e.Task)
 		meta := fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
-		return chunk{
-			text: gridRow(col, cursor, false, shortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "question: ", col.magenta, e.Question, width) +
-				"\n" + secondLine(col, "", "", meta, width),
-			cursor: cursor,
+		text = gridRow(col, shortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
+			"\n" + secondLine(col, "question: ", col.magenta, e.Question, width) +
+			"\n" + secondLine(col, "", "", meta, width)
+	} else {
+		t := r.task
+		suffix := labelSuffix(t.Labels) + edgeText(s, t.ID)
+		switch r.section {
+		case "ready":
+			badgeStyle := col.dim
+			if t.Priority == 0 {
+				badgeStyle = col.yellow
+			}
+			text = gridRow(col, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+				badgeStyle, t.Title, suffix, col.dim, width)
+		case "inprogress":
+			text = gridRow(col, shortID(t.ID), "", "", t.Title, "  ← "+t.Holder, col.yellow, width)
+		case "held":
+			// Priority is stored but inert while held (it bites again at
+			// resume), so the badge renders — dim, like the rest of the row.
+			text = gridRow(col, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+				col.dim, t.Title, suffix, col.dim, width)
+		case "inbox":
+			// No priority badge: an untriaged capture has no meaningful one.
+			text = gridRow(col, shortID(t.ID), "", "", t.Title, suffix, col.dim, width)
+		default: // blocked
+			text = gridRow(col, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
+				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width)
 		}
 	}
-	t := r.task
-	suffix := labelSuffix(t.Labels) + edgeText(s, t.ID)
-	switch r.section {
-	case "ready":
-		badgeStyle := col.dim
-		if t.Priority == 0 {
-			badgeStyle = col.yellow
-		}
-		return chunk{text: gridRow(col, cursor, false, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
-			badgeStyle, t.Title, suffix, col.dim, width), cursor: cursor}
-	case "inprogress":
-		return chunk{text: gridRow(col, cursor, false, shortID(t.ID), "", "",
-			t.Title, "  ← "+t.Holder, col.yellow, width), cursor: cursor}
-	case "held":
-		// Priority is stored but inert while held (it bites again at
-		// resume), so the badge renders — dim, like the row.
-		return chunk{text: gridRow(col, cursor, true, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
-			col.dim, t.Title, suffix, col.dim, width), cursor: cursor}
-	case "inbox":
-		// No priority badge: an untriaged capture has no meaningful one.
-		return chunk{text: gridRow(col, cursor, true, shortID(t.ID), "", "",
-			t.Title, suffix, col.dim, width), cursor: cursor}
-	default: // blocked
-		return chunk{
-			text: gridRow(col, cursor, false, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width),
-			cursor: cursor,
-		}
+	if cursor {
+		text = selectedText(col, text, width)
 	}
+	return chunk{text: text, cursor: cursor}
 }
 
 // listChunks builds the section bars and rows. The old summary-counts
@@ -1218,6 +1213,14 @@ func runTUI(args []string) int {
 		return 1
 	}
 	m := topModel{armed: !watch, col: newColors(os.Stdout)}
+	if m.col.reset != "" {
+		// Colored TTY: resolve the selection-bar tint down the
+		// capability ladder (selection.go), querying the terminal once —
+		// before bubbletea owns stdin. NO_COLOR never reaches here: the
+		// ▌ glyph alone marks selection there.
+		ans, dark := queryTermBG(os.Stdout)
+		m.col.selBG = selectionBG(ans, os.Getenv("TERM"), os.Getenv("COLORTERM"), dark)
+	}
 	if m.armed {
 		actor, err := topActor(as)
 		if err != nil {

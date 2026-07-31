@@ -13,11 +13,16 @@ import (
 // colors holds ANSI escape codes, or all-empty strings for plain
 // output. Color is on only when out is a terminal and NO_COLOR is unset
 // (https://no-color.org). 16-color ANSI only — user themes must
-// survive. The bg* codes are black-on-color section bars (TUI only);
-// their zero values degrade bars to plain text with the same geometry.
+// survive. (Revised 2026-07-31: selBG, the TUI selection-bar
+// background, is the one sanctioned exception — the capability ladder
+// in selection.go may hand it a truecolor or 256-color code; every
+// other code stays 16-color.) The bg* codes are black-on-color section
+// bars (TUI only); their zero values degrade bars to plain text with
+// the same geometry.
 type colors struct {
 	reset, bold, dim, rev, green, yellow, red, magenta string
 	bgMagenta, bgGreen, bgYellow, bgRed                string
+	selBG                                              string // selection bar; set by runTUI only, never by newColors
 }
 
 // isTTY reports whether f is a character device (a real terminal).

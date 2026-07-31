@@ -206,7 +206,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"READY (2)", "write the parser", "sweep the floor",
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (0)",
-		"▸ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
+		"▌ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
 		"↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
@@ -255,7 +255,7 @@ func TestTopNavigationMovesAndClamps(t *testing.T) {
 		t.Errorf("k moved cursor to %d, want %d", m.cursor, want)
 	}
 	// len-2 is the held row: the shelves are ordinary cursor stops.
-	if v := m.View(); !strings.Contains(v, "▸ t-park") {
+	if v := m.View(); !strings.Contains(v, "▌ t-park") {
 		t.Errorf("cursor marker not on t-park; view:\n%s", v)
 	}
 }
@@ -1394,7 +1394,7 @@ func TestTopListWrapsAndScrolls(t *testing.T) {
 	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 12 {
 		t.Errorf("frame taller than terminal: %d > 12 lines; view:\n%s", n, v)
 	}
-	if !strings.Contains(v, "▸") {
+	if !strings.Contains(v, "▌") {
 		t.Errorf("cursor row not visible at top; view:\n%s", v)
 	}
 	// Walk to the last row: the window must follow the cursor there.
@@ -1402,7 +1402,7 @@ func TestTopListWrapsAndScrolls(t *testing.T) {
 		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	}
 	v = m.View()
-	if !strings.Contains(v, "▸") || !strings.Contains(v, "idea: dark mode") {
+	if !strings.Contains(v, "▌") || !strings.Contains(v, "idea: dark mode") {
 		t.Errorf("cursor row (inbox t-idea) not visible after scrolling; view:\n%s", v)
 	}
 	if strings.Contains(v, "question:") {
