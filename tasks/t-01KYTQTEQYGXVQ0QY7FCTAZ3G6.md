@@ -1,6 +1,6 @@
 # t-01KYTQTEQYGXVQ0QY7FCTAZ3G6 — Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
 
-- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
+- Status: done
 - Priority: 1
 - Labels: `docs`, `protocol`
 - Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`
@@ -20,4 +20,9 @@ Constraints: keep the doc's voice (terse, imperative); do not renumber or rewrit
 
 ## History
 
-_No activity yet._
+### 2026-07-31 05:30 UTC — run by `4099114+brandonbews/claude-code-2` — done
+
+- Branch: `main`
+- Commits: `ee80980`
+
+docs/agent-protocol.md revised in place with a dated (2026-07-30) revision note in the Status line covering all three points. (1) New section "Anti-pattern: dangling pointers": monitored ledger entries (task descriptions, run summaries, escalation Q&A, release reasons) must be self-contained or point only at durable repo state; references to "this session", chat context, scratchpads, or uncommitted paths are banned; the real Cycle-4 "full plan in the session that created this task" incident is the cautionary tale. (2) New "Human live in your session?" paragraph in the escalation section: ask directly instead of escalate/release, but claim discipline and a self-contained finish_run still apply — the ledger, not the transcript, is what the human monitors. (3) Loop step 4 reframed: continuity is carried by the typed transition events (claim/finish_run/release_claim/escalate/synthesized interrupted run) whose payloads are already mandatory; add_note is optional garnish, zero-note runs are normal. Matching small revision note taken in 002 T5's "ledger is agent memory" bullet, deferring doctrine to the protocol doc. No code changed. Follow-up worth a task: five code strings still carry the old "letters to the next agent/incarnation" framing — internal/daemon/mcp.go lines ~30, ~344, ~439, ~505-507 and internal/event/catalog.go ~134 — they are the live tool descriptions agents actually read, so they now lag the doc.
