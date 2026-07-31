@@ -4,15 +4,14 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) | TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles | 0 | cli, tui |
 | [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) | claim_task on an escalation-blocked task reports "unmet dependencies" | 0 | mcp, dx |
 | [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
 | [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) | Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows) | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Blocked / waiting
 
@@ -22,7 +21,6 @@
 | [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | depends on [t-01KYRMFV10W1N28TCN5NWAGSW5](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) |
 | [t-01KYRMFV10W1N28TCN5WVTCB1J](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine dogfood: real claim races over one remote | 2 | escalation: This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation? |
 | [t-01KYRMFV10W1N28TCN62F6FRTH](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [tuh-01KYWJRW0DD4CYGH29EZ151DCT](tasks/tuh-01KYWJRW0DD4CYGH29EZ151DCT.md) | TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles | 0 | depends on [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) |
 
 ## On hold
 
@@ -67,6 +65,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [t-01KYVJ5NABEKX72KNE006MBBMC](tasks/t-01KYVJ5NABEKX72KNE006MBBMC.md) — Inbox and held: capture without scoping pressure, pause without pretending
 - [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) — finish_run accepts a claimless finish: opFinishRun never checks holdership
 - [t-01KYVMD4PS9NMQVP1K5M1PVRD8](tasks/t-01KYVMD4PS9NMQVP1K5M1PVRD8.md) — Shim died once: 'stdio session: invalid trailing data at the end of stream'
+- [tuh-01KYWJWCK26X34J7TGSNVK83BN](tasks/tuh-01KYWJWCK26X34J7TGSNVK83BN.md) — Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows)
 - [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [tuh-01KYX6CMQV1G6XDZGNAF2M5C5P](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) — Slash command /drain-backlog: the reusable drain-the-backlog prompt

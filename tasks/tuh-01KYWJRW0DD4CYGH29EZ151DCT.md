@@ -1,9 +1,9 @@
 # tuh-01KYWJRW0DD4CYGH29EZ151DCT — TUI selection highlight and visual hierarchy: full-height gutter bar, adaptive tint, bold titles
 
-- Status: open — blocked on dependencies
+- Status: open — ready
 - Priority: 0
 - Labels: `cli`, `tui`
-- Depends on: [tuh-01KYWJWCK26X34J7TGSNVK83BN](tuh-01KYWJWCK26X34J7TGSNVK83BN.md) (open)
+- Depends on: [tuh-01KYWJWCK26X34J7TGSNVK83BN](tuh-01KYWJWCK26X34J7TGSNVK83BN.md) (done)
 - Created: 2026-07-31 17:15 UTC by `brandon`
 
 ## Description

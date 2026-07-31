@@ -1,6 +1,6 @@
 # tuh-01KYWJWCK26X34J7TGSNVK83BN — Needs Input is the single home for escalation-blocked tasks (task-shaped 3-line rows)
 
-- Status: open — in progress, claimed by `brandon/claude-code-1`
+- Status: done
 - Priority: 0
 - Labels: `cli`, `tui`
 - Created: 2026-07-31 17:17 UTC by `brandon`
@@ -29,4 +29,10 @@ Constraints: one-shot commands and internal/views untouched; 16-color ANSI only;
 
 ## History
 
-_No activity yet._
+### 2026-07-31 23:11 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-83bn/needs-input-single-home`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/3>
+- Commits: `20dd313`
+
+Merged (squash) to main via PR #3. NEEDS INPUT rows are now task-shaped three-liners (title line with red ! badge when blocking, magenta question: line via new colors.magenta, dim actor·stamp meta); buildRows drops BLOCKED rows for escalation-only-blocked tasks and blockedReasonTUI names only unmet deps — "needs input (above)" and the word "blocking" are gone. One-shot output untouched. All four acceptance bullets covered by golden/TUI tests (TestTopGoldenPlain80, TestTopBlockedRowNamesOnlyUnmetDeps, TestTopNonBlockingEscalationRow, existing answer/cursor flows); make test lint green. Noted consequence, accepted in the PR body: an unclaimed escalation-only-blocked task has no task row in the armed list, so its detail is reachable there only via watch mode or other rows.
