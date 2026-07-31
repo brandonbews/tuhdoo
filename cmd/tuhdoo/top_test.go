@@ -569,7 +569,8 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		"↑/↓ (j/k) scroll · esc back · q quit",
+		// Armed with no open escalation: p/c advertised, no enter.
+		"↑/↓ (j/k) scroll · p priority · c archive · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -925,6 +926,342 @@ func TestResolveTaskID(t *testing.T) {
 				t.Errorf("resolveTaskID(%q) = %q, want %q", tt.frag, got, tt.want)
 			}
 		})
+	}
+}
+
+// ---- the armed detail screen steers the viewed task (task t-…63RQJM) ----
+
+// openDetail walks the cursor to a task's row and opens its detail.
+func openDetail(t *testing.T, m topModel, id string) topModel {
+	t.Helper()
+	m = moveTo(t, m, id)
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != id {
+		t.Fatalf("enter did not open detail of %s: mode %d detail %q", id, m.mode, m.detailID)
+	}
+	return m
+}
+
+// Armed detail of a task with an open escalation: the escalation is the
+// focused item, enter answers it in place — same API call and refresh
+// as answering from the list — and the flow returns to the detail.
+func TestTopDetailAnswerFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-lic")
+	v := m.View()
+	if !strings.Contains(v, "▸ unanswered — enter to answer") {
+		t.Fatalf("open escalation not rendered as the focused item; view:\n%s", v)
+	}
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter answer · p priority · c archive · esc back · q quit") {
+		t.Errorf("armed detail footer wrong; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer {
+		t.Fatalf("enter on the focused escalation: mode %d, want modeAnswer", m.mode)
+	}
+	// Answering targets the escalation belonging to the viewed task, and
+	// the detail stays on screen with the standard prompt as its footer.
+	if m.target.esc.ID != "01E1" {
+		t.Fatalf("answer targets %q, want 01E1 (the viewed task's escalation)", m.target.esc.ID)
+	}
+	v = m.View()
+	for _, want := range []string{
+		"t-lic — choose a license", // still the detail frame
+		"Which license?", "enter submits · esc cancels",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("detail answer prompt missing %q; view:\n%s", want, v)
+		}
+	}
+	m, cmd := press(t, m, append(runes("Use MIT."), keyOf(tea.KeyEnter))...)
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Errorf("submit did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.answers["01E1"]; got != "Use MIT." {
+		t.Errorf("answered with %q, want %q", got, "Use MIT.")
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if v := m.View(); !strings.Contains(v, "answered") {
+		t.Errorf("detail view does not surface the action status; view:\n%s", v)
+	}
+
+	// The refresh that lands the answer removes the focusable item:
+	// marker gone, enter dead, footer back to scroll/p/c.
+	fresh := topSnapshot()
+	h := fresh.tasks["t-lic"]
+	e := h.Escalations[0]
+	e.Answered, e.Answer, e.AnsweredBy = true, "Use MIT.", "brandon"
+	h.Escalations = []escalationJSON{e}
+	fresh.tasks["t-lic"] = h
+	fresh.state.OpenEscalations = nil
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	v = m.View()
+	if strings.Contains(v, "▸ unanswered") {
+		t.Errorf("answered escalation still renders focused; view:\n%s", v)
+	}
+	if !strings.Contains(v, "↑/↓ (j/k) scroll · p priority · c archive · esc back · q quit") {
+		t.Errorf("footer still advertises enter answer; view:\n%s", v)
+	}
+	m, cmd = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || cmd != nil {
+		t.Errorf("enter with nothing focusable: mode %d cmd %v, want modeDetail nil", m.mode, cmd)
+	}
+}
+
+// esc from an input mode opened in detail returns to that detail, not
+// the list; esc again reaches the list.
+func TestTopDetailInputEscReturnsToDetail(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-lic")
+	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEsc))
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Fatalf("esc from detail answer: mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
+	}
+	if len(fake.answers) != 0 {
+		t.Errorf("esc still answered: %v", fake.answers)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav {
+		t.Errorf("esc from detail: mode %d, want modeNav", m.mode)
+	}
+	// Back on the list, input modes return to the list again.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}) // cursor still on t-lic's task row
+	if m.mode != modePriority {
+		t.Fatalf("p on the blocked task row: mode %d, want modePriority", m.mode)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav {
+		t.Errorf("esc from a list-opened prompt: mode %d, want modeNav", m.mode)
+	}
+}
+
+// p in an armed detail reprioritizes the viewed task with the same
+// prompt as the list, returning to the detail after submit.
+func TestTopDetailPriorityFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-lic")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	if m.mode != modePriority {
+		t.Fatalf("p in detail: mode %d, want modePriority", m.mode)
+	}
+	if v := m.View(); !strings.Contains(v, "priority t-lic (choose a license)") {
+		t.Errorf("priority prompt does not name the viewed task; view:\n%s", v)
+	}
+	m, cmd := press(t, m, append(runes("4"), keyOf(tea.KeyEnter))...)
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Errorf("submit did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.priorities["t-lic"]; got != 4 {
+		t.Errorf("priority set to %d on the viewed task, want 4", got)
+	}
+}
+
+// c in an armed detail archives the viewed task behind the same y/n
+// confirm as the list; the detail survives the archive, showing the
+// task's new archived status once the refresh lands.
+func TestTopDetailArchiveFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-lic")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if m.mode != modeConfirmArchive {
+		t.Fatalf("c in detail: mode %d, want modeConfirmArchive", m.mode)
+	}
+	if v := m.View(); !strings.Contains(v, "archive t-lic (choose a license)? y/n") {
+		t.Errorf("confirm prompt does not name the viewed task; view:\n%s", v)
+	}
+	// n backs out to the detail without a call.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	if m.mode != modeDetail || len(fake.archived) != 0 {
+		t.Fatalf("n did not back out to detail: mode %d archived %v", m.mode, fake.archived)
+	}
+	// y confirms.
+	m, cmd := press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	if cmd == nil {
+		t.Fatal("confirm produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if len(fake.archived) != 1 || fake.archived[0] != "t-lic" {
+		t.Errorf("archived %v, want [t-lic]", fake.archived)
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if m.mode != modeDetail {
+		t.Fatalf("archive knocked the model out of detail: mode %d", m.mode)
+	}
+	if v := m.View(); !strings.Contains(v, "archived t-lic") {
+		t.Errorf("archive status not surfaced in detail; view:\n%s", v)
+	}
+	// The refresh lands the archive: the task stays viewable — history
+	// stays on the ledger — with the human-facing status word.
+	fresh := topSnapshot()
+	for i := range fresh.state.Tasks {
+		if fresh.state.Tasks[i].ID == "t-lic" {
+			fresh.state.Tasks[i].Status = "cancelled"
+		}
+	}
+	h := fresh.tasks["t-lic"]
+	h.Task.Status = "cancelled"
+	fresh.tasks["t-lic"] = h
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Fatalf("refresh after archive left mode %d detail %q", m.mode, m.detailID)
+	}
+	if v := m.View(); !strings.Contains(v, "status      archived") {
+		t.Errorf("archived task's detail missing its new status; view:\n%s", v)
+	}
+}
+
+// multiEscSnapshot seeds one task with two open escalations and a long
+// description, for the focus-vs-scroll rule.
+func multiEscSnapshot() *snapshot {
+	raised := time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)
+	e1 := escalationJSON{ID: "01E1", Task: "t-two", Actor: "brandon/a1",
+		Question: "First question?", Blocking: true, RaisedAt: raised}
+	e2 := escalationJSON{ID: "01E2", Task: "t-two", Actor: "brandon/a1",
+		Question: "Second question?", RaisedAt: raised}
+	return &snapshot{
+		state: stateResp{
+			Tasks:           []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open"}},
+			OpenEscalations: []escalationJSON{e1, e2},
+		},
+		tasks: map[string]hydratedTask{
+			"t-two": {
+				Task: taskJSON{ID: "t-two", Title: "twice escalated",
+					Description: strings.Repeat("A line of description.\n", 20)},
+				Escalations: []escalationJSON{e1, e2},
+			},
+		},
+	}
+}
+
+// The focus/scroll rule: j/k move focus when a further open escalation
+// exists in that direction — scrolling just enough to reveal it — and
+// scroll one line otherwise.
+func TestTopDetailFocusMovesAmongEscalations(t *testing.T) {
+	s := multiEscSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
+	m = mm.(topModel)
+	m = openDetail(t, m, "t-two")
+	if m.detailFocus != 0 {
+		t.Fatalf("focus starts at %d, want 0", m.detailFocus)
+	}
+	if n := strings.Count(strings.Join(m.detailBody(), "\n"), "▸ unanswered"); n != 1 {
+		t.Fatalf("want exactly one focused marker, got %d", n)
+	}
+	inWindow := func(m topModel) bool {
+		l := m.detailFocusLine()
+		return l >= m.detailScroll && l < m.detailScroll+m.detailWindow()
+	}
+	// j moves focus to the second escalation and reveals it.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m.detailFocus != 1 {
+		t.Fatalf("j moved focus to %d, want 1", m.detailFocus)
+	}
+	if !inWindow(m) {
+		t.Errorf("focused marker not revealed: line %d scroll %d window %d",
+			m.detailFocusLine(), m.detailScroll, m.detailWindow())
+	}
+	// enter answers the focused (second) escalation.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
+		t.Fatalf("enter on second focus: mode %d target %q, want modeAnswer 01E2", m.mode, m.target.esc.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeDetail || m.detailFocus != 1 {
+		t.Fatalf("esc lost the detail focus: mode %d focus %d", m.mode, m.detailFocus)
+	}
+	// k moves focus back up; k again (no item further up) scrolls a line.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if m.detailFocus != 0 {
+		t.Fatalf("k moved focus to %d, want 0", m.detailFocus)
+	}
+	if !inWindow(m) {
+		t.Errorf("first marker not revealed after k: line %d scroll %d", m.detailFocusLine(), m.detailScroll)
+	}
+	before := m.detailScroll
+	if before == 0 {
+		t.Fatal("test needs a scrolled-down window to exercise the k fallback")
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if m.detailFocus != 0 || m.detailScroll != before-1 {
+		t.Errorf("k at first focus: focus %d scroll %d, want 0 %d (line-scroll fallback)",
+			m.detailFocus, m.detailScroll, before-1)
+	}
+}
+
+// detailFocusIdx clamps like detailScroll: content shrinking under a
+// refresh pulls the focus back onto a real item, or to none at all.
+func TestDetailFocusIdx(t *testing.T) {
+	tests := []struct{ focus, n, want int }{
+		{0, 0, -1}, // nothing focusable
+		{3, 0, -1},
+		{0, 2, 0},
+		{1, 2, 1},
+		{5, 2, 1}, // shrunk under refresh: clamp to the last
+	}
+	for _, tt := range tests {
+		if got := detailFocusIdx(tt.focus, tt.n); got != tt.want {
+			t.Errorf("detailFocusIdx(%d, %d) = %d, want %d", tt.focus, tt.n, got, tt.want)
+		}
+	}
+}
+
+// Watch mode's detail is fully disarmed: no focusable affordances, no
+// input — enter, p, and c are dead; j/k only scroll; the footer stays
+// read-only.
+func TestWatchModeDetailFullyDisarmed(t *testing.T) {
+	m := newWatchModel()
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // escalation row → read-only detail of t-lic
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Fatalf("mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
+	}
+	v := m.View()
+	if strings.Contains(v, "▸ unanswered") {
+		t.Errorf("watch detail renders a focusable item; view:\n%s", v)
+	}
+	if !strings.Contains(v, "    unanswered") {
+		t.Errorf("open escalation missing from watch detail history; view:\n%s", v)
+	}
+	if !strings.Contains(v, "↑/↓ (j/k) scroll · esc back · q quit") {
+		t.Errorf("watch detail footer not read-only; view:\n%s", v)
+	}
+	for _, reject := range []string{"enter answer", "p priority", "c archive"} {
+		if strings.Contains(v, reject) {
+			t.Errorf("watch detail advertises %q; view:\n%s", reject, v)
+		}
+	}
+	for _, k := range []tea.KeyMsg{
+		keyOf(tea.KeyEnter),
+		{Type: tea.KeyRunes, Runes: []rune{'p'}},
+		{Type: tea.KeyRunes, Runes: []rune{'c'}},
+		{Type: tea.KeyRunes, Runes: []rune{'a'}}, // the removed key stays removed here too
+	} {
+		mm, cmd := press(t, m, k)
+		if mm.mode != modeDetail || cmd != nil {
+			t.Errorf("%q in watch detail: mode %d cmd %v, want modeDetail nil", k.String(), mm.mode, cmd)
+		}
 	}
 }
 
