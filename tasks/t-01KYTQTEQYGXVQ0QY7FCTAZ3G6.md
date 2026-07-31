@@ -1,6 +1,6 @@
 # t-01KYTQTEQYGXVQ0QY7FCTAZ3G6 — Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
 
-- Status: open — ready
+- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
 - Priority: 1
 - Labels: `docs`, `protocol`
 - Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`

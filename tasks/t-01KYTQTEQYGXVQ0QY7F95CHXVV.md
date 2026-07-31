@@ -1,6 +1,6 @@
 # t-01KYTQTEQYGXVQ0QY7F95CHXVV — Principal identity override: stop deriving ugly actors from noreply emails
 
-- Status: open — ready
+- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
 - Priority: 1
 - Labels: `daemon`, `identity`, `ux`
 - Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`
