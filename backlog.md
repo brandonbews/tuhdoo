@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [t-01KYVEXK2BX040KJ244S2WP213](tasks/t-01KYVEXK2BX040KJ244S2WP213.md) | CLI write verbs: a paved path when no MCP session exists | 1 | cli, dx |
 | [t-01KYVJ2607S5S390CVYSF3PVG4](tasks/t-01KYVJ2607S5S390CVYSF3PVG4.md) | TUI dashboard visual redesign: section bars + fixed column grid (mock-a) | 1 | cli, tui, design |
 | [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) | finish_run accepts a claimless finish: opFinishRun never checks holdership | 1 | daemon, protocol, bug |
 | [t-01KYRMFV10W1N28TCN62RR3A4D](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | go, platform, parked |
@@ -46,6 +45,7 @@ _None._
 - [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) — Short IDs are the human contract: display everywhere, accept as input, annotate edges
 - [t-01KYVD31CNTR1EVCDHPG0G4GMZ](tasks/t-01KYVD31CNTR1EVCDHPG0G4GMZ.md) — TUI navigation: up/down arrows move the cursor; footer says so
 - [t-01KYVD31CNTR1EVCDHPJGSQAGH](tasks/t-01KYVD31CNTR1EVCDHPJGSQAGH.md) — Align MCP tool descriptions with the revised notes doctrine
+- [t-01KYVEXK2BX040KJ244S2WP213](tasks/t-01KYVEXK2BX040KJ244S2WP213.md) — CLI write verbs: a paved path when no MCP session exists
 
 ## Cancelled
 

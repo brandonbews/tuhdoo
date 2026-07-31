@@ -1,6 +1,6 @@
 # t-01KYVEXK2BX040KJ244S2WP213 — CLI write verbs: a paved path when no MCP session exists
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `dx`
 - Created: 2026-07-31 06:48 UTC by `brandon/claude-code-4`
@@ -17,4 +17,8 @@ Constraints: the daemon stays the sole writer (D2) — the CLI talks HTTP to it,
 
 ## History
 
-_No activity yet._
+### 2026-07-31 08:36 UTC — run by `brandon/claude-fable` — done
+
+- Commits: `65200ff`
+
+Commit 65200ff on main. tuhdoo create/update/answer land as one-shot CLI verbs over the daemon HTTP API (client gains writeResp; no daemon changes — all endpoints existed). Actor rules mirror TUI steer mode by reusing topActor: --as wins, tuhdoo.principal override honored, root human principal enforced. create: --desc text or - for stdin, --priority, --labels, --parents/--depends-on with short-ID resolution. update: partial by construction (only set flags are sent), plus --status; field-less update errors. answer: resolves by escalation ID or its task ID (what tuhdoo escalations prints); ambiguity lists candidates; the rest of the line is the answer. Claim lifecycle deliberately excluded per the task's offered option — help text owns the decision (leases are session-bound; a one-shot claim would lapse interrupted); T7 note added in 002-technology.md. Tests: write_cli_test.go — three integration tests through the real binary and daemon covering every verb, stdin desc, full-replacement labels, status curation, daemon validation surfacing, ambiguity, principal override, help contract. make test lint green.
