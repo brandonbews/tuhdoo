@@ -116,10 +116,14 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	m = refreshTop(t, m)
 
 	// ---- answer the blocking escalation from the TUI ----
+	// Enter on the Needs Input row is the answer key.
 	if r, ok := m.selected(); !ok || r.kind != rowEscalation {
 		t.Fatalf("first row is not the escalation: %+v", m.rows)
 	}
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer {
+		t.Fatalf("enter on the escalation row: mode %d, want modeAnswer", m.mode)
+	}
 	m, cmd := press(t, m, append(runes("MIT."), keyOf(tea.KeyEnter))...)
 	m = act(t, m, cmd)
 

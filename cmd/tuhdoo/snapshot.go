@@ -126,25 +126,40 @@ func (s *snapshot) blockingEscalation(taskID string) *escalationJSON {
 }
 
 // blockedReason names why a blocked task cannot be claimed: each unmet
-// dependency, and/or an open blocking escalation.
+// dependency, and/or an open blocking escalation. One-shot copy: full
+// dependency IDs, and the escalation carries its question verbatim —
+// one-shot output stands alone, with no Needs Input row to point at.
 func (s *snapshot) blockedReason(id string) string {
-	return s.blockedReasonDisp(id, func(dep string) string { return dep })
+	parts := s.unmetDeps(id, func(dep string) string { return dep })
+	if e := s.blockingEscalation(id); e != nil {
+		parts = append(parts, "escalation: "+oneLine(e.Question))
+	}
+	return strings.Join(parts, "; ")
 }
 
-// blockedReasonDisp is blockedReason with dependency IDs passed
-// through disp: the TUI shortens them for display, the one-shot
-// commands print them full.
-func (s *snapshot) blockedReasonDisp(id string, disp func(string) string) string {
+// blockedReasonTUI is the dashboard's blockedReason: dependency IDs
+// pass through disp (shortened and annotated for the screen), and the
+// escalation part names the Needs Input row above instead of repeating
+// its question — the same question rendering twice on one screen was
+// noise (steering feedback, 2026-07-30).
+func (s *snapshot) blockedReasonTUI(id string, disp func(string) string) string {
+	parts := s.unmetDeps(id, disp)
+	if s.blockingEscalation(id) != nil {
+		parts = append(parts, "needs input (above)")
+	}
+	return strings.Join(parts, "; ")
+}
+
+// unmetDeps lists a task's not-yet-done dependencies as "depends on X"
+// parts, IDs rendered through disp.
+func (s *snapshot) unmetDeps(id string, disp func(string) string) []string {
 	var parts []string
 	for _, dep := range s.tasks[id].Task.DependsOn {
 		if st, ok := s.statusOf(dep); ok && st != "done" {
 			parts = append(parts, "depends on "+disp(dep))
 		}
 	}
-	if e := s.blockingEscalation(id); e != nil {
-		parts = append(parts, "escalation: "+oneLine(e.Question))
-	}
-	return strings.Join(parts, "; ")
+	return parts
 }
 
 // taskRef renders one task reference for TUI display: the short form,

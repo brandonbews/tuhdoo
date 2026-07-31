@@ -28,7 +28,7 @@ func TestTopGoldenPlain80(t *testing.T) {
 	want := strings.Join([]string{
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
-		" NEEDS INPUT (1)                                                       a answer ",
+		" NEEDS INPUT (1)                                                   enter answer ",
 		"▸ t-lic   !   Which license?",
 		"              blocking · brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
@@ -41,9 +41,9 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"",
 		" BLOCKED (1)                                                                    ",
 		"  t-lic       choose a license",
-		"              waiting: escalation: Which license?",
+		"              waiting: needs input (above)",
 		"",
-		" ↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit 1 done",
+		" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit    1 done ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -69,11 +69,11 @@ func TestTopGoldenBars(t *testing.T) {
 		}
 		for _, bar := range []string{
 			"\x1b[7m\x1b[1m" + pad(" tuhdoo · local-only", "acting as brandon ") + "\x1b[0m",
-			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "a answer ") + "\x1b[0m",
+			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + pad(" READY (2)", "p priority · c archive ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
 			"\x1b[30;41m" + pad(" BLOCKED (1)", "") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit", "1 done") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit", "1 done ") + "\x1b[0m",
 		} {
 			if !strings.Contains(v, bar) {
 				t.Errorf("width %d: view missing bar %q; view:\n%s", width, bar, v)
@@ -94,7 +94,7 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.width, m.height = 80, 40
 	v := m.View()
 	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · q quit")
-	for _, absent := range []string{"a answer", "p priority", "c archive"} {
+	for _, absent := range []string{"enter answer", "p priority", "c archive"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}
@@ -155,7 +155,7 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 	if !strings.Contains(v, "▸ t-lic ") {
 		t.Fatalf("cursor row not visible in window; view:\n%s", v)
 	}
-	if !strings.Contains(v, "waiting: escalation: Which license?") {
+	if !strings.Contains(v, "waiting: needs input (above)") {
 		t.Errorf("blocked cursor row split: second line missing; view:\n%s", v)
 	}
 	// The escalation two-liner obeys the same rule wherever it appears:

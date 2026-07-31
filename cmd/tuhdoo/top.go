@@ -244,15 +244,21 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		if r, ok := m.selected(); ok {
+			// Enter acts on what the row is for: a Needs Input row goes
+			// straight into answering (dogfood steering, 2026-07-30 — the
+			// old `a` key is gone, one documented behavior per action);
+			// task rows open their biography. A disarmed pane never opens
+			// input: watch mode falls through to the read-only detail of
+			// the escalation's task.
+			if m.armed && r.kind == rowEscalation {
+				m.mode, m.target, m.input, m.status = modeAnswer, r, "", ""
+				return m, nil
+			}
 			id := r.task.ID
 			if r.kind == rowEscalation {
-				id = r.esc.Task // an escalation opens its task's biography
+				id = r.esc.Task
 			}
 			m.mode, m.detailID, m.detailScroll, m.status = modeDetail, id, 0, ""
-		}
-	case "a":
-		if r, ok := m.selected(); m.armed && ok && r.kind == rowEscalation {
-			m.mode, m.target, m.input, m.status = modeAnswer, r, "", ""
 		}
 	case "p":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
@@ -509,7 +515,7 @@ var topSections = []topSection{
 	// entity keeps its name; the header alone softens the severity the
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
-	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "a answer"},
+	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "enter answer"},
 	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c archive"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
@@ -660,7 +666,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 	default: // blocked
 		return chunk{
 			gridRow(col, cursor, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonDisp(t.ID, s.taskRef), width),
+				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width),
 			cursor,
 		}
 	}
@@ -789,17 +795,17 @@ func (m topModel) footerView(width int) string {
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			col.dim, col.reset), m.width)
 	}
+	// "enter answer/open" because enter acts on what the row is for:
+	// answering on a Needs Input row, the biography elsewhere. Folding
+	// the old `a` key into enter also bought back the tally's trailing
+	// margin space at 80 columns.
 	legend := " ↑/↓ (j/k) move · enter open · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit"
+		legend = " ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit"
 	}
-	// No trailing margin space on the tally: the armed legend plus
-	// "N done " is one rune over 80 columns since cancel became archive
-	// (T7, 2026-07-31), and barLine would drop the tally entirely at
-	// the design width. The bar still pads to full width either way.
 	done := ""
 	if m.snap != nil {
-		done = fmt.Sprintf("%d done", len(m.snap.classify().done))
+		done = fmt.Sprintf("%d done ", len(m.snap.classify().done))
 	}
 	return barLine(col, col.rev+col.dim, legend, done, width) + "\n"
 }

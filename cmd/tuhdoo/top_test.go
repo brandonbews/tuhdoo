@@ -175,9 +175,9 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"NEEDS INPUT (1)", "Which license?", "blocking · brandon/a2",
 		"READY (2)", "write the parser", "sweep the floor",
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
-		"BLOCKED (1)", "choose a license", "waiting:",
+		"BLOCKED (1)", "choose a license", "waiting: needs input (above)",
 		"▸ t-lic   !   Which license?", // cursor starts on the first row
-		"↑/↓ (j/k) move · enter open · a answer · p priority · c archive · q quit",
+		"↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -186,6 +186,15 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	}
 	if strings.Contains(v, "old chore") {
 		t.Errorf("done task should not render a steerable row; view:\n%s", v)
+	}
+	// The question renders once — its Needs Input row — never repeated
+	// in the blocked row's waiting: reason (steering feedback,
+	// 2026-07-30).
+	if n := strings.Count(v, "Which license?"); n != 1 {
+		t.Errorf("question renders %d times, want exactly 1; view:\n%s", n, v)
+	}
+	if strings.Contains(v, "waiting: escalation:") {
+		t.Errorf("blocked row still repeats the escalation; view:\n%s", v)
 	}
 }
 
@@ -231,7 +240,11 @@ func TestTopDetailArrowsScroll(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 8})
 	m = mm.(topModel)
-	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flak: the longest biography
+		keyOf(tea.KeyEnter))
 	if m.mode != modeDetail {
 		t.Fatalf("mode = %d, want modeDetail", m.mode)
 	}
@@ -271,11 +284,15 @@ func TestTopSelectionSurvivesRefresh(t *testing.T) {
 func TestTopAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	// Enter on a Needs Input row goes straight into answering — no
+	// detail detour, no separate answer key.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeAnswer {
-		t.Fatalf("a on an escalation row: mode %d, want modeAnswer", m.mode)
+		t.Fatalf("enter on an escalation row: mode %d, want modeAnswer", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "answer") || !strings.Contains(v, "enter submits") {
+	v := m.View()
+	if !strings.Contains(v, "answer") || !strings.Contains(v, "Which license?") ||
+		!strings.Contains(v, "enter submits · esc cancels") {
 		t.Errorf("answer prompt missing; view:\n%s", v)
 	}
 	m, _ = press(t, m, runes("Use MIT.")...)
@@ -313,7 +330,7 @@ func TestTopAnswerFlow(t *testing.T) {
 func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	m, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}, keyOf(tea.KeyEnter))
+	m, cmd := press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter))
 	if cmd != nil {
 		t.Error("empty answer still submitted")
 	}
@@ -331,16 +348,14 @@ func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 
 func TestTopActionKeysRespectRowKind(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	// a on a task row: ignored.
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	// a died when enter became the answer key (Cycle-4 rule: no
+	// vestigial keys) — it does nothing anywhere, escalation row included.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if m.mode != modeNav {
-		t.Errorf("a on a task row entered mode %d", m.mode)
+		t.Errorf("removed key a still entered mode %d", m.mode)
 	}
 	// p and c on an escalation row: ignored.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if m.mode != modeNav {
 		t.Errorf("p on an escalation row entered mode %d", m.mode)
 	}
@@ -434,7 +449,7 @@ func TestTopActionErrorSurfacesInStatus(t *testing.T) {
 	fake.err = errors.New("writes rejected (fail-safe read-only)")
 	m := newTopModel(fake)
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		keyOf(tea.KeyEnter),
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}},
 		keyOf(tea.KeyEnter))
 	am := cmd().(actionMsg)
@@ -463,8 +478,9 @@ func TestTopQuitKeys(t *testing.T) {
 			t.Errorf("key %q produced %T, want tea.QuitMsg", key.String(), cmd())
 		}
 	}
-	// In input mode q is text, ctrl+c still quits.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+	// In input mode q is text, ctrl+c still quits. (Enter on the
+	// escalation row the cursor starts on opens answer input.)
+	m, _ = press(t, m, keyOf(tea.KeyEnter),
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if m.mode != modeAnswer || m.input != "q" {
 		t.Errorf("q in answer mode: mode %d input %q", m.mode, m.input)
@@ -493,6 +509,17 @@ func TestWatchModeDisarmed(t *testing.T) {
 			t.Errorf("%q in watch mode produced a command", r)
 		}
 	}
+	// Enter on the Needs Input row never opens answer input in a
+	// disarmed pane: it falls through to the read-only detail of the
+	// escalation's task, and esc steps back.
+	m, cmd := press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-lic" {
+		t.Fatalf("enter on escalation row in watch mode: mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
+	}
+	if cmd != nil {
+		t.Error("enter on escalation row in watch mode produced a command")
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
 	// Navigation and quit still work.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if m.cursor != 1 {
@@ -507,7 +534,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"acting as", "a answer"} {
+	for _, reject := range []string{"acting as", "enter answer"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
@@ -519,17 +546,12 @@ func TestWatchModeDisarmed(t *testing.T) {
 	}
 }
 
-// The detail screen: enter opens the row's task in place — for an
-// escalation row, the task it hangs off — rendered like `tuhdoo task`.
+// The detail screen: enter on a task row opens the task in place,
+// rendered like `tuhdoo task`. (On an armed escalation row enter
+// answers instead — TestTopAnswerFlow; watch mode's escalation-row
+// detail lives in TestWatchModeDisarmed.)
 func TestTopEnterOpensDetail(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	// Cursor starts on the escalation row: enter opens its parent task.
-	m, _ = press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-lic" {
-		t.Fatalf("enter on escalation row: mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
-	}
-	m, _ = press(t, m, keyOf(tea.KeyEsc))
-
 	// A task row opens itself, with description and history visible.
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
