@@ -36,6 +36,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — Do we still need the one-shot backlog/escalations commands?
+- [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — create proper developmet branch flow. assumption is dev branch as default with main being where release branches off dev merge to create release and features start becoming branches off dev that then pr and then merge
 
 ## Done
 
