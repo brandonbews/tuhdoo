@@ -1,8 +1,8 @@
 # tuhdoo agent protocol
 
-**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
+**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). Revised again 2026-07-30 (steering): notes reframed — the typed transition events carry continuity, `add_note` is optional garnish (step 4); the dangling-pointer anti-pattern named; interactive sessions addressed (escalation section). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
 
-This is the instruction text a harness loads for any agent working a tuhdoo-managed project. It is the agent's half of the contract; the daemon's half (leases, serialization, sync) is automatic. The protocol exists because the ledger is **agent memory before it is human audit trail**: sessions end and contexts compact, and the only continuity between today's agent and tomorrow's is what today's agent wrote down.
+This is the instruction text a harness loads for any agent working a tuhdoo-managed project. It is the agent's half of the contract; the daemon's half (leases, serialization, sync) is automatic. The protocol exists because the ledger is **agent memory before it is human audit trail**: sessions end and contexts compact, and the only continuity between today's agent and tomorrow's is what landed on the ledger — chiefly the typed transition events the loop below already requires *(revised 2026-07-30; see step 4)*.
 
 ---
 
@@ -31,7 +31,7 @@ Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_
 1. **Claim before working.** Call `claim_next` (or `claim_task` if the human named a specific task). Never start work on a task you have not claimed — an unclaimed task may be claimed by another agent at any moment. `claim_next` returning `claimed: false` means the pool is empty or nothing matches your labels — a normal outcome, not an error; report it and stand by rather than retrying in a loop.
 2. **Read the task as a prompt.** The claim returns the task fully hydrated: description, acceptance criteria, dependency context, prior notes, prior runs. If a prior run exists, you are a **successor, not a pioneer**: read its notes and outcome first, resume from where it stopped, and do not re-derive what a predecessor already learned. A prior run ending `interrupted` means your predecessor died mid-work — trust its notes over its (absent) summary.
 3. **Work normally.** Worktrees, branches, commits — ordinary git on ordinary code branches. tuhdoo never touches your code workflow.
-4. **Checkpoint with `add_note`.** Notes are letters to your next incarnation. Write one: after any significant finding; before any risky or hard-to-reverse step; at any stopping point. A good note says what you learned or decided and *exactly where work stands* — file paths, branch name, what's done, what's next. Do not save noting for the end; the sessions that die are precisely the ones that never reach the end. The test: if your session died right now, could a successor resume from your notes without redoing anything significant? A run short enough to have no stopping points may legitimately end with zero notes — notes are not the finish summary (see below), and a note that merely restates it is noise on the ledger.
+4. **Checkpoint with `add_note` — optionally.** *(Reframed 2026-07-30, steering decision; notes were previously "letters to your next incarnation" doctrine.)* Continuity across agents is carried by the **typed transition events**, all of which already require their payloads: `claim` (who/when, plus full hydration on pick-up), `finish_run` (outcome + summary), `release_claim` (required reason), `escalate` (question + context), and the daemon's synthesized `interrupted` run on lease expiry. `add_note` is garnish on top of that record — mid-flight context you choose to pass on, not a protocol obligation. Write one when it would save a successor real work: a significant finding, the state before a risky or hard-to-reverse step, exactly where things stand at a stopping point (file paths, branch name, what's done, what's next). Zero-note runs are normal; a note that merely restates the finish summary (see below) is noise on the ledger.
 5. **Finish honestly.** `finish_run` with the true outcome and links (branch, PR, commits) plus a summary a human can act on. You may report exactly four outcomes:
    - `done` — the acceptance criteria hold.
    - `failed` — attempted and did not work; summary says why.
@@ -56,6 +56,8 @@ Your question will usually be answered after your session is gone. Do not wait f
 
 Write escalations so a human can answer from the escalation alone, without reading your whole run: the question, the minimal context, the options you see, your recommendation if you have one.
 
+**Human live in your session?** *(2026-07-30)* Then escalate/release is legitimately bypassed — ask directly, keep working. Claim discipline and an honest, self-contained `finish_run` still apply in full: the ledger, not the session transcript, is what the human monitors, and an interactive run that ends without a real summary leaves the same hole as any other. Record any decision the human makes on an open escalation with `relay_answer` (below).
+
 **Answered out of band?** Sometimes the human answers your question in your own live session instead of a steering surface. Record it with `relay_answer` (escalation ID + the answer as given) — otherwise the settled question lingers open in the inbox, polluting the signal escalations exist to provide. The answer lands exactly like a steering-surface answer: attribution goes to your root principal (the daemon derives it; you cannot attribute to anyone else), the ledger marks you as the relay, and a blocking escalation returns its task to the pool immediately — if you still hold the claim, just keep working; the handoff dance is only for answers that haven't arrived. You are the scribe, not the decider: relay only a decision a human actually made, verbatim, never an answer you inferred. Open escalations only — amending a settled answer is curation, human work on the steering surfaces.
 
 ## Decomposition
@@ -75,6 +77,12 @@ Task quality bounds output quality. A well-formed task description contains:
 - **Constraints** — what must not change, project laws that bite here.
 
 If you claim a task whose description fails this bar and you cannot proceed safely, that is a legitimate blocking escalation: ask for the missing criteria rather than guessing at scope.
+
+## Anti-pattern: dangling pointers *(named 2026-07-30)*
+
+The ledger is read by people and agents who were never in your session: the steering human at the TUI, a successor claiming the task, a teammate browsing the data branch. Every ledger entry humans monitor — task descriptions, run summaries, escalation questions and answers, release reasons — must be **self-contained, or point only at durable repo state**: committed files, design docs, task IDs, branches, PRs. Never reference "this session", chat context, scratchpads, plan-mode output, or uncommitted local paths — those die with your session, and the pointer dangles forever.
+
+Cautionary tale (Cycle-4 build, 2026-07-30): an agent created a task whose description said "full plan in the session that created this task." The session ended; the plan died with it; the claimant inherited a pointer to nothing. This is the natural lazy move when your context already contains the plan — the fix is to write the plan into the description (or commit it to the repo) before the call, every time.
 
 ## What you never do
 
