@@ -1,6 +1,6 @@
 # t-01KYTQTEQYGXVQ0QY7F95CHXVV — Principal identity override: stop deriving ugly actors from noreply emails
 
-- Status: open — in progress, claimed by `4099114+brandonbews/claude-code-2`
+- Status: done
 - Priority: 1
 - Labels: `daemon`, `identity`, `ux`
 - Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`
@@ -21,4 +21,9 @@ Constraints: boring Go; no new dependencies; do not rewrite historical events �
 
 ## History
 
-_No activity yet._
+### 2026-07-31 05:30 UTC — run by `4099114+brandonbews/claude-code-2` — done
+
+- Branch: `main`
+- Commits: `10a48e3`
+
+Override lands as `git config tuhdoo.principal <name>` — chosen over a .git/tuhdoo/ file and over data-branch state (per-human per-clone preference doesn't belong in shared fleet state): one familiar command, survives .git/tuhdoo wipes, per-machine reach free via --global with ordinary git precedence, zero new file formats. Implemented inside the single shared derivation (gitEmailLocalPart in cmd/tuhdoo/repo.go), so the mcp shim and TUI steer mode both pick it up with no call-site changes and --as wins automatically (callers only derive when no explicit principal given). Set-but-invalid values (empty, agent-shaped with /, fails ValidateActor) error loudly naming the config key — never a silent fall-back to email derivation. Tests in cmd/tuhdoo/repo_test.go: unit derivation table (override set/absent/unset restores email rule/invalid values), TUI steer-mode actor (override honored, --as steve wins, agent-shaped rejected), and end-to-end shim (no-flag session creates as brandon/claude-code-1 with daemon-minted agent half; --as steve/agent-7 beats override; invalid override kills the shim non-zero at connect). Documented as a dated bullet in 002 T4. Stored events untouched — old actors stay as recorded. To use it here: `git config tuhdoo.principal brandon` in this clone (takes effect for new sessions after the daemon restart that deploys this).

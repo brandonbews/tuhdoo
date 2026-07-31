@@ -13,7 +13,6 @@
 
 | ID | Task | Priority | Claimed by |
 |---|---|---:|---|
-| [t-01KYTQTEQYGXVQ0QY7F95CHXVV](tasks/t-01KYTQTEQYGXVQ0QY7F95CHXVV.md) | Principal identity override: stop deriving ugly actors from noreply emails | 1 | `4099114+brandonbews/claude-code-2` |
 | [t-01KYTQTEQYGXVQ0QY7FCTAZ3G6](tasks/t-01KYTQTEQYGXVQ0QY7FCTAZ3G6.md) | Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record | 1 | `4099114+brandonbews/claude-code-2` |
 | [t-01KYTSQDQJWM8YQQ8FWMHBZ5DW](tasks/t-01KYTSQDQJWM8YQQ8FWMHBZ5DW.md) | Short IDs are the human contract: display everywhere, accept as input, annotate edges | 1 | `4099114+brandonbews/claude-code-2` |
 
@@ -35,6 +34,7 @@
 - [t-01KYRVCBE83KT62BAE11W3TAM8](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) — Release pipeline: tagged, cross-compiled binaries
 - [t-01KYT63MB28Z535SMJC9B0D83W](tasks/t-01KYT63MB28Z535SMJC9B0D83W.md) — One TUI: bare tuhdoo is the interactive surface (Cycle 4)
 - [t-01KYT80CP4JKAM3V2C4DNGF1Y3](tasks/t-01KYT80CP4JKAM3V2C4DNGF1Y3.md) — TUI readability: short display IDs, width-aware wrapping, list scrolling
+- [t-01KYTQTEQYGXVQ0QY7F95CHXVV](tasks/t-01KYTQTEQYGXVQ0QY7F95CHXVV.md) — Principal identity override: stop deriving ugly actors from noreply emails
 - [t-01KYTRJQT44HGYXGR9C7C3R2GS](tasks/t-01KYTRJQT44HGYXGR9C7C3R2GS.md) — Escalation ergonomics: resolve answered-out-of-band, and the name itself
 
 ## Cancelled
