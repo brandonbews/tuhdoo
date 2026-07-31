@@ -91,13 +91,17 @@ type Daemon struct {
 	// degraded is non-nil after a fail-safe replay error (T3): reads
 	// keep serving the last good state, writes are rejected with 503.
 	degraded error
-	// written holds every event this process has produced, overlaid on
-	// LoadEvents at refresh so debounced (not-yet-committed) writes are
-	// visible immediately. Replay dedupes by ID, so overlap with
-	// already-committed events is harmless. Grows for the process
-	// lifetime — with full replay per write, the obvious later
-	// optimization point (incremental apply) covers both.
+	// written holds events this process has produced that are not yet
+	// visible on the branch, overlaid on the loaded events at refresh so
+	// debounced (not-yet-committed) writes are visible immediately.
+	// Replay dedupes by ID, so a brief overlap with already-committed
+	// events is harmless; refreshLocked trims events off the overlay as
+	// soon as a load sees them on the branch, so it stays bounded by the
+	// debounce window, not the process lifetime.
 	written []event.Event
+	// lastLoggedEvents is the branch event count of the last refresh
+	// timing line, so refresh logging fires on change, not on every poll.
+	lastLoggedEvents int
 	// entropy is monotonic so events minted in the same millisecond get
 	// ULIDs in mint order — replay order must not invert, e.g. a claim
 	// sorting before the task it claims. Guarded by mu.
@@ -308,24 +312,42 @@ func (d *Daemon) Refresh() error {
 	return d.refreshLocked(time.Now())
 }
 
+// slowRefresh is the refresh duration above which a timing line is
+// always logged, whether or not the event count moved.
+const slowRefresh = 250 * time.Millisecond
+
 // refreshLocked reloads events and leases and replays. On a fail-safe
 // replay error the daemon degrades: the last good state keeps serving
-// reads and every write path starts rejecting. Full replay per write is
-// fine at v0 volumes; incremental apply is the known later optimization.
+// reads and every write path starts rejecting.
+//
+// Full replay per refresh is a measured, deliberate keep: replay of the
+// 50-event dogfood log costs ~1ms and the pure core benchmarks linearly
+// (BenchmarkReplay in internal/core) — the load path was the real cost,
+// and the store's content-addressed decode caches take it from a
+// cat-file subprocess per event (~8ms each) to one rev-parse + one
+// ls-tree per refresh. Incremental apply / snapshot replay stay
+// unnecessary until replay itself shows up in the timing lines below.
 func (d *Daemon) refreshLocked(now time.Time) error {
-	events, err := d.store.LoadEvents()
+	loadStart := time.Now()
+	events, leases, err := d.store.LoadReplayInput()
 	if err != nil {
 		return err
 	}
-	leases, err := d.store.ReadLeases()
-	if err != nil {
-		return err
-	}
+	loadDur := time.Since(loadStart)
+
+	// Events the load saw on the branch no longer need the overlay.
+	d.written = trimOverlay(d.written, events)
+	combined := make([]event.Event, 0, len(events)+len(d.written))
+	combined = append(combined, events...)
+	combined = append(combined, d.written...)
+
+	replayStart := time.Now()
 	st, err := d.replay.Replay(core.Input{
-		Events: append(events, d.written...),
+		Events: combined,
 		Leases: leases,
 		Now:    now,
 	})
+	replayDur := time.Since(replayStart)
 	if err != nil {
 		if isFailSafe(err) {
 			d.degraded = err
@@ -335,7 +357,38 @@ func (d *Daemon) refreshLocked(now time.Time) error {
 	d.degraded = nil
 	d.state = st
 	d.leases = leases
+
+	// One timing line per change in branch event count (≈ one per landed
+	// commit), plus any refresh slow enough to worry about. This is the
+	// live evidence stream for the replay-scaling question.
+	if len(events) != d.lastLoggedEvents || loadDur+replayDur >= slowRefresh {
+		d.lastLoggedEvents = len(events)
+		d.log.Printf("daemon: refresh: %d events (+%d overlay), %d leases; load %s, replay %s",
+			len(events), len(d.written), len(leases),
+			loadDur.Round(10*time.Microsecond), replayDur.Round(10*time.Microsecond))
+	}
 	return nil
+}
+
+// trimOverlay drops overlay events that have landed on the branch: once
+// an event is in the committed set the overlay copy is redundant (replay
+// dedupes by ID), and dropping it here is what keeps the overlay from
+// growing for the process lifetime.
+func trimOverlay(written, committed []event.Event) []event.Event {
+	if len(written) == 0 {
+		return written
+	}
+	onBranch := make(map[string]bool, len(committed))
+	for _, e := range committed {
+		onBranch[e.ID] = true
+	}
+	var kept []event.Event
+	for _, e := range written {
+		if !onBranch[e.ID] {
+			kept = append(kept, e)
+		}
+	}
+	return kept
 }
 
 // stageLocked records events in the overlay and the batcher. Caller

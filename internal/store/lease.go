@@ -71,38 +71,6 @@ func (s *Store) DeleteLease(claimID string) error {
 
 // ReadLeases returns every lease as claim ID → expiry (UTC).
 func (s *Store) ReadLeases() (map[string]time.Time, error) {
-	head, err := s.git.ReadRef(s.ref)
-	if err != nil {
-		return nil, fmt.Errorf("store: read leases: %w", err)
-	}
-	entries, err := s.git.LsTree(head)
-	if err != nil {
-		return nil, fmt.Errorf("store: read leases: %w", err)
-	}
-
-	leases := make(map[string]time.Time)
-	for _, entry := range entries {
-		claimID, ok := strings.CutPrefix(entry.Path, "leases/")
-		if !ok {
-			continue
-		}
-		claimID, ok = strings.CutSuffix(claimID, ".json")
-		if !ok || strings.Contains(claimID, "/") {
-			continue
-		}
-		data, err := s.git.CatFile(entry.OID)
-		if err != nil {
-			return nil, fmt.Errorf("store: read leases: %s: %w", entry.Path, err)
-		}
-		var lf leaseFile
-		if err := json.Unmarshal(data, &lf); err != nil {
-			return nil, fmt.Errorf("store: read leases: %s: %w", entry.Path, err)
-		}
-		expires, err := time.Parse(time.RFC3339, lf.Expires)
-		if err != nil {
-			return nil, fmt.Errorf("store: read leases: %s: %w", entry.Path, err)
-		}
-		leases[claimID] = expires.UTC()
-	}
-	return leases, nil
+	_, leases, err := s.LoadReplayInput()
+	return leases, err
 }

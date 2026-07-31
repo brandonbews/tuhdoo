@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ import (
 
 var testIdent = gitx.Identity{Name: "Test Bot", Email: "bot@example.com"}
 
-func setGitEnv(t *testing.T) {
+func setGitEnv(t testing.TB) {
 	t.Helper()
 	t.Setenv("GIT_AUTHOR_NAME", testIdent.Name)
 	t.Setenv("GIT_AUTHOR_EMAIL", testIdent.Email)
@@ -31,7 +32,7 @@ func setGitEnv(t *testing.T) {
 	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 }
 
-func runGit(t *testing.T, dir string, args ...string) string {
+func runGit(t testing.TB, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
@@ -43,7 +44,7 @@ func runGit(t *testing.T, dir string, args ...string) string {
 }
 
 // newStore builds a fresh repository and an initialized Store on it.
-func newStore(t *testing.T) (*Store, string) {
+func newStore(t testing.TB) (*Store, string) {
 	t.Helper()
 	setGitEnv(t)
 	dir := t.TempDir()
@@ -60,7 +61,7 @@ func newStore(t *testing.T) (*Store, string) {
 }
 
 // newEvent builds a valid event with a fresh ULID.
-func newEvent(t *testing.T, n int) event.Event {
+func newEvent(t testing.TB, n int) event.Event {
 	t.Helper()
 	id, err := event.NewID(time.Now(), rand.Reader)
 	if err != nil {
@@ -443,6 +444,120 @@ func TestFilesRideBatchesAndReadFile(t *testing.T) {
 	}
 	if got := commitCount(t, dir); got != before+1 {
 		t.Errorf("drained Flush produced %d extra commits, want 0", got-before-1)
+	}
+
+	assertNoWorktreeFiles(t, dir)
+}
+
+// countingGit counts CatFile calls, to observe the decode caches: blobs
+// are content-addressed, so each one should be read from git only once.
+type countingGit struct {
+	gitx.Git
+	catFiles int
+}
+
+func (g *countingGit) CatFile(oid string) ([]byte, error) {
+	g.catFiles++
+	return g.Git.CatFile(oid)
+}
+
+// The decode caches mean repeated loads cost no cat-file subprocesses:
+// only blobs never seen before are read, renewed leases are re-read
+// exactly once, and the lease cache tracks the live tree instead of
+// growing with renewal churn.
+func TestLoadReplayInputCachesDecodes(t *testing.T) {
+	setGitEnv(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "--quiet", "-b", "main")
+	g, err := gitx.New(dir)
+	if err != nil {
+		t.Fatalf("gitx.New: %v", err)
+	}
+	cg := &countingGit{Git: g}
+	s := New(cg, "", testIdent)
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	evs := []event.Event{newEvent(t, 0), newEvent(t, 1), newEvent(t, 2)}
+	if err := s.AppendBatch(Batch{Events: evs}); err != nil {
+		t.Fatalf("AppendBatch: %v", err)
+	}
+	exp1 := time.Now().Add(10 * time.Minute).UTC().Truncate(time.Second)
+	if err := s.WriteLease("c1", exp1); err != nil {
+		t.Fatalf("WriteLease: %v", err)
+	}
+
+	events1, leases1, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("LoadReplayInput: %v", err)
+	}
+	if len(events1) != 3 || len(leases1) != 1 || !leases1["c1"].Equal(exp1) {
+		t.Fatalf("first load = %d events, leases %v; want 3 events, c1 -> %v", len(events1), leases1, exp1)
+	}
+	if cg.catFiles != 4 {
+		t.Errorf("first load read %d blobs, want 4 (3 events + 1 lease)", cg.catFiles)
+	}
+
+	// Second load with nothing changed: zero blob reads, same results.
+	events2, leases2, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("second LoadReplayInput: %v", err)
+	}
+	if cg.catFiles != 4 {
+		t.Errorf("unchanged reload read %d extra blobs, want 0", cg.catFiles-4)
+	}
+	if !reflect.DeepEqual(events1, events2) || !reflect.DeepEqual(leases1, leases2) {
+		t.Errorf("cached reload changed results:\nevents %v vs %v\nleases %v vs %v",
+			events1, events2, leases1, leases2)
+	}
+
+	// A lease renewal writes a new blob: exactly one new read, fresh
+	// expiry served, and the superseded blob leaves the cache.
+	exp2 := exp1.Add(10 * time.Minute)
+	if err := s.WriteLease("c1", exp2); err != nil {
+		t.Fatalf("renew WriteLease: %v", err)
+	}
+	_, leases3, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("post-renewal LoadReplayInput: %v", err)
+	}
+	if cg.catFiles != 5 {
+		t.Errorf("renewal reload read %d extra blobs, want 1", cg.catFiles-4)
+	}
+	if !leases3["c1"].Equal(exp2) {
+		t.Errorf("post-renewal lease = %v, want %v", leases3["c1"], exp2)
+	}
+	if len(s.leaseByOID) != 1 {
+		t.Errorf("lease cache holds %d entries after renewal, want 1", len(s.leaseByOID))
+	}
+
+	// A new event costs exactly its own read.
+	if err := s.AppendBatch(Batch{Events: []event.Event{newEvent(t, 3)}}); err != nil {
+		t.Fatalf("AppendBatch: %v", err)
+	}
+	events4, _, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("post-append LoadReplayInput: %v", err)
+	}
+	if len(events4) != 4 {
+		t.Errorf("post-append load = %d events, want 4", len(events4))
+	}
+	if cg.catFiles != 6 {
+		t.Errorf("post-append reload read %d extra blobs, want 1", cg.catFiles-5)
+	}
+
+	// Deleting a lease costs nothing and empties the lease cache.
+	if err := s.DeleteLease("c1"); err != nil {
+		t.Fatalf("DeleteLease: %v", err)
+	}
+	_, leases5, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("post-delete LoadReplayInput: %v", err)
+	}
+	if len(leases5) != 0 || len(s.leaseByOID) != 0 || cg.catFiles != 6 {
+		t.Errorf("post-delete: leases %v, cache %d, blob reads %d; want none, 0, 6",
+			leases5, len(s.leaseByOID), cg.catFiles)
 	}
 
 	assertNoWorktreeFiles(t, dir)

@@ -526,3 +526,46 @@ func TestViewsGuardRefusesNewerStamp(t *testing.T) {
 		t.Errorf("backlog.md written despite newer stamp:\n%s", backlog)
 	}
 }
+
+// The overlay of process-written events carries a write only until a
+// refresh sees it on the branch, then trims it — it must not grow for
+// the process lifetime (t-01KYRMFV10W1N28TCN5ZZ9Z2C1). State must serve
+// the write throughout: from the overlay before the flush, from the
+// branch after the trim.
+func TestOverlayTrimsAfterFlush(t *testing.T) {
+	d, c := startDaemon(t)
+
+	id := createOne(t, c, "brandon", map[string]any{"title": "trim me"})
+
+	// Before the debounced flush lands, the event lives in the overlay
+	// and state already serves it.
+	d.mu.Lock()
+	overlayBefore := len(d.written)
+	_, inState := d.state.Tasks[id]
+	d.mu.Unlock()
+	if overlayBefore != 1 {
+		t.Fatalf("overlay holds %d events before flush, want 1", overlayBefore)
+	}
+	if !inState {
+		t.Fatalf("task %s not in state while its event is overlay-only", id)
+	}
+
+	// After the flush, the next refresh must trim the overlay to empty
+	// while the task keeps being served, now from the branch.
+	if err := d.batcher.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	if err := d.Refresh(); err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	d.mu.Lock()
+	overlayAfter := len(d.written)
+	_, inState = d.state.Tasks[id]
+	d.mu.Unlock()
+	if overlayAfter != 0 {
+		t.Errorf("overlay holds %d events after flush + refresh, want 0", overlayAfter)
+	}
+	if !inState {
+		t.Errorf("task %s vanished from state after overlay trim", id)
+	}
+}
