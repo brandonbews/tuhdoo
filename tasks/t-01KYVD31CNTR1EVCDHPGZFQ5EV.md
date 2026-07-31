@@ -1,6 +1,6 @@
 # t-01KYVD31CNTR1EVCDHPGZFQ5EV — Rename the cancel interaction: archive as the human verb, task.cancelled stays the plumbing
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`, `design`
 - Depends on: [t-01KYVJ2607S5S390CVYSF3PVG4](t-01KYVJ2607S5S390CVYSF3PVG4.md) (done)
@@ -23,4 +23,9 @@ Constraints: no event, API, or MCP surface changes; stored bytes untouched; bori
 
 ## History
 
-_No activity yet._
+### 2026-07-31 09:11 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `042b2c0`
+
+Archive is now the human verb everywhere; task.cancelled stays the plumbing. TUI: footer/READY-bar `c archive`, confirm copy "archive t-xxxx (title)? y/n — history stays on the ledger", status message `archived t-xxxx`; modeConfirmCancel→modeConfirmArchive, cancelTask→archiveTask (PATCH body still sends status:"cancelled"). One-shot: new humanStatus() helper in render.go maps cancelled→archived in status/backlog tallies, task-biography status line, and edge annotations `(archived — title)`; JSON/API values pinned as `cancelled` by a new test assertion in write_cli_test.go. `tuhdoo update --status` documents `archived` (mapped to `cancelled` before PATCH; raw `cancelled` still passes for scripts). Dated T7 note in docs/design/002-technology.md records the archive ↔ task.cancelled mapping; Cycle 4 accepted-consequences line amended to match. Exact-format tests deliberately updated: top_golden_test.go (READY bar + footer goldens — footer tally lost its trailing margin space because "archive" is one rune longer and the 80-col drop rule would otherwise discard the done tally), top_test.go (TestTopCancelFlow→TestTopArchiveFlow, taskRef annotation), cli_test.go (Archived tallies), write_cli_test.go (exercises --status archived, pins JSON "cancelled"). esc-cancels-input deliberately keeps the word "cancel" — that collision was the point. make test lint green; single commit 042b2c0 on main, pushed. Deploy note: daemon NOT restarted yet — binary rebuild+restart batched to end of the overnight run.
