@@ -30,6 +30,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
 | [tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | docs, product |
 | [tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | docs, product, web |
+| [tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ](tasks/tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ.md) | Init flavor picker: multiple-choice workflow setup in `tuhdoo init` that drops recipe files | 0 | cli, docs, product |
 
 ## Inbox
 
