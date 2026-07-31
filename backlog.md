@@ -2,9 +2,7 @@
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) | Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN) | 0 | distribution, ci, npm |
+_None._
 
 ## In progress
 
@@ -63,6 +61,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [t-01KYVJ5NABEKX72KNE006MBBMC](tasks/t-01KYVJ5NABEKX72KNE006MBBMC.md) — Inbox and held: capture without scoping pressure, pause without pretending
 - [t-01KYVMD4PS9NMQVP1K5HQ8769X](tasks/t-01KYVMD4PS9NMQVP1K5HQ8769X.md) — finish_run accepts a claimless finish: opFinishRun never checks holdership
 - [t-01KYVMD4PS9NMQVP1K5M1PVRD8](tasks/t-01KYVMD4PS9NMQVP1K5M1PVRD8.md) — Shim died once: 'stdio session: invalid trailing data at the end of stream'
+- [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 
 ## Cancelled
 

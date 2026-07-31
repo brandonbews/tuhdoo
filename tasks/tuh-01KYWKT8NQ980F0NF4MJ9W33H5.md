@@ -1,6 +1,6 @@
 # tuh-01KYWKT8NQ980F0NF4MJ9W33H5 — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 
-- Status: open — ready
+- Status: done
 - Priority: 0
 - Labels: `distribution`, `ci`, `npm`
 - Created: 2026-07-31 17:33 UTC by `brandon/claude-code-1`
@@ -21,4 +21,9 @@ Constraints: PROJECT LAW — workflow change: isolated commit, explicit call-out
 
 ## History
 
-_No activity yet._
+### 2026-07-31 19:16 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `main`
+- Commits: `a771a65`
+
+OIDC trusted publishing is live and verified end-to-end: commit a771a65 (eyes-on reviewed by Brandon in-session) added id-token: write, removed all NPM_TOKEN/.npmrc wiring, and upgraded runner npm to 11 in the open; Brandon configured trusted publishers on all five packages (repo brandonbews/tuhdoo, workflow release.yml, publish-only) and deleted the bootstrap token + secret. Tag v0.1.1 then published all five packages with no credential in existence — the auth half of acceptance is proven live. The publish() idempotency wrapper is unchanged. One acceptance item deferred: provenance attestations were NOT generated because the repo was private (npm silently skips provenance for private repos — it goes to Sigstore's public transparency log). Brandon decided in-session to make the repo public; once flipped, provenance turns on automatically at the next v* tag with zero workflow changes — whoever cuts the next release should confirm attestations appear (npm view <pkg> dist.attestations).
