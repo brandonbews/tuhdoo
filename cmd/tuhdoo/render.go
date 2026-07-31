@@ -126,7 +126,9 @@ func renderBlocked(w io.Writer, col colors, s *snapshot, tasks []stateTask) {
 }
 
 func renderOpenEscalations(w io.Writer, col colors, s *snapshot, escs []escalationJSON) {
-	fmt.Fprintf(w, "%sOpen escalations%s (%d)\n", col.bold, col.reset, len(escs))
+	// Same header as the TUI's escalations section (T7, 2026-07-30):
+	// "Needs Input" softens the severity without renaming the entity.
+	fmt.Fprintf(w, "%sNeeds Input%s (%d)\n", col.bold, col.reset, len(escs))
 	if len(escs) == 0 {
 		fmt.Fprintf(w, "  %snone — the fleet is unblocked%s\n", col.dim, col.reset)
 		return

@@ -523,7 +523,11 @@ func renderTopRows(w io.Writer, col colors, s *snapshot, rows []topRow, cursor i
 	secs := []struct {
 		key, title, color string
 	}{
-		{"escalations", "Open escalations", ""},
+		// "Needs Input", not "Open escalations" (T7, 2026-07-30): the
+		// entity keeps its name; the header alone softens the severity
+		// the word overstates, and names no answerer — a future one may
+		// not be a human.
+		{"escalations", "Needs Input", ""},
 		{"ready", "Ready", col.green},
 		{"inprogress", "In progress", col.yellow},
 		{"blocked", "Blocked", col.red},

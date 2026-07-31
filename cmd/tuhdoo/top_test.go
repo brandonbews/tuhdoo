@@ -173,7 +173,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	for _, want := range []string{
 		"tuhdoo · sync: local-only", "acting as brandon",
 		"2 ready · 1 in progress · 1 blocked · 1 done · 0 cancelled · 1 escalation open",
-		"Open escalations (1)", "Which license?", "[blocking]", "asked by brandon/a2",
+		"Needs Input (1)", "Which license?", "[blocking]", "asked by brandon/a2",
 		"Ready (2)", "write the parser", "sweep the floor",
 		"In progress (1)", "investigate the flake", "brandon/a1",
 		"Blocked (1)", "choose a license", "waiting:",
