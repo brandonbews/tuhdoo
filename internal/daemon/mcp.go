@@ -26,10 +26,11 @@ import (
 // calls). The full protocol lives in docs/agent-protocol.md; this is
 // the elevator version every session carries.
 const mcpInstructions = "tuhdoo is the shared work ledger for this repository. " +
-	"The loop: claim_next (or claim_task) to take work, add_note to checkpoint findings " +
-	"as you go — notes are letters to the next agent on this task — escalate when a human " +
-	"must decide (relay_answer records their answer if it arrives out of band, in your own " +
-	"session), and always end with finish_run (or release_claim to stand down). " +
+	"The loop: claim_next (or claim_task) to take work, escalate when a human must decide " +
+	"(relay_answer records their answer if it arrives out of band, in your own session), " +
+	"and always end with finish_run (or release_claim to stand down) — the typed " +
+	"transitions are the record your successors resume from. add_note is optional: " +
+	"checkpoint mid-flight context only when it would save a successor real work. " +
 	"Your claim's lease renews automatically while this session is connected; " +
 	"if the session drops, the task returns to the pool."
 
@@ -341,7 +342,7 @@ type relayAnswerInput struct {
 
 type addNoteInput struct {
 	Task string `json:"task" jsonschema:"the task to annotate"`
-	Text string `json:"text" jsonschema:"the checkpoint: findings, decisions, exactly where you stopped — a letter to the next agent on this task"`
+	Text string `json:"text" jsonschema:"the checkpoint: a significant finding, the state before a risky step, or exactly where things stand — only what would save a successor real work"`
 }
 
 type eventIDResult struct {
@@ -436,7 +437,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "release_claim",
 		Description: "Voluntarily stand down from a task you hold, returning it to the pool with " +
-			"your reason on record. add_note first if you learned anything worth passing on.",
+			"your reason on record. The reason is the handoff; add_note first only for " +
+			"resume-state it cannot carry.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in releaseClaimInput) (*mcp.CallToolResult, releaseClaimResult, error) {
 		claim, oe := d.opReleaseClaim(s.principal(), in.Task, in.Reason)
 		if oe != nil {
@@ -502,9 +504,10 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "add_note",
-		Description: "Checkpoint an observation on a task: after significant findings, before risky " +
-			"changes, at any stopping point. Notes outlive your session — they are how the next " +
-			"agent resumes instead of re-deriving your work.",
+		Description: "Optionally checkpoint mid-flight context on a task: a significant finding, " +
+			"the state before a risky step, where things stand at a stopping point. The typed " +
+			"transitions (claim, finish_run, release_claim, escalate) carry the record; write " +
+			"a note only when it would save a successor real work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in addNoteInput) (*mcp.CallToolResult, eventIDResult, error) {
 		id, oe := d.opAddNote(s.principal(), in.Task, in.Text)
 		if oe != nil {

@@ -130,8 +130,9 @@ type EscalationAnswered struct {
 	Unknown map[string]json.RawMessage `json:"-"`
 }
 
-// NoteAdded is the payload of "note.added": checkpoint observations,
-// letters to the next incarnation (T5).
+// NoteAdded is the payload of "note.added": optional mid-flight
+// checkpoints — continuity is carried by the typed transition events
+// (T5, notes doctrine revised 2026-07-30).
 type NoteAdded struct {
 	Text string `json:"text"`
 
