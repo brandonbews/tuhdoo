@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
@@ -134,24 +135,64 @@ func runBacklog() int {
 		fmt.Fprintln(os.Stderr, "tuhdoo backlog:", err)
 		return 1
 	}
-	printBacklog(os.Stdout, newColors(os.Stdout), snap)
+	printBacklog(os.Stdout, snap)
 	return 0
 }
 
-func printBacklog(w io.Writer, col colors, s *snapshot) {
+// printBacklog emits one row per task under a header: serialization,
+// not design (T7, 2026-07-31). Plain aligned columns via tabwriter, no
+// ANSI ever — the bytes are identical to a terminal and to a pipe — and
+// a STATE column instead of section headers, so `tuhdoo backlog | grep
+// ready` selects exactly the ready rows. Row order mirrors the old
+// sections (ready by priority, then in-progress, blocked, on-hold,
+// inbox, done, archived; creation order within each); full IDs
+// throughout — scriptable plumbing.
+func printBacklog(w io.Writer, s *snapshot) {
 	b := s.classify()
-	renderReady(w, col, b.ready)
-	fmt.Fprintln(w)
-	renderInProgress(w, col, b.inProgress)
-	fmt.Fprintln(w)
-	renderBlocked(w, col, s, b.blocked)
-	fmt.Fprintln(w)
-	renderHeld(w, col, b.held)
-	fmt.Fprintln(w)
-	renderInbox(w, col, b.inbox)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "%sDone%s %d · %sArchived%s %d\n",
-		col.dim, col.reset, len(b.done), col.dim, col.reset, len(b.cancelled))
+	tw := newTabWriter(w)
+	fmt.Fprintln(tw, "ID\tSTATE\tPRI\tHOLDER\tLABELS\tWAITING\tTITLE")
+	row := func(t stateTask, state, waiting string) {
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\t%s\n",
+			t.ID, state, t.Priority, cell(t.Holder),
+			cell(strings.Join(t.Labels, ",")), waiting, oneLine(t.Title))
+	}
+	for _, t := range b.ready {
+		row(t, "ready", "-")
+	}
+	for _, t := range b.inProgress {
+		row(t, "in-progress", "-")
+	}
+	for _, t := range b.blocked {
+		row(t, "blocked", s.waitingOn(t.ID))
+	}
+	for _, t := range b.held {
+		row(t, "on-hold", "-")
+	}
+	for _, t := range b.inbox {
+		row(t, "inbox", "-")
+	}
+	for _, t := range b.done {
+		row(t, "done", "-")
+	}
+	for _, t := range b.cancelled {
+		row(t, "archived", "-")
+	}
+	tw.Flush()
+}
+
+// newTabWriter is the one aligned-column configuration both serialized
+// commands share: two-space gutters, no minimum width, spaces only.
+func newTabWriter(w io.Writer) *tabwriter.Writer {
+	return tabwriter.NewWriter(w, 0, 8, 2, ' ', 0)
+}
+
+// cell renders one column value, "-" standing in for empty so every
+// column is present on every row.
+func cell(v string) string {
+	if v == "" {
+		return "-"
+	}
+	return v
 }
 
 // ---- task <id> ----
@@ -381,29 +422,43 @@ func runEscalations() int {
 		fmt.Fprintln(os.Stderr, "tuhdoo escalations:", err)
 		return 1
 	}
-	printEscalations(os.Stdout, newColors(os.Stdout), snap)
+	printEscalations(os.Stdout, snap)
 	return 0
 }
 
-func printEscalations(w io.Writer, col colors, s *snapshot) {
-	var open, answered []escalationJSON
-	for _, e := range s.allEscalations() {
+// printEscalations emits one row per escalation under a header — the
+// same serialization register as printBacklog (T7, 2026-07-31): plain
+// aligned columns, no ANSI, full IDs, "-" for empty cells. Open
+// questions first, then answered, raise (ULID) order within each; the
+// STATE column says which, so grep selects either set.
+func printEscalations(w io.Writer, s *snapshot) {
+	tw := newTabWriter(w)
+	fmt.Fprintln(tw, "ID\tSTATE\tBLOCKING\tTASK\tASKED-BY\tRAISED\tANSWERED-BY\tRELAYED-BY\tQUESTION\tANSWER")
+	row := func(e escalationJSON) {
+		state, blocking := "open", "-"
 		if e.Answered {
-			answered = append(answered, e)
-		} else {
-			open = append(open, e)
+			state = "answered"
+		}
+		if e.Blocking {
+			blocking = "blocking"
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			e.ID, state, blocking, e.Task, e.Actor, stampCompact(e.RaisedAt),
+			cell(e.AnsweredBy), cell(e.RelayedBy),
+			oneLine(e.Question), cell(oneLine(e.Answer)))
+	}
+	all := s.allEscalations()
+	for _, e := range all {
+		if !e.Answered {
+			row(e)
 		}
 	}
-	renderOpenEscalations(w, col, s, open)
-	fmt.Fprintf(w, "\n%sAnswered%s (%d)\n", col.bold, col.reset, len(answered))
-	if len(answered) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
+	for _, e := range all {
+		if e.Answered {
+			row(e)
+		}
 	}
-	for _, e := range answered {
-		fmt.Fprintf(w, "  %s (%s, raised %s) — %s: %s\n",
-			oneLine(e.Question), e.Task, stamp(e.RaisedAt), answererLabel(e), oneLine(e.Answer))
-	}
+	tw.Flush()
 }
 
 // answererLabel attributes an answer, marking the out-of-band path

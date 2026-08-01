@@ -138,7 +138,15 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("escalations exit %d; output:\n%s", code, out)
 	}
-	mustContain(t, out, "brandon: UTF-8 only.")
+	answeredRow := ""
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "answered") {
+			answeredRow = line
+		}
+	}
+	if !strings.Contains(answeredRow, "brandon") || !strings.Contains(answeredRow, "UTF-8 only.") {
+		t.Errorf("answered row missing attribution or answer:\n%s", out)
+	}
 
 	// Two open questions on one task: addressing by task is ambiguous,
 	// the error lists candidates, and the escalation's own ID still
@@ -207,12 +215,13 @@ func TestCreateCaptureAndPromote(t *testing.T) {
 	}
 	mustContain(t, out, "invalid status")
 
-	// The shelves render: backlog sections (On hold above Inbox), status
-	// counts, and the task biography's status line.
+	// The shelves render: backlog rows carry the on-hold / inbox STATE
+	// values (serialized form, T7 2026-07-31; on-hold above inbox),
+	// status counts them, and the task biography keeps its status line.
 	out, _ = runCLI(t, repo, "backlog")
-	mustContain(t, out, "On hold (1)", parked, "p3", "Inbox (1)", idea, "idea: dark mode")
-	if strings.Index(out, "On hold (1)") > strings.Index(out, "Inbox (1)") {
-		t.Errorf("On hold must render above Inbox:\n%s", out)
+	mustContain(t, out, "on-hold", parked, "inbox", idea, "idea: dark mode")
+	if strings.Index(out, parked) > strings.Index(out, idea) {
+		t.Errorf("the on-hold row must render above the inbox row:\n%s", out)
 	}
 	out, _ = runCLI(t, repo, "status")
 	mustContain(t, out, "0 ready", "1 on hold", "1 inbox")

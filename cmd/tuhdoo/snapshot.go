@@ -139,24 +139,33 @@ func (s *snapshot) blockingEscalation(taskID string) *escalationJSON {
 	return nil
 }
 
-// blockedReason names why a blocked task cannot be claimed: each unmet
-// dependency, and/or an open blocking escalation. One-shot copy: full
-// dependency IDs, and the escalation carries its question verbatim —
-// one-shot output stands alone, with no Needs Input row to point at.
-func (s *snapshot) blockedReason(id string) string {
-	parts := s.unmetDeps(id, func(dep string) string { return dep })
-	if e := s.blockingEscalation(id); e != nil {
-		parts = append(parts, "escalation: "+oneLine(e.Question))
+// waitingOn condenses why a blocked task cannot be claimed into one
+// column cell: dep:<task-id> per unmet dependency, esc:<escalation-id>
+// for the open blocking escalation, comma-joined — IDs, never prose
+// (T7, 2026-07-31: the serialized backlog is grep fodder; the story
+// lives in `tuhdoo task <id>`). "-" when nothing is waited on.
+func (s *snapshot) waitingOn(id string) string {
+	var parts []string
+	for _, dep := range s.tasks[id].Task.DependsOn {
+		if st, ok := s.statusOf(dep); ok && st != "done" {
+			parts = append(parts, "dep:"+dep)
+		}
 	}
-	return strings.Join(parts, "; ")
+	if e := s.blockingEscalation(id); e != nil {
+		parts = append(parts, "esc:"+e.ID)
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, ",")
 }
 
-// blockedReasonTUI is the dashboard's blockedReason: dependency IDs
-// pass through disp (shortened and annotated for the screen), and only
-// unmet deps are named — never the escalation. On this screen the Needs
-// Input row is the single home for escalation blockage (grill cycle,
-// 2026-07-31), and a task blocked by escalation alone renders no
-// BLOCKED row at all (see buildRows).
+// blockedReasonTUI names why a blocked task cannot be claimed, for the
+// dashboard: dependency IDs pass through disp (shortened and annotated
+// for the screen), and only unmet deps are named — never the
+// escalation. On this screen the Needs Input row is the single home for
+// escalation blockage (grill cycle, 2026-07-31), and a task blocked by
+// escalation alone renders no BLOCKED row at all (see buildRows).
 func (s *snapshot) blockedReasonTUI(id string, disp func(string) string) string {
 	return strings.Join(s.unmetDeps(id, disp), "; ")
 }
