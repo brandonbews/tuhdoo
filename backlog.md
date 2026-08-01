@@ -36,8 +36,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
-- [tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE](tasks/tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE.md) — the task view needs to be brought more in line with the design of the dash. bold on the fields names up top, white bars for headings, a clear section when theres an escalation to answer with an easy way to answer.
-- [tuh-01KYXE2S7A1WD7RKZSA0TNP09A](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) — archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
 - [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) — the enter captues and esc cancels instructions from the inbox field move distractingly as you type. they shoud be fixed below what should be a text box or header witha  clear delineation
 - [tuh-01KYXE4NSNBFFRTT8STNDJHYED](tasks/tuh-01KYXE4NSNBFFRTT8STNDJHYED.md) — i should be able to move the cursor in all text boxes using standard commands
 - [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) — you should be able to edit the desription or title in the task view
@@ -83,3 +81,5 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYWJT42G4CXYPMB6VBX0RG1Q](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) — stronger visual hierarchy, maybe make tasks titles bold?
 - [tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) — confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
 - [tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ](tasks/tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ.md) — Init flavor picker: multiple-choice workflow setup in `tuhdoo init` that drops recipe files
+- [tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE](tasks/tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE.md) — the task view needs to be brought more in line with the design of the dash. bold on the fields names up top, white bars for headings, a clear section when theres an escalation to answer with an easy way to answer.
+- [tuh-01KYXE2S7A1WD7RKZSA0TNP09A](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) — archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
