@@ -2,7 +2,7 @@
 
 `tuh-01KYXT6GSA20QPJ5ME1KP6KW85`
 
-- **Status:** inbox — untriaged capture
+- **Status:** archived
 - **Priority:** 0
 - **Created:** 2026-08-01 04:44 UTC by `brandon`
 

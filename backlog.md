@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 5 blocked · 6 on hold · 3 inbox · 36 done · 7 archived
+0 in progress · 1 ready · 5 blocked · 6 on hold · 2 inbox · 36 done · 8 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -42,7 +42,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
-- [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) the history section of the task view shield put a full return between entries and bold the title line of each entry.
 
 ## Done
@@ -93,3 +92,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-1nce`](tasks/tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE.md) the task view needs to be brought more in line with the design of the dash. bold on the fields names up top, white bars for headings, a clear section when theres an escalation to answer with an easy way to answer.
 - [`tuh-p09a`](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
 - [`tuh-hyed`](tasks/tuh-01KYXE4NSNBFFRTT8STNDJHYED.md) i should be able to move the cursor in all text boxes using standard commands
+- [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
