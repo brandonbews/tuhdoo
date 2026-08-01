@@ -1,9 +1,11 @@
-# t-01KYTQTEQYGXVQ0QY7F95CHXVV — Principal identity override: stop deriving ugly actors from noreply emails
+# Principal identity override: stop deriving ugly actors from noreply emails
 
-- Status: done
-- Priority: 1
-- Labels: `daemon`, `identity`, `ux`
-- Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`
+`t-01KYTQTEQYGXVQ0QY7F95CHXVV`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `daemon` `identity` `ux`
+- **Created:** 2026-07-31 00:05 UTC by `4099114+brandonbews`
 
 ## Description
 

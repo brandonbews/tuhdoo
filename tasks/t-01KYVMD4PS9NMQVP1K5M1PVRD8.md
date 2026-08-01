@@ -1,9 +1,11 @@
-# t-01KYVMD4PS9NMQVP1K5M1PVRD8 — Shim died once: 'stdio session: invalid trailing data at the end of stream'
+# Shim died once: 'stdio session: invalid trailing data at the end of stream'
 
-- Status: done
-- Priority: 0
-- Labels: `mcp`, `daemon`, `investigation`
-- Created: 2026-07-31 08:24 UTC by `brandon/claude-fable`
+`t-01KYVMD4PS9NMQVP1K5M1PVRD8`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `mcp` `daemon` `investigation`
+- **Created:** 2026-07-31 08:24 UTC by `brandon/claude-fable`
 
 ## Description
 

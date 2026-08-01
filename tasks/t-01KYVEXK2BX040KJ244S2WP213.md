@@ -1,9 +1,11 @@
-# t-01KYVEXK2BX040KJ244S2WP213 — CLI write verbs: a paved path when no MCP session exists
+# CLI write verbs: a paved path when no MCP session exists
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `dx`
-- Created: 2026-07-31 06:48 UTC by `brandon/claude-code-4`
+`t-01KYVEXK2BX040KJ244S2WP213`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `dx`
+- **Created:** 2026-07-31 06:48 UTC by `brandon/claude-code-4`
 
 ## Description
 

@@ -1,10 +1,12 @@
-# t-01KYVJ5NABEKX72KNE006MBBMC — Inbox and held: capture without scoping pressure, pause without pretending
+# Inbox and held: capture without scoping pressure, pause without pretending
 
-- Status: done
-- Priority: 1
-- Labels: `core`, `mcp`, `cli`, `tui`, `design`
-- Depends on: [t-01KYVD31CNTR1EVCDHPGZFQ5EV](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
-- Created: 2026-07-31 07:45 UTC by `brandon/claude-code-8`
+`t-01KYVJ5NABEKX72KNE006MBBMC`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `core` `mcp` `cli` `tui` `design`
+- **Depends on:** [`t-q5ev`](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
+- **Created:** 2026-07-31 07:45 UTC by `brandon/claude-code-8`
 
 ## Description
 

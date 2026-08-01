@@ -1,9 +1,11 @@
-# t-01KYRMFV10W1N28TCN5ZZ9Z2C1 — Retire full-replay-per-write and the grow-forever event overlay
+# Retire full-replay-per-write and the grow-forever event overlay
 
-- Status: done
-- Priority: 1
-- Labels: `go`, `performance`
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN5ZZ9Z2C1`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `go` `performance`
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 

@@ -1,9 +1,11 @@
-# tuh-01KYX6CMQV1G6XDZGNAF2M5C5P — Slash command /drain-backlog: the reusable drain-the-backlog prompt
+# Slash command /drain-backlog: the reusable drain-the-backlog prompt
 
-- Status: done
-- Priority: 0
-- Labels: `dx`, `docs`
-- Created: 2026-07-31 22:58 UTC by `brandon/claude-code-1`
+`tuh-01KYX6CMQV1G6XDZGNAF2M5C5P`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `dx` `docs`
+- **Created:** 2026-07-31 22:58 UTC by `brandon/claude-code-1`
 
 ## Description
 

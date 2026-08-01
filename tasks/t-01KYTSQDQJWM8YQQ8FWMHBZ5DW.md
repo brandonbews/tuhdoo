@@ -1,9 +1,11 @@
-# t-01KYTSQDQJWM8YQQ8FWMHBZ5DW — Short IDs are the human contract: display everywhere, accept as input, annotate edges
+# Short IDs are the human contract: display everywhere, accept as input, annotate edges
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`, `design`
-- Created: 2026-07-31 00:38 UTC by `4099114+brandonbews`
+`t-01KYTSQDQJWM8YQQ8FWMHBZ5DW`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux` `design`
+- **Created:** 2026-07-31 00:38 UTC by `4099114+brandonbews`
 
 ## Description
 

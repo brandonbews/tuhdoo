@@ -1,9 +1,11 @@
-# tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 — Marketing / docs site for tuhdoo (monorepo: site/ in this repo)
+# Marketing / docs site for tuhdoo (monorepo: site/ in this repo)
 
-- Status: on hold — deliberately paused
-- Priority: 0
-- Labels: `docs`, `product`, `web`
-- Created: 2026-07-31 22:32 UTC by `brandon/claude-code-1`
+`tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2`
+
+- **Status:** on hold — deliberately paused
+- **Priority:** 0
+- **Labels:** `docs` `product` `web`
+- **Created:** 2026-07-31 22:32 UTC by `brandon/claude-code-1`
 
 ## Description
 

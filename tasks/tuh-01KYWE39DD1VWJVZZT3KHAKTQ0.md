@@ -1,8 +1,10 @@
-# tuh-01KYWE39DD1VWJVZZT3KHAKTQ0 — just a test
+# just a test
 
-- Status: cancelled
-- Priority: 0
-- Created: 2026-07-31 15:53 UTC by `brandon`
+`tuh-01KYWE39DD1VWJVZZT3KHAKTQ0`
+
+- **Status:** archived
+- **Priority:** 0
+- **Created:** 2026-07-31 15:53 UTC by `brandon`
 
 ## Description
 

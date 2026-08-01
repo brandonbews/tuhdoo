@@ -1,9 +1,11 @@
-# t-01KYRMVT1YC2929WSQ3W6YHHZM — Render markdown views on local daemon writes
+# Render markdown views on local daemon writes
 
-- Status: done
-- Priority: 4
-- Labels: `go`, `bug`, `views`
-- Created: 2026-07-30 04:35 UTC by `brandon/impl-1`
+`t-01KYRMVT1YC2929WSQ3W6YHHZM`
+
+- **Status:** done
+- **Priority:** 4
+- **Labels:** `go` `bug` `views`
+- **Created:** 2026-07-30 04:35 UTC by `brandon/impl-1`
 
 ## Description
 

@@ -1,9 +1,11 @@
-# t-01KYTRJQT44HGYXGR9C7C3R2GS — Escalation ergonomics: resolve answered-out-of-band, and the name itself
+# Escalation ergonomics: resolve answered-out-of-band, and the name itself
 
-- Status: done
-- Priority: 2
-- Labels: `mcp`, `design`, `escalations`
-- Created: 2026-07-31 00:18 UTC by `4099114+brandonbews`
+`t-01KYTRJQT44HGYXGR9C7C3R2GS`
+
+- **Status:** done
+- **Priority:** 2
+- **Labels:** `mcp` `design` `escalations`
+- **Created:** 2026-07-31 00:18 UTC by `4099114+brandonbews`
 
 ## Description
 

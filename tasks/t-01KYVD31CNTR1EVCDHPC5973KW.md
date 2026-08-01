@@ -1,10 +1,12 @@
-# t-01KYVD31CNTR1EVCDHPC5973KW — Needs Input: enter answers in place; blocked rows stop repeating the question
+# Needs Input: enter answers in place; blocked rows stop repeating the question
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`
-- Depends on: [t-01KYVD31CNTR1EVCDHPGZFQ5EV](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
-- Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
+`t-01KYVD31CNTR1EVCDHPC5973KW`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux`
+- **Depends on:** [`t-q5ev`](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
+- **Created:** 2026-07-31 06:16 UTC by `brandon/claude-code-2`
 
 ## Description
 

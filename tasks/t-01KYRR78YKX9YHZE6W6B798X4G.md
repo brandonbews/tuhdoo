@@ -1,9 +1,11 @@
-# t-01KYRR78YKX9YHZE6W6B798X4G — Auto-derive session principals: git identity + daemon-minted agent names
+# Auto-derive session principals: git identity + daemon-minted agent names
 
-- Status: done
-- Priority: 2
-- Labels: `go`, `mcp`, `ux`
-- Created: 2026-07-30 05:33 UTC by `brandon/migrator`
+`t-01KYRR78YKX9YHZE6W6B798X4G`
+
+- **Status:** done
+- **Priority:** 2
+- **Labels:** `go` `mcp` `ux`
+- **Created:** 2026-07-30 05:33 UTC by `brandon/migrator`
 
 ## Description
 

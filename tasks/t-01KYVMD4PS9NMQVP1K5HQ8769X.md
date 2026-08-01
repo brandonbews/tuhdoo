@@ -1,9 +1,11 @@
-# t-01KYVMD4PS9NMQVP1K5HQ8769X — finish_run accepts a claimless finish: opFinishRun never checks holdership
+# finish_run accepts a claimless finish: opFinishRun never checks holdership
 
-- Status: done
-- Priority: 1
-- Labels: `daemon`, `protocol`, `bug`
-- Created: 2026-07-31 08:24 UTC by `brandon/claude-fable`
+`t-01KYVMD4PS9NMQVP1K5HQ8769X`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `daemon` `protocol` `bug`
+- **Created:** 2026-07-31 08:24 UTC by `brandon/claude-fable`
 
 ## Description
 

@@ -1,11 +1,13 @@
-# t-01KYRMFV10W1N28TCN5WVTCB1J — Two-machine dogfood: real claim races over one remote
+# Two-machine dogfood: real claim races over one remote
 
-- Status: open — waiting on an escalation answer
-- Priority: 2
-- Labels: `dogfood`, `multiplayer`
-- Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
-- Depends on: [t-01KYRMFV10W1N28TCN5TDQC7KM](t-01KYRMFV10W1N28TCN5TDQC7KM.md) (done)
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN5WVTCB1J`
+
+- **Status:** open — waiting on an escalation answer
+- **Priority:** 2
+- **Labels:** `dogfood` `multiplayer`
+- **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
+- **Depends on:** [`t-c7km`](t-01KYRMFV10W1N28TCN5TDQC7KM.md) (done)
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 
@@ -21,7 +23,7 @@ Constraints: no force-push on the data branch, ever; no manual repair — needin
 
 ### 2026-07-30 05:51 UTC — escalation from `brandon/impl-2` (blocking)
 
-**Q:** This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation?
+> This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation?
 
 Two things, one blocking and one a finding:
 

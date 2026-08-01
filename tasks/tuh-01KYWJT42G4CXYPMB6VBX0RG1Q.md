@@ -1,8 +1,10 @@
-# tuh-01KYWJT42G4CXYPMB6VBX0RG1Q — stronger visual hierarchy, maybe make tasks titles bold?
+# stronger visual hierarchy, maybe make tasks titles bold?
 
-- Status: cancelled
-- Priority: 0
-- Created: 2026-07-31 17:16 UTC by `brandon`
+`tuh-01KYWJT42G4CXYPMB6VBX0RG1Q`
+
+- **Status:** archived
+- **Priority:** 0
+- **Created:** 2026-07-31 17:16 UTC by `brandon`
 
 ## Description
 

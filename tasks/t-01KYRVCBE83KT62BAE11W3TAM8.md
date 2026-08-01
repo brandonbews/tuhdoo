@@ -1,9 +1,11 @@
-# t-01KYRVCBE83KT62BAE11W3TAM8 — Release pipeline: tagged, cross-compiled binaries
+# Release pipeline: tagged, cross-compiled binaries
 
-- Status: done
-- Priority: 1
-- Labels: `distribution`, `ci`
-- Created: 2026-07-30 06:28 UTC by `brandon/impl-2`
+`t-01KYRVCBE83KT62BAE11W3TAM8`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `distribution` `ci`
+- **Created:** 2026-07-30 06:28 UTC by `brandon/impl-2`
 
 ## Description
 

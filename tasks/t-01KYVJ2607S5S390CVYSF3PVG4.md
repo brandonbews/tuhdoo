@@ -1,9 +1,11 @@
-# t-01KYVJ2607S5S390CVYSF3PVG4 — TUI dashboard visual redesign: section bars + fixed column grid (mock-a)
+# TUI dashboard visual redesign: section bars + fixed column grid (mock-a)
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `design`
-- Created: 2026-07-31 07:43 UTC by `brandon/claude-code-6`
+`t-01KYVJ2607S5S390CVYSF3PVG4`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `design`
+- **Created:** 2026-07-31 07:43 UTC by `brandon/claude-code-6`
 
 ## Description
 

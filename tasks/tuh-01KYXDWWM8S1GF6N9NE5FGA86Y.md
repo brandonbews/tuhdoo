@@ -1,9 +1,11 @@
-# tuh-01KYXDWWM8S1GF6N9NE5FGA86Y — Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
+# Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 
-- Status: done
-- Priority: 2
-- Labels: `cli`, `tui`, `ux`, `design`
-- Created: 2026-08-01 01:09 UTC by `brandon`
+`tuh-01KYXDWWM8S1GF6N9NE5FGA86Y`
+
+- **Status:** done
+- **Priority:** 2
+- **Labels:** `cli` `tui` `ux` `design`
+- **Created:** 2026-08-01 01:09 UTC by `brandon`
 
 ## Description
 

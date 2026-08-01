@@ -1,10 +1,12 @@
-# t-01KYT63MB28Z535SMJCBC7SY1P — Tree/parent-grouped rendering in the TUI list
+# Tree/parent-grouped rendering in the TUI list
 
-- Status: on hold — deliberately paused
-- Priority: 0
-- Labels: `cli`, `tui`, `design`
-- Depends on: [t-01KYT63MB28Z535SMJC9B0D83W](t-01KYT63MB28Z535SMJC9B0D83W.md) (done)
-- Created: 2026-07-30 18:55 UTC by `4099114+brandonbews`
+`t-01KYT63MB28Z535SMJCBC7SY1P`
+
+- **Status:** on hold — deliberately paused
+- **Priority:** 0
+- **Labels:** `cli` `tui` `design`
+- **Depends on:** [`t-d83w`](t-01KYT63MB28Z535SMJC9B0D83W.md) (done)
+- **Created:** 2026-07-30 18:55 UTC by `4099114+brandonbews`
 
 ## Description
 

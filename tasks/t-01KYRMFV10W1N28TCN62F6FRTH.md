@@ -1,10 +1,12 @@
-# t-01KYRMFV10W1N28TCN62F6FRTH — Epoch compaction (D9): snapshot event + in-commit deletion
+# Epoch compaction (D9): snapshot event + in-commit deletion
 
-- Status: open — blocked on dependencies
-- Priority: 1
-- Labels: `go`, `storage`
-- Depends on: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (open)
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN62F6FRTH`
+
+- **Status:** open — blocked on dependencies
+- **Priority:** 1
+- **Labels:** `go` `storage`
+- **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (open)
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 

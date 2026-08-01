@@ -1,9 +1,11 @@
-# tuh-01KYX1D49M9M0EB69HNVBZT906 — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
+# Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 
-- Status: done
-- Priority: 0
-- Labels: `process`, `docs`
-- Created: 2026-07-31 21:31 UTC by `brandon`
+`tuh-01KYX1D49M9M0EB69HNVBZT906`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `process` `docs`
+- **Created:** 2026-07-31 21:31 UTC by `brandon`
 
 ## Description
 

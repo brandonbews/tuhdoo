@@ -1,9 +1,11 @@
-# tuh-01KYWKT8NQ980F0NF4MJ9W33H5 — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
+# Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 
-- Status: done
-- Priority: 0
-- Labels: `distribution`, `ci`, `npm`
-- Created: 2026-07-31 17:33 UTC by `brandon/claude-code-1`
+`tuh-01KYWKT8NQ980F0NF4MJ9W33H5`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `distribution` `ci` `npm`
+- **Created:** 2026-07-31 17:33 UTC by `brandon/claude-code-1`
 
 ## Description
 

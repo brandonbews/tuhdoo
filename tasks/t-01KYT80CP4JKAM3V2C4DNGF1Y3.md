@@ -1,9 +1,11 @@
-# t-01KYT80CP4JKAM3V2C4DNGF1Y3 — TUI readability: short display IDs, width-aware wrapping, list scrolling
+# TUI readability: short display IDs, width-aware wrapping, list scrolling
 
-- Status: done
-- Priority: 2
-- Labels: `cli`, `tui`
-- Created: 2026-07-30 19:28 UTC by `4099114+brandonbews`
+`t-01KYT80CP4JKAM3V2C4DNGF1Y3`
+
+- **Status:** done
+- **Priority:** 2
+- **Labels:** `cli` `tui`
+- **Created:** 2026-07-30 19:28 UTC by `4099114+brandonbews`
 
 ## Description
 

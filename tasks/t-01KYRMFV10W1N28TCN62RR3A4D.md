@@ -1,9 +1,11 @@
-# t-01KYRMFV10W1N28TCN62RR3A4D — Daemon portability: unix-only lock and the socket-path length limit
+# Daemon portability: unix-only lock and the socket-path length limit
 
-- Status: on hold — deliberately paused
-- Priority: 0
-- Labels: `go`, `platform`
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN62RR3A4D`
+
+- **Status:** on hold — deliberately paused
+- **Priority:** 0
+- **Labels:** `go` `platform`
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 

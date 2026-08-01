@@ -1,9 +1,11 @@
-# tuh-01KYX7303WN3RSBXXB9CAGZB01 — History view: surface the activity ledger (TUI pane and/or command)
+# History view: surface the activity ledger (TUI pane and/or command)
 
-- Status: on hold — deliberately paused
-- Priority: 0
-- Labels: `design`, `tui`, `cli`, `product`
-- Created: 2026-07-31 23:10 UTC by `brandon`
+`tuh-01KYX7303WN3RSBXXB9CAGZB01`
+
+- **Status:** on hold — deliberately paused
+- **Priority:** 0
+- **Labels:** `design` `tui` `cli` `product`
+- **Created:** 2026-07-31 23:10 UTC by `brandon`
 
 ## Description
 

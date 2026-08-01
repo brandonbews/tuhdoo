@@ -1,10 +1,12 @@
-# t-01KYVE848CJZNG5VFWZ9J3WRKM — Brand the task IDs: mint tuh-, accept both prefixes, age out t-
+# Brand the task IDs: mint tuh-, accept both prefixes, age out t-
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`, `design`
-- Depends on: [t-01KYVD31CNTR1EVCDHPGZFQ5EV](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
-- Created: 2026-07-31 06:37 UTC by `brandon/claude-code-3`
+`t-01KYVE848CJZNG5VFWZ9J3WRKM`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux` `design`
+- **Depends on:** [`t-q5ev`](t-01KYVD31CNTR1EVCDHPGZFQ5EV.md) (done)
+- **Created:** 2026-07-31 06:37 UTC by `brandon/claude-code-3`
 
 ## Description
 

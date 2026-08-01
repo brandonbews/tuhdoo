@@ -1,9 +1,11 @@
-# t-01KYVD31CNTR1EVCDHPG0G4GMZ — TUI navigation: up/down arrows move the cursor; footer says so
+# TUI navigation: up/down arrows move the cursor; footer says so
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`
-- Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
+`t-01KYVD31CNTR1EVCDHPG0G4GMZ`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux`
+- **Created:** 2026-07-31 06:16 UTC by `brandon/claude-code-2`
 
 ## Description
 

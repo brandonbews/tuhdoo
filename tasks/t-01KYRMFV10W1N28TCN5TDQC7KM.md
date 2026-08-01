@@ -1,10 +1,12 @@
-# t-01KYRMFV10W1N28TCN5TDQC7KM — Grow watch into the interactive steering TUI (tuhdoo top)
+# Grow watch into the interactive steering TUI (tuhdoo top)
 
-- Status: done
-- Priority: 3
-- Labels: `go`, `tui`
-- Parents: [t-01KYRMFV10W1N28TCN5SH4QM7A](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN5TDQC7KM`
+
+- **Status:** done
+- **Priority:** 3
+- **Labels:** `go` `tui`
+- **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 

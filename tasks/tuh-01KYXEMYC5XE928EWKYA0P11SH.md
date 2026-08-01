@@ -1,9 +1,11 @@
-# tuh-01KYXEMYC5XE928EWKYA0P11SH — npm provenance: trusted publishing promised attestations, the registry has none
+# npm provenance: trusted publishing promised attestations, the registry has none
 
-- Status: open — ready
-- Priority: 1
-- Labels: `distribution`, `ci`, `npm`, `investigation`
-- Created: 2026-08-01 01:22 UTC by `brandon`
+`tuh-01KYXEMYC5XE928EWKYA0P11SH`
+
+- **Status:** open — ready
+- **Priority:** 1
+- **Labels:** `distribution` `ci` `npm` `investigation`
+- **Created:** 2026-08-01 01:22 UTC by `brandon`
 
 ## Description
 

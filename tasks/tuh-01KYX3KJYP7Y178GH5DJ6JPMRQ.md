@@ -1,9 +1,11 @@
-# tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ — Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions)
+# Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions)
 
-- Status: on hold — deliberately paused
-- Priority: 0
-- Labels: `docs`, `product`
-- Created: 2026-07-31 22:09 UTC by `brandon/claude-code-1`
+`tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ`
+
+- **Status:** on hold — deliberately paused
+- **Priority:** 0
+- **Labels:** `docs` `product`
+- **Created:** 2026-07-31 22:09 UTC by `brandon/claude-code-1`
 
 ## Description
 

@@ -1,9 +1,11 @@
-# tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ — Init flavor picker: multiple-choice workflow setup in `tuhdoo init` that drops recipe files
+# Init flavor picker: multiple-choice workflow setup in `tuhdoo init` that drops recipe files
 
-- Status: cancelled
-- Priority: 0
-- Labels: `cli`, `docs`, `product`
-- Created: 2026-07-31 23:58 UTC by `brandon/claude-code-1`
+`tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ`
+
+- **Status:** archived
+- **Priority:** 0
+- **Labels:** `cli` `docs` `product`
+- **Created:** 2026-07-31 23:58 UTC by `brandon/claude-code-1`
 
 ## Description
 

@@ -1,9 +1,11 @@
-# tuh-01KYXE40ES9YSEGW9Z0GXKYPWW — One real text-input widget: delineated box, fixed hint line, standard cursor editing
+# One real text-input widget: delineated box, fixed hint line, standard cursor editing
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`
-- Created: 2026-08-01 01:13 UTC by `brandon`
+`tuh-01KYXE40ES9YSEGW9Z0GXKYPWW`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux`
+- **Created:** 2026-08-01 01:13 UTC by `brandon`
 
 ## Description
 

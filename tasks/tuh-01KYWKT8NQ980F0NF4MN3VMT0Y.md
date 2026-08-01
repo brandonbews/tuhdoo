@@ -1,9 +1,11 @@
-# tuh-01KYWKT8NQ980F0NF4MN3VMT0Y — claim_task on an escalation-blocked task reports "unmet dependencies"
+# claim_task on an escalation-blocked task reports "unmet dependencies"
 
-- Status: done
-- Priority: 0
-- Labels: `mcp`, `dx`
-- Created: 2026-07-31 17:33 UTC by `brandon/claude-code-1`
+`tuh-01KYWKT8NQ980F0NF4MN3VMT0Y`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `mcp` `dx`
+- **Created:** 2026-07-31 17:33 UTC by `brandon/claude-code-1`
 
 ## Description
 

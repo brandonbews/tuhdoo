@@ -1,10 +1,12 @@
-# t-01KYVD31CNTR1EVCDHPGZFQ5EV — Rename the cancel interaction: archive as the human verb, task.cancelled stays the plumbing
+# Rename the cancel interaction: archive as the human verb, task.cancelled stays the plumbing
 
-- Status: done
-- Priority: 1
-- Labels: `cli`, `tui`, `ux`, `design`
-- Depends on: [t-01KYVJ2607S5S390CVYSF3PVG4](t-01KYVJ2607S5S390CVYSF3PVG4.md) (done)
-- Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
+`t-01KYVD31CNTR1EVCDHPGZFQ5EV`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `cli` `tui` `ux` `design`
+- **Depends on:** [`t-pvg4`](t-01KYVJ2607S5S390CVYSF3PVG4.md) (done)
+- **Created:** 2026-07-31 06:16 UTC by `brandon/claude-code-2`
 
 ## Description
 

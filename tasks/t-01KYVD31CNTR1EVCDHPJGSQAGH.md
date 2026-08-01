@@ -1,9 +1,11 @@
-# t-01KYVD31CNTR1EVCDHPJGSQAGH — Align MCP tool descriptions with the revised notes doctrine
+# Align MCP tool descriptions with the revised notes doctrine
 
-- Status: done
-- Priority: 1
-- Labels: `protocol`, `docs`, `mcp`
-- Created: 2026-07-31 06:16 UTC by `brandon/claude-code-2`
+`t-01KYVD31CNTR1EVCDHPJGSQAGH`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `protocol` `docs` `mcp`
+- **Created:** 2026-07-31 06:16 UTC by `brandon/claude-code-2`
 
 ## Description
 

@@ -1,9 +1,11 @@
-# tuh-01KYXAS20FAP956KBHVZ057WBW — Design pass on the generated markdown views: scannable, glanceable data branch
+# Design pass on the generated markdown views: scannable, glanceable data branch
 
-- Status: done
-- Priority: 1
-- Labels: `views`, `design`, `ux`
-- Created: 2026-08-01 00:14 UTC by `brandon`
+`tuh-01KYXAS20FAP956KBHVZ057WBW`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `views` `design` `ux`
+- **Created:** 2026-08-01 00:14 UTC by `brandon`
 
 ## Description
 

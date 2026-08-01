@@ -1,0 +1,1 @@
+{"actor":"brandon/claude-code-1","data":{"depends_on":null,"description":"","labels":["cleanup","go"],"parents":null,"priority":0,"status":"inbox","title":"shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper"},"id":"01KYXNTBJRKM8YDW6QG79M3HQK","machine":"m-f292ceeb","sig":null,"task":"tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y","type":"task.created","v":2}

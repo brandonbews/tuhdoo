@@ -1,9 +1,11 @@
-# t-01KYT63MB28Z535SMJC9B0D83W — One TUI: bare tuhdoo is the interactive surface (Cycle 4)
+# One TUI: bare tuhdoo is the interactive surface (Cycle 4)
 
-- Status: done
-- Priority: 2
-- Labels: `cli`, `tui`, `design-revision`
-- Created: 2026-07-30 18:55 UTC by `4099114+brandonbews`
+`t-01KYT63MB28Z535SMJC9B0D83W`
+
+- **Status:** done
+- **Priority:** 2
+- **Labels:** `cli` `tui` `design-revision`
+- **Created:** 2026-07-30 18:55 UTC by `4099114+brandonbews`
 
 ## Description
 

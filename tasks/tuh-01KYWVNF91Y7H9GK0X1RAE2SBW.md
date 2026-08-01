@@ -1,9 +1,11 @@
-# tuh-01KYWVNF91Y7H9GK0X1RAE2SBW — Audit: agents via MCP can perform the main steering actions users ask for
+# Audit: agents via MCP can perform the main steering actions users ask for
 
-- Status: done
-- Priority: 0
-- Labels: `mcp`, `dx`, `docs`
-- Created: 2026-07-31 19:50 UTC by `brandon`
+`tuh-01KYWVNF91Y7H9GK0X1RAE2SBW`
+
+- **Status:** done
+- **Priority:** 0
+- **Labels:** `mcp` `dx` `docs`
+- **Created:** 2026-07-31 19:50 UTC by `brandon`
 
 ## Description
 
@@ -27,7 +29,7 @@ Constraints: eleven tools stay eleven within this task (T5) — gaps escalate wi
 
 ### 2026-08-01 00:19 UTC — escalation from `brandon/claude-code-1`
 
-**Q:** Parity audit found real MCP visibility gaps: agents cannot list in-progress, blocked, done, or cancelled tasks, nor open escalations. Do you want a T5 design revision (grill cycle) to add an orientation path — e.g. more get_backlog arrays or a /v0/state-shaped read verb?
+> Parity audit found real MCP visibility gaps: agents cannot list in-progress, blocked, done, or cancelled tasks, nor open escalations. Do you want a T5 design revision (grill cycle) to add an orientation path — e.g. more get_backlog arrays or a /v0/state-shaped read verb?
 
 Audit (PR #7) verified all ten steering write-paths work through the eleven tools, but read-side parity fails against the TUI's sections. Evidence, per section: (1) Needs Input — no verb lists open escalations; a blocking escalation removes its task from ready, so an agent can't even discover the task ID to get_task it; a non-blocking escalation is invisible in the task's backlog row. (2) In Progress — a claimed task vanishes from all three get_backlog arrays, and taskJSON carries no holder field, so "what's in progress and who holds it?" has no MCP path. (3) Blocked — dep-blocked and escalation-blocked tasks appear in no array. (4) Done/Archived — done and cancelled tasks appear nowhere; "what did we finish this week?" is unanswerable. All such tasks remain readable by known ID via get_task; the gap is discovery, not access. Also worth settling in the same revision: T5's sentence "curation (cancel, reprioritize, archive) is human work via CLI/TUI on the HTTP API" no longer matches code or intent — update_task mechanically accepts cancelled/priority from agents and the full-agentic goal depends on that; PR #7 already corrected agent-protocol.md wording, but 002-technology.md T5 itself still says it. Options: (a) grow get_backlog with in_progress/blocked/done/cancelled/escalations arrays (token-heavy — rows carry full descriptions), (b) a new state-shaped orientation verb mirroring GET /v0/state (breaks eleven-verbs), (c) filter/scope inputs on get_backlog. Recommendation: run the grill cycle; my lean is (c) or (a-with-slim-rows) since a twelfth verb needs the stronger justification. This escalation is the audit's designed output — the task said gaps become a design revision, not a workaround.
 

@@ -1,10 +1,12 @@
-# t-01KYRMFV10W1N28TCN5SH4QM7A — v1 milestone: steering surface and a second machine
+# v1 milestone: steering surface and a second machine
 
-- Status: open — blocked on dependencies
-- Priority: 0
-- Labels: `milestone`
-- Depends on: [t-01KYRMFV10W1N28TCN5NWAGSW5](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (open)
-- Created: 2026-07-30 04:28 UTC by `brandon/migrator`
+`t-01KYRMFV10W1N28TCN5SH4QM7A`
+
+- **Status:** open — blocked on dependencies
+- **Priority:** 0
+- **Labels:** `milestone`
+- **Depends on:** [`t-gsw5`](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (open)
+- **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
 

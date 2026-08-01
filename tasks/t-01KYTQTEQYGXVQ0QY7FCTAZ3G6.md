@@ -1,9 +1,11 @@
-# t-01KYTQTEQYGXVQ0QY7FCTAZ3G6 — Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
+# Agent protocol: dangling-pointer anti-pattern; notes are garnish, transitions are the record
 
-- Status: done
-- Priority: 1
-- Labels: `docs`, `protocol`
-- Created: 2026-07-31 00:05 UTC by `4099114+brandonbews`
+`t-01KYTQTEQYGXVQ0QY7FCTAZ3G6`
+
+- **Status:** done
+- **Priority:** 1
+- **Labels:** `docs` `protocol`
+- **Created:** 2026-07-31 00:05 UTC by `4099114+brandonbews`
 
 ## Description
 
