@@ -2,7 +2,7 @@
 
 `tuh-01KYXE5376YPXHDS98V3K985M6`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `cli` `tui` `ux`
 - **Depends on:** [`tuh-a86y`](tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) (done), [`tuh-ypww`](tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) (done)
@@ -39,4 +39,10 @@ An edit affordance in the task view:
 
 ## History
 
-_No activity yet._
+### 2026-08-01 03:40 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-85m6/task-view-editing`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/12>
+- Commits: `fdb4a02`
+
+Landed on main as fdb4a02 (PR #12, squash, CI green). Armed task view gains e (edit title, single-line widget) and E (edit description, multi-line mode first real consumer); footer says e/E edit. Both prefill current value, cursor at end; esc cancels without writing; unchanged submit writes nothing; empty title rejected in place; emptying description is a legitimate clear. Writes ride the same PATCH /v0/tasks plumbing as tuhdoo update (same task.updated event, TUI principal); real-daemon test greps the data branch for the event. Watch mode gains nothing (pinned). One deliberate footer trade flagged for Brandon in the PR: the redundant enter-answer legend item moved out of the detail footer (the NEEDS INPUT section bar owns it, dashboard convention) to keep the legend inside 80 columns. Deliberately not done: no e/E on the dashboard list; labels/status/edges not editable; no pre-edit re-fetch (same ~2s poll staleness as all steering writes).

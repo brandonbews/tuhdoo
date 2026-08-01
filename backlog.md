@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 1 ready · 4 blocked · 5 on hold · 1 inbox · 35 done · 7 archived
+0 in progress · 1 ready · 4 blocked · 5 on hold · 1 inbox · 36 done · 7 archived
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) | Edit title and description from the task view | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -80,6 +78,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7wbw`](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) Design pass on the generated markdown views: scannable, glanceable data branch
 - [`tuh-a86y`](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 - [`tuh-ypww`](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) One real text-input widget: delineated box, fixed hint line, standard cursor editing
+- [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) Edit title and description from the task view
 
 ## Archived
 
