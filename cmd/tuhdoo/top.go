@@ -131,7 +131,7 @@ func (r topRow) id() string {
 // then the dim shelves — held above inbox (2026-07-31; held passed
 // triage, so it sits closer to workable than raw captures). Done and
 // cancelled tasks are not steerable and get no rows; held and inbox
-// rows are ordinary rows — enter opens detail, c archives.
+// rows are ordinary rows — enter opens detail, a archives.
 func buildRows(s *snapshot) []topRow {
 	var rows []topRow
 	for _, e := range s.state.OpenEscalations {
@@ -167,8 +167,8 @@ func buildRows(s *snapshot) []topRow {
 
 // Input modes. Nav is the resting state; the others capture keys until
 // enter/esc (or y/n for the archive confirmation). Detail is the
-// in-place task screen: armed it steers the viewed task (enter answers
-// the focused open escalation, p/c reprioritize/archive), disarmed it
+// in-place task view: armed it steers the viewed task (enter answers
+// the selected open escalation, p/a reprioritize/archive), disarmed it
 // is read-only; esc steps back to the list either way.
 const (
 	modeNav = iota
@@ -285,7 +285,9 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.back, m.target, m.input, m.status = modePriority, modeNav, r, "", ""
 		}
-	case "c":
+	case "a":
+		// Archive is a (task-view rework, 2026-08-01): c read as
+		// "cancel"/"close", not archive. c is free again.
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.back, m.target, m.input, m.status = modeConfirmArchive, modeNav, r, "", ""
 		}
@@ -301,21 +303,27 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // openRow is what enter — and a click on the already-selected row —
-// does. It acts on what the row is for: a Needs Input row goes straight
-// into answering (dogfood steering, 2026-07-30 — the old `a` key is
-// gone, one documented behavior per action); task rows open their
-// biography. A disarmed pane never opens input: watch mode falls
-// through to the read-only detail of the escalation's task.
+// does: open the task view. A Needs Input row opens its task's view
+// with that escalation preselected (task-view rework, 2026-08-01 —
+// superseding the 2026-07-30 inline answer prompt: dogfooding showed
+// answering needs the task's context on screen, so the task view is
+// where answering happens now); task rows open their biography. Watch
+// mode gets the same view, read-only.
 func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
-	if m.armed && r.kind == rowEscalation {
-		m.mode, m.back, m.target, m.input, m.status = modeAnswer, modeNav, r, "", ""
-		return m, nil
-	}
 	id := r.task.ID
 	if r.kind == rowEscalation {
 		id = r.esc.Task
 	}
 	m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
+	if r.kind == rowEscalation {
+		for i, e := range m.detailOpenEscalations() {
+			if e.ID == r.esc.ID {
+				m.detailFocus = i
+				break
+			}
+		}
+		m.detailScroll = m.detailRevealScroll()
+	}
 	return m, nil
 }
 
@@ -362,9 +370,58 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if m.detailScroll < m.detailMaxScroll() {
 				m.detailScroll++
 			}
+		case click:
+			// Same contract as the list: a click selects the escalation
+			// row under the pointer; a click on the already-selected row
+			// acts as enter (opens answer entry). detailOpenEscalations is
+			// empty in watch mode, so a stray click stays read-only.
+			open := m.detailOpenEscalations()
+			i := m.detailEscAt(msg.Y)
+			if i < 0 || i >= len(open) {
+				break
+			}
+			if i == detailFocusIdx(m.detailFocus, len(open)) {
+				m.detailFocus = i
+				m.mode, m.back = modeAnswer, modeDetail
+				m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[i]}, "", ""
+				break
+			}
+			m.detailFocus = i
+			m.detailScroll = m.detailRevealScroll()
 		}
 	}
 	return m, nil
+}
+
+// detailEscAt maps a terminal row to the open-escalation index rendered
+// there, or -1 for everything else. Like rowAt, it replays the exact
+// layout detailView draws — same header, same scroll window — off the
+// same tagged lines, so the hit map is the layout.
+func (m topModel) detailEscAt(y int) int {
+	lines := m.detailLines()
+	if lines == nil {
+		return -1
+	}
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	head := strings.Count(m.listHead(width), "\n")
+	scroll := m.detailScroll
+	if max := m.detailMaxScroll(); scroll > max {
+		scroll = max
+	}
+	if y < head {
+		return -1
+	}
+	if m.height > 0 && y-head >= m.detailWindow() {
+		return -1
+	}
+	i := y - head + scroll
+	if i >= len(lines) {
+		return -1
+	}
+	return lines[i].esc
 }
 
 // rowAt maps a terminal row (0-based, from the top of the screen) to
@@ -426,12 +483,13 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// updateDetail: the armed detail screen steers the viewed task in place
+// updateDetail: the armed task view steers the viewed task in place
 // (dogfood steering, 2026-07-30 — no more esc → navigate → answer round
-// trips): enter answers the focused open escalation, p reprioritizes and
-// c archives the viewed task, all with the same footers and confirms as
-// the list. Watch mode keeps the read-only contract: no focus, no input,
-// ↑/↓ and j/k scroll, esc steps back, q and ctrl+c quit.
+// trips): enter answers the selected open escalation, p reprioritizes
+// and a archives the viewed task, all with the same footers and
+// confirms as the list. Watch mode keeps the read-only contract: no
+// focus, no input, ↑/↓ and j/k scroll, esc steps back, q and ctrl+c
+// quit.
 //
 // Focus vs scroll — the deliberate rule: j/k move focus when a further
 // open escalation exists in that direction (the window scrolls just
@@ -473,7 +531,7 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.mode, m.back = modePriority, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, "", ""
 		}
-	case "c":
+	case "a":
 		if t, ok := m.viewedTask(); m.armed && ok {
 			m.mode, m.back = modeConfirmArchive, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, "", ""
@@ -482,12 +540,11 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// detailOpenEscalations lists the viewed task's unanswered escalations
-// in ULID order — the same order historyOf renders them — as the
-// focusable items of an armed detail. Watch mode focuses nothing: the
-// disarmed pane stays fully read-only.
-func (m topModel) detailOpenEscalations() []escalationJSON {
-	if !m.armed || m.snap == nil {
+// detailEscalations lists the viewed task's unanswered escalations in
+// ULID order: the rows of the task view's NEEDS INPUT section. Both
+// modes render them — watch just never selects one.
+func (m topModel) detailEscalations() []escalationJSON {
+	if m.snap == nil {
 		return nil
 	}
 	var open []escalationJSON
@@ -498,6 +555,16 @@ func (m topModel) detailOpenEscalations() []escalationJSON {
 	}
 	sort.Slice(open, func(i, j int) bool { return open[i].ID < open[j].ID })
 	return open
+}
+
+// detailOpenEscalations is the selectable subset: the same rows when
+// armed, nothing in watch mode — the disarmed pane stays fully
+// read-only, so it has no selection to act on.
+func (m topModel) detailOpenEscalations() []escalationJSON {
+	if !m.armed {
+		return nil
+	}
+	return m.detailEscalations()
 }
 
 // detailFocusIdx clamps a stored focus to the current focusable set —
@@ -590,20 +657,24 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 
 // ---- rendering (pure over model state) ----
 
-// badge names the mode in the header: who steering acts as, or a
-// visible marker that this pane cannot act at all.
-func (m topModel) badge() string {
-	col := m.col
-	if !m.armed {
-		return fmt.Sprintf("%s%swatch mode%s", col.bold, col.yellow, col.reset)
-	}
-	return fmt.Sprintf("acting as %s%s%s", col.bold, m.actor, col.reset)
+// detailLine is one rendered screen line of the task view, tagged with
+// the open-escalation index it belongs to (-1 for everything else) so
+// selection reveal and click hit-testing work off the same bytes View
+// draws.
+type detailLine struct {
+	text string
+	esc  int
 }
 
-// detailBody renders the full task biography (the same layout as
-// `tuhdoo task <id>`, with references shortened and annotated for the
-// screen) as lines, or nil if the task vanished.
-func (m topModel) detailBody() []string {
+// detailLines renders the task view on the dashboard's visual language
+// (task-view rework, 2026-08-01): bold field names in the header block,
+// dashboard section bars, and the task's open escalations as selectable
+// rows under a NEEDS INPUT bar — the same gutter-bar/tint selection UI
+// as the list. Open escalations live in that section alone; History
+// keeps notes, runs, and answered escalations (the single-home rule the
+// dashboard already follows). Returns nil if the task vanished under a
+// refresh.
+func (m topModel) detailLines() []detailLine {
 	if m.snap == nil {
 		return nil
 	}
@@ -611,44 +682,155 @@ func (m topModel) detailBody() []string {
 	if !ok {
 		return nil
 	}
-	var b strings.Builder
-	printTaskRef(&b, m.col, h, m.snap.taskRef)
-	body := b.String()
-	if open := m.detailOpenEscalations(); len(open) > 0 {
-		body = markFocusedEscalation(body, m.col, detailFocusIdx(m.detailFocus, len(open)))
+	col, t := m.col, h.Task
+	width := m.width
+	if width <= 0 {
+		width = 80 // no WindowSizeMsg yet: the mockup's design width
 	}
-	// Wrap before splitting so the scroll window counts screen lines,
-	// not logical ones.
-	return strings.Split(strings.TrimRight(wrapTo(body, m.width), "\n"), "\n")
+	var out []detailLine
+	add := func(esc int, text string) {
+		for _, l := range strings.Split(strings.TrimRight(wrapTo(text, width), "\n"), "\n") {
+			out = append(out, detailLine{text: l, esc: esc})
+		}
+	}
+	// Bars and escalation rows are already sized to the width; wrapping
+	// them again would eat the bar's space fill.
+	addRaw := func(esc int, text string) {
+		for _, l := range strings.Split(text, "\n") {
+			out = append(out, detailLine{text: l, esc: esc})
+		}
+	}
+
+	// Header block: title line, then the field grid with bold names.
+	add(-1, fmt.Sprintf("%s%s%s — %s", col.bold, shortID(t.ID), col.reset, oneLine(t.Title)))
+	add(-1, "")
+	field := func(name, value string) {
+		add(-1, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
+	}
+	field("id", sgr(col, col.dim, t.ID))
+	status := humanStatus(t.Status)
+	if h.Claim != nil {
+		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
+		if h.Claim.Expires != nil {
+			status += fmt.Sprintf(" (lease expires %s)", stamp(*h.Claim.Expires))
+		}
+	}
+	field("status", status)
+	field("priority", strconv.Itoa(t.Priority))
+	if len(t.Labels) > 0 {
+		field("labels", strings.Join(t.Labels, ", "))
+	}
+	if len(t.Parents) > 0 {
+		field("parents", joinRefs(t.Parents, m.snap.taskRef))
+	}
+	if len(t.DependsOn) > 0 {
+		field("depends on", joinRefs(t.DependsOn, m.snap.taskRef))
+	}
+	field("created", fmt.Sprintf("%s by %s", stamp(t.CreatedAt), t.CreatedBy))
+
+	// The escalations section: every open escalation, selectable.
+	if open := m.detailEscalations(); len(open) > 0 {
+		add(-1, "")
+		hint := ""
+		if m.armed {
+			hint = "enter answer "
+		}
+		addRaw(-1, barLine(col, col.bgMagenta, fmt.Sprintf(" NEEDS INPUT (%d)", len(open)), hint, width))
+		focus := detailFocusIdx(m.detailFocus, len(m.detailOpenEscalations()))
+		for i, e := range open {
+			text := escalationRow(col, e, width)
+			if i == focus {
+				text = selectedText(col, text, width)
+			}
+			addRaw(i, text)
+		}
+	}
+
+	add(-1, "")
+	addRaw(-1, barLine(col, col.rev+col.dim, " DESCRIPTION", "", width))
+	if t.Description == "" {
+		add(-1, "  "+sgr(col, col.dim, "none"))
+	} else {
+		add(-1, indent(t.Description, "  "))
+	}
+
+	add(-1, "")
+	addRaw(-1, barLine(col, col.rev+col.dim, " HISTORY", "", width))
+	hh := h
+	hh.Escalations = nil
+	for _, e := range h.Escalations {
+		if e.Answered {
+			hh.Escalations = append(hh.Escalations, e)
+		}
+	}
+	entries := historyOf(col, hh)
+	if len(entries) == 0 {
+		add(-1, "  "+sgr(col, col.dim, "no activity yet"))
+	}
+	for _, e := range entries {
+		add(-1, strings.TrimRight(e.text, "\n"))
+	}
+	return out
 }
 
-// markFocusedEscalation rewrites the focus-th "unanswered" line of a
-// rendered biography into the focused-item marker. The k-th unanswered
-// line belongs to the k-th open escalation because historyOf renders
-// entries in ULID order and detailOpenEscalations sorts the same way.
-// Pure string-in string-out; the one-shot rendering never passes
-// through here and stays byte-identical.
-func markFocusedEscalation(body string, col colors, focus int) string {
-	plain := "    " + sgr(col, col.dim, "unanswered")
-	lines := strings.Split(body, "\n")
-	k := 0
-	for i, l := range lines {
-		if l != plain {
+// escalationRow renders one open escalation of the task view: badge
+// cell and question (bold, wrapped), any context, then dim meta — all
+// on the list's two-cell mark column, so the selection bar's ▌ gutter
+// and tint read exactly like the dashboard's rows.
+func escalationRow(col colors, e escalationJSON, width int) string {
+	inner := width - 6
+	if inner < 10 {
+		inner = 10
+	}
+	wrapIndent := func(s string) []string {
+		return strings.Split(strings.TrimRight(wrapTo(s, inner), "\n"), "\n")
+	}
+	badge, style := "", ""
+	if e.Blocking {
+		badge, style = "!", col.red+col.bold
+	}
+	var lines []string
+	for i, q := range wrapIndent(oneLine(e.Question)) {
+		if i == 0 {
+			lines = append(lines, "  "+sgr(col, style, padTo(badge, 2))+"  "+sgr(col, col.bold, q))
 			continue
 		}
-		if k == focus {
-			lines[i] = "  ▸ " + sgr(col, col.bold, "unanswered — enter to answer")
-		}
-		k++
+		lines = append(lines, "      "+sgr(col, col.bold, q))
 	}
+	if e.Context != "" {
+		for _, c := range strings.Split(strings.TrimRight(e.Context, "\n"), "\n") {
+			for _, l := range wrapIndent(c) {
+				lines = append(lines, "      "+sgr(col, col.dim, l))
+			}
+		}
+	}
+	lines = append(lines, "      "+sgr(col, col.dim, fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))))
 	return strings.Join(lines, "\n")
 }
 
-// detailFocusLine is the wrapped-body line index of the focus marker,
-// or -1 when nothing is focused.
+// detailBody is the task view's screen lines — detailLines stripped of
+// its tags, for the scroll-window math.
+func (m topModel) detailBody() []string {
+	lines := m.detailLines()
+	if lines == nil {
+		return nil
+	}
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = l.text
+	}
+	return out
+}
+
+// detailFocusLine is the first body line of the selected escalation
+// row, or -1 when nothing is selected.
 func (m topModel) detailFocusLine() int {
-	for i, l := range m.detailBody() {
-		if strings.HasPrefix(l, "  ▸") {
+	focus := detailFocusIdx(m.detailFocus, len(m.detailOpenEscalations()))
+	if focus < 0 {
+		return -1
+	}
+	for i, l := range m.detailLines() {
+		if l.esc == focus {
 			return i
 		}
 	}
@@ -704,14 +886,14 @@ func (m topModel) detailMaxScroll() int {
 }
 
 func (m topModel) detailView(body []string) string {
-	col := m.col
-	var w strings.Builder
-	w.WriteString(wrapTo(fmt.Sprintf("%stuhdoo%s · sync: %s · %s\n", col.bold, col.reset,
-		syncLine(m.snap.state.Sync), m.badge()), m.width))
-	if m.status != "" {
-		w.WriteString(m.status + "\n")
+	width := m.width
+	if width <= 0 {
+		width = 80
 	}
-	w.WriteString("\n")
+	var w strings.Builder
+	// The same header bar as the list: one screen identity (task-view
+	// rework, 2026-08-01).
+	w.WriteString(m.listHead(width))
 	scroll := m.detailScroll
 	if max := m.detailMaxScroll(); scroll > max {
 		scroll = max // content shrank under a live refresh
@@ -729,24 +911,28 @@ func (m topModel) detailView(body []string) string {
 	return w.String()
 }
 
-// detailFooter is the detail screen's bottom line: the live input
-// prompt while one is open (so answering reads the same from either
-// screen), else the key legend for what this pane can do — the armed
-// legend advertises steering, and only mentions enter when there is an
-// open escalation to answer; watch mode keeps the read-only legend.
+// detailFooter is the task view's bottom line: the live input prompt
+// while one is open (so answering reads the same from either screen),
+// else the same footer bar as the list — the armed legend advertises
+// steering, and only mentions enter when there is an open escalation to
+// answer; watch mode keeps the read-only legend.
 func (m topModel) detailFooter() string {
 	if f := m.inputFooter(); f != "" {
 		return f
 	}
 	col := m.col
-	legend := "↑/↓ (j/k) scroll · esc back · q quit"
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+	legend := " ↑/↓ (j/k) scroll · esc back · q quit"
 	if m.armed {
-		legend = "↑/↓ (j/k) scroll · p priority · c archive · esc back · q quit"
+		legend = " ↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit"
 		if len(m.detailOpenEscalations()) > 0 {
-			legend = "↑/↓ (j/k) move · enter answer · p priority · c archive · esc back · q quit"
+			legend = " ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit"
 		}
 	}
-	return wrapTo(fmt.Sprintf("%s%s%s\n", col.dim, legend, col.reset), m.width)
+	return barLine(col, col.rev+col.dim, legend, "", width) + "\n"
 }
 
 func (m topModel) View() string {
@@ -826,14 +1012,14 @@ var topSections = []topSection{
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, false, "enter answer"},
-	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · c archive"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · a archive"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, false, ""},
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
 	// The shelves (2026-07-31): held above inbox, both dim — parked and
 	// captured work sits below the live queue and never claims the eye.
 	// No colored bars: reverse-dim reads as "present but not active".
-	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "c archive"},
-	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c archive"},
+	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "a archive"},
+	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · a archive"},
 }
 
 // chunk is one atomic display unit — a bar, a one- or two-line row, a
@@ -1148,13 +1334,12 @@ func (m topModel) footerView(width int) string {
 	if f := m.inputFooter(); f != "" {
 		return f
 	}
-	// "enter answer/open" because enter acts on what the row is for:
-	// answering on a Needs Input row, the biography elsewhere. Folding
-	// the old `a` key into enter also bought back the tally's trailing
-	// margin space at 80 columns.
+	// "enter open" on every row: a Needs Input row opens its task's view
+	// with the question preselected — answering happens there, with the
+	// task's context on screen (task-view rework, 2026-08-01).
 	legend := " ↑/↓ (j/k) move · enter open · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit"
+		legend = " ↑/↓ (j/k) move · enter open · p priority · a archive · q quit"
 	}
 	done := ""
 	if m.snap != nil {

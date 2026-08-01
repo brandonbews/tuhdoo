@@ -207,7 +207,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (0)",
 		"▌ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
-		"↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit",
+		"↑/↓ (j/k) move · enter open · p priority · a archive · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -319,16 +319,37 @@ func TestTopSelectionSurvivesRefresh(t *testing.T) {
 	}
 }
 
+// TestTopAnswerFlow is the routing contract (task-view rework,
+// 2026-08-01, superseding the 2026-07-30 inline prompt): enter on a
+// Needs Input row lands in the task view with the escalation
+// preselected — never the old bottom-of-dashboard answer prompt — and
+// enter there opens answer entry, submitting through the same plumbing.
 func TestTopAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	// Enter on a Needs Input row goes straight into answering — no
-	// detail detour, no separate answer key.
-	m, _ = press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeAnswer {
-		t.Fatalf("enter on an escalation row: mode %d, want modeAnswer", m.mode)
+	m, cmd := press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-lic" || cmd != nil {
+		t.Fatalf("enter on an escalation row: mode %d detail %q, want the task view of t-lic", m.mode, m.detailID)
+	}
+	if m.detailFocus != 0 {
+		t.Fatalf("detailFocus = %d, want the escalation preselected at 0", m.detailFocus)
 	}
 	v := m.View()
+	for _, want := range []string{
+		"t-lic — choose a license", // the task's context is on screen
+		"NEEDS INPUT (1)",
+		"▌ !   Which license?", // the escalation row, selected
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("task view missing %q; view:\n%s", want, v)
+		}
+	}
+	// Enter on the selected question opens answer entry in the footer.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer {
+		t.Fatalf("enter on the selected question: mode %d, want modeAnswer", m.mode)
+	}
+	v = m.View()
 	if !strings.Contains(v, "answer") || !strings.Contains(v, "Which license?") ||
 		!strings.Contains(v, "enter submits · esc cancels") {
 		t.Errorf("answer prompt missing; view:\n%s", v)
@@ -341,9 +362,9 @@ func TestTopAnswerFlow(t *testing.T) {
 	if m.input != "Use MIT" {
 		t.Fatalf("backspace left %q", m.input)
 	}
-	m, cmd := press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeNav {
-		t.Errorf("mode after submit = %d, want modeNav", m.mode)
+	m, cmd = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail {
+		t.Errorf("mode after submit = %d, want modeDetail (back to the task view)", m.mode)
 	}
 	if cmd == nil {
 		t.Fatal("submit produced no command")
@@ -368,7 +389,9 @@ func TestTopAnswerFlow(t *testing.T) {
 func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	m, cmd := press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter))
+	// enter routes to the task view; enter opens answer entry; enter on
+	// empty input is rejected in place.
+	m, cmd := press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter), keyOf(tea.KeyEnter))
 	if cmd != nil {
 		t.Error("empty answer still submitted")
 	}
@@ -376,8 +399,8 @@ func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 		t.Errorf("empty answer: mode %d status %q", m.mode, m.status)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	if m.mode != modeNav {
-		t.Errorf("esc left mode %d, want modeNav", m.mode)
+	if m.mode != modeDetail {
+		t.Errorf("esc left mode %d, want modeDetail (back to the task view)", m.mode)
 	}
 	if len(fake.answers) != 0 {
 		t.Errorf("esc still answered: %v", fake.answers)
@@ -386,20 +409,27 @@ func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 
 func TestTopActionKeysRespectRowKind(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	// a died when enter became the answer key (Cycle-4 rule: no
-	// vestigial keys) — it does nothing anywhere, escalation row included.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
-	if m.mode != modeNav {
-		t.Errorf("removed key a still entered mode %d", m.mode)
-	}
-	// p and c on an escalation row: ignored.
+	// p and a on an escalation row: ignored — they steer task rows only.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if m.mode != modeNav {
 		t.Errorf("p on an escalation row entered mode %d", m.mode)
 	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	if m.mode != modeNav {
+		t.Errorf("a on an escalation row entered mode %d", m.mode)
+	}
+	// c is free again (task-view rework, 2026-08-01: archive moved to a
+	// because c read as cancel/close) — it does nothing anywhere, task
+	// rows included.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
 	if m.mode != modeNav {
-		t.Errorf("c on an escalation row entered mode %d", m.mode)
+		t.Errorf("freed key c still entered mode %d", m.mode)
+	}
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars, a task row
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if m.mode != modeNav {
+		t.Errorf("freed key c on a task row entered mode %d", m.mode)
 	}
 }
 
@@ -442,7 +472,7 @@ func TestTopArchiveFlow(t *testing.T) {
 	m := newTopModel(fake)
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if m.mode != modeConfirmArchive {
 		t.Fatalf("mode = %d, want modeConfirmArchive", m.mode)
 	}
@@ -462,7 +492,7 @@ func TestTopArchiveFlow(t *testing.T) {
 	}
 	// y confirms.
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	if cmd == nil {
 		t.Fatal("confirm produced no command")
@@ -487,7 +517,8 @@ func TestTopActionErrorSurfacesInStatus(t *testing.T) {
 	fake.err = errors.New("writes rejected (fail-safe read-only)")
 	m := newTopModel(fake)
 	m, cmd := press(t, m,
-		keyOf(tea.KeyEnter),
+		keyOf(tea.KeyEnter), // task view of t-lic, escalation preselected
+		keyOf(tea.KeyEnter), // answer entry
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}},
 		keyOf(tea.KeyEnter))
 	am := cmd().(actionMsg)
@@ -516,9 +547,10 @@ func TestTopQuitKeys(t *testing.T) {
 			t.Errorf("key %q produced %T, want tea.QuitMsg", key.String(), cmd())
 		}
 	}
-	// In input mode q is text, ctrl+c still quits. (Enter on the
-	// escalation row the cursor starts on opens answer input.)
-	m, _ = press(t, m, keyOf(tea.KeyEnter),
+	// In input mode q is text, ctrl+c still quits. (Enter routes to the
+	// task view; enter there opens answer input for the preselected
+	// escalation.)
+	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter),
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	if m.mode != modeAnswer || m.input != "q" {
 		t.Errorf("q in answer mode: mode %d input %q", m.mode, m.input)
@@ -572,7 +604,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"acting as", "enter answer"} {
+	for _, reject := range []string{"acting as", "enter answer", "a archive"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
@@ -602,13 +634,13 @@ func TestTopEnterOpensDetail(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"t-flak — investigate the flake",
-		"Description", "The parser test flakes on CI.",
-		"History", "note by brandon/a1", "Repros only under -race.",
+		"DESCRIPTION", "The parser test flakes on CI.",
+		"HISTORY", "note by brandon/a1", "Repros only under -race.",
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		// Armed with no open escalation: p/c advertised, no enter.
-		"↑/↓ (j/k) scroll · p priority · c archive · esc back · q quit",
+		// Armed with no open escalation: p/a advertised, no enter.
+		"↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -616,6 +648,11 @@ func TestTopEnterOpensDetail(t *testing.T) {
 	}
 	if strings.Contains(v, "enter open") {
 		t.Errorf("detail view leaked the list footer; view:\n%s", v)
+	}
+	// No open escalation: the NEEDS INPUT section does not render (the
+	// answered one lives in HISTORY).
+	if strings.Contains(v, "NEEDS INPUT") {
+		t.Errorf("detail view grew an empty escalations section; view:\n%s", v)
 	}
 }
 
@@ -1041,17 +1078,21 @@ func openDetail(t *testing.T, m topModel, id string) topModel {
 	return m
 }
 
-// Armed detail of a task with an open escalation: the escalation is the
-// focused item, enter answers it in place — same API call and refresh
-// as answering from the list — and the flow returns to the detail.
+// Armed task view of a task with an open escalation: the escalation is
+// the selected row of the NEEDS INPUT section, enter answers it in
+// place — same API call and refresh as any steering write — and the
+// flow returns to the task view.
 func TestTopDetailAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
 	v := m.View()
-	if !strings.Contains(v, "▸ unanswered — enter to answer") {
-		t.Fatalf("open escalation not rendered as the focused item; view:\n%s", v)
+	if !strings.Contains(v, "NEEDS INPUT (1)") {
+		t.Fatalf("open escalation section missing; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) move · enter answer · p priority · c archive · esc back · q quit") {
+	if !strings.Contains(v, "▌ !   Which license?") {
+		t.Fatalf("open escalation not rendered as the selected row; view:\n%s", v)
+	}
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
@@ -1092,8 +1133,9 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 		t.Errorf("detail view does not surface the action status; view:\n%s", v)
 	}
 
-	// The refresh that lands the answer removes the focusable item:
-	// marker gone, enter dead, footer back to scroll/p/c.
+	// The refresh that lands the answer removes the selectable row: the
+	// section is gone, the answer shows in HISTORY, enter is dead, and
+	// the footer is back to scroll/p/a — the view re-rendered.
 	fresh := topSnapshot()
 	h := fresh.tasks["t-lic"]
 	e := h.Escalations[0]
@@ -1104,10 +1146,13 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	mm, _ = m.Update(snapMsg{snap: fresh})
 	m = mm.(topModel)
 	v = m.View()
-	if strings.Contains(v, "▸ unanswered") {
-		t.Errorf("answered escalation still renders focused; view:\n%s", v)
+	if strings.Contains(v, "NEEDS INPUT") {
+		t.Errorf("answered escalation still renders a section; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) scroll · p priority · c archive · esc back · q quit") {
+	if !strings.Contains(v, "A (brandon): Use MIT.") {
+		t.Errorf("answer missing from HISTORY after the refresh; view:\n%s", v)
+	}
+	if !strings.Contains(v, "↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit") {
 		t.Errorf("footer still advertises enter answer; view:\n%s", v)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
@@ -1170,15 +1215,15 @@ func TestTopDetailPriorityFlow(t *testing.T) {
 	}
 }
 
-// c in an armed detail archives the viewed task behind the same y/n
+// a in an armed detail archives the viewed task behind the same y/n
 // confirm as the list; the detail survives the archive, showing the
 // task's new archived status once the refresh lands.
 func TestTopDetailArchiveFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if m.mode != modeConfirmArchive {
-		t.Fatalf("c in detail: mode %d, want modeConfirmArchive", m.mode)
+		t.Fatalf("a in detail: mode %d, want modeConfirmArchive", m.mode)
 	}
 	if v := m.View(); !strings.Contains(v, "archive t-lic (choose a license)? y/n") {
 		t.Errorf("confirm prompt does not name the viewed task; view:\n%s", v)
@@ -1190,7 +1235,7 @@ func TestTopDetailArchiveFlow(t *testing.T) {
 	}
 	// y confirms.
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	if cmd == nil {
 		t.Fatal("confirm produced no command")
@@ -1270,8 +1315,13 @@ func TestTopDetailFocusMovesAmongEscalations(t *testing.T) {
 	if m.detailFocus != 0 {
 		t.Fatalf("focus starts at %d, want 0", m.detailFocus)
 	}
-	if n := strings.Count(strings.Join(m.detailBody(), "\n"), "▸ unanswered"); n != 1 {
-		t.Fatalf("want exactly one focused marker, got %d", n)
+	// Exactly one escalation row carries the selection bar: the first.
+	body := strings.Join(m.detailBody(), "\n")
+	if !strings.Contains(body, "▌ !   First question?") {
+		t.Fatalf("first escalation not selected; body:\n%s", body)
+	}
+	if strings.Contains(body, "▌     Second question?") {
+		t.Fatalf("second escalation selected too; body:\n%s", body)
 	}
 	inWindow := func(m topModel) bool {
 		l := m.detailFocusLine()
@@ -1281,6 +1331,10 @@ func TestTopDetailFocusMovesAmongEscalations(t *testing.T) {
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if m.detailFocus != 1 {
 		t.Fatalf("j moved focus to %d, want 1", m.detailFocus)
+	}
+	body = strings.Join(m.detailBody(), "\n")
+	if !strings.Contains(body, "▌     Second question?") || strings.Contains(body, "▌ !   First question?") {
+		t.Fatalf("selection bar did not move to the second escalation; body:\n%s", body)
 	}
 	if !inWindow(m) {
 		t.Errorf("focused marker not revealed: line %d scroll %d window %d",
@@ -1314,6 +1368,114 @@ func TestTopDetailFocusMovesAmongEscalations(t *testing.T) {
 	}
 }
 
+// Routing preselects the entered-from question: enter on the second
+// Needs Input row of a twice-escalated task lands in its task view with
+// that escalation selected, not the first.
+func TestTopEnterOnNeedsInputPreselectsThatEscalation(t *testing.T) {
+	s := multiEscSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // the second Needs Input row
+		keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-two" || m.detailFocus != 1 {
+		t.Fatalf("enter on the second Needs Input row: mode %d detail %q focus %d, want t-two with focus 1",
+			m.mode, m.detailID, m.detailFocus)
+	}
+	body := strings.Join(m.detailBody(), "\n")
+	if !strings.Contains(body, "▌     Second question?") || strings.Contains(body, "▌ !   First question?") {
+		t.Errorf("second question not the selected row; body:\n%s", body)
+	}
+}
+
+// A task with two open escalations: each is answered from its task
+// view, one after the other, through the ordinary select → enter →
+// submit loop; the view re-renders between the two.
+func TestTopTaskViewAnswersBothEscalations(t *testing.T) {
+	fake := newFakeSteering()
+	s := multiEscSnapshot()
+	m := topModel{api: fake, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	// Route in from the first Needs Input row; answer the first question.
+	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E1" {
+		t.Fatalf("mode %d target %q, want modeAnswer on 01E1", m.mode, m.target.esc.ID)
+	}
+	m, cmd := press(t, m, append(runes("Yes."), keyOf(tea.KeyEnter))...)
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	// The refresh lands the first answer: one open escalation remains,
+	// and it is the selected row now.
+	fresh := multiEscSnapshot()
+	h := fresh.tasks["t-two"]
+	e := h.Escalations[0]
+	e.Answered, e.Answer, e.AnsweredBy = true, "Yes.", "brandon"
+	h.Escalations = []escalationJSON{e, h.Escalations[1]}
+	fresh.tasks["t-two"] = h
+	fresh.state.OpenEscalations = fresh.state.OpenEscalations[1:]
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if m.mode != modeDetail || m.detailID != "t-two" {
+		t.Fatalf("refresh knocked the model out of the task view: mode %d detail %q", m.mode, m.detailID)
+	}
+	v := m.View()
+	if !strings.Contains(v, "NEEDS INPUT (1)") || !strings.Contains(v, "▌     Second question?") {
+		t.Fatalf("remaining question not re-rendered as the selected row; view:\n%s", v)
+	}
+	// Answer the second from the same screen.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
+		t.Fatalf("mode %d target %q, want modeAnswer on 01E2", m.mode, m.target.esc.ID)
+	}
+	m, cmd = press(t, m, append(runes("Do both."), keyOf(tea.KeyEnter))...)
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if m.mode != modeDetail {
+		t.Errorf("mode after second submit = %d, want modeDetail", m.mode)
+	}
+	if fake.answers["01E1"] != "Yes." || fake.answers["01E2"] != "Do both." {
+		t.Errorf("answers = %v, want both questions recorded", fake.answers)
+	}
+}
+
+// In the task view, a click moves the selection among escalation rows;
+// a click on the selected row opens answer entry; chrome hits nothing —
+// the dashboard's click contract on the new surface.
+func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
+	s := multiEscSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // task view, first question selected
+	y := screenLineOf(t, m, "Second question?")
+	m, cmd := mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || m.detailFocus != 1 || cmd != nil {
+		t.Fatalf("click on the unselected question: mode %d focus %d cmd %v, want selection moved",
+			m.mode, m.detailFocus, cmd)
+	}
+	// Chrome — the section bar — hits nothing.
+	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "NEEDS INPUT (2)")))
+	if m2.mode != modeDetail || m2.detailFocus != 1 {
+		t.Errorf("click on the section bar: mode %d focus %d, want unchanged", m2.mode, m2.detailFocus)
+	}
+	// Click again: the selected question opens answer entry.
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
+		t.Fatalf("click on the selected question: mode %d target %q, want modeAnswer on 01E2",
+			m.mode, m.target.esc.ID)
+	}
+}
+
 // detailFocusIdx clamps like detailScroll: content shrinking under a
 // refresh pulls the focus back onto a real item, or to none at all.
 func TestDetailFocusIdx(t *testing.T) {
@@ -1341,16 +1503,18 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 		t.Fatalf("mode %d detail %q, want modeDetail t-lic", m.mode, m.detailID)
 	}
 	v := m.View()
-	if strings.Contains(v, "▸ unanswered") {
-		t.Errorf("watch detail renders a focusable item; view:\n%s", v)
+	if strings.Contains(v, "▌") {
+		t.Errorf("watch detail renders a selected row; view:\n%s", v)
 	}
-	if !strings.Contains(v, "    unanswered") {
-		t.Errorf("open escalation missing from watch detail history; view:\n%s", v)
+	// The escalations section still shows the question — visible, never
+	// selectable, and its bar carries no steering hint.
+	if !strings.Contains(v, "NEEDS INPUT (1)") || !strings.Contains(v, "Which license?") {
+		t.Errorf("open escalation missing from watch detail; view:\n%s", v)
 	}
 	if !strings.Contains(v, "↑/↓ (j/k) scroll · esc back · q quit") {
 		t.Errorf("watch detail footer not read-only; view:\n%s", v)
 	}
-	for _, reject := range []string{"enter answer", "p priority", "c archive"} {
+	for _, reject := range []string{"enter answer", "p priority", "a archive"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch detail advertises %q; view:\n%s", reject, v)
 		}
@@ -1358,8 +1522,8 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 	for _, k := range []tea.KeyMsg{
 		keyOf(tea.KeyEnter),
 		{Type: tea.KeyRunes, Runes: []rune{'p'}},
-		{Type: tea.KeyRunes, Runes: []rune{'c'}},
-		{Type: tea.KeyRunes, Runes: []rune{'a'}}, // the removed key stays removed here too
+		{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		{Type: tea.KeyRunes, Runes: []rune{'c'}}, // the freed key stays free here too
 	} {
 		mm, cmd := press(t, m, k)
 		if mm.mode != modeDetail || cmd != nil {
@@ -1496,7 +1660,8 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 
 // Click on the already-selected row acts as enter — and a double-click
 // is exactly that: press one selects, press two finds it selected. On
-// an armed escalation row that means answering; on a task row, detail.
+// a task row that opens detail; on an escalation row it opens the task
+// view with the question preselected (task-view rework, 2026-08-01).
 func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
@@ -1516,9 +1681,9 @@ func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	// nav on row 1 — walk back first).
 	m, _ = press(t, m, keyOf(tea.KeyUp))
 	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "Which license?")))
-	if m.mode != modeAnswer || m.target.esc.ID != "01E1" {
-		t.Fatalf("click on selected escalation row: mode %d target %q, want modeAnswer 01E1",
-			m.mode, m.target.esc.ID)
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 0 {
+		t.Fatalf("click on selected escalation row: mode %d detail %q focus %d, want the task view of t-lic",
+			m.mode, m.detailID, m.detailFocus)
 	}
 }
 
@@ -1623,7 +1788,8 @@ func TestTopClickIgnoredDuringInput(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	m = mm.(topModel)
-	m, _ = press(t, m, keyOf(tea.KeyEnter)) // answer the escalation
+	// enter routes to the task view; enter there opens answer entry.
+	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter))
 	m, _ = press(t, m, runes("Use MIT.")...)
 	m, cmd := mouseTo(t, m,
 		clickAt(0, 10), clickAt(0, 10), wheelMsg(tea.MouseButtonWheelDown))
@@ -1741,7 +1907,7 @@ func TestWatchModeNeverAdvertisesCapture(t *testing.T) {
 	}
 }
 
-// Shelf rows are ordinary rows: enter opens the biography, c archives —
+// Shelf rows are ordinary rows: enter opens the biography, a archives —
 // on both held and inbox.
 func TestTopShelfRowsOpenDetailAndArchive(t *testing.T) {
 	for _, id := range []string{"t-park", "t-idea"} {
@@ -1754,7 +1920,7 @@ func TestTopShelfRowsOpenDetailAndArchive(t *testing.T) {
 		}
 		m, _ = press(t, m, keyOf(tea.KeyEsc))
 		m, cmd := press(t, m,
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
 			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 		if cmd == nil {
 			t.Fatalf("archive on %s produced no command", id)

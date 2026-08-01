@@ -118,16 +118,24 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	m = refreshTop(t, m)
 
 	// ---- answer the blocking escalation from the TUI ----
-	// Enter on the Needs Input row is the answer key.
+	// Enter on the Needs Input row routes into the task view with the
+	// escalation preselected (task-view rework, 2026-08-01); enter there
+	// opens answer entry.
 	if r, ok := m.selected(); !ok || r.kind != rowEscalation {
 		t.Fatalf("first row is not the escalation: %+v", m.rows)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != lic {
+		t.Fatalf("enter on the escalation row: mode %d detail %q, want the task view of %s", m.mode, m.detailID, lic)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeAnswer {
-		t.Fatalf("enter on the escalation row: mode %d, want modeAnswer", m.mode)
+		t.Fatalf("enter on the selected question: mode %d, want modeAnswer", m.mode)
 	}
 	m, cmd := press(t, m, append(runes("MIT."), keyOf(tea.KeyEnter))...)
 	m = act(t, m, cmd)
+	// Back out of the task view to the list for the steps below.
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
 
 	// The task returned to the ready pool: a direct claim now succeeds
 	// (it would 409 while the blocking escalation was open).
@@ -161,7 +169,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
 	m, cmd = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	m = act(t, m, cmd)
 
