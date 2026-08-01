@@ -1,9 +1,10 @@
 package main
 
 // The interactive TUI (002 T7, revised by Cycle 4): the single live
-// human surface. Reads poll the daemon on a tick; the three steering
-// writes (answer an escalation, reprioritize, archive) go through the
-// daemon HTTP API only, stamped with the acting human principal.
+// human surface. Reads poll the daemon on a tick; the steering writes
+// (answer an escalation, reprioritize, archive, capture, edit
+// title/description) go through the daemon HTTP API only, stamped with
+// the acting human principal.
 // Watch mode is the same screen disarmed: steering keys dead, fixed at
 // launch — no keypress can re-arm a disarmed pane.
 
@@ -65,6 +66,8 @@ type steeringAPI interface {
 	setPriority(task string, priority int) error
 	archiveTask(task string) error
 	captureTask(title string) error
+	setTitle(task, title string) error
+	setDescription(task, description string) error
 }
 
 // httpSteering implements steeringAPI over the daemon's JSON HTTP API,
@@ -90,6 +93,18 @@ func (s httpSteering) setPriority(task string, priority int) error {
 // records, and "archive" is what humans read and type for it.
 func (s httpSteering) archiveTask(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": "cancelled"})
+}
+
+// setTitle and setDescription are the task view's edit writes
+// (dogfood capture, 2026-08-01): the same PATCH — and so the same
+// task.updated ledger event — as `tuhdoo update --title/--desc`,
+// stamped with the steering human.
+func (s httpSteering) setTitle(task, title string) error {
+	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"title": title})
+}
+
+func (s httpSteering) setDescription(task, description string) error {
+	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"description": description})
 }
 
 // captureTask is TUI quick-capture (2026-07-31): a title-only inbox
@@ -177,6 +192,8 @@ const (
 	modeConfirmArchive
 	modeCapture // quick-capture: one line of title, straight to inbox
 	modeDetail
+	modeEditTitle // task-view edits (2026-08-01): the widget prefilled
+	modeEditDesc  // with the current value; unchanged submit writes nothing
 )
 
 // actionMsg is the result of one steering write.
@@ -197,11 +214,12 @@ type topModel struct {
 	rows   []topRow
 	cursor int
 
-	mode   int
-	back   int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
-	input  textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
-	target topRow    // row a pending answer/priority/archive applies to
-	status string    // one-line result of the last action
+	mode    int
+	back    int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
+	input   textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
+	target  topRow    // row a pending answer/priority/archive/edit applies to
+	editWas string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
+	status  string    // one-line result of the last action
 
 	detailID     string // task shown by modeDetail
 	detailScroll int    // first visible body line in modeDetail
@@ -487,11 +505,11 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // updateDetail: the armed task view steers the viewed task in place
 // (dogfood steering, 2026-07-30 — no more esc → navigate → answer round
-// trips): enter answers the selected open escalation, p reprioritizes
-// and a archives the viewed task, all with the same footers and
-// confirms as the list. Watch mode keeps the read-only contract: no
-// focus, no input, ↑/↓ and j/k scroll, esc steps back, q and ctrl+c
-// quit.
+// trips): enter answers the selected open escalation, p reprioritizes,
+// a archives, and e/E edit the title/description of the viewed task,
+// all with the same footers and confirms as the list. Watch mode keeps
+// the read-only contract: no focus, no input, ↑/↓ and j/k scroll, esc
+// steps back, q and ctrl+c quit.
 //
 // Focus vs scroll — the deliberate rule: j/k move focus when a further
 // open escalation exists in that direction (the window scrolls just
@@ -537,6 +555,24 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if t, ok := m.viewedTask(); m.armed && ok {
 			m.mode, m.back = modeConfirmArchive, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
+		}
+	case "e":
+		// Edit the title in place (dogfood capture, 2026-08-01): the
+		// shared widget's single-line mode, prefilled — you edit the
+		// typo, not retype the title.
+		if t, ok := m.viewedTask(); m.armed && ok {
+			title := m.snap.tasks[t.ID].Task.Title
+			m.mode, m.back = modeEditTitle, modeDetail
+			m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(title, false), title, ""
+		}
+	case "E":
+		// Edit the description in the widget's multi-line mode — its
+		// first real consumer (Brandon, 2026-07-31: multi-line lives in
+		// the widget itself, never a separate editor or $EDITOR).
+		if t, ok := m.viewedTask(); m.armed && ok {
+			desc := m.snap.tasks[t.ID].Task.Description
+			m.mode, m.back = modeEditDesc, modeDetail
+			m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(desc, true), desc, ""
 		}
 	}
 	return m, nil
@@ -652,6 +688,38 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 				return actionMsg{err: err}
 			}
 			return actionMsg{desc: fmt.Sprintf("captured %q to inbox", input)}
+		}
+	case modeEditTitle:
+		if input == "" {
+			m.status = "title cannot be empty"
+			return m, nil
+		}
+		if input == m.editWas { // unchanged: close without writing
+			m.mode, m.input = m.back, textInput{}
+			return m, nil
+		}
+		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
+		return m, func() tea.Msg {
+			if err := api.setTitle(target.task.ID, input); err != nil {
+				return actionMsg{err: err}
+			}
+			return actionMsg{desc: "updated title of " + shortID(target.task.ID)}
+		}
+	case modeEditDesc:
+		// The description is kept byte-for-byte as typed — an editor
+		// never trims — and emptying it is a legitimate clear, exactly
+		// like `tuhdoo update --desc ""`.
+		raw := m.input.String()
+		if raw == m.editWas { // unchanged: close without writing
+			m.mode, m.input = m.back, textInput{}
+			return m, nil
+		}
+		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
+		return m, func() tea.Msg {
+			if err := api.setDescription(target.task.ID, raw); err != nil {
+				return actionMsg{err: err}
+			}
+			return actionMsg{desc: "updated description of " + shortID(target.task.ID)}
 		}
 	}
 	return m, nil
@@ -920,8 +988,12 @@ func (m topModel) detailView(body []string) string {
 // detailFooter is the task view's bottom line: the live input prompt
 // while one is open (so answering reads the same from either screen),
 // else the same footer bar as the list — the armed legend advertises
-// steering, and only mentions enter when there is an open escalation to
-// answer; watch mode keeps the read-only legend.
+// steering; watch mode keeps the read-only legend. "enter answer" is
+// not in the legend (edit affordance, 2026-08-01): the NEEDS INPUT bar
+// directly above the selectable rows already carries it when armed —
+// the same section-bar convention the dashboard uses — and the legend
+// with e/E edit added would not fit 80 columns otherwise. j/k still
+// read "move" instead of "scroll" while an escalation is selectable.
 func (m topModel) detailFooter() string {
 	if f := m.inputFooter(); f != "" {
 		return f
@@ -933,9 +1005,9 @@ func (m topModel) detailFooter() string {
 	}
 	legend := " ↑/↓ (j/k) scroll · esc back · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit"
+		legend = " ↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit"
 		if len(m.detailOpenEscalations()) > 0 {
-			legend = " ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit"
+			legend = " ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit"
 		}
 	}
 	return barLine(col, col.rev+col.dim, legend, "", width) + "\n"
@@ -1329,6 +1401,13 @@ func (m topModel) inputFooter() string {
 	case modeCapture:
 		// No y/n: capture is cheap by design, and archive reverses it.
 		return m.input.view(col, "capture (to inbox)", "captures", m.width)
+	case modeEditTitle:
+		// The box carries the title being edited; the label only needs
+		// to name whose it is.
+		return m.input.view(col, "title "+shortID(m.target.task.ID), "saves", m.width)
+	case modeEditDesc:
+		label := fmt.Sprintf("description %s (%s)", shortID(m.target.task.ID), oneLine(m.target.task.Title))
+		return m.input.view(col, label, "saves", m.width)
 	}
 	return ""
 }

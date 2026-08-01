@@ -107,12 +107,19 @@ type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
 	archived   []string
-	captured   []string // quick-capture titles, in order
+	captured   []string          // quick-capture titles, in order
+	titles     map[string]string // task-view title edits
+	descs      map[string]string // task-view description edits
 	err        error
 }
 
 func newFakeSteering() *fakeSteering {
-	return &fakeSteering{answers: map[string]string{}, priorities: map[string]int{}}
+	return &fakeSteering{
+		answers:    map[string]string{},
+		priorities: map[string]int{},
+		titles:     map[string]string{},
+		descs:      map[string]string{},
+	}
 }
 
 func (f *fakeSteering) answerEscalation(escalation, answer string) error {
@@ -144,6 +151,22 @@ func (f *fakeSteering) captureTask(title string) error {
 		return f.err
 	}
 	f.captured = append(f.captured, title)
+	return nil
+}
+
+func (f *fakeSteering) setTitle(task, title string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.titles[task] = title
+	return nil
+}
+
+func (f *fakeSteering) setDescription(task, description string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.descs[task] = description
 	return nil
 }
 
@@ -639,8 +662,8 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		// Armed with no open escalation: p/a advertised, no enter.
-		"↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit",
+		// Armed with no open escalation: e/E, p, a advertised, no enter.
+		"↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -1092,7 +1115,9 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "▌ !   Which license?") {
 		t.Fatalf("open escalation not rendered as the selected row; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit") {
+	// The footer legend carries edit/priority/archive; "enter answer"
+	// rides the NEEDS INPUT bar itself (edit affordance, 2026-08-01).
+	if !strings.Contains(v, "↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
@@ -1152,8 +1177,8 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "A (brandon): Use MIT.") {
 		t.Errorf("answer missing from HISTORY after the refresh; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) scroll · p priority · a archive · esc back · q quit") {
-		t.Errorf("footer still advertises enter answer; view:\n%s", v)
+	if !strings.Contains(v, "↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit") {
+		t.Errorf("footer did not fall back to the scroll legend; view:\n%s", v)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || cmd != nil {
@@ -1273,6 +1298,201 @@ func TestTopDetailArchiveFlow(t *testing.T) {
 	}
 	if v := m.View(); !strings.Contains(v, "status      archived") {
 		t.Errorf("archived task's detail missing its new status; view:\n%s", v)
+	}
+}
+
+// e in an armed detail edits the viewed task's title in the widget's
+// single-line mode, prefilled with the current title (task-view edits,
+// 2026-08-01): submit goes through the same task.updated plumbing as
+// `tuhdoo update --title`, and the refreshed snapshot re-renders the
+// view with the new content.
+func TestTopDetailEditTitleFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-flak")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	if m.mode != modeEditTitle {
+		t.Fatalf("e in detail: mode %d, want modeEditTitle", m.mode)
+	}
+	// Prefilled for editing, not retyping: the current title, cursor at
+	// the end, single-line.
+	if got := m.input.String(); got != "investigate the flake" || m.input.multiline {
+		t.Fatalf("title editor opened with %q (multiline %v), want the current title single-line",
+			got, m.input.multiline)
+	}
+	if m.input.cursor != len([]rune("investigate the flake")) {
+		t.Fatalf("cursor at %d, want the end of the prefilled title", m.input.cursor)
+	}
+	v := m.View()
+	for _, want := range []string{
+		"title t-flak",
+		"> investigate the flake█",
+		"enter saves · esc cancels",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("title editor missing %q; view:\n%s", want, v)
+		}
+	}
+	// Edit the tail word and submit.
+	m, _ = press(t, m, keyOf(tea.KeyCtrlW))
+	m, cmd := press(t, m, append(runes("flakiness"), keyOf(tea.KeyEnter))...)
+	if m.mode != modeDetail || m.detailID != "t-flak" {
+		t.Errorf("submit did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.titles["t-flak"]; got != "investigate the flakiness" {
+		t.Errorf("title written as %q, want %q", got, "investigate the flakiness")
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if !strings.Contains(m.status, "updated title of t-flak") {
+		t.Errorf("status = %q, want the title confirmation", m.status)
+	}
+	// The refresh lands the edit: the view re-renders with the new title.
+	fresh := topSnapshot()
+	for i := range fresh.state.Tasks {
+		if fresh.state.Tasks[i].ID == "t-flak" {
+			fresh.state.Tasks[i].Title = "investigate the flakiness"
+		}
+	}
+	h := fresh.tasks["t-flak"]
+	h.Task.Title = "investigate the flakiness"
+	fresh.tasks["t-flak"] = h
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if v := m.View(); !strings.Contains(v, "t-flak — investigate the flakiness") {
+		t.Errorf("edited title missing after refresh; view:\n%s", v)
+	}
+}
+
+// The title editor's guard rails: an unchanged submit writes nothing,
+// an emptied title is rejected in place, and esc cancels without a
+// write.
+func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-flak")
+	// Unchanged submit: straight back to the detail, no write, no error.
+	m, cmd := press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}},
+		keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || cmd != nil || len(fake.titles) != 0 {
+		t.Fatalf("unchanged submit: mode %d cmd %v titles %v, want a silent close", m.mode, cmd, fake.titles)
+	}
+	// Emptied title: rejected in place, prompt stays up.
+	m, cmd = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}},
+		keyOf(tea.KeyCtrlU), // cursor at end: kills the whole title
+		keyOf(tea.KeyEnter))
+	if cmd != nil || m.mode != modeEditTitle || m.status != "title cannot be empty" {
+		t.Fatalf("empty title: mode %d status %q cmd %v, want in-place rejection", m.mode, m.status, cmd)
+	}
+	// esc abandons the edit without a write.
+	m, _ = press(t, m, append(runes("junk"), keyOf(tea.KeyEsc))...)
+	if m.mode != modeDetail || len(fake.titles) != 0 {
+		t.Errorf("esc did not abandon the edit: mode %d titles %v", m.mode, fake.titles)
+	}
+}
+
+// E in an armed detail edits the description in the widget's multi-line
+// mode — its first real consumer: prefilled, enter inserts a newline,
+// ctrl+s submits through the update plumbing.
+func TestTopDetailEditDescriptionFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-flak")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	if m.mode != modeEditDesc {
+		t.Fatalf("E in detail: mode %d, want modeEditDesc", m.mode)
+	}
+	if got := m.input.String(); got != "The parser test flakes on CI.\nFind out why." || !m.input.multiline {
+		t.Fatalf("description editor opened with %q (multiline %v), want the current description multi-line",
+			got, m.input.multiline)
+	}
+	v := m.View()
+	for _, want := range []string{
+		"description t-flak (investigate the flake)",
+		"> The parser test flakes on CI.",
+		"> Find out why.█",
+		"ctrl+s saves · enter newline · esc cancels",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("description editor missing %q; view:\n%s", want, v)
+		}
+	}
+	// enter is an edit here — a newline, never a submit.
+	m, cmd := press(t, m, keyOf(tea.KeyEnter))
+	if cmd != nil || m.mode != modeEditDesc {
+		t.Fatalf("enter submitted a multi-line edit: mode %d cmd %v", m.mode, cmd)
+	}
+	m, cmd = press(t, m, append(runes("Fix it."), keyOf(tea.KeyCtrlS))...)
+	if m.mode != modeDetail || m.detailID != "t-flak" {
+		t.Errorf("ctrl+s did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	if cmd == nil {
+		t.Fatal("ctrl+s produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	want := "The parser test flakes on CI.\nFind out why.\nFix it."
+	if got := fake.descs["t-flak"]; got != want {
+		t.Errorf("description written as %q, want %q", got, want)
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if !strings.Contains(m.status, "updated description of t-flak") {
+		t.Errorf("status = %q, want the description confirmation", m.status)
+	}
+	// The refresh lands the edit: the DESCRIPTION section re-renders.
+	fresh := topSnapshot()
+	h := fresh.tasks["t-flak"]
+	h.Task.Description = want
+	fresh.tasks["t-flak"] = h
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if v := m.View(); !strings.Contains(v, "Fix it.") {
+		t.Errorf("edited description missing after refresh; view:\n%s", v)
+	}
+}
+
+// The description editor writes nothing on an unchanged submit or esc;
+// a task with no description opens an empty multi-line editor and a
+// first description saves through the same path.
+func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
+	fake := newFakeSteering()
+	m := openDetail(t, newTopModel(fake), "t-flak")
+	m, cmd := press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}},
+		keyOf(tea.KeyCtrlS))
+	if m.mode != modeDetail || cmd != nil || len(fake.descs) != 0 {
+		t.Fatalf("unchanged submit: mode %d cmd %v descs %v, want a silent close", m.mode, cmd, fake.descs)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	m, _ = press(t, m, append(runes("scribble"), keyOf(tea.KeyEsc))...)
+	if m.mode != modeDetail || len(fake.descs) != 0 {
+		t.Fatalf("esc did not abandon the edit: mode %d descs %v", m.mode, fake.descs)
+	}
+	// A description-less task (t-pars): the editor opens empty and a
+	// typed description is a real change.
+	m = openDetail(t, newTopModel(fake), "t-pars")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	if got := m.input.String(); got != "" {
+		t.Fatalf("editor for a description-less task opened with %q", got)
+	}
+	m, cmd = press(t, m, append(runes("Parse the event log."), keyOf(tea.KeyCtrlS))...)
+	if cmd == nil {
+		t.Fatal("ctrl+s produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.descs["t-pars"]; got != "Parse the event log." {
+		t.Errorf("first description written as %q", got)
 	}
 }
 
@@ -1514,7 +1734,7 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 	if !strings.Contains(v, "↑/↓ (j/k) scroll · esc back · q quit") {
 		t.Errorf("watch detail footer not read-only; view:\n%s", v)
 	}
-	for _, reject := range []string{"enter answer", "p priority", "a archive"} {
+	for _, reject := range []string{"enter answer", "p priority", "a archive", "e/E edit"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch detail advertises %q; view:\n%s", reject, v)
 		}
@@ -1524,6 +1744,8 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 		{Type: tea.KeyRunes, Runes: []rune{'p'}},
 		{Type: tea.KeyRunes, Runes: []rune{'a'}},
 		{Type: tea.KeyRunes, Runes: []rune{'c'}}, // the freed key stays free here too
+		{Type: tea.KeyRunes, Runes: []rune{'e'}}, // edits are armed-only
+		{Type: tea.KeyRunes, Runes: []rune{'E'}},
 	} {
 		mm, cmd := press(t, m, k)
 		if mm.mode != modeDetail || cmd != nil {
