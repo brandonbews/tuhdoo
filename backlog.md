@@ -5,6 +5,7 @@
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) | Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive | 2 | cli, tui, ux, design |
+| [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) | One real text-input widget: delineated box, fixed hint line, standard cursor editing | 1 | cli, tui, ux |
 
 ## In progress
 
@@ -36,7 +37,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
-- [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) — the enter captues and esc cancels instructions from the inbox field move distractingly as you type. they shoud be fixed below what should be a text box or header witha  clear delineation
 - [tuh-01KYXE4NSNBFFRTT8STNDJHYED](tasks/tuh-01KYXE4NSNBFFRTT8STNDJHYED.md) — i should be able to move the cursor in all text boxes using standard commands
 - [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) — you should be able to edit the desription or title in the task view
 
