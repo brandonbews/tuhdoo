@@ -1,6 +1,6 @@
 # tuh-01KYXDWWM8S1GF6N9NE5FGA86Y — Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 
-- Status: open — ready
+- Status: done
 - Priority: 2
 - Labels: `cli`, `tui`, `ux`, `design`
 - Created: 2026-08-01 01:09 UTC by `brandon`
@@ -44,4 +44,10 @@ Rework the task view into the place where steering happens:
 
 ## History
 
-_No activity yet._
+### 2026-08-01 02:39 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-a86y/task-view-answering-home`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/9>
+- Commits: `63505f0`
+
+Landed on main as 63505f0 (PR #9, squash). Enter on a Needs Input row now opens the task view with that escalation preselected; the dashboard's inline answer prompt is removed (superseding t-01KYVD31CNTR1EVCDHPC5973KW per this task). Task view adopts the dashboard's visual language: listHead header, bold field names, magenta NEEDS INPUT (n) bar, reverse-dim DESCRIPTION/HISTORY bars and footer bar. Open escalations render as selectable rows (dashboard gutter/tint helpers, arrows + click, enter answers, multi-escalation covered by test); escalation context now renders under the question; open escalations live only in NEEDS INPUT, HISTORY keeps notes/runs/answered ones. Archive rebound c→a on both screens, c pinned dead by test; watch mode shows the section read-only. All changes under cmd/tuhdoo/; make test lint green; CI green. Known leftover, deliberately out of scope: docs/design/002-technology.md T7 prose still describes the old enter-answers-inline dashboard flow — needs an explicit design-doc revision.

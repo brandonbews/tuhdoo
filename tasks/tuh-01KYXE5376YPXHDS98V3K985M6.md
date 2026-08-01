@@ -3,7 +3,7 @@
 - Status: open — blocked on dependencies
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`
-- Depends on: [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) (open), [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) (open)
+- Depends on: [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) (done), [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) (open)
 - Created: 2026-08-01 01:13 UTC by `brandon`
 
 ## Description
