@@ -1,18 +1,18 @@
 # Backlog
 
-0 in progress · 1 ready · 4 blocked · 5 on hold · 1 inbox · 36 done · 7 archived
+1 in progress · 0 ready · 4 blocked · 5 on hold · 1 inbox · 36 done · 7 archived
 
-**[3 open questions](escalations.md) are waiting on a human.**
+**[4 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | `distribution` `ci` `npm` `investigation` |
+_None._
 
 ## Blocked / waiting
 
