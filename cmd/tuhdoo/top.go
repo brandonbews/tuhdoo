@@ -198,10 +198,10 @@ type topModel struct {
 	cursor int
 
 	mode   int
-	back   int // mode an input mode returns to on esc/submit: the list or the detail it was opened from
-	input  string
-	target topRow // row a pending answer/priority/archive applies to
-	status string // one-line result of the last action
+	back   int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
+	input  textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
+	target topRow    // row a pending answer/priority/archive applies to
+	status string    // one-line result of the last action
 
 	detailID     string // task shown by modeDetail
 	detailScroll int    // first visible body line in modeDetail
@@ -283,20 +283,20 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "p":
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
-			m.mode, m.back, m.target, m.input, m.status = modePriority, modeNav, r, "", ""
+			m.mode, m.back, m.target, m.input, m.status = modePriority, modeNav, r, textInput{}, ""
 		}
 	case "a":
 		// Archive is a (task-view rework, 2026-08-01): c read as
 		// "cancel"/"close", not archive. c is free again.
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
-			m.mode, m.back, m.target, m.input, m.status = modeConfirmArchive, modeNav, r, "", ""
+			m.mode, m.back, m.target, m.input, m.status = modeConfirmArchive, modeNav, r, textInput{}, ""
 		}
 	case "i":
 		// Quick capture (2026-07-31): armed only — a watch pane never
 		// writes. No row target: capture is about the idea in your head,
 		// not the row under the cursor.
 		if m.armed {
-			m.mode, m.back, m.target, m.input, m.status = modeCapture, modeNav, topRow{}, "", ""
+			m.mode, m.back, m.target, m.input, m.status = modeCapture, modeNav, topRow{}, textInput{}, ""
 		}
 	}
 	return m, nil
@@ -383,7 +383,7 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if i == detailFocusIdx(m.detailFocus, len(open)) {
 				m.detailFocus = i
 				m.mode, m.back = modeAnswer, modeDetail
-				m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[i]}, "", ""
+				m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[i]}, textInput{}, ""
 				break
 			}
 			m.detailFocus = i
@@ -450,13 +450,17 @@ func (m topModel) rowAt(y int) int {
 	return -1
 }
 
+// updateInput drives every text-entry mode. It owns only the mode
+// keys — quit, cancel, and submit (enter single-line, ctrl+s
+// multi-line, per the widget's hint) — and hands every other key to
+// the shared widget: no per-screen editing exists (textinput.go).
 func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.mode == modeConfirmArchive {
 		switch k.String() {
 		case "y":
 			return m.submit()
 		case "n", "esc":
-			m.mode, m.input = m.back, ""
+			m.mode, m.input = m.back, textInput{}
 		case "ctrl+c":
 			return m, tea.Quit
 		}
@@ -466,20 +470,18 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		m.mode, m.input = m.back, ""
+		m.mode, m.input = m.back, textInput{}
+		return m, nil
 	case "enter":
-		return m.submit()
-	case "backspace":
-		if r := []rune(m.input); len(r) > 0 {
-			m.input = string(r[:len(r)-1])
+		if !m.input.multiline {
+			return m.submit()
 		}
-	case " ":
-		m.input += " "
-	default:
-		if k.Type == tea.KeyRunes {
-			m.input += string(k.Runes)
+	case "ctrl+s":
+		if m.input.multiline {
+			return m.submit()
 		}
 	}
+	m.input = m.input.handleKey(k, m.width)
 	return m, nil
 }
 
@@ -524,17 +526,17 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if focus >= 0 { // armed with an open escalation; watch has none by construction
 			m.detailFocus = focus
 			m.mode, m.back = modeAnswer, modeDetail
-			m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[focus]}, "", ""
+			m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[focus]}, textInput{}, ""
 		}
 	case "p":
 		if t, ok := m.viewedTask(); m.armed && ok {
 			m.mode, m.back = modePriority, modeDetail
-			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, "", ""
+			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
 		}
 	case "a":
 		if t, ok := m.viewedTask(); m.armed && ok {
 			m.mode, m.back = modeConfirmArchive, modeDetail
-			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, "", ""
+			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
 		}
 	}
 	return m, nil
@@ -604,14 +606,14 @@ func (m topModel) selected() (topRow, bool) {
 // submit turns the pending input into one steering write, run as a
 // command so a slow daemon never freezes the view loop.
 func (m topModel) submit() (tea.Model, tea.Cmd) {
-	api, target, input := m.api, m.target, strings.TrimSpace(m.input)
+	api, target, input := m.api, m.target, strings.TrimSpace(m.input.String())
 	switch m.mode {
 	case modeAnswer:
 		if input == "" {
 			m.status = "answer cannot be empty"
 			return m, nil
 		}
-		m.mode, m.input, m.status = m.back, "", "answering…"
+		m.mode, m.input, m.status = m.back, textInput{}, "answering…"
 		return m, func() tea.Msg {
 			if err := api.answerEscalation(target.esc.ID, input); err != nil {
 				return actionMsg{err: err}
@@ -624,7 +626,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			m.status = fmt.Sprintf("priority must be an integer, got %q", input)
 			return m, nil
 		}
-		m.mode, m.input, m.status = m.back, "", "updating…"
+		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
 		return m, func() tea.Msg {
 			if err := api.setPriority(target.task.ID, p); err != nil {
 				return actionMsg{err: err}
@@ -632,7 +634,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			return actionMsg{desc: fmt.Sprintf("set %s to p%d", shortID(target.task.ID), p)}
 		}
 	case modeConfirmArchive:
-		m.mode, m.input, m.status = m.back, "", "archiving…"
+		m.mode, m.input, m.status = m.back, textInput{}, "archiving…"
 		return m, func() tea.Msg {
 			if err := api.archiveTask(target.task.ID); err != nil {
 				return actionMsg{err: err}
@@ -644,7 +646,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			m.status = "title cannot be empty"
 			return m, nil
 		}
-		m.mode, m.input, m.status = m.back, "", "capturing…"
+		m.mode, m.input, m.status = m.back, textInput{}, "capturing…"
 		return m, func() tea.Msg {
 			if err := api.captureTask(input); err != nil {
 				return actionMsg{err: err}
@@ -858,13 +860,17 @@ func (m topModel) detailRevealScroll() int {
 }
 
 // detailWindow is how many body lines fit: terminal height minus the
-// header, footer, and optional status lines detailView prints around
-// the body.
+// lines detailView actually prints around the body — the header block
+// (with its optional status line), the blank separator, and the footer,
+// which is taller while an input box is open. Counting the rendered
+// strings keeps the window honest against any footer shape.
 func (m topModel) detailWindow() int {
-	w := m.height - 4
-	if m.status != "" {
-		w--
+	width := m.width
+	if width <= 0 {
+		width = 80
 	}
+	w := m.height - strings.Count(m.listHead(width), "\n") - 1 -
+		strings.Count(m.detailFooter(), "\n")
 	if w < 1 {
 		w = 1
 	}
@@ -1304,25 +1310,25 @@ func shortID(id string) string {
 
 // inputFooter is the active input prompt, or "" when no input mode is
 // live — shared by the list and detail footers so each steering write
-// reads identically from either screen.
+// reads identically from either screen. Text entry renders through the
+// shared widget's box (textinput.go): header bar naming the entry, the
+// buffer with the cursor, and the hint fixed on its own line; only the
+// archive y/n confirm — not a text input — keeps its one-liner.
 func (m topModel) inputFooter() string {
 	col := m.col
 	switch m.mode {
 	case modeAnswer:
-		return wrapTo(fmt.Sprintf("%sanswer%s %s > %s█  %senter submits · esc cancels%s\n",
-			col.bold, col.reset, oneLine(m.target.esc.Question), m.input, col.dim, col.reset), m.width)
+		return m.input.view(col, "answer · "+oneLine(m.target.esc.Question), "submits", m.width)
 	case modePriority:
-		return wrapTo(fmt.Sprintf("%spriority%s %s (%s) > %s█  %senter submits · esc cancels%s\n",
-			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
-			m.input, col.dim, col.reset), m.width)
+		label := fmt.Sprintf("priority %s (%s)", shortID(m.target.task.ID), oneLine(m.target.task.Title))
+		return m.input.view(col, label, "submits", m.width)
 	case modeConfirmArchive:
 		return wrapTo(fmt.Sprintf("%sarchive%s %s (%s)? y/n %s— history stays on the ledger%s\n",
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			col.dim, col.reset), m.width)
 	case modeCapture:
 		// No y/n: capture is cheap by design, and archive reverses it.
-		return wrapTo(fmt.Sprintf("%scapture%s (to inbox) > %s█  %senter captures · esc cancels%s\n",
-			col.bold, col.reset, m.input, col.dim, col.reset), m.width)
+		return m.input.view(col, "capture (to inbox)", "captures", m.width)
 	}
 	return ""
 }
