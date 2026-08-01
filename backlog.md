@@ -5,6 +5,7 @@
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) | Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive | 2 | cli, tui, ux, design |
+| [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) | Design pass on the generated markdown views: scannable, glanceable data branch | 1 | views, design, ux |
 | [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) | One real text-input widget: delineated box, fixed hint line, standard cursor editing | 1 | cli, tui, ux |
 
 ## In progress
@@ -35,9 +36,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
+_None._
 
 ## Done
 
