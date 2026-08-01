@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 5 blocked · 6 on hold · 0 inbox · 36 done · 8 archived
+0 in progress · 3 ready · 6 blocked · 5 on hold · 0 inbox · 36 done · 8 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -24,6 +24,7 @@ _None._
 | [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | depends on [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) |
 | [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine dogfood: real claim races over one remote | 2 | an [open question](escalations.md) |
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: h opens the done/archived shelf in the TUI | 0 | depends on [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) |
 | [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | an [open question](escalations.md) |
 
 ## On hold
@@ -36,7 +37,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`t-sy1p`](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | `cli` `tui` `design` |
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
-| [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: surface the activity ledger (TUI pane and/or command) | 0 | `design` `tui` `cli` `product` |
 | [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `tui` `design` |
 
 ## Inbox

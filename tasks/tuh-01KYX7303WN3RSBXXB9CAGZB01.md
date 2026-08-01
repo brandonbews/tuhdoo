@@ -1,27 +1,35 @@
-# History view: surface the activity ledger (TUI pane and/or command)
+# History view: h opens the done/archived shelf in the TUI
 
 `tuh-01KYX7303WN3RSBXXB9CAGZB01`
 
-- **Status:** on hold — deliberately paused
+- **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `design` `tui` `cli` `product`
+- **Depends on:** [`tuh-s8vt`](tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) (open)
 - **Created:** 2026-07-31 23:10 UTC by `brandon`
 
 ## Description
 
-Gated: design-shaped — unpark for a grill cycle in the v1 (steering surface) era, and grill together with or immediately before epoch compaction (t-01KYRMFV10W1N28TCN62F6FRTH), because compaction decides what history even survives to be viewed. Do NOT scope or build before that grill; this is the triage decision (2026-07-31), not a plan.
+Context: The activity-ledger third of the pitch had no surface — done work was a count ("Done 30") and `tuhdoo task <id>` needed a known ID. Grilled 2026-08-01 (unparked early from the v1-era gate by Brandon); this description is the settled design. History is a "what did I build" device for the steering developer, NOT an audit device — agents dig raw events/git for forensics.
 
-Original inbox question (Brandon, 2026-07-31): do we need or want some kind of history view — in the main TUI dashboard, or a separate command — just to view work that has been done historically?
+The ask: A history mode in the TUI. `h` from the top list (both armed dashboard and watch mode) opens it; esc returns to the dashboard; q quits. The mode reuses the dashboard's list machinery wholesale — same scroll, same selection, same click/enter behavior. Two section bars: DONE, then ARCHIVED (cancelled), each reverse-chronological by close time, newest first (recency is the browse axis here, not priority). Rows render with the ready-row anatomy (title, dim labels suffix, edge markers) plus a dim close stamp and closing actor appended, e.g. `· 2026-07-30 · brandon/claude-code-1`. Enter opens the existing task view (modeDetail) on the row's task; esc from there returns to the history list, not the dashboard.
 
-Triage argument for "yes, eventually": the project's one-line pitch is "a shared backlog, work queue, and activity ledger" — and the activity-ledger third currently has no surface. Today the only window into completed work is `tuhdoo task <id>` if you already know the ID; the backlog view reduces done work to a count ("Done 30"). All the data exists — the data branch is an event log — and a history view is exactly the pure view-generation-over-events shape the deterministic core is built for (T1).
+Task-view additions (both entry paths, no history-only variant):
+- The status field line of a terminal task shows close metadata: `done — finished 2026-07-30 by <actor>` / `archived — <stamp> by <actor>`.
+- Unanswered escalations on terminal tasks render in the History section instead of vanishing (the NEEDS INPUT section only serves open ones); on a finished task an unanswered escalation is part of the record.
+- No other augmentation: description + runs + notes + escalations already carry the spirit of the task as built. Explicitly rejected at the grill: a per-task raw-event timeline (edits, status twists, claim fates) — not this device.
 
-Design questions for the grill:
-- Surface: TUI pane/tab vs a `tuhdoo log`-style command vs both (D8 says CLI is the local human's portal; the TUI is the steering surface — history may be browsing, not steering).
-- Granularity: task-level ("what got done, by whom, when") vs event-level ("what happened": claims, finishes, escalations, releases, notes).
-- Filters and window: by principal, by label, by time range; how far back by default.
-- Overlap with the free surface: D3 markdown views + git log already give per-task history on the git host — is that sufficient for the browsing audience, making the local view steering-adjacent only?
+Replay/state: core.Task grows ClosedAt/ClosedBy (in-memory only — no stored-byte changes, T3), set by the status-change event that enters done/cancelled, cleared if status leaves terminal; deterministic in ULID order. Fallback: a task created directly in a terminal status (B12 migration shape) closes at its creation event's time/actor. The TUI snapshot payload (stateTask + hydration) carries the new fields; no new endpoints, no write verbs — this feature is read-only.
 
-The compaction coupling (why the shared grill): D9.4 compaction writes a snapshot event and deletes superseded event files from the live tree; replay starts from the latest snapshot. A history view reading only the live tree goes amnesiac at each epoch boundary unless it deliberately walks git history (which D9 preserves for forensics). The history view's data source — live tree, git archaeology, or snapshot-carried summaries — must be decided with compaction semantics on the table, not after them.
+Data source (settled): pure view over replayed live-tree state, the T1 shape. The epoch-compaction task (t-01KYRMFV10W1N28TCN62F6FRTH) inherits the continuity constraint — its grill decides what survives snapshots for this view; do not solve that here.
+
+Out of scope (deliberate): filters (principal/label/time), an un-archive TUI key (agents/CLI resurrect via update --status; capture a task if dogfooding wants it), event-level activity feed, pagination.
+
+Acceptance: Interaction tests: h opens history from nav and watch; esc stack (history→dashboard, detail→history); enter/click open detail identically to dashboard; scroll matches dashboard behavior; a/p dead on terminal tasks in detail. Golden tests: two-bar layout, reverse-chron order within bars, row stamp+actor suffix, terminal status line with close metadata, unanswered escalation of a terminal task shown in History. Replay table-tests: ClosedAt/ClosedBy from status-change, created-terminal fallback, cleared on un-archive, deterministic across event orderings. Footer legends updated in both modes. make test lint green.
+
+Pointers: cmd/tuhdoo/top.go (buildRows, modeDetail, detailLines, footer legends), render.go (labelSuffix), internal/core/replay.go + state.go (ClosedAt/ClosedBy), internal/daemon/api.go (stateTask, taskJSON).
+
+Constraints: boring Go; no new dependencies; read-only feature — no new daemon write paths; depends_on the focus-ring task (tuh-01KYXT2KAG7QXZGF1W47E6S8VT) purely to serialize the two top.go reworks.
 
 ## History
 
