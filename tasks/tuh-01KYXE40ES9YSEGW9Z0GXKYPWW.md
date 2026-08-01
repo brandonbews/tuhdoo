@@ -1,6 +1,6 @@
 # tuh-01KYXE40ES9YSEGW9Z0GXKYPWW — One real text-input widget: delineated box, fixed hint line, standard cursor editing
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `cli`, `tui`, `ux`
 - Created: 2026-08-01 01:13 UTC by `brandon`
@@ -43,4 +43,16 @@ One shared text-input component used by every text entry in the TUI:
 
 ## History
 
-_No activity yet._
+### 2026-08-01 02:40 UTC — run by `brandon/claude-code-1` — interrupted
+
+lease expired without a finish or release
+
+_Synthesized by replay, not recorded by the agent._
+
+### 2026-08-01 02:57 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-ypww/text-input-widget`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/10>
+- Commits: `0a9727b`
+
+Landed on main as 0a9727b (PR #10, squash). New cmd/tuhdoo/textinput.go: value-semantics textInput widget ([]rune buffer + cursor), rendered as a delineated box with header bar, > gutter, cursor glyph, and the hint on its own fixed line — it no longer shifts while typing. Full confirmed editing set incl. alt/option word ops, tested via the exact KeyMsg forms bubbletea produces (ESC b/f, ESC backspace, CSI 1;3D/C). Multi-line is a mode of the same widget: hard wrap, up/down across wrapped rows, enter-newline, ctrl+s submits (ctrl+d rejected: readline forward-delete collision). All three entries (answer, priority, capture) migrated; updateInput owns only mode keys; no bespoke editing remains. Hand-rolled over bubbles: no lipgloss second styling system (T1 auditability); go.mod untouched. 41-case table-driven suite + goldens; make test lint and CI green. Note: the prior interrupted run on this task was this same session — the daemon restart after PR #9 killed the harness MCP session, so the lease could not renew during the build; work continued uninterrupted and this run is its completion. Deliberately not done: ctrl+h-as-backspace (not in confirmed set), kill-ring/yank, multi-line answers (one-line flip at the modeAnswer entry points if dogfooding wants it). The future description editor task should set multiline: true on this widget.

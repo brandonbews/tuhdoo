@@ -5,7 +5,7 @@
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) | Design pass on the generated markdown views: scannable, glanceable data branch | 1 | views, design, ux |
-| [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) | One real text-input widget: delineated box, fixed hint line, standard cursor editing | 1 | cli, tui, ux |
+| [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) | Edit title and description from the task view | 1 | cli, tui, ux |
 | [tuh-01KYXEMYC5XE928EWKYA0P11SH](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | distribution, ci, npm, investigation |
 
 ## In progress
@@ -20,7 +20,6 @@ _None._
 | [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | depends on [t-01KYRMFV10W1N28TCN5NWAGSW5](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) |
 | [t-01KYRMFV10W1N28TCN5WVTCB1J](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine dogfood: real claim races over one remote | 2 | escalation: This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation? |
 | [t-01KYRMFV10W1N28TCN62F6FRTH](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [t-01KYRMFV10W1N28TCN5SH4QM7A](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) | Edit title and description from the task view | 1 | depends on [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) |
 
 ## On hold
 
@@ -73,6 +72,7 @@ _None._
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [tuh-01KYX6CMQV1G6XDZGNAF2M5C5P](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) — Slash command /drain-backlog: the reusable drain-the-backlog prompt
 - [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) — Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
+- [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) — One real text-input widget: delineated box, fixed hint line, standard cursor editing
 
 ## Cancelled
 

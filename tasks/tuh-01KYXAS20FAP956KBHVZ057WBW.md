@@ -36,4 +36,8 @@ A design pass on the generated markdown:
 
 ## History
 
-_No activity yet._
+### 2026-08-01 02:40 UTC — run by `brandon/claude-code-1` — interrupted
+
+lease expired without a finish or release
+
+_Synthesized by replay, not recorded by the agent._
