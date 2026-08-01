@@ -464,8 +464,9 @@ func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 
 // Multi-line is a mode of the same loop: enter inserts a newline
 // instead of submitting, the hint advertises the ctrl+s chord, and
-// ctrl+s submits. (No current entry opens multi-line; the loop and
-// widget carry the mode for the coming description editor.)
+// ctrl+s submits. (The description editor — E in the task view — is
+// the mode's real consumer; this pins the loop itself, on a capture
+// forced multi-line.)
 func TestTopInputMultilineEnterAndCtrlS(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -494,6 +495,76 @@ func TestTopInputMultilineEnterAndCtrlS(t *testing.T) {
 	}
 	if len(fake.captured) != 1 || fake.captured[0] != "line one\nline two" {
 		t.Errorf("captured %v, want the two-line title", fake.captured)
+	}
+}
+
+// editInput seeds the widget for in-place editing: the given value,
+// cursor at the end, in the asked-for mode; the empty value stays the
+// zero-value entry.
+func TestEditInput(t *testing.T) {
+	in := editInput("fix the typo", false)
+	if got := withCursor(in); got != "fix the typo|" || in.multiline {
+		t.Errorf("editInput single-line = %q (multiline %v)", got, in.multiline)
+	}
+	// Prefilled text edits like typed text: word motion and deletion
+	// land where the cursor sits.
+	in = applyKeys(in, 80, keyOf(tea.KeyCtrlW))
+	if got := withCursor(in); got != "fix the |" {
+		t.Errorf("ctrl+w on prefilled = %q", got)
+	}
+	in = editInput("one\ntwo", true)
+	if got := withCursor(in); got != "one\ntwo|" || !in.multiline {
+		t.Errorf("editInput multi-line = %q (multiline %v)", got, in.multiline)
+	}
+	if got := withCursor(editInput("", true)); got != "|" {
+		t.Errorf("editInput empty = %q", got)
+	}
+}
+
+// The title editor's box in the full detail frame at 80 columns, plain
+// colors: prefilled buffer, cursor at the end, single-line hint —
+// byte-exact footer geometry.
+func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-flak")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	v := m.View()
+	want := strings.Join([]string{
+		" title t-flak" + strings.Repeat(" ", 67),
+		"> investigate the flake█",
+		"  enter saves · esc cancels",
+		"",
+	}, "\n")
+	if !strings.HasSuffix(v, want) {
+		t.Errorf("title box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
+	}
+	if strings.Contains(v, "\x1b") {
+		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
+	}
+}
+
+// The description editor's box in the full detail frame at 80 columns,
+// plain colors: the multi-line prefill renders one gutter line per
+// logical line, cursor on the last, ctrl+s hint fixed below.
+func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-flak")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	v := m.View()
+	want := strings.Join([]string{
+		" description t-flak (investigate the flake)" + strings.Repeat(" ", 37),
+		"> The parser test flakes on CI.",
+		"> Find out why.█",
+		"  ctrl+s saves · enter newline · esc cancels",
+		"",
+	}, "\n")
+	if !strings.HasSuffix(v, want) {
+		t.Errorf("description box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
+	}
+	if strings.Contains(v, "\x1b") {
+		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
 	}
 }
 

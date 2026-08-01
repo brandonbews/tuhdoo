@@ -36,6 +36,15 @@ type textInput struct {
 
 func (in textInput) String() string { return string(in.buf) }
 
+// editInput seeds the widget with an existing value for in-place
+// editing — cursor at the end, ready to append or move back through
+// the text. The zero value stays the empty single-line entry every
+// from-scratch mode opens with.
+func editInput(s string, multiline bool) textInput {
+	buf := []rune(s)
+	return textInput{buf: buf, cursor: len(buf), multiline: multiline}
+}
+
 // inputInnerWidth is the wrap width inside the box: the terminal
 // width minus the two-cell "> " gutter and one cell for the cursor
 // glyph, so no rendered line ever exceeds the terminal. Zero width

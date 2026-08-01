@@ -252,7 +252,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		" HISTORY                                                                        ",
 		"  no activity yet",
 		"",
-		" ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit     ",
+		" ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit         ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -286,7 +286,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit", "") + "\x1b[0m",
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",

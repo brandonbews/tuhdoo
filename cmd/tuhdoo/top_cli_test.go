@@ -165,6 +165,48 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Errorf("priority = %d, want 7", next.Task.Priority)
 	}
 
+	// ---- edit title and description from the task view ----
+	// e edits the title (single-line, prefilled), E the description
+	// (multi-line, ctrl+s submits): the same PATCH — and task.updated
+	// ledger event — as `tuhdoo update`, so a restart replays the edits.
+	m = refreshTop(t, m)
+	m = moveTo(t, m, wrong)
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != wrong {
+		t.Fatalf("enter on the task row: mode %d detail %q, want the task view of %s", m.mode, m.detailID, wrong)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	if m.mode != modeEditTitle || m.input.String() != "wrong idea" {
+		t.Fatalf("e: mode %d input %q, want the prefilled title editor", m.mode, m.input)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyCtrlU)) // cursor at the end: clears the prefill
+	m, cmd = press(t, m, append(runes("right idea"), keyOf(tea.KeyEnter))...)
+	m = act(t, m, cmd)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	if m.mode != modeEditDesc || !m.input.multiline {
+		t.Fatalf("E: mode %d multiline %v, want the multi-line description editor", m.mode, m.input.multiline)
+	}
+	m, _ = press(t, m, runes("Line one.")...)
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // a newline, never a submit
+	m, cmd = press(t, m, append(runes("Line two."), keyOf(tea.KeyCtrlS))...)
+	m = act(t, m, cmd)
+
+	// The edits are daemon state now, and the next poll re-renders the
+	// still-open task view with the new content.
+	var edited hydratedTask
+	if err := c.get("/v0/tasks/"+wrong, &edited); err != nil {
+		t.Fatalf("get %s: %v", wrong, err)
+	}
+	if edited.Task.Title != "right idea" || edited.Task.Description != "Line one.\nLine two." {
+		t.Fatalf("edited task = %q / %q, want the new title and description",
+			edited.Task.Title, edited.Task.Description)
+	}
+	m = refreshTop(t, m)
+	if v := m.View(); !strings.Contains(v, "right idea") || !strings.Contains(v, "Line two.") {
+		t.Errorf("edits not rendered after refresh; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+
 	// ---- archive from the TUI ----
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
@@ -201,6 +243,15 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 	if !strings.Contains(line, `"task":"`+wrong+`"`) {
 		t.Errorf("task.cancelled event not on task %s; event:\n%s", wrong, line)
+	}
+
+	// The edits landed on the branch too — the log is append-only, so
+	// their earlier task.updated events committed with (or before) the
+	// cancelled event just found — stamped with the acting human.
+	if out, ok := grepDataBranch(repo, `"title":"right idea"`); !ok {
+		t.Error("task.updated event for the title edit never committed to the data branch")
+	} else if !strings.Contains(out, `"actor":"brandon"`) {
+		t.Errorf("title edit event not stamped with the acting human; event:\n%s", out)
 	}
 
 	// The interactive session ends cleanly from nav mode.
