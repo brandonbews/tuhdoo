@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 5 blocked · 5 on hold · 5 inbox · 36 done · 7 archived
+0 in progress · 1 ready · 5 blocked · 5 on hold · 4 inbox · 36 done · 7 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -10,7 +10,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) | Task view field focus ring: up/down selects any editable field, enter opens its editor | 1 | `cli` `tui` `ux` `design` |
 
 ## Blocked / waiting
 
@@ -39,7 +41,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
-- [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) the description doesnt appear editable in the task view. the edit button seems to just allow editing the title. it should just be an up down arrow select between fields like title the meta fields description tha escalation answers, and enter opens the right reesponse or edit medium.
 - [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) the history section of the task view shield put a full return between entries and bold the title line of each entry.
 - [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) Labels are editable from the task view (needs its own design: edit medium for a list-valued field, and a labels write path in daemon API + steeringAPI)
