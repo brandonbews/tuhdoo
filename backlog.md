@@ -38,6 +38,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
 - [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) — it feels weird from a ux perspective that enter on needs input items just opens a prompt at the bottom instead of taking you to the task that needs an answer so you can have context before answering. should it go to the task and let that ui handle taking the answer in?
 - [tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE](tasks/tuh-01KYXDZ2Y0MX2YJBX94TVF1NCE.md) — the task view needs to be brought more in line with the design of the dash. bold on the fields names up top, white bars for headings, a clear section when theres an escalation to answer with an easy way to answer.
+- [tuh-01KYXE2S7A1WD7RKZSA0TNP09A](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) — archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
 
 ## Done
 
