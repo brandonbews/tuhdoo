@@ -49,3 +49,7 @@ _Synthesized by replay, not recorded by the agent._
 - Commits: `HEAD`
 
 placeholder
+
+### 2026-08-01 03:26 UTC — note from `brandon/claude-code-1`
+
+Correction: the preceding finish_run (01KYXNQPXS7RRFN5C96AP2V2P9) was submitted with summary "placeholder" and commits ["HEAD"] by mistake — an agent bundling a holdership probe with the finish call. The real record: landed on main as 6c76c65 (PR #11, squash, CI green). FormatVersion 4→5 in internal/views: README leads with an open-questions callout + one-row counts table; escalations.md renders open questions blocking-first with blockquoted questions; backlog.md orders actionable states first as tables with linked short IDs and code-span labels; task pages get H1 titles, full ID once, bold field names; cancelled renders as Archived everywhere humans read. Generation stays pure (no clocks — last sync deliberately omitted; total ordering). Before/after renderings of the live ledger are embedded in the PR body. Deliberately not done: shortID is now duplicated between cmd/tuhdoo and internal/views (extraction touches cmd/, out of scope — candidate capture). The live branch regenerates on the daemon next write after deploy.
