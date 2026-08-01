@@ -382,8 +382,9 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "get_backlog",
 		Description: "The claimable backlog: open tasks with met dependencies and no active claim, " +
 			"highest priority first — plus the inbox (untriaged captures) and held (deliberately " +
-			"paused) shelves, which claim verbs never serve. Orientation only — use claim_next " +
-			"to actually take work.",
+			"paused) shelves, which claim verbs never serve. Nothing else is listed: in-progress, " +
+			"blocked, done, and cancelled tasks appear in no array — a known task ID is always " +
+			"readable with get_task. Orientation only — use claim_next to actually take work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in getBacklogInput) (*mcp.CallToolResult, backlogResult, error) {
 		ready, inbox, held, oe := d.opBacklog()
 		if oe != nil {
@@ -539,7 +540,10 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "update_task",
 		Description: "Update a task's fields: status, priority, labels, edges, title, description. " +
-			"Only the fields you send change.",
+			"Only the fields you send change, but the list fields (labels, parents, depends_on) " +
+			"are full replacements — send the complete new list, never a delta. Status cancelled " +
+			"is the archive: terminal but never deleted (get_task still reads it) — archive only " +
+			"at a human's direction, never over your own disagreement.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateTaskInput) (*mcp.CallToolResult, taskJSON, error) {
 		t, oe := d.opUpdateTask(s.principal(), in.Task, updateTaskReq{
 			Title: in.Title, Description: in.Description, Status: in.Status,

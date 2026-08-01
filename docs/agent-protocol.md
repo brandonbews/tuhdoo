@@ -1,6 +1,6 @@
 # tuhdoo agent protocol
 
-**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). Revised again 2026-07-30 (steering): notes reframed — the typed transition events carry continuity, `add_note` is optional garnish (step 4); the dangling-pointer anti-pattern named; interactive sessions addressed (escalation section). Revised 2026-07-31 (grill cycle): the status model grew `inbox` and `held` — capture cheap, promote deliberate (new section below). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
+**Status:** revised against the live MCP surface (B9, session 3); field-tested 2026-07-30 against a real harness session, deviations folded in (see the field-test record at the bottom). Revised again 2026-07-30 (steering): notes reframed — the typed transition events carry continuity, `add_note` is optional garnish (step 4); the dangling-pointer anti-pattern named; interactive sessions addressed (escalation section). Revised 2026-07-31 (grill cycle): the status model grew `inbox` and `held` — capture cheap, promote deliberate (new section below). Revised again 2026-07-31 (MCP parity audit): the archive wording corrected — `update_task` `status: "cancelled"` *is* mechanically available to agents, the rule is when to use it, not whether the verb exists; and `get_backlog`'s coverage stated honestly (ready + inbox + held, nothing else). The tool descriptions in `internal/daemon/mcp.go` are the live vocabulary; if this doc and a `tools/list` response disagree, the daemon is right and this doc has a bug.
 
 This is the instruction text a harness loads for any agent working a tuhdoo-managed project. It is the agent's half of the contract; the daemon's half (leases, serialization, sync) is automatic. The protocol exists because the ledger is **agent memory before it is human audit trail**: sessions end and contexts compact, and the only continuity between today's agent and tomorrow's is what landed on the ledger — chiefly the typed transition events the loop below already requires *(revised 2026-07-30; see step 4)*.
 
@@ -30,7 +30,9 @@ its own).
 
 ## The eleven verbs
 
-Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_claim`, `finish_run` · Communicate: `escalate`, `add_note`, `relay_answer` · Decompose: `create_task`, `update_task`. That is the whole surface — no delete, no admin verbs; curation is human work.
+Orient: `get_backlog`, `get_task` · Loop: `claim_next`, `claim_task`, `release_claim`, `finish_run` · Communicate: `escalate`, `add_note`, `relay_answer` · Decompose: `create_task`, `update_task`. That is the whole surface — no admin verbs, and nothing is ever hard-deleted. Archive rides `update_task` as `status: "cancelled"` *(clarified 2026-07-31: the value is mechanically accepted from agents — the rule below about never archiving unbidden is protocol, not schema)*; steering actions a human asks you to perform — cancel, reprioritize, retitle, re-edge, hold/resume — are all `update_task` field writes.
+
+Know what `get_backlog` does *not* show *(2026-07-31 audit)*: it returns exactly three arrays — `ready`, `inbox`, `held`. Tasks that are in progress (actively claimed), blocked (unmet dependencies or an open blocking escalation), `done`, or `cancelled` appear in **no** array, and there is no verb that lists them or lists open escalations across the project. A known task ID is always readable with `get_task`, whatever its status — but discovering such a task's ID, or answering "what's in progress?" / "what did we finish?", has no MCP path today; say so rather than inferring from `get_backlog` silence.
 
 ## The loop
 
@@ -104,7 +106,7 @@ Cautionary tale (Cycle-4 build, 2026-07-30): an agent created a task whose descr
 
 - Never write to the tuhdoo data branch with git directly — all plan writes go through the MCP verbs (the daemon is the sole writer; D2).
 - Never force-push the data branch (project law; it breaks every peer at once).
-- Never delete or archive tasks — curation is human work via CLI/TUI; the agent surface has no verbs for it.
+- Never archive a task unbidden *(reworded 2026-07-31: `update_task` `status: "cancelled"` is the archive and the surface does accept it from agents)* — archiving is a human decision; write it only when a human directed it, in your session or in a task you claimed. Nothing is ever hard-deleted: the history stays on the ledger.
 - Never report an outcome you didn't earn — `interrupted` and `superseded` are the daemon's words, and `done` means the acceptance criteria actually hold.
 - Never work unclaimed, never claim un-worked.
 
