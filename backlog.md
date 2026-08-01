@@ -41,6 +41,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYXE2S7A1WD7RKZSA0TNP09A](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) — archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
 - [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) — the enter captues and esc cancels instructions from the inbox field move distractingly as you type. they shoud be fixed below what should be a text box or header witha  clear delineation
 - [tuh-01KYXE4NSNBFFRTT8STNDJHYED](tasks/tuh-01KYXE4NSNBFFRTT8STNDJHYED.md) — i should be able to move the cursor in all text boxes using standard commands
+- [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) — you should be able to edit the desription or title in the task view
 
 ## Done
 
