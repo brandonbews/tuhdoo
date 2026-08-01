@@ -1,8 +1,10 @@
-# t-old — Spike: evaluate go-git
+# Spike: evaluate go-git
 
-- Status: cancelled
-- Priority: 0
-- Created: 2026-07-29 12:06 UTC by `brandon`
+`t-old`
+
+- **Status:** archived
+- **Priority:** 0
+- **Created:** 2026-07-29 12:06 UTC by `brandon`
 
 ## Description
 

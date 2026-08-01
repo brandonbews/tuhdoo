@@ -35,9 +35,28 @@ func tick(t *testing.T, n int) string {
 	return id
 }
 
+// tickBetween mints a ULID at minute n that sorts after tick(n) and
+// before tick(n+1): same instant, higher entropy in an earlier byte.
+func tickBetween(t *testing.T, n int) string {
+	t.Helper()
+	entropy := make([]byte, 10)
+	entropy[8] = 1
+	entropy[9] = byte(n)
+	id, err := event.NewID(base.Add(time.Duration(n)*time.Minute), bytes.NewReader(entropy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func evt(t *testing.T, n int, typ, actor, task string, payload any) event.Event {
 	t.Helper()
-	e, err := event.New(tick(t, n), typ, event.Versions[typ], actor, "m-test", task, payload)
+	return evtID(t, tick(t, n), typ, actor, task, payload)
+}
+
+func evtID(t *testing.T, id, typ, actor, task string, payload any) event.Event {
+	t.Helper()
+	e, err := event.New(id, typ, event.Versions[typ], actor, "m-test", task, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +82,7 @@ func goldenInput(t *testing.T) core.Input {
 			Labels:      []string{"core", "go"},
 			Parents:     []string{"t-epic"},
 		}),
-		evt(t, 3, event.TypeTaskCreated, "brandon", "t-views", event.TaskCreated{
+		evt(t, 3, event.TypeTaskCreated, "brandon", "t-view", event.TaskCreated{
 			Title:     "Render markdown views",
 			Priority:  5,
 			Labels:    []string{"core"},
@@ -73,9 +92,12 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 4, event.TypeTaskCreated, "brandon", "t-sync", event.TaskCreated{
 			Title:     "Sync loop | app-level merge",
 			Priority:  2,
-			DependsOn: []string{"t-views"},
+			DependsOn: []string{"t-view"},
 		}),
-		evt(t, 5, event.TypeTaskCreated, "brandon", "t-daemon", event.TaskCreated{
+		// A tuh-era ULID-shaped ID (the others keep short word tails for
+		// golden readability): views must abbreviate it for display
+		// (`tuh-dmn4`) while link targets keep the full ID.
+		evt(t, 5, event.TypeTaskCreated, "brandon", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.TaskCreated{
 			Title:    "Daemon skeleton",
 			Priority: 4,
 			Parents:  []string{"t-epic"},
@@ -83,7 +105,7 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 6, event.TypeTaskCreated, "brandon", "t-old", event.TaskCreated{
 			Title: "Spike: evaluate go-git",
 		}),
-		evt(t, 7, event.TypeTaskCreated, "brandon", "t-flaky", event.TaskCreated{
+		evt(t, 7, event.TypeTaskCreated, "brandon", "t-flak", event.TaskCreated{
 			Title:    "Fix flaky TestFoo",
 			Priority: 8,
 			Labels:   []string{"tests"},
@@ -111,23 +133,23 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 13, event.TypeTaskUpdated, "brandon", "t-old", event.TaskUpdated{
 			Status: ptr(core.StatusCancelled),
 		}),
-		evt(t, 14, event.TypeClaimMade, "sarah/impl-9", "t-daemon", event.ClaimMade{}),
-		evt(t, 15, event.TypeNoteAdded, "sarah/impl-9", "t-daemon", event.NoteAdded{
+		evt(t, 14, event.TypeClaimMade, "sarah/impl-9", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.ClaimMade{}),
+		evt(t, 15, event.TypeNoteAdded, "sarah/impl-9", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.NoteAdded{
 			Text: "Socket path decided; writing the lockfile next.",
 		}),
-		evt(t, 16, event.TypeClaimMade, "brandon/impl-2", "t-flaky", event.ClaimMade{}),
-		evt(t, 17, event.TypeEscalationRaised, "brandon/impl-2", "t-flaky", event.EscalationRaised{
+		evt(t, 16, event.TypeClaimMade, "brandon/impl-2", "t-flak", event.ClaimMade{}),
+		evt(t, 17, event.TypeEscalationRaised, "brandon/impl-2", "t-flak", event.EscalationRaised{
 			Question: "TestFoo depends on wall-clock timing — rewrite or delete?",
 			Context:  "It races a 10ms sleep against the scheduler. Rewriting means faking the clock.",
 			Blocking: true,
 		}),
 		// An out-of-band answer relayed by an agent (T5 relay_answer):
 		// envelope actor is the scribe, answered_by the attribution.
-		evt(t, 18, event.TypeEscalationRaised, "sarah/impl-9", "t-daemon", event.EscalationRaised{
+		evt(t, 18, event.TypeEscalationRaised, "sarah/impl-9", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.EscalationRaised{
 			Question: "Reuse the repo lockfile for the daemon singleton?",
 			Blocking: false,
 		}),
-		evt(t, 19, event.TypeEscalationAnswered, "sarah/impl-9", "t-daemon", event.EscalationAnswered{
+		evt(t, 19, event.TypeEscalationAnswered, "sarah/impl-9", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.EscalationAnswered{
 			Answer:     "Yes — one lockfile, one meaning.",
 			AnsweredBy: "sarah",
 			Escalation: tick(t, 18),
@@ -149,14 +171,22 @@ func goldenInput(t *testing.T) core.Input {
 			Title:  "Idea: label-based claim routing",
 			Status: core.StatusInbox,
 		}),
-		evt(t, 23, event.TypeTaskCreated, "brandon", "t-routr", event.TaskCreated{
+		evt(t, 23, event.TypeTaskCreated, "brandon", "t-rout", event.TaskCreated{
 			Title:     "Route claims by label",
 			DependsOn: []string{"t-idea"},
 		}),
+		// An open non-blocking escalation raised BEFORE t-flak's open
+		// blocking one (tick 17): escalations.md must list the blocking
+		// question first regardless of raise order, and a non-blocking
+		// question must not pull t-view out of ready.
+		evtID(t, tickBetween(t, 16), event.TypeEscalationRaised, "brandon/impl-3", "t-view", event.EscalationRaised{
+			Question: "Views ship tables in v0, or lists until GFM support is confirmed?",
+			Blocking: false,
+		}),
 	}
 	leases := map[string]time.Time{
-		tick(t, 14): testNow.Add(time.Hour),     // t-daemon claim alive
-		tick(t, 16): base.Add(30 * time.Minute), // t-flaky lease lapsed → interrupted
+		tick(t, 14): testNow.Add(time.Hour),     // tuh-dmn4 (daemon skeleton) claim alive
+		tick(t, 16): base.Add(30 * time.Minute), // t-flak lease lapsed → interrupted
 	}
 	return core.Input{Events: events, Leases: leases, Now: testNow}
 }
@@ -245,7 +275,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":4}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":5}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -304,8 +334,8 @@ func TestCanWrite(t *testing.T) {
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
 		{"lower", []byte(`{"format":2}`), true},
-		{"equal", []byte(`{"format":4}`), true},
-		{"higher", []byte(`{"format":5}`), false},
+		{"equal", []byte(`{"format":5}`), true},
+		{"higher", []byte(`{"format":6}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {
