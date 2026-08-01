@@ -8,6 +8,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -34,7 +35,7 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"▌             question: Which license?",
 		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
-		" READY (2)                                               p priority · c archive ",
+		" READY (2)                                               p priority · a archive ",
 		"  t-pars  p5  write the parser  · in t-epic · 1 dep",
 		"  t-flor  p1  sweep the floor",
 		"",
@@ -44,13 +45,13 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" BLOCKED (0)                                                                    ",
 		"  none",
 		"",
-		" ON HOLD (1)                                                          c archive ",
+		" ON HOLD (1)                                                          a archive ",
 		"  t-park  p2  polish the docs",
 		"",
-		" INBOX (1)                                                i capture · c archive ",
+		" INBOX (1)                                                i capture · a archive ",
 		"  t-idea      idea: dark mode",
 		"",
-		" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit    1 done ",
+		" ↑/↓ (j/k) move · enter open · p priority · a archive · q quit           1 done ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -77,14 +78,14 @@ func TestTopGoldenBars(t *testing.T) {
 		for _, bar := range []string{
 			"\x1b[7m\x1b[1m" + pad(" tuhdoo · local-only", "acting as brandon ") + "\x1b[0m",
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
-			"\x1b[30;42m" + pad(" READY (2)", "p priority · c archive ") + "\x1b[0m",
+			"\x1b[30;42m" + pad(" READY (2)", "p priority · a archive ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
 			"\x1b[30;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
 			// The shelves (2026-07-31): reverse-dim bars, no section color
 			// — present but never claiming the eye.
-			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c archive ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c archive ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer/open · p priority · c archive · q quit", "1 done ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "a archive ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · a archive ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · a archive · q quit", "1 done ") + "\x1b[0m",
 		} {
 			if !strings.Contains(v, bar) {
 				t.Errorf("width %d: view missing bar %q; view:\n%s", width, bar, v)
@@ -165,7 +166,7 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.width, m.height = 80, 40
 	v := m.View()
 	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · q quit")
-	for _, absent := range []string{"enter answer", "p priority", "c archive", "i capture"} {
+	for _, absent := range []string{"enter answer", "p priority", "a archive", "i capture"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}
@@ -209,6 +210,121 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 		if n := len([]rune(line)); n > 80 {
 			t.Errorf("line is %d runes wide (>80): %q", n, line)
 		}
+	}
+}
+
+// The task view at 80 columns, plain colors (task-view rework,
+// 2026-08-01): the dashboard's header bar, the field block (bold names
+// degrade to plain), the NEEDS INPUT section with the routed-to
+// escalation as the selected row, DESCRIPTION and HISTORY bars, and the
+// footer bar — byte-exact geometry, entered by pressing enter on the
+// dashboard's Needs Input row.
+func TestTopGoldenTaskViewPlain80(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	h := m.snap.tasks["t-lic"]
+	h.Task.Status = "open"
+	h.Task.CreatedAt = time.Date(2026, 7, 29, 12, 0, 0, 0, time.UTC)
+	h.Task.CreatedBy = "brandon"
+	m.snap.tasks["t-lic"] = h
+	m.width, m.height = 80, 40
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 0 {
+		t.Fatalf("enter on the Needs Input row: mode %d detail %q focus %d, want t-lic preselected",
+			m.mode, m.detailID, m.detailFocus)
+	}
+	want := strings.Join([]string{
+		" tuhdoo · local-only                                          acting as brandon ",
+		"",
+		"t-lic — choose a license",
+		"",
+		"  id          t-lic",
+		"  status      open",
+		"  priority    0",
+		"  created     2026-07-29 12:00 UTC by brandon",
+		"",
+		" NEEDS INPUT (1)                                                   enter answer ",
+		"▌ !   Which license?",
+		"▌     brandon/a2 · 2026-07-29 14:03 UTC",
+		"",
+		" DESCRIPTION                                                                    ",
+		"  none",
+		"",
+		" HISTORY                                                                        ",
+		"  no activity yet",
+		"",
+		" ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit     ",
+		"",
+	}, "\n")
+	got := m.View()
+	if got != want {
+		t.Errorf("plain 80-column task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("plain task view leaked ANSI escapes:\n%q", got)
+	}
+}
+
+// Task-view composition with real colors: the NEEDS INPUT bar carries
+// the dashboard's magenta, DESCRIPTION and HISTORY the reverse-dim
+// bars, field names are bold on the grid, and the selected escalation
+// row is the same full-height gutter bar as the list. Watch mode keeps
+// the sections but drops the hint and the selection.
+func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	h := m.snap.tasks["t-lic"]
+	h.Task.Status = "open"
+	m.snap.tasks["t-lic"] = h
+	m.col = ansiColors
+	m.col.selBG = "\x1b[48;5;236m"
+	m.width, m.height = 80, 40
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	v := m.View()
+	pad := func(left, right string) string {
+		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
+	}
+	for _, want := range []string{
+		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter answer · p priority · a archive · esc back · q quit", "") + "\x1b[0m",
+		// Bold field names on the grid; the canonical id value stays dim.
+		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
+		"  \x1b[1mstatus\x1b[0m      open",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("task view missing %q; view:\n%q", want, v)
+		}
+	}
+	// The selected escalation row: gutter and tint on both lines, each
+	// padded to the full width — one continuous bar, like the list.
+	var sel []string
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, "▌") {
+			sel = append(sel, l)
+		}
+	}
+	if len(sel) != 2 {
+		t.Fatalf("selected escalation row has %d gutter lines, want 2; view:\n%q", len(sel), v)
+	}
+	for _, l := range sel {
+		if !strings.HasPrefix(l, "\x1b[48;5;236m▌ ") {
+			t.Errorf("selected line does not open with bg+gutter: %q", l)
+		}
+		if w := ansi.StringWidth(l); w != 80 {
+			t.Errorf("selected line is %d cells, want the full 80: %q", w, l)
+		}
+	}
+	// Watch mode: same view, no steering hint, nothing selected.
+	w := newWatchModel()
+	w.col = ansiColors
+	w.width, w.height = 80, 40
+	w, _ = press(t, w, keyOf(tea.KeyEnter))
+	wv := w.View()
+	if !strings.Contains(wv, "\x1b[30;45m"+pad(" NEEDS INPUT (1)", "")+"\x1b[0m") {
+		t.Errorf("watch task view missing the hint-free NEEDS INPUT bar; view:\n%q", wv)
+	}
+	if strings.Contains(wv, "▌") {
+		t.Errorf("watch task view renders a selected row; view:\n%q", wv)
 	}
 }
 
