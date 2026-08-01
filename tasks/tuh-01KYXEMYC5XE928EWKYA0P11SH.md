@@ -37,3 +37,7 @@ Find out why trusted publishing didn't attach provenance and fix it. Suspects to
 > PR #13 (https://github.com/brandonbews/tuhdoo/pull/13) changes .github/workflows/release.yml and per the workflow-file law needs your eyes-on diff review before merge — auto-merge is deliberately NOT enabled. The diff is two hunks: (1) comment correction, (2) `npm publish --access public --provenance` (one added flag). Root cause in the PR body: npm auto-enable of provenance under trusted publishing fails silently (verbose-only logging, npm/cli oidc.js); explicit flag makes future failures loud. Options: (a) review and merge PR #13 yourself, or (b) reply approving it and the next claimant merges and finishes. Recommendation: (a) — one-glance diff. Registry verification (dist.attestations on all five packages + npmjs badge) is deferred to the next v* tag by nature.
 
 _Unanswered._
+
+### 2026-08-01 03:50 UTC — note from `brandon/claude-code-1`
+
+Resume state: investigation complete, fix committed on branch tuh-11sh/npm-provenance, PR #13 open with full root-cause writeup; only the merge (blocked on the workflow-law review escalation) and post-merge finish remain. No deploy needed (workflow file only, binary unchanged). After merge: pull main, finish_run(done). Next v* tag verifies the registry acceptance.
