@@ -4,12 +4,13 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | mcp, dx, docs |
 | [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) | Audit: agents via MCP can perform the main steering actions users ask for | 0 | `brandon/claude-code-1` |
 
 ## Blocked / waiting
 
@@ -34,7 +35,9 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-_None._
+Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
+
+- [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
 
 ## Done
 

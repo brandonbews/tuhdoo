@@ -1,6 +1,6 @@
 # tuh-01KYWVNF91Y7H9GK0X1RAE2SBW — Audit: agents via MCP can perform the main steering actions users ask for
 
-- Status: open — ready
+- Status: open — in progress, claimed by `brandon/claude-code-1`
 - Priority: 0
 - Labels: `mcp`, `dx`, `docs`
 - Created: 2026-07-31 19:50 UTC by `brandon`
