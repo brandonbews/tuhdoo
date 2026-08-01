@@ -6,9 +6,7 @@ _None._
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Blocked / waiting
 
@@ -74,6 +72,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [tuh-01KYWKT8NQ980F0NF4MJ9W33H5](tasks/tuh-01KYWKT8NQ980F0NF4MJ9W33H5.md) — Release npm job: switch to OIDC trusted publishing (drop NPM_TOKEN)
 - [tuh-01KYWKT8NQ980F0NF4MN3VMT0Y](tasks/tuh-01KYWKT8NQ980F0NF4MN3VMT0Y.md) — claim_task on an escalation-blocked task reports "unmet dependencies"
 - [tuh-01KYWVNF91Y7H9GK0X1RAE2SBW](tasks/tuh-01KYWVNF91Y7H9GK0X1RAE2SBW.md) — Audit: agents via MCP can perform the main steering actions users ask for
+- [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [tuh-01KYX6CMQV1G6XDZGNAF2M5C5P](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) — Slash command /drain-backlog: the reusable drain-the-backlog prompt
 

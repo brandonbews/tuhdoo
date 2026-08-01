@@ -1,6 +1,6 @@
 # tuh-01KYWWH4DZH4TR7ASVGTDBT14P — One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 
-- Status: open — in progress, claimed by `brandon/claude-code-1`
+- Status: done
 - Priority: 0
 - Labels: `cli`, `design`
 - Created: 2026-07-31 20:05 UTC by `brandon/claude-code-1`
@@ -29,4 +29,9 @@ Constraints: eleven MCP tools untouched (T5). internal/views untouched. Complete
 
 ## History
 
-_No activity yet._
+### 2026-08-01 01:15 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-t14p/one-shot-serialized-output`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/8>
+
+Merged to main (PR #8, squash). T7 in docs/design/002-technology.md carries the in-place revision note: Rule 1 steering parity, Rule 2 work-loop-is-session-only, and the output contract (one-shot output is serialization, not design). `tuhdoo backlog` and `tuhdoo escalations` now emit header + one aligned row per record via text/tabwriter: STATE column (grep-selectable, hyphenated one-token values incl. on-hold/in-progress), waiting-reasons as dep:/esc: IDs, "-" for empty cells, zero ANSI by construction (printers no longer take a colors argument — identical bytes TTY vs pipe). Done/archived got full rows (digest showed only counts). Byte-exact goldens in cmd/tuhdoo/oneshot_golden_test.go. One deliberate narrowing: escalations rows carry the task ID but not the task title annotation the digest had — the ID is the join key; story lives in `tuhdoo task <id>`. status/task-id output untouched per scope (follow-up capture territory). make test lint green.
