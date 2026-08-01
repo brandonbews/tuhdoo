@@ -16,7 +16,7 @@ views are derived from the log — never edit them by hand. The design lives in
 | — in progress | 1 |
 | — blocked / waiting | 4 |
 | On-hold tasks (paused) | 5 |
-| Inbox (untriaged) | 2 |
+| Inbox (untriaged) | 3 |
 | Done tasks | 31 |
 | Cancelled tasks | 4 |
 | Open escalations | 3 |
