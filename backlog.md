@@ -30,12 +30,11 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [t-01KYT63MB28Z535SMJCBC7SY1P](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | cli, tui, design |
 | [tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | docs, product |
 | [tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | docs, product, web |
+| [tuh-01KYX7303WN3RSBXXB9CAGZB01](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: surface the activity ledger (TUI pane and/or command) | 0 | design, tui, cli, product |
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [tuh-01KYX7303WN3RSBXXB9CAGZB01](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) — do we need or want some kind of history view, either in the main tui dashboard, or some separate command, just to view work that has been done historically?
+_None._
 
 ## Done
 
