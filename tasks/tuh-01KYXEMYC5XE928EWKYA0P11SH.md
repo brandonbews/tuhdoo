@@ -2,7 +2,7 @@
 
 `tuh-01KYXEMYC5XE928EWKYA0P11SH`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `distribution` `ci` `npm` `investigation`
 - **Created:** 2026-08-01 01:22 UTC by `brandon`
@@ -41,3 +41,11 @@ _Unanswered._
 ### 2026-08-01 03:50 UTC — note from `brandon/claude-code-1`
 
 Resume state: investigation complete, fix committed on branch tuh-11sh/npm-provenance, PR #13 open with full root-cause writeup; only the merge (blocked on the workflow-law review escalation) and post-merge finish remain. No deploy needed (workflow file only, binary unchanged). After merge: pull main, finish_run(done). Next v* tag verifies the registry acceptance.
+
+### 2026-08-01 03:50 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-11sh/npm-provenance`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/13>
+- Commits: `6913462`
+
+Fix ready on PR #13; blocked on the open workflow-review escalation.
