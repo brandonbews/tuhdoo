@@ -1,8 +1,10 @@
-# t-epic — v0 build-out
+# v0 build-out
 
-- Status: open — ready
-- Priority: 1
-- Created: 2026-07-29 12:01 UTC by `brandon`
+`t-epic`
+
+- **Status:** open — ready
+- **Priority:** 1
+- **Created:** 2026-07-29 12:01 UTC by `brandon`
 
 ## Description
 

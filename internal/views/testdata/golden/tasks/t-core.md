@@ -1,10 +1,12 @@
-# t-core — Build the replay engine
+# Build the replay engine
 
-- Status: done
-- Priority: 5
-- Labels: `core`, `go`
-- Parents: [t-epic](t-epic.md)
-- Created: 2026-07-29 12:02 UTC by `brandon`
+`t-core`
+
+- **Status:** done
+- **Priority:** 5
+- **Labels:** `core` `go`
+- **Parents:** [`t-epic`](t-epic.md)
+- **Created:** 2026-07-29 12:02 UTC by `brandon`
 
 ## Description
 
@@ -23,11 +25,11 @@ Fix in progress.
 
 ### 2026-07-29 12:10 UTC — escalation from `brandon/impl-1`
 
-**Q:** Should upcasters live in core or in a separate package?
+> Should upcasters live in core or in a separate package?
 
 T3 says in-memory only; either placement satisfies that.
 
-**A** (`brandon`): Keep them in core; they are part of honest replay.
+**Answer** (`brandon`): Keep them in core; they are part of honest replay.
 
 ### 2026-07-29 12:11 UTC — run by `brandon/impl-1` — done
 
