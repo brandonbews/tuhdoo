@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 5 blocked · 5 on hold · 4 inbox · 36 done · 7 archived
+0 in progress · 1 ready · 5 blocked · 6 on hold · 3 inbox · 36 done · 7 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -35,6 +35,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
 | [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: surface the activity ledger (TUI pane and/or command) | 0 | `design` `tui` `cli` `product` |
+| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `tui` `design` |
 
 ## Inbox
 
@@ -43,7 +44,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
 - [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) the history section of the task view shield put a full return between entries and bold the title line of each entry.
-- [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) Labels are editable from the task view (needs its own design: edit medium for a list-valued field, and a labels write path in daemon API + steeringAPI)
 
 ## Done
 
