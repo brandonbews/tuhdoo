@@ -4,7 +4,6 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) | Design pass on the generated markdown views: scannable, glanceable data branch | 1 | views, design, ux |
 | [tuh-01KYXE5376YPXHDS98V3K985M6](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) | Edit title and description from the task view | 1 | cli, tui, ux |
 | [tuh-01KYXEMYC5XE928EWKYA0P11SH](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | distribution, ci, npm, investigation |
 
@@ -71,6 +70,7 @@ _None._
 - [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) — One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 - [tuh-01KYX1D49M9M0EB69HNVBZT906](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) — Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [tuh-01KYX6CMQV1G6XDZGNAF2M5C5P](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) — Slash command /drain-backlog: the reusable drain-the-backlog prompt
+- [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — Design pass on the generated markdown views: scannable, glanceable data branch
 - [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) — Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 - [tuh-01KYXE40ES9YSEGW9Z0GXKYPWW](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) — One real text-input widget: delineated box, fixed hint line, standard cursor editing
 

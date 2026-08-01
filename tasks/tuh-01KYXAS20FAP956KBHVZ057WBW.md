@@ -1,6 +1,6 @@
 # tuh-01KYXAS20FAP956KBHVZ057WBW — Design pass on the generated markdown views: scannable, glanceable data branch
 
-- Status: open — ready
+- Status: done
 - Priority: 1
 - Labels: `views`, `design`, `ux`
 - Created: 2026-08-01 00:14 UTC by `brandon`
@@ -41,3 +41,11 @@ A design pass on the generated markdown:
 lease expired without a finish or release
 
 _Synthesized by replay, not recorded by the agent._
+
+### 2026-08-01 03:26 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-7wbw/markdown-views-design`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/11>
+- Commits: `HEAD`
+
+placeholder
