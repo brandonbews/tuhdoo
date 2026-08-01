@@ -358,6 +358,110 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 	}
 }
 
+// Curation over the MCP surface (parity audit, 2026-07-31): every
+// steering action a human asks for rides update_task fields, not verbs.
+// Archive is update_task status cancelled — the task leaves every
+// get_backlog array but stays readable by ID (nothing is deleted);
+// retitle, redescribe, and reprioritize land field-wise leaving the
+// unsent fields untouched; edge lists are full replacements, so an
+// empty list is how an edge is removed.
+func TestMCPCurationUpdates(t *testing.T) {
+	d, _ := startDaemon(t)
+	const actor = "brandon/impl-1"
+	cs := mcpConnect(t, d, actor, nil)
+
+	var created createTasksResult
+	mustToolOK(t, cs, "create_task", map[string]any{
+		"tasks": []map[string]any{
+			{"title": "idea: stale capture", "status": "inbox"},
+			{"title": "the epic", "description": "parent for edge tests"},
+			{"title": "the dep", "description": "dependency for edge tests"},
+			{"title": "worked task", "description": "original body", "priority": 1},
+		},
+	}, &created)
+	if len(created.IDs) != 4 {
+		t.Fatalf("create_task ids = %v, want four", created.IDs)
+	}
+	doomed, epic, dep, worked := created.IDs[0], created.IDs[1], created.IDs[2], created.IDs[3]
+
+	// Archive: status cancelled through the ordinary update surface.
+	var updated taskJSON
+	mustToolOK(t, cs, "update_task", map[string]any{"task": doomed, "status": "cancelled"}, &updated)
+	if updated.Status != "cancelled" {
+		t.Fatalf("archived status = %q, want cancelled", updated.Status)
+	}
+
+	// The archived task appears in no backlog array…
+	var backlog backlogResult
+	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
+	for _, rows := range map[string][]taskJSON{
+		"ready": backlog.Ready, "inbox": backlog.Inbox, "held": backlog.Held,
+	} {
+		for _, r := range rows {
+			if r.ID == doomed {
+				t.Fatalf("archived task %s still listed in %+v", doomed, rows)
+			}
+		}
+	}
+	// …but nothing is deleted: get_task still reads it by ID.
+	var h hydratedTask
+	mustToolOK(t, cs, "get_task", map[string]any{"task": doomed}, &h)
+	if h.Task.Status != "cancelled" || h.Task.Title != "idea: stale capture" {
+		t.Fatalf("get_task on archived = %+v, want cancelled with title intact", h.Task)
+	}
+	// And it can never be claimed.
+	res := callTool(t, cs, "claim_task", map[string]any{"task": doomed})
+	if !res.IsError || !strings.Contains(contentText(res), "status is cancelled") {
+		t.Fatalf("claim_task(cancelled) = isError %v %q, want status-is-cancelled error", res.IsError, contentText(res))
+	}
+
+	// Retitle + reprioritize in one call: only the sent fields change.
+	mustToolOK(t, cs, "update_task", map[string]any{
+		"task": worked, "title": "renamed task", "priority": 5,
+	}, &updated)
+	if updated.Title != "renamed task" || updated.Priority != 5 {
+		t.Fatalf("after retitle = title %q priority %d, want renamed task / 5", updated.Title, updated.Priority)
+	}
+	if updated.Description != "original body" || updated.Status != "open" {
+		t.Fatalf("unsent fields changed: %+v", updated)
+	}
+
+	// Edges land as full replacements: add a parent and a dependency…
+	mustToolOK(t, cs, "update_task", map[string]any{
+		"task": worked, "parents": []string{epic}, "depends_on": []string{dep},
+	}, &updated)
+	if len(updated.Parents) != 1 || updated.Parents[0] != epic ||
+		len(updated.DependsOn) != 1 || updated.DependsOn[0] != dep {
+		t.Fatalf("edges = parents %v depends_on %v, want [%s] / [%s]", updated.Parents, updated.DependsOn, epic, dep)
+	}
+	// …which dep-blocks the task out of ready…
+	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
+	for _, r := range backlog.Ready {
+		if r.ID == worked {
+			t.Fatalf("dep-blocked task %s still in ready: %+v", worked, backlog.Ready)
+		}
+	}
+	// …and an explicit empty list is the removal, leaving the parent
+	// edge (unsent) untouched.
+	mustToolOK(t, cs, "update_task", map[string]any{
+		"task": worked, "depends_on": []string{},
+	}, &updated)
+	if len(updated.DependsOn) != 0 {
+		t.Fatalf("depends_on after clearing = %v, want empty", updated.DependsOn)
+	}
+	if len(updated.Parents) != 1 || updated.Parents[0] != epic {
+		t.Fatalf("parents after clearing depends_on = %v, want still [%s]", updated.Parents, epic)
+	}
+
+	// An edge naming an unknown task is rejected whole.
+	res = callTool(t, cs, "update_task", map[string]any{
+		"task": worked, "parents": []string{"tuh-01NOPE"},
+	})
+	if !res.IsError || !strings.Contains(contentText(res), "unknown task") {
+		t.Fatalf("bad edge = isError %v %q, want unknown-task tool error", res.IsError, contentText(res))
+	}
+}
+
 // relay_answer (T5, 2026-07-30 revision): an agent records an
 // out-of-band answer; the event's actor is the agent, the payload
 // attributes the answer to the session's root principal, and the task
