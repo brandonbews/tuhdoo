@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -68,6 +67,14 @@ func stamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04 UTC")
 }
 
+// stampCompact is stamp for serialized column output (T7, 2026-07-31):
+// the same UTC instant at the same minute precision, with no interior
+// spaces, so a timestamp stays one awk/grep token. The trailing Z is a
+// literal — the instant is always UTC.
+func stampCompact(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04") + "Z"
+}
+
 // humanStatus maps a plumbing status value to the human-facing word
 // (T7, 2026-07-31): the ledger event and API value stay "cancelled"
 // (T3), but humans read "archived" — the verb that says curation, not
@@ -123,90 +130,7 @@ func plural(n int, word string) string {
 	return fmt.Sprintf("%d %ss", n, word)
 }
 
-// ---- shared sections (the one-shot commands render these buckets) ----
-
-func renderReady(w io.Writer, col colors, tasks []stateTask) {
-	fmt.Fprintf(w, "%s%sReady%s (%d)\n", col.bold, col.green, col.reset, len(tasks))
-	if len(tasks) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
-	}
-	for _, t := range tasks {
-		fmt.Fprintf(w, "  %s%s%s  p%d  %s%s\n",
-			col.dim, t.ID, col.reset, t.Priority, oneLine(t.Title), labelSuffix(t.Labels))
-	}
-}
-
-func renderInProgress(w io.Writer, col colors, tasks []stateTask) {
-	fmt.Fprintf(w, "%s%sIn progress%s (%d)\n", col.bold, col.yellow, col.reset, len(tasks))
-	if len(tasks) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
-	}
-	for _, t := range tasks {
-		fmt.Fprintf(w, "  %s%s%s  %s  %s← %s%s\n",
-			col.dim, t.ID, col.reset, oneLine(t.Title), col.yellow, t.Holder, col.reset)
-	}
-}
-
-func renderBlocked(w io.Writer, col colors, s *snapshot, tasks []stateTask) {
-	fmt.Fprintf(w, "%s%sBlocked%s (%d)\n", col.bold, col.red, col.reset, len(tasks))
-	if len(tasks) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
-	}
-	for _, t := range tasks {
-		fmt.Fprintf(w, "  %s%s%s  %s\n      %swaiting:%s %s\n",
-			col.dim, t.ID, col.reset, oneLine(t.Title), col.red, col.reset, s.blockedReason(t.ID))
-	}
-}
-
-// renderHeld and renderInbox are the shelf sections (2026-07-31): dim
-// headers — parked and captured work sits below the live queue in both
-// the one-shot output and the TUI.
-func renderHeld(w io.Writer, col colors, tasks []stateTask) {
-	fmt.Fprintf(w, "%sOn hold%s (%d)\n", col.dim, col.reset, len(tasks))
-	if len(tasks) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
-	}
-	for _, t := range tasks {
-		fmt.Fprintf(w, "  %s%s  p%d  %s%s%s\n",
-			col.dim, t.ID, t.Priority, oneLine(t.Title), labelSuffix(t.Labels), col.reset)
-	}
-}
-
-func renderInbox(w io.Writer, col colors, tasks []stateTask) {
-	fmt.Fprintf(w, "%sInbox%s (%d)\n", col.dim, col.reset, len(tasks))
-	if len(tasks) == 0 {
-		fmt.Fprintf(w, "  %snone%s\n", col.dim, col.reset)
-		return
-	}
-	for _, t := range tasks {
-		fmt.Fprintf(w, "  %s%s  %s%s%s\n",
-			col.dim, t.ID, oneLine(t.Title), labelSuffix(t.Labels), col.reset)
-	}
-}
-
-func renderOpenEscalations(w io.Writer, col colors, s *snapshot, escs []escalationJSON) {
-	// Same header as the TUI's escalations section (T7, 2026-07-30):
-	// "Needs Input" softens the severity without renaming the entity.
-	fmt.Fprintf(w, "%sNeeds Input%s (%d)\n", col.bold, col.reset, len(escs))
-	if len(escs) == 0 {
-		fmt.Fprintf(w, "  %snone — the fleet is unblocked%s\n", col.dim, col.reset)
-		return
-	}
-	for _, e := range escs {
-		mark := ""
-		if e.Blocking {
-			mark = fmt.Sprintf("  %s[blocking]%s", col.red, col.reset)
-		}
-		fmt.Fprintf(w, "  %s%s%s%s\n", col.bold, oneLine(e.Question), col.reset, mark)
-		title := ""
-		if h, ok := s.tasks[e.Task]; ok {
-			title = " (" + oneLine(h.Task.Title) + ")"
-		}
-		fmt.Fprintf(w, "    task %s%s · asked by %s · raised %s\n",
-			e.Task, title, e.Actor, stamp(e.RaisedAt))
-	}
-}
+// The digest section renderers (Ready/In progress/Blocked/On hold/
+// Inbox/Needs Input) lived here until 2026-07-31, when the one-shot
+// commands moved to serialized column output (T7: serialization, not
+// design) — see printBacklog / printEscalations in commands.go.

@@ -83,10 +83,13 @@ the life of the pane — the dashboard that sits beside a working agent.
 
   init          set up the data branch in this repository (idempotent)
   status        one-screen overview: sync state, counts, active claims
-  backlog       ready / in-progress / blocked / on-hold / inbox work, from
-                live daemon state
+  backlog       every task, one line each: ID, state, priority, holder,
+                labels, waiting-on IDs, title. Plain aligned columns,
+                no styling — grep a state (ready, in-progress, blocked,
+                on-hold, inbox, done, archived) to select its rows
   task <id>     one task fully hydrated, with its chronological history
-  escalations   questions raised by agents, awaiting a human answer
+  escalations   every escalation, one line each, open before answered —
+                same plain-column form; grep open or blocking
   create <t>    add a task: --desc <text|-> --priority <n> --labels a,b
                 --parents <ids> --depends-on <ids> (- reads stdin)
                 --status inbox|held captures without opening the task

@@ -307,6 +307,8 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	chore := createTask(t, hc, map[string]any{"title": "old chore"})
 	wrong := createTask(t, hc, map[string]any{"title": "wrong idea"})
 	createTask(t, hc, map[string]any{"title": "sweep the floor", "priority": 1})
+	createTask(t, hc, map[string]any{"title": "polish the manual", "status": "held", "priority": 2})
+	createTask(t, hc, map[string]any{"title": "idea: dark mode", "status": "inbox"})
 
 	api(t, hc, "PATCH", "/v0/tasks/"+chore, "brandon", map[string]any{"status": "done"})
 	api(t, hc, "PATCH", "/v0/tasks/"+wrong, "brandon", map[string]any{"status": "cancelled"})
@@ -314,9 +316,14 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	api(t, hc, "POST", "/v0/notes", "brandon/a1", map[string]any{
 		"task": flake, "text": "the flake is in the retry loop",
 	})
-	api(t, hc, "POST", "/v0/escalations", "brandon/a2", map[string]any{
+	var lic struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(api(t, hc, "POST", "/v0/escalations", "brandon/a2", map[string]any{
 		"task": license, "question": "Which license do we ship under?", "blocking": true,
-	})
+	}), &lic); err != nil {
+		t.Fatalf("unmarshal escalation: %v", err)
+	}
 	var esc struct {
 		ID string `json:"id"`
 	}
@@ -329,26 +336,59 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"escalation": esc.ID, "answer": "ASCII first.",
 	})
 
-	// backlog: buckets, holders, blocked reasons, done/archived counts
-	// (the cancelled plumbing status renders as archived — T7).
+	// grepState mimics `out | grep <state>`: the acceptance contract is
+	// that a state name selects exactly that state's rows.
+	grepState := func(out, state string) []string {
+		var m []string
+		for _, l := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+			if strings.Contains(l, state) {
+				m = append(m, l)
+			}
+		}
+		return m
+	}
+
+	// backlog: serialized column output (T7, 2026-07-31) — one row per
+	// task, STATE column, dep:/esc: waiting IDs, no ANSI ever (the
+	// cancelled plumbing status still renders as archived — T7).
 	out, code := runCLI(t, repo, "backlog")
 	if code != 0 {
 		t.Fatalf("backlog exit %d; output:\n%s", code, out)
 	}
-	mustContain(t, out,
-		"write the parser", "sweep the floor",
-		"investigate the flake", "brandon/a1",
-		"ship the docs", "depends on "+parser,
-		"choose a license", "escalation: Which license do we ship under?",
-		"Done 1", "Archived 1",
-	)
-	// Ready is priority-ordered: p5 parser before p1 floor-sweeping.
-	if strings.Index(out, "write the parser") > strings.Index(out, "sweep the floor") {
-		t.Errorf("ready queue not priority-ordered:\n%s", out)
+	if strings.Contains(out, "\x1b") {
+		t.Errorf("serialized backlog contains ANSI escapes:\n%q", out)
 	}
-	// The claimed task must not render as ready.
-	if strings.Index(out, "investigate the flake") < strings.Index(out, "In progress") {
-		t.Errorf("claimed task rendered before the In progress section:\n%s", out)
+	mustContain(t, out, "ID", "STATE", "PRI", "HOLDER", "LABELS", "WAITING", "TITLE")
+	for state, wantRows := range map[string][]string{
+		"ready":       {"write the parser", "sweep the floor"},
+		"in-progress": {"investigate the flake"},
+		"blocked":     {"ship the docs", "choose a license"},
+		"on-hold":     {"polish the manual"},
+		"inbox":       {"idea: dark mode"},
+		"done":        {"old chore"},
+		"archived":    {"wrong idea"},
+	} {
+		lines := grepState(out, state)
+		if len(lines) != len(wantRows) {
+			t.Errorf("grep %q selects %d lines, want %d:\n%s", state, len(lines), len(wantRows), out)
+			continue
+		}
+		for i, sub := range wantRows {
+			if !strings.Contains(lines[i], sub) {
+				t.Errorf("grep %q row %d missing %q: %q", state, i, sub, lines[i])
+			}
+		}
+	}
+	// Ready is priority-ordered (p5 parser before p1 floor-sweeping —
+	// checked by row order above); waiting reasons are IDs, not prose;
+	// the holder is attributed on the in-progress row; labels ride the
+	// parser's row as a plain comma cell.
+	mustContain(t, out, "dep:"+parser, "esc:"+lic.ID, "brandon/a1")
+	if ready := grepState(out, "ready"); len(ready) > 0 && !strings.Contains(ready[0], "go") {
+		t.Errorf("parser row lost its label cell: %q", ready[0])
+	}
+	if strings.Contains(out, "depends on ") || strings.Contains(out, "escalation:") {
+		t.Errorf("backlog still renders prose waiting-reasons:\n%s", out)
 	}
 
 	// task <id>: metadata, description, history.
@@ -396,20 +436,34 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	}
 	mustContain(t, out, "unknown task")
 
-	// escalations: open with absolute age and blocking mark, answered
-	// compactly.
+	// escalations: serialized column output — one row per escalation,
+	// open before answered, the blocking flag its own column, task/actor
+	// attribution and a compact UTC timestamp per row, no ANSI.
 	out, code = runCLI(t, repo, "escalations")
 	if code != 0 {
 		t.Fatalf("escalations exit %d; output:\n%s", code, out)
 	}
-	mustContain(t, out,
-		"Which license do we ship under?", "[blocking]",
-		"task "+license, "asked by brandon/a2", "raised 20",
-		"Do we need unicode?", "brandon: ASCII first.",
-	)
-	// The open question must render before the Answered section.
-	if strings.Index(out, "Which license") > strings.Index(out, "Answered") {
-		t.Errorf("open escalation rendered after Answered section:\n%s", out)
+	if strings.Contains(out, "\x1b") {
+		t.Errorf("serialized escalations contains ANSI escapes:\n%q", out)
+	}
+	mustContain(t, out, "BLOCKING", "ASKED-BY", "RAISED", "QUESTION",
+		lic.ID, esc.ID, license, parser, "brandon/a2", "brandon/a3",
+		"Which license do we ship under?", "Do we need unicode?", "ASCII first.")
+	if open := grepState(out, "open"); len(open) != 1 ||
+		!strings.Contains(open[0], "blocking") || !strings.Contains(open[0], lic.ID) {
+		t.Errorf("grep open must select exactly the blocking license row:\n%s", out)
+	}
+	if ans := grepState(out, "answered"); len(ans) != 1 ||
+		!strings.Contains(ans[0], "brandon") || !strings.Contains(ans[0], "ASCII first.") {
+		t.Errorf("grep answered must select exactly the answered row, with attribution:\n%s", out)
+	}
+	// The open question renders before the answered one.
+	if strings.Index(out, "Which license") > strings.Index(out, "ASCII first.") {
+		t.Errorf("open escalation rendered after the answered one:\n%s", out)
+	}
+	// The RAISED cell is one token: compact UTC, no interior spaces.
+	if !strings.Contains(out, "Z ") && !strings.HasSuffix(out, "Z\n") {
+		t.Errorf("no compact UTC timestamp in escalations output:\n%s", out)
 	}
 
 	// status: counts line reflects the seeded state.
@@ -418,8 +472,8 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		t.Fatalf("status exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, "local-only",
-		"2 ready", "1 in progress", "2 blocked", "1 done", "1 archived",
-		"1 question open", "brandon/a1")
+		"2 ready", "1 in progress", "2 blocked", "1 on hold", "1 inbox",
+		"1 done", "1 archived", "1 question open", "brandon/a1")
 	_ = docs
 }
 
