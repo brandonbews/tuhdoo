@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 6 blocked · 5 on hold · 0 inbox · 36 done · 8 archived
+0 in progress · 3 ready · 6 blocked · 5 on hold · 1 inbox · 36 done · 8 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -41,7 +41,9 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-_None._
+Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
+
+- [`tuh-qt4g`](tasks/tuh-01KYZ34E3NR1HM02P8P3G7QT4G.md) there should be a concept of codereview for workflows that work that way/require it. it's almost a normal escalation but not quite. lets explore ways to do it. my current hunch is maybe an IN CODE REVIEW section that only appears if a task actually has that status. if we go that route, i could see ON HOLD, and NEEDS INPUT only showing when relevant too. def need a grill session for this
 
 ## Done
 
