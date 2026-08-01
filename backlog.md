@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 5 blocked · 6 on hold · 1 inbox · 36 done · 8 archived
+0 in progress · 3 ready · 5 blocked · 6 on hold · 0 inbox · 36 done · 8 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -13,6 +13,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) | Task view field focus ring: up/down selects any editable field, enter opens its editor | 1 | `cli` `tui` `ux` `design` |
+| [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) | shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper | 0 | `cleanup` `go` |
 | [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) | Task-view history: blank line between entries, bold entry descriptors | 0 | `cli` `tui` `ux` |
 
 ## Blocked / waiting
@@ -40,9 +41,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
+_None._
 
 ## Done
 
