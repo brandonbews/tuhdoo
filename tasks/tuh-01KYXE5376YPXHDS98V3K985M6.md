@@ -16,7 +16,7 @@ Dogfooding capture from Brandon (2026-08-01). Fixing a typo'd title or fleshing 
 
 An edit affordance in the task view:
 
-- Edit the title in a single-line input, the description in a multi-line entry (a simple line-based editor is fine for v0; opening $EDITOR is NOT the ask — this stays in the TUI).
+- Edit the title in the shared text-input widget's single-line mode, the description in its multi-line mode (tuh-01KYXE40ES9YSEGW9Z0GXKYPWW — Brandon decided 2026-07-31 that multi-line lives in the widget itself; do not build a separate editor here). Opening $EDITOR is NOT the ask — this stays in the TUI.
 - Writes go through the same plumbing as `tuhdoo update` (task.updated), acting as the TUI's principal.
 - Pick an unclaimed key (e.g. `e`) and put it in the footer.
 
@@ -33,7 +33,7 @@ An edit affordance in the task view:
 ## Constraints
 
 - Boring Go; TUI-only.
-- Depends on tuh-01KYXE40ES9YSEGW9Z0GXKYPWW (the shared text-input widget — build editing on it, don't hand-roll a third input) and tuh-01KYXDWWM8S1GF6N9NE5FGA86Y (the task-view rework — land after it so the screen isn't rebuilt twice).
+- Depends on tuh-01KYXE40ES9YSEGW9Z0GXKYPWW (the shared widget, including its multi-line mode) and tuh-01KYXDWWM8S1GF6N9NE5FGA86Y (the task-view rework — land after it so the screen isn't rebuilt twice).
 
 ## History
 

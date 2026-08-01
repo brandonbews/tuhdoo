@@ -21,14 +21,16 @@ There are already at least two text entries (inbox capture, escalation answer) a
 One shared text-input component used by every text entry in the TUI:
 
 - A clearly delineated input box (border or header) with the hint line ("enter captures · esc cancels" etc.) rendered on its own fixed line below the box — it must not move as the user types.
-- Standard editing: insertion at cursor, left/right arrows, home/end, ctrl+a / ctrl+e, ctrl+k / ctrl+u / ctrl+w, backspace and delete at the cursor.
+- Standard editing (Brandon confirmed the full set, 2026-07-31): insertion at cursor; left/right arrows; home/end; ctrl+a / ctrl+e; ctrl+k / ctrl+u / ctrl+w; backspace and delete at the cursor; **word motion**: alt/option+left/right (and alt+b / alt+f) jump by word, alt/option+backspace deletes the previous word.
+- **Multi-line is a mode of this same widget** (Brandon's call, 2026-07-31 — no separate bespoke editor): the description editor in tuh-01KYXE5376YPXHDS98V3K985M6 uses it. Multi-line mode adds line wrapping, up/down cursor movement across lines, and enter-inserts-newline (submit moves to a different chord, e.g. ctrl+d or ctrl+s — pick one and put it in the hint line). Single-line mode keeps enter-submits.
 - All existing entries (inbox capture, escalation answer) migrate onto it.
 
 ## Acceptance
 
 - Hint text stays fixed while typing in every input.
-- In every input the cursor can be moved mid-string and text inserted/deleted there; the listed key commands all work.
-- No per-screen bespoke input handling remains — one widget, table-driven tests over its editing operations, golden tests for the fixed-hint rendering. make test lint green.
+- In every input the cursor can be moved mid-string and text inserted/deleted there; every listed key command works, including the alt/option word operations (test the escape-sequence forms a terminal actually sends: ESC b / ESC f / ESC backspace and the modified-arrow CSI forms).
+- Multi-line mode: up/down moves across lines, wrapping renders correctly at narrow widths, hint line shows the submit chord.
+- No per-screen bespoke input handling remains — one widget, table-driven tests over its editing operations (both modes), golden tests for the fixed-hint rendering. make test lint green.
 
 ## Pointers
 
@@ -36,7 +38,7 @@ One shared text-input component used by every text entry in the TUI:
 
 ## Constraints
 
-- Boring Go. The TUI is bubbletea; charmbracelet/bubbles/textinput is an acceptable same-family dependency, but a plain struct with a []rune buffer and a cursor index is equally fine — pick whichever stays more auditable.
+- Boring Go. The TUI is bubbletea; charmbracelet/bubbles textinput/textarea are acceptable same-family dependencies, but a plain struct with a []rune buffer and a cursor index is equally fine — pick whichever stays more auditable given multi-line is required.
 - Merged from inbox captures tuh-01KYXE40ES9YSEGW9Z0GXKYPWW, tuh-01KYXE4NSNBFFRTT8STNDJHYED.
 
 ## History
