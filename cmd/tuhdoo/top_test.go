@@ -355,11 +355,11 @@ func TestTopAnswerFlow(t *testing.T) {
 		t.Errorf("answer prompt missing; view:\n%s", v)
 	}
 	m, _ = press(t, m, runes("Use MIT.")...)
-	if m.input != "Use MIT." {
+	if m.input.String() != "Use MIT." {
 		t.Fatalf("input = %q, want %q", m.input, "Use MIT.")
 	}
 	m, _ = press(t, m, keyOf(tea.KeyBackspace))
-	if m.input != "Use MIT" {
+	if m.input.String() != "Use MIT" {
 		t.Fatalf("backspace left %q", m.input)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
@@ -552,7 +552,7 @@ func TestTopQuitKeys(t *testing.T) {
 	// escalation.)
 	m, _ = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyEnter),
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
-	if m.mode != modeAnswer || m.input != "q" {
+	if m.mode != modeAnswer || m.input.String() != "q" {
 		t.Errorf("q in answer mode: mode %d input %q", m.mode, m.input)
 	}
 	_, cmd := m.Update(keyOf(tea.KeyCtrlC))
@@ -1793,7 +1793,7 @@ func TestTopClickIgnoredDuringInput(t *testing.T) {
 	m, _ = press(t, m, runes("Use MIT.")...)
 	m, cmd := mouseTo(t, m,
 		clickAt(0, 10), clickAt(0, 10), wheelMsg(tea.MouseButtonWheelDown))
-	if m.mode != modeAnswer || m.input != "Use MIT." || m.cursor != 0 || cmd != nil {
+	if m.mode != modeAnswer || m.input.String() != "Use MIT." || m.cursor != 0 || cmd != nil {
 		t.Errorf("mouse during input: mode %d input %q cursor %d cmd %v, want untouched modeAnswer",
 			m.mode, m.input, m.cursor, cmd)
 	}
