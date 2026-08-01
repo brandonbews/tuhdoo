@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 5 blocked · 5 on hold · 3 inbox · 36 done · 7 archived
+0 in progress · 0 ready · 5 blocked · 5 on hold · 4 inbox · 36 done · 7 archived
 
 **[4 open questions](escalations.md) are waiting on a human.**
 
@@ -41,6 +41,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
 - [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) the description doesnt appear editable in the task view. the edit button seems to just allow editing the title. it should just be an up down arrow select between fields like title the meta fields description tha escalation answers, and enter opens the right reesponse or edit medium.
 - [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
+- [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) the history section of the task view shield put a full return between entries and bold the title line of each entry.
 
 ## Done
 
