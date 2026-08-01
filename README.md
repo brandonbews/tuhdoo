@@ -19,7 +19,7 @@ views are derived from the log — never edit them by hand. The design lives in
 | Inbox (untriaged) | 1 |
 | Done tasks | 30 |
 | Cancelled tasks | 4 |
-| Open escalations | 2 |
+| Open escalations | 3 |
 
 - [backlog.md](backlog.md) — ready, in-progress, and blocked work, plus the on-hold and inbox shelves
 - [escalations.md](escalations.md) — open questions awaiting a human
