@@ -73,7 +73,11 @@ jobs:
   # Auth is OIDC trusted publishing: each of the five packages names this
   # repo + workflow file as its trusted publisher on npmjs.com, and npm
   # exchanges the job's identity token for a short-lived publish grant.
-  # No token secret exists anywhere; provenance attestations come free.
+  # No token secret exists anywhere. Provenance is NOT automatic despite
+  # npm's docs: the CLI's auto-enable silently skipped it on v0.1.1 (its
+  # failure reasons log only at verbose level), so publish passes
+  # --provenance explicitly — then a provenance failure fails the publish
+  # loudly instead of shipping an unattested package.
   npm:
     needs: release
     runs-on: ubuntu-latest
@@ -118,7 +122,7 @@ jobs:
           # `npm view`, which lags behind fresh publishes.
           publish() {
             local out
-            if out=$(npm publish "$1" --access public 2>&1); then
+            if out=$(npm publish "$1" --access public --provenance 2>&1); then
               printf '%s\n' "$out" | tail -n 3
             elif printf '%s' "$out" | grep -q 'previously published'; then
               echo "already published, skipping: $1"
