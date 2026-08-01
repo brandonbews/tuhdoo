@@ -2,13 +2,13 @@
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | cli, design |
+_None._
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [tuh-01KYWWH4DZH4TR7ASVGTDBT14P](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) | One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output | 0 | `brandon/claude-code-1` |
 
 ## Blocked / waiting
 
@@ -36,6 +36,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [tuh-01KYXAS20FAP956KBHVZ057WBW](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) — do a design pass to make the generated markdown files in the tuhdoo branch pretty, or least easy to read and scannable/glanceable
+- [tuh-01KYXDWWM8S1GF6N9NE5FGA86Y](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) — it feels weird from a ux perspective that enter on needs input items just opens a prompt at the bottom instead of taking you to the task that needs an answer so you can have context before answering. should it go to the task and let that ui handle taking the answer in?
 
 ## Done
 

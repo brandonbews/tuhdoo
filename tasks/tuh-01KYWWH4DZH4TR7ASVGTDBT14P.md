@@ -1,6 +1,6 @@
 # tuh-01KYWWH4DZH4TR7ASVGTDBT14P — One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 
-- Status: open — ready
+- Status: open — in progress, claimed by `brandon/claude-code-1`
 - Priority: 0
 - Labels: `cli`, `design`
 - Created: 2026-07-31 20:05 UTC by `brandon/claude-code-1`
