@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 6 blocked · 5 on hold · 4 inbox · 36 done · 8 archived
+0 in progress · 4 ready · 6 blocked · 5 on hold · 3 inbox · 36 done · 9 archived
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
@@ -44,7 +44,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [`tuh-qt4g`](tasks/tuh-01KYZ34E3NR1HM02P8P3G7QT4G.md) there should be a concept of codereview for workflows that work that way/require it. it's almost a normal escalation but not quite. lets explore ways to do it. my current hunch is maybe an IN CODE REVIEW section that only appears if a task actually has that status. if we go that route, i could see ON HOLD, and NEEDS INPUT only showing when relevant too. def need a grill session for this
 - [`tuh-h4k6`](tasks/tuh-01KYZ9BJWWE0NZ89FJZW5KH4K6.md) status vs section in the dashoboard is a little confusing. grill and align behavior for ux. we need vocab alignment between data and surfaces this early in the project.
 - [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) One status vocabulary: stored words are the displayed words
 - [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) One classifier: the daemon serves the derived situation
@@ -98,3 +97,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-p09a`](tasks/tuh-01KYXE2S7A1WD7RKZSA0TNP09A.md) archive should be a for clarity, and escalation answers and just be enter on the question in teh task view (the task view can suport multiple escalations for the same task and the user can select fro them with same gray background click or arrow ui as the dashboard)
 - [`tuh-hyed`](tasks/tuh-01KYXE4NSNBFFRTT8STNDJHYED.md) i should be able to move the cursor in all text boxes using standard commands
 - [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
+- [`tuh-qt4g`](tasks/tuh-01KYZ34E3NR1HM02P8P3G7QT4G.md) there should be a concept of codereview for workflows that work that way/require it. it's almost a normal escalation but not quite. lets explore ways to do it. my current hunch is maybe an IN CODE REVIEW section that only appears if a task actually has that status. if we go that route, i could see ON HOLD, and NEEDS INPUT only showing when relevant too. def need a grill session for this
