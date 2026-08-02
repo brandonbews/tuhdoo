@@ -93,19 +93,19 @@ func TestCreateUpdateAnswer(t *testing.T) {
 		t.Errorf("labels not fully replaced:\n%s", out)
 	}
 
-	// update --status is the curation path (done/archived). "archived"
-	// is the human word (T7, 2026-07-31): the CLI maps it to the
-	// "cancelled" plumbing status the API and ledger speak.
-	out, code = runCLI(t, repo, "update", docs, "--status", "archived")
+	// update --status is the curation path (done/cancelled). One
+	// vocabulary since the status-vocabulary revision (2026-08-01):
+	// the flag word is the stored word, and the "archived" input alias
+	// is gone.
+	out, code = runCLI(t, repo, "update", docs, "--status", "cancelled")
 	if code != 0 {
 		t.Fatalf("update --status exit %d; output:\n%s", code, out)
 	}
 	out, _ = runCLI(t, repo, "status")
-	mustContain(t, out, "1 archived")
+	mustContain(t, out, "1 cancelled")
 	out, _ = runCLI(t, repo, "task", docs)
-	mustContain(t, out, "status      archived")
-	// The machine surface is untouched: the API JSON still says
-	// cancelled.
+	mustContain(t, out, "status      cancelled")
+	// The machine surface agrees: the API JSON says cancelled.
 	hc := apiClient(t, repo)
 	if got := string(api(t, hc, "GET", "/v0/tasks/"+docs, "", nil)); !strings.Contains(got, `"status":"cancelled"`) {
 		t.Errorf("API status vocabulary changed; body:\n%s", got)

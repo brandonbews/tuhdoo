@@ -542,7 +542,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Update a task's fields: status, priority, labels, edges, title, description. " +
 			"Only the fields you send change, but the list fields (labels, parents, depends_on) " +
 			"are full replacements — send the complete new list, never a delta. Status cancelled " +
-			"is the archive: terminal but never deleted (get_task still reads it) — archive only " +
+			"is terminal but never deleted (get_task still reads it) — cancel only " +
 			"at a human's direction, never over your own disagreement.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateTaskInput) (*mcp.CallToolResult, taskJSON, error) {
 		t, oe := d.opUpdateTask(s.principal(), in.Task, updateTaskReq{

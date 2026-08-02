@@ -167,7 +167,7 @@ func runCreate(args []string) int {
 
 func runUpdate(args []string) int {
 	const use = `usage: tuhdoo update <id> [--title <t>] [--desc <text>|--desc -]
-                     [--priority <n>] [--status open|inbox|held|done|archived]
+                     [--priority <n>] [--status open|inbox|held|done|cancelled]
                      [--labels a,b] [--parents <ids>] [--depends-on <ids>]
                      [--as <human>]
 (list flags are full replacements; an empty value clears the list;
@@ -235,12 +235,6 @@ func runUpdate(args []string) int {
 		body["priority"] = priority
 	}
 	if set["status"] {
-		// "archive" is the human verb; the API and ledger vocabulary
-		// stays "cancelled" (T7, 2026-07-31). The plumbing word still
-		// passes through untouched for scripts that speak it.
-		if status == "archived" {
-			status = "cancelled"
-		}
 		body["status"] = status
 	}
 	if set["labels"] {

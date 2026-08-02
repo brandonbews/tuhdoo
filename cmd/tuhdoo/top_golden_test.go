@@ -35,7 +35,7 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"▌             question: Which license?",
 		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
-		" READY (2)                                               p priority · a archive ",
+		" READY (2)                                                p priority · c cancel ",
 		"  t-pars  p5  write the parser  · in t-epic · 1 dep",
 		"  t-flor  p1  sweep the floor",
 		"",
@@ -45,13 +45,13 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" BLOCKED (0)                                                                    ",
 		"  none",
 		"",
-		" ON HOLD (1)                                                          a archive ",
+		" ON HOLD (1)                                                           c cancel ",
 		"  t-park  p2  polish the docs",
 		"",
-		" INBOX (1)                                                i capture · a archive ",
+		" INBOX (1)                                                 i capture · c cancel ",
 		"  t-idea      idea: dark mode",
 		"",
-		" ↑/↓ (j/k) move · enter open · p priority · a archive · q quit           1 done ",
+		" ↑/↓ (j/k) move · enter open · p priority · c cancel · q quit            1 done ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -78,14 +78,14 @@ func TestTopGoldenBars(t *testing.T) {
 		for _, bar := range []string{
 			"\x1b[7m\x1b[1m" + pad(" tuhdoo · local-only", "acting as brandon ") + "\x1b[0m",
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
-			"\x1b[30;42m" + pad(" READY (2)", "p priority · a archive ") + "\x1b[0m",
+			"\x1b[30;42m" + pad(" READY (2)", "p priority · c cancel ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
 			"\x1b[30;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
 			// The shelves (2026-07-31): reverse-dim bars, no section color
 			// — present but never claiming the eye.
-			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "a archive ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · a archive ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · a archive · q quit", "1 done ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · c cancel · q quit", "1 done ") + "\x1b[0m",
 		} {
 			if !strings.Contains(v, bar) {
 				t.Errorf("width %d: view missing bar %q; view:\n%s", width, bar, v)
@@ -166,7 +166,7 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.width, m.height = 80, 40
 	v := m.View()
 	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · q quit")
-	for _, absent := range []string{"enter answer", "p priority", "a archive", "i capture"} {
+	for _, absent := range []string{"enter answer", "p priority", "c cancel", "i capture"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}
@@ -252,7 +252,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		" HISTORY                                                                        ",
 		"  no activity yet",
 		"",
-		" ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit         ",
+		" ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit          ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -286,7 +286,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit", "") + "\x1b[0m",
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",

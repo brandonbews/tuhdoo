@@ -360,7 +360,7 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 
 // Curation over the MCP surface (parity audit, 2026-07-31): every
 // steering action a human asks for rides update_task fields, not verbs.
-// Archive is update_task status cancelled — the task leaves every
+// Cancelling is update_task status cancelled — the task leaves every
 // get_backlog array but stays readable by ID (nothing is deleted);
 // retitle, redescribe, and reprioritize land field-wise leaving the
 // unsent fields untouched; edge lists are full replacements, so an
@@ -384,14 +384,14 @@ func TestMCPCurationUpdates(t *testing.T) {
 	}
 	doomed, epic, dep, worked := created.IDs[0], created.IDs[1], created.IDs[2], created.IDs[3]
 
-	// Archive: status cancelled through the ordinary update surface.
+	// Cancel: status cancelled through the ordinary update surface.
 	var updated taskJSON
 	mustToolOK(t, cs, "update_task", map[string]any{"task": doomed, "status": "cancelled"}, &updated)
 	if updated.Status != "cancelled" {
-		t.Fatalf("archived status = %q, want cancelled", updated.Status)
+		t.Fatalf("cancelled status = %q, want cancelled", updated.Status)
 	}
 
-	// The archived task appears in no backlog array…
+	// The cancelled task appears in no backlog array…
 	var backlog backlogResult
 	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
 	for _, rows := range map[string][]taskJSON{
@@ -399,7 +399,7 @@ func TestMCPCurationUpdates(t *testing.T) {
 	} {
 		for _, r := range rows {
 			if r.ID == doomed {
-				t.Fatalf("archived task %s still listed in %+v", doomed, rows)
+				t.Fatalf("cancelled task %s still listed in %+v", doomed, rows)
 			}
 		}
 	}
@@ -407,7 +407,7 @@ func TestMCPCurationUpdates(t *testing.T) {
 	var h hydratedTask
 	mustToolOK(t, cs, "get_task", map[string]any{"task": doomed}, &h)
 	if h.Task.Status != "cancelled" || h.Task.Title != "idea: stale capture" {
-		t.Fatalf("get_task on archived = %+v, want cancelled with title intact", h.Task)
+		t.Fatalf("get_task on cancelled = %+v, want cancelled with title intact", h.Task)
 	}
 	// And it can never be claimed.
 	res := callTool(t, cs, "claim_task", map[string]any{"task": doomed})

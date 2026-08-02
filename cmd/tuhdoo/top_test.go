@@ -106,7 +106,7 @@ func newTopModelWithDep(api steeringAPI) topModel {
 type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
-	archived   []string
+	cancelled  []string
 	captured   []string          // quick-capture titles, in order
 	titles     map[string]string // task-view title edits
 	descs      map[string]string // task-view description edits
@@ -138,11 +138,11 @@ func (f *fakeSteering) setPriority(task string, priority int) error {
 	return nil
 }
 
-func (f *fakeSteering) archiveTask(task string) error {
+func (f *fakeSteering) cancelTask(task string) error {
 	if f.err != nil {
 		return f.err
 	}
-	f.archived = append(f.archived, task)
+	f.cancelled = append(f.cancelled, task)
 	return nil
 }
 
@@ -230,7 +230,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (0)",
 		"▌ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
-		"↑/↓ (j/k) move · enter open · p priority · a archive · q quit",
+		"↑/↓ (j/k) move · enter open · p priority · c cancel · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -437,22 +437,21 @@ func TestTopActionKeysRespectRowKind(t *testing.T) {
 	if m.mode != modeNav {
 		t.Errorf("p on an escalation row entered mode %d", m.mode)
 	}
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
-	if m.mode != modeNav {
-		t.Errorf("a on an escalation row entered mode %d", m.mode)
-	}
-	// c is free again (task-view rework, 2026-08-01: archive moved to a
-	// because c read as cancel/close) — it does nothing anywhere, task
-	// rows included.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
 	if m.mode != modeNav {
-		t.Errorf("freed key c still entered mode %d", m.mode)
+		t.Errorf("c on an escalation row entered mode %d", m.mode)
+	}
+	// a is free (status-vocabulary revision, 2026-08-01: cancel moved
+	// back to c) — it does nothing anywhere, task rows included.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	if m.mode != modeNav {
+		t.Errorf("freed key a still entered mode %d", m.mode)
 	}
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars, a task row
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if m.mode != modeNav {
-		t.Errorf("freed key c on a task row entered mode %d", m.mode)
+		t.Errorf("freed key a on a task row entered mode %d", m.mode)
 	}
 }
 
@@ -490,32 +489,32 @@ func TestTopPriorityFlow(t *testing.T) {
 	}
 }
 
-func TestTopArchiveFlow(t *testing.T) {
+func TestTopCancelFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
-	if m.mode != modeConfirmArchive {
-		t.Fatalf("mode = %d, want modeConfirmArchive", m.mode)
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if m.mode != modeConfirmCancel {
+		t.Fatalf("mode = %d, want modeConfirmCancel", m.mode)
 	}
 	v := m.View()
-	if !strings.Contains(v, "archive t-pars") || !strings.Contains(v, "y/n") ||
+	if !strings.Contains(v, "cancel t-pars") || !strings.Contains(v, "y/n") ||
 		!strings.Contains(v, "history stays on the ledger") {
 		t.Errorf("confirm prompt missing; view:\n%s", v)
 	}
-	// The human verb never says cancel — that word belongs to esc.
-	if strings.Contains(v, "cancel t-pars") {
-		t.Errorf("confirm prompt still says cancel; view:\n%s", v)
+	// The archive vocabulary is retired (2026-08-01).
+	if strings.Contains(v, "archive t-pars") {
+		t.Errorf("confirm prompt still says archive; view:\n%s", v)
 	}
 	// n backs out without a call.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	if m.mode != modeNav || len(fake.archived) != 0 {
-		t.Fatalf("n did not back out cleanly: mode %d archived %v", m.mode, fake.archived)
+	if m.mode != modeNav || len(fake.cancelled) != 0 {
+		t.Fatalf("n did not back out cleanly: mode %d cancelled %v", m.mode, fake.cancelled)
 	}
 	// y confirms.
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	if cmd == nil {
 		t.Fatal("confirm produced no command")
@@ -524,14 +523,14 @@ func TestTopArchiveFlow(t *testing.T) {
 	if am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if len(fake.archived) != 1 || fake.archived[0] != "t-pars" {
-		t.Errorf("archived %v, want [t-pars]", fake.archived)
+	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-pars" {
+		t.Errorf("cancelled %v, want [t-pars]", fake.cancelled)
 	}
-	// The confirmation names the human verb.
+	// The confirmation names the verb.
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if m.status != "archived t-pars" {
-		t.Errorf("status = %q, want %q", m.status, "archived t-pars")
+	if m.status != "cancelled t-pars" {
+		t.Errorf("status = %q, want %q", m.status, "cancelled t-pars")
 	}
 }
 
@@ -627,7 +626,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"acting as", "enter answer", "a archive"} {
+	for _, reject := range []string{"acting as", "enter answer", "c cancel"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
@@ -662,8 +661,8 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		// Armed with no open escalation: e/E, p, a advertised, no enter.
-		"↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit",
+		// Armed with no open escalation: e/E, p, c advertised, no enter.
+		"↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -906,9 +905,9 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 // the snapshot carry status and title (done and cancelled tasks are in
 // the state listing even though they render no rows — the annotation
 // is what proves such an edge isn't dangling); unresolvable IDs render
-// bare — never an invented status; long titles are ellipsized. The
-// status word is the human-facing one: the plumbing value "cancelled"
-// renders as "archived" (T7, 2026-07-31).
+// bare — never an invented status; long titles are ellipsized. Status
+// words are the stored words (status-vocabulary revision, 2026-08-01),
+// except held, which reads "on hold".
 func TestSnapshotTaskRef(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks, stateTask{
@@ -925,7 +924,7 @@ func TestSnapshotTaskRef(t *testing.T) {
 		{"t-park", "t-park (on hold — polish the docs)"},
 		{"t-idea", "t-idea (inbox — idea: dark mode)"},
 		{"t-01KYT63MB28Z535SMJC9B0D83W",
-			"t-d83w (archived — wide wide wide wide wide wide wide wide…)"},
+			"t-d83w (cancelled — wide wide wide wide wide wide wide wide…)"},
 	}
 	for _, tt := range tests {
 		if got := s.taskRef(tt.id); got != tt.want {
@@ -1115,9 +1114,9 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "▌ !   Which license?") {
 		t.Fatalf("open escalation not rendered as the selected row; view:\n%s", v)
 	}
-	// The footer legend carries edit/priority/archive; "enter answer"
+	// The footer legend carries edit/priority/cancel; "enter answer"
 	// rides the NEEDS INPUT bar itself (edit affordance, 2026-08-01).
-	if !strings.Contains(v, "↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit") {
+	if !strings.Contains(v, "↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
@@ -1177,7 +1176,7 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "A (brandon): Use MIT.") {
 		t.Errorf("answer missing from HISTORY after the refresh; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit") {
+	if !strings.Contains(v, "↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit") {
 		t.Errorf("footer did not fall back to the scroll legend; view:\n%s", v)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
@@ -1240,27 +1239,27 @@ func TestTopDetailPriorityFlow(t *testing.T) {
 	}
 }
 
-// a in an armed detail archives the viewed task behind the same y/n
-// confirm as the list; the detail survives the archive, showing the
-// task's new archived status once the refresh lands.
-func TestTopDetailArchiveFlow(t *testing.T) {
+// c in an armed detail cancels the viewed task behind the same y/n
+// confirm as the list; the detail survives the cancel, showing the
+// task's new cancelled status once the refresh lands.
+func TestTopDetailCancelFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
-	if m.mode != modeConfirmArchive {
-		t.Fatalf("a in detail: mode %d, want modeConfirmArchive", m.mode)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if m.mode != modeConfirmCancel {
+		t.Fatalf("c in detail: mode %d, want modeConfirmCancel", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "archive t-lic (choose a license)? y/n") {
+	if v := m.View(); !strings.Contains(v, "cancel t-lic (choose a license)? y/n") {
 		t.Errorf("confirm prompt does not name the viewed task; view:\n%s", v)
 	}
 	// n backs out to the detail without a call.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
-	if m.mode != modeDetail || len(fake.archived) != 0 {
-		t.Fatalf("n did not back out to detail: mode %d archived %v", m.mode, fake.archived)
+	if m.mode != modeDetail || len(fake.cancelled) != 0 {
+		t.Fatalf("n did not back out to detail: mode %d cancelled %v", m.mode, fake.cancelled)
 	}
 	// y confirms.
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	if cmd == nil {
 		t.Fatal("confirm produced no command")
@@ -1269,19 +1268,19 @@ func TestTopDetailArchiveFlow(t *testing.T) {
 	if am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if len(fake.archived) != 1 || fake.archived[0] != "t-lic" {
-		t.Errorf("archived %v, want [t-lic]", fake.archived)
+	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-lic" {
+		t.Errorf("cancelled %v, want [t-lic]", fake.cancelled)
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
 	if m.mode != modeDetail {
-		t.Fatalf("archive knocked the model out of detail: mode %d", m.mode)
+		t.Fatalf("cancel knocked the model out of detail: mode %d", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "archived t-lic") {
-		t.Errorf("archive status not surfaced in detail; view:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "cancelled t-lic") {
+		t.Errorf("cancel status not surfaced in detail; view:\n%s", v)
 	}
-	// The refresh lands the archive: the task stays viewable — history
-	// stays on the ledger — with the human-facing status word.
+	// The refresh lands the cancel: the task stays viewable — history
+	// stays on the ledger — with the stored status word.
 	fresh := topSnapshot()
 	for i := range fresh.state.Tasks {
 		if fresh.state.Tasks[i].ID == "t-lic" {
@@ -1294,10 +1293,10 @@ func TestTopDetailArchiveFlow(t *testing.T) {
 	mm, _ = m.Update(snapMsg{snap: fresh})
 	m = mm.(topModel)
 	if m.mode != modeDetail || m.detailID != "t-lic" {
-		t.Fatalf("refresh after archive left mode %d detail %q", m.mode, m.detailID)
+		t.Fatalf("refresh after cancel left mode %d detail %q", m.mode, m.detailID)
 	}
-	if v := m.View(); !strings.Contains(v, "status      archived") {
-		t.Errorf("archived task's detail missing its new status; view:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "status      cancelled") {
+		t.Errorf("cancelled task's detail missing its new status; view:\n%s", v)
 	}
 }
 
@@ -1734,7 +1733,7 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 	if !strings.Contains(v, "↑/↓ (j/k) scroll · esc back · q quit") {
 		t.Errorf("watch detail footer not read-only; view:\n%s", v)
 	}
-	for _, reject := range []string{"enter answer", "p priority", "a archive", "e/E edit"} {
+	for _, reject := range []string{"enter answer", "p priority", "c cancel", "e/E edit"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch detail advertises %q; view:\n%s", reject, v)
 		}
@@ -1954,7 +1953,7 @@ func TestWatchModeClickNeverOpensInput(t *testing.T) {
 	// Clicking every rendered line, twice each, never yields an input mode.
 	for y := 0; y < 40; y++ {
 		m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
-		if m.mode == modeAnswer || m.mode == modePriority || m.mode == modeConfirmArchive {
+		if m.mode == modeAnswer || m.mode == modePriority || m.mode == modeConfirmCancel {
 			t.Fatalf("double-click at line %d in watch mode opened input mode %d", y, m.mode)
 		}
 		m, _ = press(t, m, keyOf(tea.KeyEsc)) // step back out of any detail
@@ -2065,7 +2064,7 @@ func TestTopDetailWrapsToWidth(t *testing.T) {
 
 // The full capture flow: i opens a single-line input, typing builds the
 // title, enter creates a title-only inbox item through the steering API
-// — no y/n anywhere (capture is reversible via archive).
+// — no y/n anywhere (capture is reversible via cancel).
 func TestTopQuickCaptureFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -2129,9 +2128,9 @@ func TestWatchModeNeverAdvertisesCapture(t *testing.T) {
 	}
 }
 
-// Shelf rows are ordinary rows: enter opens the biography, a archives —
+// Shelf rows are ordinary rows: enter opens the biography, c cancels —
 // on both held and inbox.
-func TestTopShelfRowsOpenDetailAndArchive(t *testing.T) {
+func TestTopShelfRowsOpenDetailAndCancel(t *testing.T) {
 	for _, id := range []string{"t-park", "t-idea"} {
 		fake := newFakeSteering()
 		m := newTopModel(fake)
@@ -2142,16 +2141,16 @@ func TestTopShelfRowsOpenDetailAndArchive(t *testing.T) {
 		}
 		m, _ = press(t, m, keyOf(tea.KeyEsc))
 		m, cmd := press(t, m,
-			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
 			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 		if cmd == nil {
-			t.Fatalf("archive on %s produced no command", id)
+			t.Fatalf("cancel on %s produced no command", id)
 		}
 		if am := cmd().(actionMsg); am.err != nil {
-			t.Fatalf("archive %s: %v", id, am.err)
+			t.Fatalf("cancel %s: %v", id, am.err)
 		}
-		if len(fake.archived) != 1 || fake.archived[0] != id {
-			t.Fatalf("archived %v, want [%s]", fake.archived, id)
+		if len(fake.cancelled) != 1 || fake.cancelled[0] != id {
+			t.Fatalf("cancelled %v, want [%s]", fake.cancelled, id)
 		}
 	}
 }

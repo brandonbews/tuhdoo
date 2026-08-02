@@ -12,6 +12,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
+	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
 // connect is the common preamble: repo discovery plus a live daemon.
@@ -104,7 +105,7 @@ func printStatus(w io.Writer, col colors, head string, s *snapshot) {
 	if s.state.Degraded != "" {
 		fmt.Fprintf(w, "%sDEGRADED%s     %s\n", col.red, col.reset, s.state.Degraded)
 	}
-	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d on hold · %d inbox · %d done · %d archived\n",
+	fmt.Fprintf(w, "%stasks%s        %s%d ready%s · %s%d in progress%s · %s%d blocked%s · %d on hold · %d inbox · %d done · %d cancelled\n",
 		col.bold, col.reset,
 		col.green, len(b.ready), col.reset,
 		col.yellow, len(b.inProgress), col.reset,
@@ -145,7 +146,7 @@ func runBacklog() int {
 // a STATE column instead of section headers, so `tuhdoo backlog | grep
 // ready` selects exactly the ready rows. Row order mirrors the old
 // sections (ready by priority, then in-progress, blocked, on-hold,
-// inbox, done, archived; creation order within each); full IDs
+// inbox, done, cancelled; creation order within each); full IDs
 // throughout — scriptable plumbing.
 func printBacklog(w io.Writer, s *snapshot) {
 	b := s.classify()
@@ -175,7 +176,7 @@ func printBacklog(w io.Writer, s *snapshot) {
 		row(t, "done", "-")
 	}
 	for _, t := range b.cancelled {
-		row(t, "archived", "-")
+		row(t, "cancelled", "-")
 	}
 	tw.Flush()
 }
@@ -290,7 +291,7 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, shortID(t.ID), col.reset, oneLine(t.Title))
 		fmt.Fprintf(w, "  %sid          %s%s\n", col.dim, t.ID, col.reset)
 	}
-	status := humanStatus(t.Status)
+	status := views.HumanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
 		if h.Claim.Expires != nil {

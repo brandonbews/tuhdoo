@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
 // fetchState reads /v0/state, briefly waiting out the sync loop's
@@ -191,7 +193,7 @@ func (s *snapshot) unmetDeps(id string, disp func(string) string) []string {
 func (s *snapshot) taskRef(id string) string {
 	for _, t := range s.state.Tasks {
 		if t.ID == id {
-			return fmt.Sprintf("%s (%s — %s)", shortID(id), humanStatus(t.Status), ellipsize(oneLine(t.Title), 40))
+			return fmt.Sprintf("%s (%s — %s)", shortID(id), views.HumanStatus(t.Status), ellipsize(oneLine(t.Title), 40))
 		}
 	}
 	return shortID(id)

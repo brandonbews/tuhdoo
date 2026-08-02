@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 2 ready · 2 blocked · 2 on hold · 1 inbox · 1 done · 1 archived
+1 in progress · 2 ready · 2 blocked · 2 on hold · 1 inbox · 1 done · 1 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
@@ -43,6 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`t-core`](tasks/t-core.md) Build the replay engine
 
-## Archived
+## Cancelled
 
 - [`t-old`](tasks/t-old.md) Spike: evaluate go-git
