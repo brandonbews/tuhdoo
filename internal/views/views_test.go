@@ -275,7 +275,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":5}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":6}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -334,8 +334,8 @@ func TestCanWrite(t *testing.T) {
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
 		{"lower", []byte(`{"format":2}`), true},
-		{"equal", []byte(`{"format":5}`), true},
-		{"higher", []byte(`{"format":6}`), false},
+		{"equal", []byte(`{"format":6}`), true},
+		{"higher", []byte(`{"format":7}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

@@ -9,7 +9,7 @@
 // someone glancing at the branch on GitHub. README.md is the landing
 // page (a needs-input callout plus one-row counts), escalations.md is
 // the steering inbox (questions a human can answer, blocking first),
-// backlog.md orders actionable states before the archive. Raw-terminal
+// backlog.md orders actionable states before the closed ones. Raw-terminal
 // legibility is best-effort; terminal readers have the CLI and TUI.
 package views
 
@@ -32,7 +32,10 @@ import (
 // 4: the held status renders as "on hold" everywhere humans read it.
 // 5: rendered-first redesign — short IDs, at-a-glance counts, escalations
 // as answerable questions, cancelled reads "archived".
-const FormatVersion = 5
+// 6: status-vocabulary revision (2026-08-01) — displayed words are the
+// stored words: cancelled renders as "cancelled" (archive retired);
+// "on hold" for held stays as the one sanctioned display mapping.
+const FormatVersion = 6
 
 // MetaPath is where the view-format stamp lives. T6 named "views/.meta",
 // but the views render at the branch root (README.md and friends), so
@@ -92,7 +95,7 @@ type buckets struct {
 	held       []*core.Task // triaged, deliberately paused; creation order
 	inbox      []*core.Task // untriaged captures; creation order
 	done       []*core.Task
-	cancelled  []*core.Task // renders as "archived" (the human verb)
+	cancelled  []*core.Task
 }
 
 func classify(s *core.State) buckets {
@@ -153,7 +156,7 @@ func readme(s *core.State, b buckets) []byte {
 
 	w.WriteString("## At a glance\n\n")
 	w.WriteString(needsHuman(len(s.OpenEscalations())))
-	w.WriteString("| In progress | Ready | Blocked | On hold | Inbox | Done | Archived |\n")
+	w.WriteString("| In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |\n")
 	w.WriteString("|---:|---:|---:|---:|---:|---:|---:|\n")
 	fmt.Fprintf(&w, "| %d | %d | %d | %d | %d | %d | %d |\n\n",
 		len(b.inProgress), len(b.ready), len(b.blocked),
@@ -183,7 +186,7 @@ func needsHuman(n int) string {
 func backlog(s *core.State, b buckets) []byte {
 	var w strings.Builder
 	w.WriteString("# Backlog\n\n")
-	fmt.Fprintf(&w, "%d in progress · %d ready · %d blocked · %d on hold · %d inbox · %d done · %d archived\n\n",
+	fmt.Fprintf(&w, "%d in progress · %d ready · %d blocked · %d on hold · %d inbox · %d done · %d cancelled\n\n",
 		len(b.inProgress), len(b.ready), len(b.blocked),
 		len(b.held), len(b.inbox), len(b.done), len(b.cancelled))
 	if n := len(s.OpenEscalations()); n > 0 {
@@ -252,7 +255,7 @@ func backlog(s *core.State, b buckets) []byte {
 
 	w.WriteString("## Done\n\n")
 	compactList(&w, b.done)
-	w.WriteString("\n## Archived\n\n")
+	w.WriteString("\n## Cancelled\n\n")
 	compactList(&w, b.cancelled)
 	return []byte(w.String())
 }
@@ -392,9 +395,9 @@ func statusLine(s *core.State, t *core.Task) string {
 	case core.StatusDone:
 		return "done"
 	case core.StatusCancelled:
-		return "archived"
+		return "cancelled"
 	case core.StatusHeld:
-		return "on hold — deliberately paused"
+		return HumanStatus(core.StatusHeld) + " — deliberately paused"
 	case core.StatusInbox:
 		return "inbox — untriaged capture"
 	}
@@ -541,19 +544,19 @@ func depLinks(s *core.State, ids []string) string {
 	for i, id := range ids {
 		parts[i] = fmt.Sprintf("[`%s`](%s.md)", shortID(id), id)
 		if d, ok := s.Tasks[id]; ok {
-			parts[i] += " (" + humanStatus(d.Status) + ")"
+			parts[i] += " (" + HumanStatus(d.Status) + ")"
 		}
 	}
 	return strings.Join(parts, ", ")
 }
 
-// humanStatus maps a stored status to the word humans read: cancelled
-// is the plumbing, "archived" the human verb; held reads "on hold".
-func humanStatus(status string) string {
-	switch status {
-	case core.StatusCancelled:
-		return "archived"
-	case core.StatusHeld:
+// HumanStatus maps a stored status to the word humans read. Since the
+// status-vocabulary revision (2026-08-01) the displayed words are the
+// stored words with exactly one exception: held reads "on hold". This
+// is the mapping's only definition — every display surface (markdown
+// views, CLI, TUI) calls it here.
+func HumanStatus(status string) string {
+	if status == core.StatusHeld {
 		return "on hold"
 	}
 	return status

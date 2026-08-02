@@ -2,7 +2,7 @@ package main
 
 // The interactive TUI (002 T7, revised by Cycle 4): the single live
 // human surface. Reads poll the daemon on a tick; the steering writes
-// (answer an escalation, reprioritize, archive, capture, edit
+// (answer an escalation, reprioritize, cancel, capture, edit
 // title/description) go through the daemon HTTP API only, stamped with
 // the acting human principal.
 // Watch mode is the same screen disarmed: steering keys dead, fixed at
@@ -22,6 +22,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/brandonbews/tuhdoo/internal/daemon"
+	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
 // wrapTo wraps rendered output to the terminal width, ANSI-aware:
@@ -64,7 +65,7 @@ func fetchCmd(c *client) tea.Cmd {
 type steeringAPI interface {
 	answerEscalation(escalation, answer string) error
 	setPriority(task string, priority int) error
-	archiveTask(task string) error
+	cancelTask(task string) error
 	captureTask(title string) error
 	setTitle(task, title string) error
 	setDescription(task, description string) error
@@ -87,11 +88,11 @@ func (s httpSteering) setPriority(task string, priority int) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"priority": priority})
 }
 
-// archiveTask is the human archive verb over the plumbing status
-// vocabulary (T7, 2026-07-31): the task model has no separate archived
-// state (D5) — "cancelled" is the terminal curation status the ledger
-// records, and "archive" is what humans read and type for it.
-func (s httpSteering) archiveTask(task string) error {
+// cancelTask writes the terminal curation status. The task model has
+// no delete (D5) — "cancelled" is terminal but never removed, and
+// since the status-vocabulary revision (2026-08-01) cancel is the word
+// everywhere: the one-day "archive" porcelain verb is retired.
+func (s httpSteering) cancelTask(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": "cancelled"})
 }
 
@@ -109,7 +110,7 @@ func (s httpSteering) setDescription(task, description string) error {
 
 // captureTask is TUI quick-capture (2026-07-31): a title-only inbox
 // item, created as the steering human. Capture is deliberately cheap —
-// no priority, no description, no confirm (archive reverses it); the
+// no priority, no description, no confirm (cancel reverses it); the
 // scoping work happens at promotion, which is an agent/CLI
 // conversation, never a TUI key.
 func (s httpSteering) captureTask(title string) error {
@@ -146,7 +147,7 @@ func (r topRow) id() string {
 // then the dim shelves — held above inbox (2026-07-31; held passed
 // triage, so it sits closer to workable than raw captures). Done and
 // cancelled tasks are not steerable and get no rows; held and inbox
-// rows are ordinary rows — enter opens detail, a archives.
+// rows are ordinary rows — enter opens detail, c cancels.
 func buildRows(s *snapshot) []topRow {
 	var rows []topRow
 	for _, e := range s.state.OpenEscalations {
@@ -181,15 +182,15 @@ func buildRows(s *snapshot) []topRow {
 // ---- the model ----
 
 // Input modes. Nav is the resting state; the others capture keys until
-// enter/esc (or y/n for the archive confirmation). Detail is the
+// enter/esc (or y/n for the cancel confirmation). Detail is the
 // in-place task view: armed it steers the viewed task (enter answers
-// the selected open escalation, p/a reprioritize/archive), disarmed it
+// the selected open escalation, p/c reprioritize/cancel), disarmed it
 // is read-only; esc steps back to the list either way.
 const (
 	modeNav = iota
 	modeAnswer
 	modePriority
-	modeConfirmArchive
+	modeConfirmCancel
 	modeCapture // quick-capture: one line of title, straight to inbox
 	modeDetail
 	modeEditTitle // task-view edits (2026-08-01): the widget prefilled
@@ -217,7 +218,7 @@ type topModel struct {
 	mode    int
 	back    int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
 	input   textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
-	target  topRow    // row a pending answer/priority/archive/edit applies to
+	target  topRow    // row a pending answer/priority/cancel/edit applies to
 	editWas string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
 	status  string    // one-line result of the last action
 
@@ -253,7 +254,7 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		if msg.snap != nil {
 			// Keep the selection on the same row across refreshes; a row
-			// that vanished (answered, archived, claimed…) drops the
+			// that vanished (answered, cancelled, claimed…) drops the
 			// cursor to the top.
 			var sel string
 			if m.cursor < len(m.rows) {
@@ -303,11 +304,12 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			m.mode, m.back, m.target, m.input, m.status = modePriority, modeNav, r, textInput{}, ""
 		}
-	case "a":
-		// Archive is a (task-view rework, 2026-08-01): c read as
-		// "cancel"/"close", not archive. c is free again.
+	case "c":
+		// Cancel is c (status-vocabulary revision, 2026-08-01): the key
+		// spells its verb again. It briefly toured "a archive" while the
+		// verb was archive (2026-07-31–2026-08-01).
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
-			m.mode, m.back, m.target, m.input, m.status = modeConfirmArchive, modeNav, r, textInput{}, ""
+			m.mode, m.back, m.target, m.input, m.status = modeConfirmCancel, modeNav, r, textInput{}, ""
 		}
 	case "i":
 		// Quick capture (2026-07-31): armed only — a watch pane never
@@ -473,7 +475,7 @@ func (m topModel) rowAt(y int) int {
 // multi-line, per the widget's hint) — and hands every other key to
 // the shared widget: no per-screen editing exists (textinput.go).
 func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.mode == modeConfirmArchive {
+	if m.mode == modeConfirmCancel {
 		switch k.String() {
 		case "y":
 			return m.submit()
@@ -506,7 +508,7 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 // updateDetail: the armed task view steers the viewed task in place
 // (dogfood steering, 2026-07-30 — no more esc → navigate → answer round
 // trips): enter answers the selected open escalation, p reprioritizes,
-// a archives, and e/E edit the title/description of the viewed task,
+// c cancels, and e/E edit the title/description of the viewed task,
 // all with the same footers and confirms as the list. Watch mode keeps
 // the read-only contract: no focus, no input, ↑/↓ and j/k scroll, esc
 // steps back, q and ctrl+c quit.
@@ -551,9 +553,9 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.mode, m.back = modePriority, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
 		}
-	case "a":
+	case "c":
 		if t, ok := m.viewedTask(); m.armed && ok {
-			m.mode, m.back = modeConfirmArchive, modeDetail
+			m.mode, m.back = modeConfirmCancel, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
 		}
 	case "e":
@@ -669,13 +671,13 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			}
 			return actionMsg{desc: fmt.Sprintf("set %s to p%d", shortID(target.task.ID), p)}
 		}
-	case modeConfirmArchive:
-		m.mode, m.input, m.status = m.back, textInput{}, "archiving…"
+	case modeConfirmCancel:
+		m.mode, m.input, m.status = m.back, textInput{}, "cancelling…"
 		return m, func() tea.Msg {
-			if err := api.archiveTask(target.task.ID); err != nil {
+			if err := api.cancelTask(target.task.ID); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "archived " + shortID(target.task.ID)}
+			return actionMsg{desc: "cancelled " + shortID(target.task.ID)}
 		}
 	case modeCapture:
 		if input == "" {
@@ -778,7 +780,7 @@ func (m topModel) detailLines() []detailLine {
 		add(-1, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
 	}
 	field("id", sgr(col, col.dim, t.ID))
-	status := humanStatus(t.Status)
+	status := views.HumanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
 		if h.Claim.Expires != nil {
@@ -1005,9 +1007,9 @@ func (m topModel) detailFooter() string {
 	}
 	legend := " ↑/↓ (j/k) scroll · esc back · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) scroll · e/E edit · p priority · a archive · esc back · q quit"
+		legend = " ↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit"
 		if len(m.detailOpenEscalations()) > 0 {
-			legend = " ↑/↓ (j/k) move · e/E edit · p priority · a archive · esc back · q quit"
+			legend = " ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit"
 		}
 	}
 	return barLine(col, col.rev+col.dim, legend, "", width) + "\n"
@@ -1090,14 +1092,14 @@ var topSections = []topSection{
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, false, "enter answer"},
-	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · a archive"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · c cancel"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, false, ""},
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
 	// The shelves (2026-07-31): held above inbox, both dim — parked and
 	// captured work sits below the live queue and never claims the eye.
 	// No colored bars: reverse-dim reads as "present but not active".
-	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "a archive"},
-	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · a archive"},
+	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "c cancel"},
+	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c cancel"},
 }
 
 // chunk is one atomic display unit — a bar, a one- or two-line row, a
@@ -1385,7 +1387,7 @@ func shortID(id string) string {
 // reads identically from either screen. Text entry renders through the
 // shared widget's box (textinput.go): header bar naming the entry, the
 // buffer with the cursor, and the hint fixed on its own line; only the
-// archive y/n confirm — not a text input — keeps its one-liner.
+// cancel y/n confirm — not a text input — keeps its one-liner.
 func (m topModel) inputFooter() string {
 	col := m.col
 	switch m.mode {
@@ -1394,12 +1396,12 @@ func (m topModel) inputFooter() string {
 	case modePriority:
 		label := fmt.Sprintf("priority %s (%s)", shortID(m.target.task.ID), oneLine(m.target.task.Title))
 		return m.input.view(col, label, "submits", m.width)
-	case modeConfirmArchive:
-		return wrapTo(fmt.Sprintf("%sarchive%s %s (%s)? y/n %s— history stays on the ledger%s\n",
+	case modeConfirmCancel:
+		return wrapTo(fmt.Sprintf("%scancel%s %s (%s)? y/n %s— history stays on the ledger%s\n",
 			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
 			col.dim, col.reset), m.width)
 	case modeCapture:
-		// No y/n: capture is cheap by design, and archive reverses it.
+		// No y/n: capture is cheap by design, and cancel reverses it.
 		return m.input.view(col, "capture (to inbox)", "captures", m.width)
 	case modeEditTitle:
 		// The box carries the title being edited; the label only needs
@@ -1424,7 +1426,7 @@ func (m topModel) footerView(width int) string {
 	// task's context on screen (task-view rework, 2026-08-01).
 	legend := " ↑/↓ (j/k) move · enter open · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter open · p priority · a archive · q quit"
+		legend = " ↑/↓ (j/k) move · enter open · p priority · c cancel · q quit"
 	}
 	done := ""
 	if m.snap != nil {

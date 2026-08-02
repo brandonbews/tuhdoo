@@ -77,7 +77,7 @@ usage: tuhdoo [-w|--watch] [--as <human>]   the TUI (needs a terminal)
        tuhdoo <command>
 
 Bare tuhdoo opens the interactive TUI: answer escalations, reprioritize,
-archive tasks, drill into any task. It acts as you (--as overrides).
+cancel tasks, drill into any task. It acts as you (--as overrides).
 -w/--watch opens the same screen read-only: steering keys are dead for
 the life of the pane — the dashboard that sits beside a working agent.
 
@@ -86,7 +86,7 @@ the life of the pane — the dashboard that sits beside a working agent.
   backlog       every task, one line each: ID, state, priority, holder,
                 labels, waiting-on IDs, title. Plain aligned columns,
                 no styling — grep a state (ready, in-progress, blocked,
-                on-hold, inbox, done, archived) to select its rows
+                on-hold, inbox, done, cancelled) to select its rows
   task <id>     one task fully hydrated, with its chronological history
   escalations   every escalation, one line each, open before answered —
                 same plain-column form; grep open or blocking
@@ -95,7 +95,7 @@ the life of the pane — the dashboard that sits beside a working agent.
                 --status inbox|held captures without opening the task
                 (inbox: title-only is fine; agents never get served it)
   update <id>   change fields: --title --desc --priority --status
-                (open|inbox|held|done|archived) --labels --parents
+                (open|inbox|held|done|cancelled) --labels --parents
                 --depends-on (lists replace in full)
   answer <id>   answer an open escalation by its ID or its task's ID;
                 the rest of the line is the answer text

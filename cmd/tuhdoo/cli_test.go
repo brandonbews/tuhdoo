@@ -349,8 +349,9 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	}
 
 	// backlog: serialized column output (T7, 2026-07-31) — one row per
-	// task, STATE column, dep:/esc: waiting IDs, no ANSI ever (the
-	// cancelled plumbing status still renders as archived — T7).
+	// task, STATE column, dep:/esc: waiting IDs, no ANSI ever. Status
+	// words are the stored words (2026-08-01); held stays the on-hold
+	// token, one word for grep/awk.
 	out, code := runCLI(t, repo, "backlog")
 	if code != 0 {
 		t.Fatalf("backlog exit %d; output:\n%s", code, out)
@@ -366,7 +367,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"on-hold":     {"polish the manual"},
 		"inbox":       {"idea: dark mode"},
 		"done":        {"old chore"},
-		"archived":    {"wrong idea"},
+		"cancelled":   {"wrong idea"},
 	} {
 		lines := grepState(out, state)
 		if len(lines) != len(wantRows) {
@@ -473,7 +474,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	}
 	mustContain(t, out, "local-only",
 		"2 ready", "1 in progress", "2 blocked", "1 on hold", "1 inbox",
-		"1 done", "1 archived", "1 question open", "brandon/a1")
+		"1 done", "1 cancelled", "1 question open", "brandon/a1")
 	_ = docs
 }
 

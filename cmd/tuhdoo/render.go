@@ -75,22 +75,8 @@ func stampCompact(t time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04") + "Z"
 }
 
-// humanStatus maps a plumbing status value to the human-facing word
-// (T7, 2026-07-31): the ledger event and API value stay "cancelled"
-// (T3), but humans read "archived" — the verb that says curation, not
-// deletion, because nothing is deleted and history stays on the ledger.
-// Same split for "held": stored value and --status flag stay "held",
-// humans read "on hold" — the phrase says paused-on-purpose where the
-// bare participle read ambiguously.
-func humanStatus(s string) string {
-	switch s {
-	case "cancelled":
-		return "archived"
-	case "held":
-		return "on hold"
-	}
-	return s
-}
+// The status display words live in views.HumanStatus — the mapping's
+// single definition since the status-vocabulary revision (2026-08-01).
 
 // oneLine flattens text for a single-line rendering.
 func oneLine(s string) string {

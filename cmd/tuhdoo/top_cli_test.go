@@ -4,9 +4,9 @@ package main
 // messages against a real auto-spawned daemon (cli_test.go harness) —
 // everything except the terminal itself. Covers the acceptance loop:
 // a blocking escalation answered from the TUI returns the task to the
-// ready pool; a reprioritize is visible to the next claim; an archive
-// lands on the data branch (as the task.cancelled plumbing event)
-// stamped with the acting human principal.
+// ready pool; a reprioritize is visible to the next claim; a cancel
+// lands on the data branch (as the task.cancelled event) stamped with
+// the acting human principal.
 
 import (
 	"bytes"
@@ -207,11 +207,11 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
 
-	// ---- archive from the TUI ----
+	// ---- cancel from the TUI ----
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
 	m, cmd = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	m = act(t, m, cmd)
 
@@ -223,9 +223,9 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Fatalf("status = %q, want cancelled", h.Task.Status)
 	}
 
-	// The task.cancelled event — archive's plumbing form, which never
-	// changes (T3) — lands on the data branch stamped with the acting
-	// human principal. Non-eager writes ride the 2s debounce, so poll.
+	// The task.cancelled event — stored bytes never change (T3) — lands
+	// on the data branch stamped with the acting human principal.
+	// Non-eager writes ride the 2s debounce, so poll.
 	deadline := time.Now().Add(8 * time.Second)
 	var line string
 	for {

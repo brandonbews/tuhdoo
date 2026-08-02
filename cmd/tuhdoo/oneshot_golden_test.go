@@ -81,7 +81,7 @@ func TestOneshotBacklogGolden(t *testing.T) {
 		"tuh-01K1G0000000000000000PARK  on-hold      2    -           docs       -                                  polish the docs",
 		"tuh-01K1G0000000000000000QC01  inbox        0    -           -          -                                  idea: dark mode",
 		"t-01K1G00000000000000000CH0R   done         0    -           -          -                                  old chore",
-		"tuh-01K1G0000000000000000WRNG  archived     0    -           -          -                                  wrong idea",
+		"tuh-01K1G0000000000000000WRNG  cancelled    0    -           -          -                                  wrong idea",
 		"",
 	}, "\n")
 	got := buf.String()
@@ -95,7 +95,7 @@ func TestOneshotBacklogGolden(t *testing.T) {
 	// exactly that state's rows.
 	for name, n := range map[string]int{
 		"ready": 2, "in-progress": 1, "blocked": 2,
-		"on-hold": 1, "inbox": 1, "done": 1, "archived": 1,
+		"on-hold": 1, "inbox": 1, "done": 1, "cancelled": 1,
 	} {
 		var hits int
 		for _, l := range strings.Split(strings.TrimRight(got, "\n"), "\n") {
