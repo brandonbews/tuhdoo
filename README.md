@@ -13,7 +13,7 @@ views are derived from the log — never edit them by hand. The design lives in
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Archived |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 4 | 6 | 5 | 1 | 36 | 10 |
+| 0 | 4 | 6 | 5 | 1 | 37 | 10 |
 
 - [backlog.md](backlog.md) — the work: in progress, ready, and blocked, plus the on-hold and inbox shelves
 - [escalations.md](escalations.md) — questions from the fleet, awaiting a human

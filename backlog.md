@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 4 ready · 6 blocked · 5 on hold · 1 inbox · 36 done · 10 archived
+0 in progress · 4 ready · 6 blocked · 5 on hold · 1 inbox · 37 done · 10 archived
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) | Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -86,6 +84,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-a86y`](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 - [`tuh-ypww`](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) One real text-input widget: delineated box, fixed hint line, standard cursor editing
 - [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) Edit title and description from the task view
+- [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping
 
 ## Archived
 

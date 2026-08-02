@@ -2,7 +2,7 @@
 
 `tuh-01KZ0ES83SFH6MKWP82Y2HNTPK`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `cleanup` `vocabulary`
 - **Created:** 2026-08-02 05:22 UTC by `brandon/claude-code-1`
@@ -49,4 +49,10 @@ Grilled with Brandon 2026-08-01; this description is the settled design and supe
 
 ## History
 
-_No activity yet._
+### 2026-08-02 06:57 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-ntpk/status-vocabulary`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/14>
+- Commits: `a1bac90`
+
+Landed as PR #14 (squash a1bac90 on main). Docs-first: 002-technology.md supersedes the archive-porcelain decision in place (displayed status words = stored words; sanctioned exceptions: held->"on hold", NEEDS INPUT), STATE tokens + shelves + 001 D5 cross-ref updated; agent-protocol.md archive verbs reworded to cancel — the grill-time "no changes needed" claim was wrong (grep missed bare "archive"). Code: archived input alias deleted; single views.HumanStatus (held->"on hold" only) used by views/CLI/TUI; views render "## Cancelled" at FormatVersion 6; TUI key a->c with cancel wording throughout (confirm copy keeps "history stays on the ledger"); STATE column and MCP update_task description say cancelled. All acceptance greps hold; make test lint green. Sibling tasks reconciled at claim time: focus-ring ("keep p and c") and history-view (done/cancelled shelf, c key). Daemon redeployed after merge.
