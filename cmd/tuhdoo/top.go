@@ -183,9 +183,9 @@ func buildRows(s *snapshot) []topRow {
 
 // Input modes. Nav is the resting state; the others capture keys until
 // enter/esc (or y/n for the cancel confirmation). Detail is the
-// in-place task view: armed it steers the viewed task (enter answers
-// the selected open escalation, p/c reprioritize/cancel), disarmed it
-// is read-only; esc steps back to the list either way.
+// in-place task view: armed it steers the viewed task (the focus ring
+// selects a field, enter opens its editor, p/c reprioritize/cancel),
+// disarmed it is read-only; esc steps back to the list either way.
 const (
 	modeNav = iota
 	modeAnswer
@@ -224,7 +224,7 @@ type topModel struct {
 
 	detailID     string // task shown by modeDetail
 	detailScroll int    // first visible body line in modeDetail
-	detailFocus  int    // focused open escalation in an armed detail (index into detailOpenEscalations)
+	detailFocus  int    // focused stop in an armed detail (index into detailStops)
 	width        int    // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
 	height       int    // terminal rows; 0 renders all
 }
@@ -327,8 +327,9 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 // with that escalation preselected (task-view rework, 2026-08-01 —
 // superseding the 2026-07-30 inline answer prompt: dogfooding showed
 // answering needs the task's context on screen, so the task view is
-// where answering happens now); task rows open their biography. Watch
-// mode gets the same view, read-only.
+// where answering happens now); a plain task row opens its biography
+// with the title stop focused at the top of the view. Watch mode gets
+// the same view, read-only.
 func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 	id := r.task.ID
 	if r.kind == rowEscalation {
@@ -336,8 +337,8 @@ func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 	}
 	m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
 	if r.kind == rowEscalation {
-		for i, e := range m.detailOpenEscalations() {
-			if e.ID == r.esc.ID {
+		for i, s := range m.detailStops() {
+			if s.kind == stopEscalation && s.esc.ID == r.esc.ID {
 				m.detailFocus = i
 				break
 			}
@@ -391,20 +392,18 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				m.detailScroll++
 			}
 		case click:
-			// Same contract as the list: a click selects the escalation
-			// row under the pointer; a click on the already-selected row
-			// acts as enter (opens answer entry). detailOpenEscalations is
-			// empty in watch mode, so a stray click stays read-only.
-			open := m.detailOpenEscalations()
-			i := m.detailEscAt(msg.Y)
-			if i < 0 || i >= len(open) {
+			// Same contract as the list: a click selects the stop under
+			// the pointer; a click on the already-selected stop acts as
+			// enter (opens its editor). detailStops is empty in watch
+			// mode, so a stray click stays read-only.
+			stops := m.detailStops()
+			i := m.detailStopAt(msg.Y)
+			if i < 0 || i >= len(stops) {
 				break
 			}
-			if i == detailFocusIdx(m.detailFocus, len(open)) {
+			if i == detailFocusIdx(m.detailFocus, len(stops)) {
 				m.detailFocus = i
-				m.mode, m.back = modeAnswer, modeDetail
-				m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[i]}, textInput{}, ""
-				break
+				return m.openStop(stops[i])
 			}
 			m.detailFocus = i
 			m.detailScroll = m.detailRevealScroll()
@@ -413,11 +412,11 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// detailEscAt maps a terminal row to the open-escalation index rendered
-// there, or -1 for everything else. Like rowAt, it replays the exact
-// layout detailView draws — same header, same scroll window — off the
-// same tagged lines, so the hit map is the layout.
-func (m topModel) detailEscAt(y int) int {
+// detailStopAt maps a terminal row to the stop index rendered there,
+// or -1 for everything else. Like rowAt, it replays the exact layout
+// detailView draws — same header, same scroll window — off the same
+// tagged lines, so the hit map is the layout.
+func (m topModel) detailStopAt(y int) int {
 	lines := m.detailLines()
 	if lines == nil {
 		return -1
@@ -441,7 +440,7 @@ func (m topModel) detailEscAt(y int) int {
 	if i >= len(lines) {
 		return -1
 	}
-	return lines[i].esc
+	return lines[i].stop
 }
 
 // rowAt maps a terminal row (0-based, from the top of the screen) to
@@ -507,29 +506,29 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // updateDetail: the armed task view steers the viewed task in place
 // (dogfood steering, 2026-07-30 — no more esc → navigate → answer round
-// trips): enter answers the selected open escalation, p reprioritizes,
-// c cancels, and e/E edit the title/description of the viewed task,
-// all with the same footers and confirms as the list. Watch mode keeps
+// trips): the focus ring walks every actionable field (field focus
+// ring, 2026-08-02 — retiring the undiscoverable e/E chords), enter
+// opens the focused stop's editor, p reprioritizes, c cancels, all
+// with the same footers and confirms as the list. Watch mode keeps
 // the read-only contract: no focus, no input, ↑/↓ and j/k scroll, esc
 // steps back, q and ctrl+c quit.
 //
-// Focus vs scroll — the deliberate rule: j/k move focus when a further
-// open escalation exists in that direction (the window scrolls just
-// enough to reveal it) and scroll one line otherwise. With at most one
-// open escalation — the overwhelmingly common case — that fallback IS
-// the behavior: plain line scrolling, exactly as before, with the single
-// escalation permanently focused. Only a multi-escalation task trades
-// some upward line-scrolling for focus jumps.
+// Focus vs scroll — the deliberate rule, generalized from the old
+// escalation-only focus: j/k move focus when a further stop exists in
+// that direction (the window scrolls just enough to reveal it) and
+// scroll one line otherwise. The description is the last stop, so j
+// below it line-scrolls the history into view; k above the title
+// line-scrolls back up.
 func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
-	open := m.detailOpenEscalations()
-	focus := detailFocusIdx(m.detailFocus, len(open))
+	stops := m.detailStops()
+	focus := detailFocusIdx(m.detailFocus, len(stops))
 	switch k.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "esc":
 		m.mode, m.detailID, m.detailScroll, m.detailFocus = modeNav, "", 0, 0
 	case "j", "down":
-		if focus >= 0 && focus < len(open)-1 {
+		if focus >= 0 && focus < len(stops)-1 {
 			m.detailFocus = focus + 1
 			m.detailScroll = m.detailRevealScroll()
 		} else if m.detailScroll < m.detailMaxScroll() {
@@ -543,10 +542,9 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.detailScroll--
 		}
 	case "enter":
-		if focus >= 0 { // armed with an open escalation; watch has none by construction
+		if focus >= 0 { // armed; watch mode has no stops by construction
 			m.detailFocus = focus
-			m.mode, m.back = modeAnswer, modeDetail
-			m.target, m.input, m.status = topRow{kind: rowEscalation, esc: open[focus]}, textInput{}, ""
+			return m.openStop(stops[focus])
 		}
 	case "p":
 		if t, ok := m.viewedTask(); m.armed && ok {
@@ -558,24 +556,73 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.mode, m.back = modeConfirmCancel, modeDetail
 			m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
 		}
-	case "e":
-		// Edit the title in place (dogfood capture, 2026-08-01): the
-		// shared widget's single-line mode, prefilled — you edit the
-		// typo, not retype the title.
-		if t, ok := m.viewedTask(); m.armed && ok {
-			title := m.snap.tasks[t.ID].Task.Title
-			m.mode, m.back = modeEditTitle, modeDetail
-			m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(title, false), title, ""
-		}
-	case "E":
-		// Edit the description in the widget's multi-line mode — its
-		// first real consumer (Brandon, 2026-07-31: multi-line lives in
-		// the widget itself, never a separate editor or $EDITOR).
-		if t, ok := m.viewedTask(); m.armed && ok {
-			desc := m.snap.tasks[t.ID].Task.Description
-			m.mode, m.back = modeEditDesc, modeDetail
-			m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(desc, true), desc, ""
-		}
+	}
+	return m, nil
+}
+
+// The task view's focusable stops, in render order. Bars and read-only
+// meta lines are never stops; labels editing is a separate task
+// (tuh-01KYXVSRVK2GFW439G1T0GBQKM).
+const (
+	stopTitle       = "title"
+	stopPriority    = "priority"
+	stopEscalation  = "escalation"
+	stopDescription = "description"
+)
+
+// detailStop is one focusable field of the task view.
+type detailStop struct {
+	kind string
+	esc  escalationJSON // set when kind == stopEscalation
+}
+
+// detailStops is the focus ring: title, the priority meta line, each
+// open escalation, then the description body — the same order they
+// render in, which is what lets detailLines tag lines by position.
+// Empty in watch mode: the disarmed pane stays fully read-only, so it
+// has no focus to act on.
+func (m topModel) detailStops() []detailStop {
+	if !m.armed || m.snap == nil {
+		return nil
+	}
+	if _, ok := m.snap.tasks[m.detailID]; !ok {
+		return nil
+	}
+	stops := []detailStop{{kind: stopTitle}, {kind: stopPriority}}
+	for _, e := range m.detailEscalations() {
+		stops = append(stops, detailStop{kind: stopEscalation, esc: e})
+	}
+	return append(stops, detailStop{kind: stopDescription})
+}
+
+// openStop opens the focused stop's editor: title and description
+// prefilled through the shared widget (unchanged submit writes
+// nothing — the editWas rule), priority as the numeric input, an
+// escalation as answer entry. One opener for enter and the mouse.
+func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
+	if s.kind == stopEscalation {
+		m.mode, m.back = modeAnswer, modeDetail
+		m.target, m.input, m.status = topRow{kind: rowEscalation, esc: s.esc}, textInput{}, ""
+		return m, nil
+	}
+	t, ok := m.viewedTask()
+	if !ok {
+		return m, nil
+	}
+	switch s.kind {
+	case stopTitle:
+		title := m.snap.tasks[t.ID].Task.Title
+		m.mode, m.back = modeEditTitle, modeDetail
+		m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(title, false), title, ""
+	case stopPriority:
+		m.mode, m.back = modePriority, modeDetail
+		m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
+	case stopDescription:
+		// Multi-line in the shared widget itself, never a separate
+		// editor or $EDITOR (Brandon, 2026-07-31).
+		desc := m.snap.tasks[t.ID].Task.Description
+		m.mode, m.back = modeEditDesc, modeDetail
+		m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(desc, true), desc, ""
 	}
 	return m, nil
 }
@@ -595,16 +642,6 @@ func (m topModel) detailEscalations() []escalationJSON {
 	}
 	sort.Slice(open, func(i, j int) bool { return open[i].ID < open[j].ID })
 	return open
-}
-
-// detailOpenEscalations is the selectable subset: the same rows when
-// armed, nothing in watch mode — the disarmed pane stays fully
-// read-only, so it has no selection to act on.
-func (m topModel) detailOpenEscalations() []escalationJSON {
-	if !m.armed {
-		return nil
-	}
-	return m.detailEscalations()
 }
 
 // detailFocusIdx clamps a stored focus to the current focusable set —
@@ -730,12 +767,12 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 // ---- rendering (pure over model state) ----
 
 // detailLine is one rendered screen line of the task view, tagged with
-// the open-escalation index it belongs to (-1 for everything else) so
+// the stop index it belongs to (-1 for chrome and read-only lines) so
 // selection reveal and click hit-testing work off the same bytes View
 // draws.
 type detailLine struct {
 	text string
-	esc  int
+	stop int
 }
 
 // detailLines renders the task view on the dashboard's visual language
@@ -759,27 +796,39 @@ func (m topModel) detailLines() []detailLine {
 	if width <= 0 {
 		width = 80 // no WindowSizeMsg yet: the mockup's design width
 	}
+	// The focus ring's stops share render order with this pass, so a
+	// line's stop tag is its position in that order; watch mode has no
+	// stops and every tag degrades to -1.
+	stops := m.detailStops()
+	stopAt := func(i int) int {
+		if len(stops) == 0 {
+			return -1
+		}
+		return i
+	}
 	var out []detailLine
-	add := func(esc int, text string) {
+	add := func(stop int, text string) {
 		for _, l := range strings.Split(strings.TrimRight(wrapTo(text, width), "\n"), "\n") {
-			out = append(out, detailLine{text: l, esc: esc})
+			out = append(out, detailLine{text: l, stop: stop})
 		}
 	}
 	// Bars and escalation rows are already sized to the width; wrapping
 	// them again would eat the bar's space fill.
-	addRaw := func(esc int, text string) {
+	addRaw := func(stop int, text string) {
 		for _, l := range strings.Split(text, "\n") {
-			out = append(out, detailLine{text: l, esc: esc})
+			out = append(out, detailLine{text: l, stop: stop})
 		}
 	}
 
-	// Header block: title line, then the field grid with bold names.
-	add(-1, fmt.Sprintf("%s%s%s — %s", col.bold, shortID(t.ID), col.reset, oneLine(t.Title)))
+	// Header block: title line on the two-cell mark column (a focusable
+	// stop carries the selection gutter there), then the field grid with
+	// bold names.
+	add(stopAt(0), "  "+sgr(col, col.bold, shortID(t.ID))+" — "+oneLine(t.Title))
 	add(-1, "")
-	field := func(name, value string) {
-		add(-1, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
+	field := func(stop int, name, value string) {
+		add(stop, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
 	}
-	field("id", sgr(col, col.dim, t.ID))
+	field(-1, "id", sgr(col, col.dim, t.ID))
 	status := views.HumanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
@@ -787,18 +836,18 @@ func (m topModel) detailLines() []detailLine {
 			status += fmt.Sprintf(" (lease expires %s)", stamp(*h.Claim.Expires))
 		}
 	}
-	field("status", status)
-	field("priority", strconv.Itoa(t.Priority))
+	field(-1, "status", status)
+	field(stopAt(1), "priority", strconv.Itoa(t.Priority))
 	if len(t.Labels) > 0 {
-		field("labels", strings.Join(t.Labels, ", "))
+		field(-1, "labels", strings.Join(t.Labels, ", "))
 	}
 	if len(t.Parents) > 0 {
-		field("parents", joinRefs(t.Parents, m.snap.taskRef))
+		field(-1, "parents", joinRefs(t.Parents, m.snap.taskRef))
 	}
 	if len(t.DependsOn) > 0 {
-		field("depends on", joinRefs(t.DependsOn, m.snap.taskRef))
+		field(-1, "depends on", joinRefs(t.DependsOn, m.snap.taskRef))
 	}
-	field("created", fmt.Sprintf("%s by %s", stamp(t.CreatedAt), t.CreatedBy))
+	field(-1, "created", fmt.Sprintf("%s by %s", stamp(t.CreatedAt), t.CreatedBy))
 
 	// The escalations section: every open escalation, selectable.
 	if open := m.detailEscalations(); len(open) > 0 {
@@ -808,22 +857,17 @@ func (m topModel) detailLines() []detailLine {
 			hint = "enter answer "
 		}
 		addRaw(-1, barLine(col, col.bgMagenta, fmt.Sprintf(" NEEDS INPUT (%d)", len(open)), hint, width))
-		focus := detailFocusIdx(m.detailFocus, len(m.detailOpenEscalations()))
 		for i, e := range open {
-			text := escalationRow(col, e, width)
-			if i == focus {
-				text = selectedText(col, text, width)
-			}
-			addRaw(i, text)
+			addRaw(stopAt(2+i), escalationRow(col, e, width))
 		}
 	}
 
 	add(-1, "")
 	addRaw(-1, barLine(col, col.rev+col.dim, " DESCRIPTION", "", width))
 	if t.Description == "" {
-		add(-1, "  "+sgr(col, col.dim, "none"))
+		add(stopAt(len(stops)-1), "  "+sgr(col, col.dim, "none"))
 	} else {
-		add(-1, indent(t.Description, "  "))
+		add(stopAt(len(stops)-1), indent(t.Description, "  "))
 	}
 
 	add(-1, "")
@@ -841,6 +885,15 @@ func (m topModel) detailLines() []detailLine {
 	}
 	for _, e := range entries {
 		add(-1, strings.TrimRight(e.text, "\n"))
+	}
+	// The focused stop renders as the dashboard selection bar over its
+	// full block — every line it tagged, wherever it landed.
+	if focus := detailFocusIdx(m.detailFocus, len(stops)); focus >= 0 {
+		for i, l := range out {
+			if l.stop == focus {
+				out[i].text = selectedText(col, l.text, width)
+			}
+		}
 	}
 	return out
 }
@@ -894,15 +947,15 @@ func (m topModel) detailBody() []string {
 	return out
 }
 
-// detailFocusLine is the first body line of the selected escalation
-// row, or -1 when nothing is selected.
+// detailFocusLine is the first body line of the focused stop, or -1
+// when nothing is focused.
 func (m topModel) detailFocusLine() int {
-	focus := detailFocusIdx(m.detailFocus, len(m.detailOpenEscalations()))
+	focus := detailFocusIdx(m.detailFocus, len(m.detailStops()))
 	if focus < 0 {
 		return -1
 	}
 	for i, l := range m.detailLines() {
-		if l.esc == focus {
+		if l.stop == focus {
 			return i
 		}
 	}
@@ -910,7 +963,7 @@ func (m topModel) detailFocusLine() int {
 }
 
 // detailRevealScroll scrolls just enough — never more — to bring the
-// focused escalation's marker line into the window.
+// focused stop's first line into the window.
 func (m topModel) detailRevealScroll() int {
 	scroll := m.detailScroll
 	if m.height <= 0 {
@@ -990,12 +1043,11 @@ func (m topModel) detailView(body []string) string {
 // detailFooter is the task view's bottom line: the live input prompt
 // while one is open (so answering reads the same from either screen),
 // else the same footer bar as the list — the armed legend advertises
-// steering; watch mode keeps the read-only legend. "enter answer" is
-// not in the legend (edit affordance, 2026-08-01): the NEEDS INPUT bar
-// directly above the selectable rows already carries it when armed —
-// the same section-bar convention the dashboard uses — and the legend
-// with e/E edit added would not fit 80 columns otherwise. j/k still
-// read "move" instead of "scroll" while an escalation is selectable.
+// steering; watch mode keeps the read-only legend. An armed view
+// always has a focus ring, so j/k always read "move"; "enter edit"
+// covers the field stops, while the NEEDS INPUT bar keeps carrying
+// "enter answer" for its own rows (the section-bar convention the
+// dashboard uses).
 func (m topModel) detailFooter() string {
 	if f := m.inputFooter(); f != "" {
 		return f
@@ -1007,10 +1059,7 @@ func (m topModel) detailFooter() string {
 	}
 	legend := " ↑/↓ (j/k) scroll · esc back · q quit"
 	if m.armed {
-		legend = " ↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit"
-		if len(m.detailOpenEscalations()) > 0 {
-			legend = " ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit"
-		}
+		legend = " ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit"
 	}
 	return barLine(col, col.rev+col.dim, legend, "", width) + "\n"
 }

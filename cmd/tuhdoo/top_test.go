@@ -354,8 +354,8 @@ func TestTopAnswerFlow(t *testing.T) {
 	if m.mode != modeDetail || m.detailID != "t-lic" || cmd != nil {
 		t.Fatalf("enter on an escalation row: mode %d detail %q, want the task view of t-lic", m.mode, m.detailID)
 	}
-	if m.detailFocus != 0 {
-		t.Fatalf("detailFocus = %d, want the escalation preselected at 0", m.detailFocus)
+	if m.detailFocus != 2 {
+		t.Fatalf("detailFocus = %d, want the escalation stop preselected at 2 (after title and priority)", m.detailFocus)
 	}
 	v := m.View()
 	for _, want := range []string{
@@ -661,8 +661,10 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1", "interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		// Armed with no open escalation: e/E, p, c advertised, no enter.
-		"↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit",
+		// A plain open focuses the title stop at the top of the view.
+		"▌ t-flak — investigate the flake",
+		// The armed legend: the ring is always live, enter opens editors.
+		"↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -1100,10 +1102,11 @@ func openDetail(t *testing.T, m topModel, id string) topModel {
 	return m
 }
 
-// Armed task view of a task with an open escalation: the escalation is
-// the selected row of the NEEDS INPUT section, enter answers it in
-// place — same API call and refresh as any steering write — and the
-// flow returns to the task view.
+// Armed task view of a task with an open escalation, opened from its
+// task row: the plain open focuses the title, the ring walks down to
+// the escalation, and enter answers it in place — same API call and
+// refresh as any steering write — and the flow returns to the task
+// view.
 func TestTopDetailAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
@@ -1111,13 +1114,22 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "NEEDS INPUT (1)") {
 		t.Fatalf("open escalation section missing; view:\n%s", v)
 	}
-	if !strings.Contains(v, "▌ !   Which license?") {
-		t.Fatalf("open escalation not rendered as the selected row; view:\n%s", v)
+	// A plain open focuses the title, not the escalation (routed opens
+	// preselect it — TestTopAnswerFlow).
+	if !strings.Contains(v, "▌ t-lic — choose a license") {
+		t.Fatalf("plain open did not focus the title; view:\n%s", v)
 	}
-	// The footer legend carries edit/priority/cancel; "enter answer"
-	// rides the NEEDS INPUT bar itself (edit affordance, 2026-08-01).
-	if !strings.Contains(v, "↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit") {
+	// The footer legend advertises the ring; "enter answer" rides the
+	// NEEDS INPUT bar itself (edit affordance, 2026-08-01).
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
+	}
+	// Two stops down the ring — past priority — is the escalation.
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if v := m.View(); !strings.Contains(v, "▌ !   Which license?") {
+		t.Fatalf("escalation not focused after walking the ring; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeAnswer {
@@ -1158,8 +1170,9 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	}
 
 	// The refresh that lands the answer removes the selectable row: the
-	// section is gone, the answer shows in HISTORY, enter is dead, and
-	// the footer is back to scroll/p/a — the view re-rendered.
+	// section is gone, the answer shows in HISTORY, and the focus clamps
+	// onto the last stop — the description — so enter now opens its
+	// editor: the ring never dangles.
 	fresh := topSnapshot()
 	h := fresh.tasks["t-lic"]
 	e := h.Escalations[0]
@@ -1176,12 +1189,12 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "A (brandon): Use MIT.") {
 		t.Errorf("answer missing from HISTORY after the refresh; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) scroll · e/E edit · p priority · c cancel · esc back · q quit") {
-		t.Errorf("footer did not fall back to the scroll legend; view:\n%s", v)
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit") {
+		t.Errorf("footer lost the armed ring legend; view:\n%s", v)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || cmd != nil {
-		t.Errorf("enter with nothing focusable: mode %d cmd %v, want modeDetail nil", m.mode, cmd)
+	if m.mode != modeEditDesc || cmd != nil {
+		t.Errorf("enter after the ring shrank: mode %d cmd %v, want the description editor (focus clamps to the last stop)", m.mode, cmd)
 	}
 }
 
@@ -1300,17 +1313,18 @@ func TestTopDetailCancelFlow(t *testing.T) {
 	}
 }
 
-// e in an armed detail edits the viewed task's title in the widget's
-// single-line mode, prefilled with the current title (task-view edits,
-// 2026-08-01): submit goes through the same task.updated plumbing as
-// `tuhdoo update --title`, and the refreshed snapshot re-renders the
-// view with the new content.
+// enter on the focused title stop (where a plain open lands) edits the
+// viewed task's title in the widget's single-line mode, prefilled with
+// the current title (task-view edits, 2026-08-01; ring, 2026-08-02):
+// submit goes through the same task.updated plumbing as `tuhdoo update
+// --title`, and the refreshed snapshot re-renders the view with the
+// new content.
 func TestTopDetailEditTitleFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeEditTitle {
-		t.Fatalf("e in detail: mode %d, want modeEditTitle", m.mode)
+		t.Fatalf("enter on the focused title: mode %d, want modeEditTitle", m.mode)
 	}
 	// Prefilled for editing, not retyping: the current title, cursor at
 	// the end, single-line.
@@ -1376,15 +1390,16 @@ func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
 	// Unchanged submit: straight back to the detail, no write, no error.
+	// (The plain open leaves the title focused, so enter opens its editor.)
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}},
+		keyOf(tea.KeyEnter),
 		keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || cmd != nil || len(fake.titles) != 0 {
 		t.Fatalf("unchanged submit: mode %d cmd %v titles %v, want a silent close", m.mode, cmd, fake.titles)
 	}
 	// Emptied title: rejected in place, prompt stays up.
 	m, cmd = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}},
+		keyOf(tea.KeyEnter),
 		keyOf(tea.KeyCtrlU), // cursor at end: kills the whole title
 		keyOf(tea.KeyEnter))
 	if cmd != nil || m.mode != modeEditTitle || m.status != "title cannot be empty" {
@@ -1397,15 +1412,19 @@ func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
 	}
 }
 
-// E in an armed detail edits the description in the widget's multi-line
-// mode — its first real consumer: prefilled, enter inserts a newline,
-// ctrl+s submits through the update plumbing.
+// enter on the focused description stop edits it in the widget's
+// multi-line mode — its first real consumer: prefilled, enter inserts
+// a newline, ctrl+s submits through the update plumbing. With no open
+// escalations the description is two ring stops below the title.
 func TestTopDetailEditDescriptionFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // priority
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // description
+		keyOf(tea.KeyEnter))
 	if m.mode != modeEditDesc {
-		t.Fatalf("E in detail: mode %d, want modeEditDesc", m.mode)
+		t.Fatalf("enter on the focused description: mode %d, want modeEditDesc", m.mode)
 	}
 	if got := m.input.String(); got != "The parser test flakes on CI.\nFind out why." || !m.input.multiline {
 		t.Fatalf("description editor opened with %q (multiline %v), want the current description multi-line",
@@ -1460,26 +1479,38 @@ func TestTopDetailEditDescriptionFlow(t *testing.T) {
 }
 
 // The description editor writes nothing on an unchanged submit or esc;
-// a task with no description opens an empty multi-line editor and a
-// first description saves through the same path.
+// a task with no description renders the focusable dim placeholder,
+// opens an empty multi-line editor, and a first description saves
+// through the same path.
 func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter),
 		keyOf(tea.KeyCtrlS))
 	if m.mode != modeDetail || cmd != nil || len(fake.descs) != 0 {
 		t.Fatalf("unchanged submit: mode %d cmd %v descs %v, want a silent close", m.mode, cmd, fake.descs)
 	}
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	// The submit returned to the detail with the description still
+	// focused, so enter alone reopens it.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	m, _ = press(t, m, append(runes("scribble"), keyOf(tea.KeyEsc))...)
 	if m.mode != modeDetail || len(fake.descs) != 0 {
 		t.Fatalf("esc did not abandon the edit: mode %d descs %v", m.mode, fake.descs)
 	}
-	// A description-less task (t-pars): the editor opens empty and a
-	// typed description is a real change.
+	// A description-less task (t-pars): the dim "none" placeholder is a
+	// real ring stop, the editor opens empty, and a typed description is
+	// a real change.
 	m = openDetail(t, newTopModel(fake), "t-pars")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if v := m.View(); !strings.Contains(v, "▌ none") {
+		t.Fatalf("empty-description placeholder not focused; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if got := m.input.String(); got != "" {
 		t.Fatalf("editor for a description-less task opened with %q", got)
 	}
@@ -1522,68 +1553,142 @@ func multiEscSnapshot() *snapshot {
 	}
 }
 
-// The focus/scroll rule: j/k move focus when a further open escalation
-// exists in that direction — scrolling just enough to reveal it — and
-// scroll one line otherwise.
-func TestTopDetailFocusMovesAmongEscalations(t *testing.T) {
+// The focus/scroll rule over the full ring: j/k move focus when a
+// further stop exists in that direction — scrolling just enough to
+// reveal it — and scroll one line otherwise. Traversal order is render
+// order: title, priority, each open escalation, description.
+func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 	s := multiEscSnapshot()
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
 	m = mm.(topModel)
 	m = openDetail(t, m, "t-two")
-	if m.detailFocus != 0 {
-		t.Fatalf("focus starts at %d, want 0", m.detailFocus)
+	// A plain open focuses the title at the top of the view.
+	if m.detailFocus != 0 || m.detailScroll != 0 {
+		t.Fatalf("plain open: focus %d scroll %d, want the title at top", m.detailFocus, m.detailScroll)
 	}
-	// Exactly one escalation row carries the selection bar: the first.
 	body := strings.Join(m.detailBody(), "\n")
-	if !strings.Contains(body, "▌ !   First question?") {
-		t.Fatalf("first escalation not selected; body:\n%s", body)
-	}
-	if strings.Contains(body, "▌     Second question?") {
-		t.Fatalf("second escalation selected too; body:\n%s", body)
+	if !strings.Contains(body, "▌ t-two — twice escalated") {
+		t.Fatalf("title not selected on a plain open; body:\n%s", body)
 	}
 	inWindow := func(m topModel) bool {
 		l := m.detailFocusLine()
 		return l >= m.detailScroll && l < m.detailScroll+m.detailWindow()
 	}
-	// j moves focus to the second escalation and reveals it.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
-	if m.detailFocus != 1 {
-		t.Fatalf("j moved focus to %d, want 1", m.detailFocus)
+	// j walks the ring in render order, revealing each stop; the
+	// previous stop hands the bar off.
+	walk := []struct{ now, previous string }{
+		{"▌ priority    0", "▌ t-two — twice escalated"},
+		{"▌ !   First question?", "▌ priority    0"},
+		{"▌     Second question?", "▌ !   First question?"},
+		{"▌ A line of description.", "▌     Second question?"},
 	}
-	body = strings.Join(m.detailBody(), "\n")
-	if !strings.Contains(body, "▌     Second question?") || strings.Contains(body, "▌ !   First question?") {
-		t.Fatalf("selection bar did not move to the second escalation; body:\n%s", body)
+	for i, w := range walk {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+		if m.detailFocus != i+1 {
+			t.Fatalf("j #%d moved focus to %d, want %d", i+1, m.detailFocus, i+1)
+		}
+		body := strings.Join(m.detailBody(), "\n")
+		if !strings.Contains(body, w.now) || strings.Contains(body, w.previous) {
+			t.Fatalf("j #%d: want %q selected and %q released; body:\n%s", i+1, w.now, w.previous, body)
+		}
+		if !inWindow(m) {
+			t.Errorf("j #%d: focused stop not revealed: line %d scroll %d window %d",
+				i+1, m.detailFocusLine(), m.detailScroll, m.detailWindow())
+		}
 	}
-	if !inWindow(m) {
-		t.Errorf("focused marker not revealed: line %d scroll %d window %d",
-			m.detailFocusLine(), m.detailScroll, m.detailWindow())
-	}
-	// enter answers the focused (second) escalation.
+	// enter answers the focused escalation, and esc keeps the focus.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
-		t.Fatalf("enter on second focus: mode %d target %q, want modeAnswer 01E2", m.mode, m.target.esc.ID)
+		t.Fatalf("enter on the second escalation: mode %d target %q, want modeAnswer 01E2", m.mode, m.target.esc.ID)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	if m.mode != modeDetail || m.detailFocus != 1 {
+	if m.mode != modeDetail || m.detailFocus != 3 {
 		t.Fatalf("esc lost the detail focus: mode %d focus %d", m.mode, m.detailFocus)
 	}
-	// k moves focus back up; k again (no item further up) scrolls a line.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
-	if m.detailFocus != 0 {
-		t.Fatalf("k moved focus to %d, want 0", m.detailFocus)
-	}
-	if !inWindow(m) {
-		t.Errorf("first marker not revealed after k: line %d scroll %d", m.detailFocusLine(), m.detailScroll)
-	}
+	// j below the description — the last stop — line-scrolls.
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // back to the description
 	before := m.detailScroll
-	if before == 0 {
-		t.Fatal("test needs a scrolled-down window to exercise the k fallback")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m.detailFocus != 4 || m.detailScroll != before+1 {
+		t.Errorf("j at the last stop: focus %d scroll %d, want 4 %d (line-scroll fallback)",
+			m.detailFocus, m.detailScroll, before+1)
+	}
+	// k walks back to the title, revealing it at the top…
+	for i := 0; i < 4; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	}
+	if m.detailFocus != 0 || m.detailScroll != 0 {
+		t.Fatalf("k back to the title: focus %d scroll %d, want 0 0", m.detailFocus, m.detailScroll)
+	}
+	// …and above the title — with the window wheeled down off the top —
+	// k line-scrolls back up instead of moving focus.
+	m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelDown), wheelMsg(tea.MouseButtonWheelDown))
+	if m.detailScroll != 2 {
+		t.Fatalf("wheel setup: scroll %d, want 2", m.detailScroll)
 	}
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
-	if m.detailFocus != 0 || m.detailScroll != before-1 {
-		t.Errorf("k at first focus: focus %d scroll %d, want 0 %d (line-scroll fallback)",
-			m.detailFocus, m.detailScroll, before-1)
+	if m.detailFocus != 0 || m.detailScroll != 1 {
+		t.Errorf("k at the first stop: focus %d scroll %d, want 0 1 (line-scroll fallback)",
+			m.detailFocus, m.detailScroll)
+	}
+}
+
+// enter opens the focused stop's editor — the right prefilled mode for
+// every stop kind, walked in one pass down the ring.
+func TestTopDetailEnterOpensEditorPerStop(t *testing.T) {
+	s := multiEscSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m = openDetail(t, m, "t-two")
+	// Title: single-line, prefilled.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeEditTitle || m.input.String() != "twice escalated" || m.input.multiline {
+		t.Fatalf("title stop: mode %d input %q multiline %v, want the prefilled single-line editor",
+			m.mode, m.input, m.input.multiline)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Priority: the numeric input, targeting the viewed task.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modePriority || m.target.task.ID != "t-two" {
+		t.Fatalf("priority stop: mode %d target %q, want modePriority on t-two", m.mode, m.target.task.ID)
+	}
+	if v := m.View(); !strings.Contains(v, "priority t-two (twice escalated)") {
+		t.Errorf("priority prompt does not name the viewed task; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Each escalation: answer entry on its own question.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E1" {
+		t.Fatalf("first escalation stop: mode %d target %q, want modeAnswer 01E1", m.mode, m.target.esc.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
+		t.Fatalf("second escalation stop: mode %d target %q, want modeAnswer 01E2", m.mode, m.target.esc.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Description: multi-line, prefilled.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modeEditDesc || !m.input.multiline ||
+		!strings.HasPrefix(m.input.String(), "A line of description.") {
+		t.Fatalf("description stop: mode %d multiline %v input %q, want the prefilled multi-line editor",
+			m.mode, m.input.multiline, m.input)
+	}
+}
+
+// e and E are retired (the ring replaced them, 2026-08-02): dead keys
+// in the armed task view.
+func TestTopDetailEAndEUnbound(t *testing.T) {
+	m := openDetail(t, newTopModel(newFakeSteering()), "t-flak")
+	for _, r := range []rune{'e', 'E'} {
+		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		if mm.mode != modeDetail || cmd != nil {
+			t.Errorf("retired key %q: mode %d cmd %v, want modeDetail nil", r, mm.mode, cmd)
+		}
 	}
 }
 
@@ -1598,8 +1703,8 @@ func TestTopEnterOnNeedsInputPreselectsThatEscalation(t *testing.T) {
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // the second Needs Input row
 		keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-two" || m.detailFocus != 1 {
-		t.Fatalf("enter on the second Needs Input row: mode %d detail %q focus %d, want t-two with focus 1",
+	if m.mode != modeDetail || m.detailID != "t-two" || m.detailFocus != 3 {
+		t.Fatalf("enter on the second Needs Input row: mode %d detail %q focus %d, want t-two with the second escalation stop (3) focused",
 			m.mode, m.detailID, m.detailFocus)
 	}
 	body := strings.Join(m.detailBody(), "\n")
@@ -1667,9 +1772,9 @@ func TestTopTaskViewAnswersBothEscalations(t *testing.T) {
 	}
 }
 
-// In the task view, a click moves the selection among escalation rows;
-// a click on the selected row opens answer entry; chrome hits nothing —
-// the dashboard's click contract on the new surface.
+// In the task view, a click moves the selection among stops; a click
+// on the selected stop opens its editor; chrome hits nothing — the
+// dashboard's click contract on the new surface.
 func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
 	s := multiEscSnapshot()
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
@@ -1678,13 +1783,13 @@ func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // task view, first question selected
 	y := screenLineOf(t, m, "Second question?")
 	m, cmd := mouseTo(t, m, clickAt(0, y))
-	if m.mode != modeDetail || m.detailFocus != 1 || cmd != nil {
+	if m.mode != modeDetail || m.detailFocus != 3 || cmd != nil {
 		t.Fatalf("click on the unselected question: mode %d focus %d cmd %v, want selection moved",
 			m.mode, m.detailFocus, cmd)
 	}
 	// Chrome — the section bar — hits nothing.
 	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "NEEDS INPUT (2)")))
-	if m2.mode != modeDetail || m2.detailFocus != 1 {
+	if m2.mode != modeDetail || m2.detailFocus != 3 {
 		t.Errorf("click on the section bar: mode %d focus %d, want unchanged", m2.mode, m2.detailFocus)
 	}
 	// Click again: the selected question opens answer entry.
@@ -1692,6 +1797,49 @@ func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
 	if m.mode != modeAnswer || m.target.esc.ID != "01E2" {
 		t.Fatalf("click on the selected question: mode %d target %q, want modeAnswer on 01E2",
 			m.mode, m.target.esc.ID)
+	}
+}
+
+// Field stops answer to the mouse exactly like escalation rows: click
+// selects the stop under the pointer, click on the selected stop opens
+// its prefilled editor.
+func TestTopDetailClickFieldStops(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m = openDetail(t, m, "t-flak")
+	// Click the description body: selection moves off the title.
+	y := screenLineOf(t, m, "The parser test flakes on CI.")
+	m, cmd := mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || m.detailFocus != 2 || cmd != nil {
+		t.Fatalf("click on the description: mode %d focus %d cmd %v, want the description stop selected",
+			m.mode, m.detailFocus, cmd)
+	}
+	// Click again: the multi-line editor opens, prefilled.
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeEditDesc || !m.input.multiline || !strings.HasPrefix(m.input.String(), "The parser test") {
+		t.Fatalf("second click on the description: mode %d multiline %v input %q, want the prefilled editor",
+			m.mode, m.input.multiline, m.input)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Same double-click contract on the priority line and the title.
+	y = screenLineOf(t, m, "priority")
+	m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
+	if m.mode != modePriority || m.target.task.ID != "t-flak" {
+		t.Fatalf("double-click on priority: mode %d target %q, want modePriority on t-flak", m.mode, m.target.task.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	y = screenLineOf(t, m, "investigate the flake")
+	m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
+	if m.mode != modeEditTitle || m.input.String() != "investigate the flake" {
+		t.Fatalf("double-click on the title: mode %d input %q, want the prefilled title editor", m.mode, m.input)
+	}
+	// A read-only meta line — the id — is never a stop: clicks hit nothing.
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	focus := m.detailFocus
+	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "id          ")))
+	if m.mode != modeDetail || m.detailFocus != focus {
+		t.Errorf("click on the id line: mode %d focus %d, want unchanged", m.mode, m.detailFocus)
 	}
 }
 
@@ -1902,8 +2050,8 @@ func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	// nav on row 1 — walk back first).
 	m, _ = press(t, m, keyOf(tea.KeyUp))
 	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "Which license?")))
-	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 0 {
-		t.Fatalf("click on selected escalation row: mode %d detail %q focus %d, want the task view of t-lic",
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 2 {
+		t.Fatalf("click on selected escalation row: mode %d detail %q focus %d, want the task view of t-lic with its escalation stop focused",
 			m.mode, m.detailID, m.detailFocus)
 	}
 }
