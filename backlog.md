@@ -1,12 +1,14 @@
 # Backlog
 
-0 in progress · 5 ready · 6 blocked · 5 on hold · 1 inbox · 36 done · 10 archived
+1 in progress · 4 ready · 6 blocked · 5 on hold · 1 inbox · 36 done · 10 archived
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) | Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
@@ -16,7 +18,6 @@ _None._
 | [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) | get_backlog scope input: MCP read parity with the TUI sections (T5 revision) | 1 | `mcp` `go` `design-revision` `dx` |
 | [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) | shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper | 0 | `cleanup` `go` |
 | [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) | Task-view history: blank line between entries, bold entry descriptors | 0 | `cli` `tui` `ux` |
-| [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) | Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping | 0 | `cleanup` `vocabulary` |
 
 ## Blocked / waiting
 

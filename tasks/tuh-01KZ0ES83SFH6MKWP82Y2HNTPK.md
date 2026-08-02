@@ -2,7 +2,7 @@
 
 `tuh-01KZ0ES83SFH6MKWP82Y2HNTPK`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 0
 - **Labels:** `cleanup` `vocabulary`
 - **Created:** 2026-08-02 05:22 UTC by `brandon/claude-code-1`
