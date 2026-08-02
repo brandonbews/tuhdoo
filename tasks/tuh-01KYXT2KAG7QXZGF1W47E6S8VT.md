@@ -2,7 +2,7 @@
 
 `tuh-01KYXT2KAG7QXZGF1W47E6S8VT`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `cli` `tui` `ux` `design`
 - **Created:** 2026-08-01 04:42 UTC by `brandon`
@@ -21,4 +21,6 @@ Constraints: No new daemon API — existing steeringAPI writes only. Boring Go; 
 
 ## History
 
-_No activity yet._
+### 2026-08-02 07:41 UTC — run by `brandon/claude-code-1` — done
+
+Implemented the task-view field focus ring per the settled design: detailStops() is the ring (title, priority meta line, each open escalation, description body incl. the dim "none" placeholder), built in the same order detailLines renders and tagged onto its lines, so selection reveal and the mouse hit-map (detailStopAt, ex-detailEscAt) read the drawn bytes. j/k move focus while a further stop exists else line-scroll; enter opens the stop's editor via one openStop (prefilled title/desc, numeric priority, answer entry; editWas unchanged-submit rule intact); e/E retired; armed legend now "move · enter edit · p priority · c cancel"; plain opens focus the title at top, Needs Input-routed opens preselect the escalation stop; watch mode has no stops (pure scroll, pinned by tests). Title line moved onto the two-cell mark column so its gutter renders like every stop. Landed as PR #15 (squash-merged to main, CI green, make test lint green). Deploy (rebuild + daemon restart) happening right after this finish.

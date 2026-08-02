@@ -2,10 +2,10 @@
 
 `tuh-01KYX7303WN3RSBXXB9CAGZB01`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 0
 - **Labels:** `design` `tui` `cli` `product`
-- **Depends on:** [`tuh-s8vt`](tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) (open)
+- **Depends on:** [`tuh-s8vt`](tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) (done)
 - **Created:** 2026-07-31 23:10 UTC by `brandon`
 
 ## Description
