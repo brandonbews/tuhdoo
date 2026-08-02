@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 5 ready · 5 blocked · 5 on hold · 1 inbox · 38 done · 10 cancelled
+0 in progress · 4 ready · 5 blocked · 5 on hold · 1 inbox · 39 done · 10 cancelled
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
@@ -13,7 +13,6 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) | get_backlog scope input: MCP read parity with the TUI sections (T5 revision) | 1 | `mcp` `go` `design-revision` `dx` |
-| [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) | Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous | 1 | `tui` `ux` `bug` |
 | [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: h opens the done/cancelled shelf in the TUI | 0 | `design` `tui` `cli` `product` |
 | [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) | shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper | 0 | `cleanup` `go` |
 | [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) | Task-view history: blank line between entries, bold entry descriptors | 0 | `cli` `tui` `ux` |
@@ -86,6 +85,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) Edit title and description from the task view
 - [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) Task view field focus ring: up/down selects any editable field, enter opens its editor
 - [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping
+- [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous
 
 ## Cancelled
 

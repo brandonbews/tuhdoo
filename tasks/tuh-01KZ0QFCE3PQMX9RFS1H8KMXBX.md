@@ -2,7 +2,7 @@
 
 `tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `tui` `ux` `bug`
 - **Created:** 2026-08-02 07:54 UTC by `brandon`
@@ -21,4 +21,6 @@ Constraints: rendering only — no daemon/API changes; scope is the title and de
 
 ## History
 
-_No activity yet._
+### 2026-08-02 07:58 UTC — run by `brandon/claude-code-1` — done
+
+Fixed the broken focus highlight: detailLines indented the title/description before wrapping, stranding wrapped continuation lines at column 0 where selectedText cannot place the gutter. New addBlock helper wraps to the inner width (width-2, escalationRow discipline) first, then puts every screen line — continuations and blank paragraph separators included — onto the two-cell mark column; applied to the title, description body, and empty placeholder. Focused blocks now render one continuous gutter+tint bar; unfocused continuations align with the body indent. Decision recorded: kept the gutter over tint-only (glyph survives NO_COLOR). New interaction test pins continuity over a wrapping multi-paragraph description and wrapping title. Landed as PR #16, squash-merged, CI green, make test lint green. Deploying (rebuild + daemon restart) now.
