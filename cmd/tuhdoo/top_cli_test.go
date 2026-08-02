@@ -166,25 +166,30 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 
 	// ---- edit title and description from the task view ----
-	// e edits the title (single-line, prefilled), E the description
-	// (multi-line, ctrl+s submits): the same PATCH — and task.updated
-	// ledger event — as `tuhdoo update`, so a restart replays the edits.
+	// The focus ring (2026-08-02): a plain open focuses the title, so
+	// enter edits it (single-line, prefilled); two stops down the ring
+	// is the description (multi-line, ctrl+s submits). Both go through
+	// the same PATCH — and task.updated ledger event — as `tuhdoo
+	// update`, so a restart replays the edits.
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || m.detailID != wrong {
 		t.Fatalf("enter on the task row: mode %d detail %q, want the task view of %s", m.mode, m.detailID, wrong)
 	}
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeEditTitle || m.input.String() != "wrong idea" {
-		t.Fatalf("e: mode %d input %q, want the prefilled title editor", m.mode, m.input)
+		t.Fatalf("enter on the focused title: mode %d input %q, want the prefilled title editor", m.mode, m.input)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyCtrlU)) // cursor at the end: clears the prefill
 	m, cmd = press(t, m, append(runes("right idea"), keyOf(tea.KeyEnter))...)
 	m = act(t, m, cmd)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	m, _ = press(t, m, // ring: priority, then the description
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
 	if m.mode != modeEditDesc || !m.input.multiline {
-		t.Fatalf("E: mode %d multiline %v, want the multi-line description editor", m.mode, m.input.multiline)
+		t.Fatalf("enter on the focused description: mode %d multiline %v, want the multi-line description editor", m.mode, m.input.multiline)
 	}
 	m, _ = press(t, m, runes("Line one.")...)
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // a newline, never a submit

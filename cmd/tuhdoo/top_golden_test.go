@@ -228,14 +228,14 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 	m.snap.tasks["t-lic"] = h
 	m.width, m.height = 80, 40
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 0 {
-		t.Fatalf("enter on the Needs Input row: mode %d detail %q focus %d, want t-lic preselected",
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 2 {
+		t.Fatalf("enter on the Needs Input row: mode %d detail %q focus %d, want t-lic with its escalation stop preselected",
 			m.mode, m.detailID, m.detailFocus)
 	}
 	want := strings.Join([]string{
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
-		"t-lic — choose a license",
+		"  t-lic — choose a license",
 		"",
 		"  id          t-lic",
 		"  status      open",
@@ -252,7 +252,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		" HISTORY                                                                        ",
 		"  no activity yet",
 		"",
-		" ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit          ",
+		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -261,6 +261,27 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 	}
 	if strings.Contains(got, "\x1b") {
 		t.Errorf("plain task view leaked ANSI escapes:\n%q", got)
+	}
+}
+
+// A plain open (from a task row) focuses the title stop: at plain
+// colors the selection degrades to the ▌ gutter alone, on the title
+// line's two-cell mark column; every other stop keeps its blank mark
+// cells (focused-field rendering, 2026-08-02).
+func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-pars")
+	v := m.View()
+	mustContain(t, v,
+		"▌ t-pars — write the parser",
+		"  priority    0", // an unfocused stop keeps the blank mark column
+		"  none")          // the empty-description placeholder, unfocused
+	if n := strings.Count(v, "▌"); n != 1 {
+		t.Errorf("%d gutter lines, want exactly 1 (the title); view:\n%s", n, v)
+	}
+	if strings.Contains(v, "\x1b") {
+		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
 	}
 }
 
@@ -286,7 +307,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · e/E edit · p priority · c cancel · esc back · q quit", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit", "") + "\x1b[0m",
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",

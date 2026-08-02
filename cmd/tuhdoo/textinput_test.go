@@ -464,9 +464,9 @@ func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 
 // Multi-line is a mode of the same loop: enter inserts a newline
 // instead of submitting, the hint advertises the ctrl+s chord, and
-// ctrl+s submits. (The description editor — E in the task view — is
-// the mode's real consumer; this pins the loop itself, on a capture
-// forced multi-line.)
+// ctrl+s submits. (The description editor — the description stop in
+// the task view — is the mode's real consumer; this pins the loop
+// itself, on a capture forced multi-line.)
 func TestTopInputMultilineEnterAndCtrlS(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -528,7 +528,7 @@ func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-flak")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // the plain open leaves the title focused
 	v := m.View()
 	want := strings.Join([]string{
 		" title t-flak" + strings.Repeat(" ", 67),
@@ -551,7 +551,10 @@ func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-flak")
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'E'}})
+	m, _ = press(t, m, // walk the ring past priority to the description
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
 	v := m.View()
 	want := strings.Join([]string{
 		" description t-flak (investigate the flake)" + strings.Repeat(" ", 37),
@@ -574,7 +577,10 @@ func TestTopDetailInputBoxFitsHeight(t *testing.T) {
 	m := openDetail(t, newTopModelWithDep(newFakeSteering()), "t-lic")
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
 	m = mm.(topModel)
-	m, _ = press(t, m, keyOf(tea.KeyEnter)) // answer entry
+	m, _ = press(t, m, // ring past priority to the escalation, then answer entry
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
 	m, _ = press(t, m, runes("Use MIT.")...)
 	v := m.View()
 	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 10 {
