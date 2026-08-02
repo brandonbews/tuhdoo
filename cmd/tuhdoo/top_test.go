@@ -1680,6 +1680,70 @@ func TestTopDetailEnterOpensEditorPerStop(t *testing.T) {
 	}
 }
 
+// Wrap-then-indent (2026-08-02): the title and description blocks wrap
+// to the mark column's inner width first, then every screen line sits
+// on the column — so a focused block's gutter is continuous across
+// wrapped continuations and blank paragraph separators, instead of
+// breaking wherever a logical line wrapped.
+func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
+	s := topSnapshot()
+	h := s.tasks["t-pars"]
+	h.Task.Title = "write the parser for the event log so replay stays deterministic end to end"
+	h.Task.Description = "Context: this first paragraph is long enough to wrap at eighty columns because it keeps going with detail.\n\n" +
+		"The ask: a second paragraph, also long enough to wrap at the standard eighty column width."
+	s.tasks["t-pars"] = h
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m = openDetail(t, m, "t-pars")
+	// The focused title wraps; both of its screen lines carry the gutter.
+	body := m.detailBody()
+	if !strings.HasPrefix(body[0], "▌ t-pars — ") || !strings.HasPrefix(body[1], "▌ ") {
+		t.Fatalf("wrapped title not continuously guttered:\n%q\n%q", body[0], body[1])
+	}
+	if body[2] != "" {
+		t.Fatalf("title block should be two wrapped lines; line 2 = %q", body[2])
+	}
+	// Focus the description: every line of the block — continuations and
+	// the blank paragraph separator included — carries the gutter.
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	body = m.detailBody()
+	start := -1
+	for i, l := range body {
+		if strings.Contains(l, "DESCRIPTION") {
+			start = i + 1
+			break
+		}
+	}
+	if start < 0 {
+		t.Fatalf("no DESCRIPTION bar; body:\n%s", strings.Join(body, "\n"))
+	}
+	end := start
+	for end < len(body) && body[end] != "" { // the chrome blank before HISTORY
+		end++
+	}
+	if end-start < 4 {
+		t.Fatalf("description block too short to prove wrapping: %d lines", end-start)
+	}
+	blank := false
+	for _, l := range body[start:end] {
+		if !strings.HasPrefix(l, "▌ ") {
+			t.Errorf("description line lost the gutter: %q", l)
+		}
+		if l == "▌ " {
+			blank = true
+		}
+	}
+	if !blank {
+		t.Error("no guttered blank separator inside the description block")
+	}
+	if w := maxLineWidth(m.View()); w > 80 {
+		t.Errorf("line wider than terminal: %d > 80", w)
+	}
+}
+
 // e and E are retired (the ring replaced them, 2026-08-02): dead keys
 // in the armed task view.
 func TestTopDetailEAndEUnbound(t *testing.T) {
