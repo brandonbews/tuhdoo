@@ -819,11 +819,28 @@ func (m topModel) detailLines() []detailLine {
 			out = append(out, detailLine{text: l, stop: stop})
 		}
 	}
+	// addBlock wraps to the mark column's inner width FIRST, then sets
+	// every resulting screen line — wrapped continuations and blank
+	// paragraph separators included — onto the two-cell mark column, so
+	// a focused block's selection gutter is continuous and unfocused
+	// continuations stay aligned (wrap-then-indent, 2026-08-02; the
+	// escalationRow wrapIndent precedent). add() indents first and
+	// wraps after, which strands continuations at column 0 — fine for
+	// chrome, wrong for a stop.
+	addBlock := func(stop int, text string) {
+		inner := width - 2
+		if inner < 10 {
+			inner = 10
+		}
+		for _, l := range strings.Split(strings.TrimRight(wrapTo(text, inner), "\n"), "\n") {
+			out = append(out, detailLine{text: "  " + l, stop: stop})
+		}
+	}
 
 	// Header block: title line on the two-cell mark column (a focusable
 	// stop carries the selection gutter there), then the field grid with
 	// bold names.
-	add(stopAt(0), "  "+sgr(col, col.bold, shortID(t.ID))+" — "+oneLine(t.Title))
+	addBlock(stopAt(0), sgr(col, col.bold, shortID(t.ID))+" — "+oneLine(t.Title))
 	add(-1, "")
 	field := func(stop int, name, value string) {
 		add(stop, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
@@ -865,9 +882,9 @@ func (m topModel) detailLines() []detailLine {
 	add(-1, "")
 	addRaw(-1, barLine(col, col.rev+col.dim, " DESCRIPTION", "", width))
 	if t.Description == "" {
-		add(stopAt(len(stops)-1), "  "+sgr(col, col.dim, "none"))
+		addBlock(stopAt(len(stops)-1), sgr(col, col.dim, "none"))
 	} else {
-		add(stopAt(len(stops)-1), indent(t.Description, "  "))
+		addBlock(stopAt(len(stops)-1), t.Description)
 	}
 
 	add(-1, "")
