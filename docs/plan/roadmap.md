@@ -14,7 +14,7 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 
 ## v1 — Steering, and a second machine
 
-**Scope:** the TUI (grown from `watch` by adding input handling: answer escalations, reprioritize, cancel/archive) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery. *(2026-07-30, Cycle 4: the TUI shipped verb-less — bare `tuhdoo`, `--watch` for the disarmed mode; `top` was a transient name. Details in `002` T7.)*
+**Scope:** the TUI (grown from `watch` by adding input handling: answer escalations, reprioritize, cancel) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery. *(2026-07-30, Cycle 4: the TUI shipped verb-less — bare `tuhdoo`, `--watch` for the disarmed mode; `top` was a transient name. Details in `002` T7.)*
 
 **Definition of done:** a blocking escalation is raised by an agent, answered from the TUI, and picked up by a successor agent without the human touching git; two machines run fleets against the same remote for a week with collision counts logged and zero divergent state; Brandon's 5-person work team could be onboarded with `tuhdoo init` + docs alone (whether or not they are).
 
