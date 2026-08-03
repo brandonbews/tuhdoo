@@ -12,19 +12,19 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 Raised at B12 cutover (2026-07-30, brandon/migrator): the markdown backlog was migrated into this data branch in one atomic create_task batch and tombstoned on main. This blocking escalation is the DoD clock and the agent fence in one: it keeps the v0 milestone out of the ready pool until a human verifies the week, and it puts the v0->v1 gate in the steering inbox. Development continues meanwhile through claim_next; the TUI task is the top ready item.
 
+## Answered
+
 ### [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) · Two-machine convergence: a deliberate claim-collision harness
 
-**Blocking** · asked by `brandon/impl-2` · 2026-07-30 05:51 UTC
+Asked by `brandon/impl-2` · 2026-07-30 05:51 UTC
 
 > This task is human-paced — it needs you on a second machine running fleets for a week — so an agent can't execute it. When do you want to start the week, and do you want a prep task filed first for sync-latency instrumentation?
 
-Two things, one blocking and one a finding:
+**Answer** (`brandon`): Neither — the premise is retired. The milestone grill of 2026-08-03 rewrote this task's acceptance from 'a week of two-machine operation' to a deliberate claim-collision harness (see the rewritten description). It is no longer human-paced: two clones on one box give two genuinely independent daemons, because machineID is minted per repo directory and ULID ordering never trusts wall clocks. An agent can execute it start to finish, so it returns to the ready pool with this answer rather than waiting on me.
 
-1. The task became ready when the TUI landed (fa8c7d3), but its substance — a week of two-machine operation against one origin, a real claim race, answering an escalation from `tuhdoo top` mid-week — is operational work only you can start and pace. This escalation fences it out of the ready pool so agents stop claim-churning it until you kick the week off. Answer when you're ready to begin (or tell me how you'd rather fence human-paced tasks — this is the same workaround B12 used for the milestone, per open-questions Cycle 3).
+On the sync-latency prep task: not filed, and the latency requirement is dropped from acceptance. The grill found the deeper measurement problem — syncer.Status.Collisions counts non-fast-forward pushes, not claims voided by the D6 winner rule, so the original 'collision/latency numbers' bar would have recorded the wrong quantity no matter how much latency instrumentation landed first. The rewritten acceptance names the facts that actually prove convergence (one winner per race, a superseded run per loser, byte-identical state and views, at least one real merge commit) and folds the push-contention count in as one reported figure among several. If latency proves to matter, it gets filed on evidence from this run rather than ahead of it.
 
-2. Acceptance requires "collision/latency numbers recorded onto this task as notes", and T8 says the daemon logs collision counts *and sync latencies* — but internal/syncer only counts collisions (Status.Collisions, syncer.go:37); nothing measures or logs fetch/push latency. Options: (a) I file a well-formed prep task to add sync-latency measurement/logging before the week starts (recommended — the week's evidence is half-blind without it); (b) run the week with collisions-only and eyeball latencies from timestamps; (c) you scope it differently. I deliberately did not create the prep task or wire a depends_on edge myself: making this task depend on a new child is exactly the parent/depends_on union-cycle territory open-questions Cycle 3 flags as unsettled.
-
-## Answered
+Filing note for the record: fencing this task with a blocking escalation was the wrong tool. Nothing had stalled — the task simply wasn't to be started yet, which is 'held'. The rule is now written down: docs/agent-protocol.md, 'no attempt, no escalation'.
 
 ### [`t-vv29`](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) · npm devDependency distribution (esbuild-pattern wrapper packages)
 

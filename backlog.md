@@ -1,8 +1,8 @@
 # Backlog
 
-0 in progress · 0 ready · 3 blocked · 6 on hold · 1 inbox · 46 done · 10 cancelled
+0 in progress · 1 ready · 2 blocked · 6 on hold · 1 inbox · 46 done · 10 cancelled
 
-**[2 open questions](escalations.md) are waiting on a human.**
+**[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
@@ -10,14 +10,15 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine convergence: a deliberate claim-collision harness | 2 | `dogfood` `multiplayer` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) | v0 definition of done: the dogfood week holds | 0 | an [open question](escalations.md) |
-| [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine convergence: a deliberate claim-collision harness | 2 | an [open question](escalations.md) |
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 
 ## On hold

@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN5WVTCB1J`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 2
 - **Labels:** `dogfood` `multiplayer`
 - **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -65,7 +65,11 @@ Two things, one blocking and one a finding:
 
 2. Acceptance requires "collision/latency numbers recorded onto this task as notes", and T8 says the daemon logs collision counts *and sync latencies* — but internal/syncer only counts collisions (Status.Collisions, syncer.go:37); nothing measures or logs fetch/push latency. Options: (a) I file a well-formed prep task to add sync-latency measurement/logging before the week starts (recommended — the week's evidence is half-blind without it); (b) run the week with collisions-only and eyeball latencies from timestamps; (c) you scope it differently. I deliberately did not create the prep task or wire a depends_on edge myself: making this task depend on a new child is exactly the parent/depends_on union-cycle territory open-questions Cycle 3 flags as unsettled.
 
-_Unanswered._
+**Answer** (`brandon`): Neither — the premise is retired. The milestone grill of 2026-08-03 rewrote this task's acceptance from 'a week of two-machine operation' to a deliberate claim-collision harness (see the rewritten description). It is no longer human-paced: two clones on one box give two genuinely independent daemons, because machineID is minted per repo directory and ULID ordering never trusts wall clocks. An agent can execute it start to finish, so it returns to the ready pool with this answer rather than waiting on me.
+
+On the sync-latency prep task: not filed, and the latency requirement is dropped from acceptance. The grill found the deeper measurement problem — syncer.Status.Collisions counts non-fast-forward pushes, not claims voided by the D6 winner rule, so the original 'collision/latency numbers' bar would have recorded the wrong quantity no matter how much latency instrumentation landed first. The rewritten acceptance names the facts that actually prove convergence (one winner per race, a superseded run per loser, byte-identical state and views, at least one real merge commit) and folds the push-contention count in as one reported figure among several. If latency proves to matter, it gets filed on evidence from this run rather than ahead of it.
+
+Filing note for the record: fencing this task with a blocking escalation was the wrong tool. Nothing had stalled — the task simply wasn't to be started yet, which is 'held'. The rule is now written down: docs/agent-protocol.md, 'no attempt, no escalation'.
 
 ### 2026-07-30 05:51 UTC — note from `brandon/impl-2`
 
