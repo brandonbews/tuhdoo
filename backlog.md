@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 4 blocked · 5 on hold · 1 inbox · 45 done · 10 cancelled
+0 in progress · 0 ready · 4 blocked · 5 on hold · 1 inbox · 46 done · 10 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
@@ -10,9 +10,7 @@ _None._
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) | One classifier: the daemon serves the derived situation | 0 | `cleanup` `datashape` |
+_None._
 
 ## Blocked / waiting
 
@@ -86,6 +84,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) Task-view history: blank line between entries, bold entry descriptors
 - [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) get_backlog scope input: MCP read parity with the TUI sections (T5 revision)
 - [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping
+- [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) One classifier: the daemon serves the derived situation
 - [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
 

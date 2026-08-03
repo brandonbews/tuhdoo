@@ -2,7 +2,7 @@
 
 `tuh-01KZ0ES83SFH6MKWP82YRXWQD6`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `cleanup` `datashape`
 - **Created:** 2026-08-02 05:22 UTC by `brandon/claude-code-1`
@@ -49,4 +49,9 @@ Blessed rule (Brandon 2026-08-01, confirmed at grill): exactly one implementatio
 
 ## History
 
-_No activity yet._
+### 2026-08-03 19:51 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-wqd6/one-classifier`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/23>
+
+Grilled with Brandon 2026-08-03 (design settled in the task description), then built and merged as PR #23. Core gained Situation(taskID) — the one classifier: ready/in_progress/blocked for open tasks, the status word otherwise. /v0/state's stateTask now serves situation + unmet_deps + blocking_escalations (ClaimBlockers' ID lists, all tasks regardless of status). views.classify groups over core.Situation (dead escalation re-filter deleted); views' waitingOn/statusLine consume ClaimBlockers; the CLI mirror (claimable, hasUnmetDeps, blockingEscalation, statusOf) is deleted — the CLI renders served verdicts only. Output byte-unchanged on all surfaces; golden expectations untouched. One deliberate edge change: the serialized backlog's WAITING cell lists every open blocking escalation, not just the earliest. make test lint green; CI green; squash-merged.
