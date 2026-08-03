@@ -2,7 +2,7 @@
 
 `tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `mcp` `go` `design-revision` `dx`
 - **Created:** 2026-08-01 18:30 UTC by `brandon/claude-code-1`
@@ -38,4 +38,6 @@ Constraints: eleven verbs stay eleven; omitted-scope response byte-identical; no
 
 ## History
 
-_No activity yet._
+### 2026-08-03 05:12 UTC — note from `brandon/claude-code-1`
+
+PR #18 open with auto-squash-merge armed (branch tuh-m0qk/get-backlog-scope, two commits: T5/agent-protocol docs revision, then code+tests). Implementation notes for successors: scope sections are pointer-typed omitempty fields on backlogResult so omitted scope stays byte-identical and requested-but-empty sections serialize as []. This task built ClosedAt/ClosedBy in core (replay.go, terminalStatus helper) — the history-view task (tuh-01KYX7303WN3RSBXXB9CAGZB01) consumes them, do not rebuild. Blocked-scope membership/reasons come from core.ClaimBlockers directly, deliberately aligned with the one-classifier inbox task (tuh-01KZ0ES83SFH6MKWP82YRXWQD6). T5 revision dated 2026-08-02 (landing date; grill was 2026-08-01 — deliberate deviation from the task text).
