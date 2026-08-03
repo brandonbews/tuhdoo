@@ -508,31 +508,17 @@ func relaySuffix(e *core.Escalation) string {
 	return fmt.Sprintf(", relayed by `%s`", e.RelayedBy)
 }
 
-// shortID abbreviates a task ID for display, mirroring the TUI's
-// convention (T7): the ID's own type prefix plus the ULID's last four
-// characters, lowercased — the tail is where same-batch ULIDs actually
-// differ. Display sugar only: link targets and the task page's
-// canonical id line keep the full ID.
-func shortID(id string) string {
-	i := strings.Index(id, "-")
-	tail := id[i+1:]
-	if len(tail) <= 4 {
-		return id
-	}
-	return id[:i+1] + strings.ToLower(tail[len(tail)-4:])
-}
-
 // rootLink links a task from a branch-root view: short ID in a code
 // span, full ID in the target path.
 func rootLink(id string) string {
-	return fmt.Sprintf("[`%s`](tasks/%s.md)", shortID(id), id)
+	return fmt.Sprintf("[`%s`](tasks/%s.md)", event.ShortID(id), id)
 }
 
 // siblingLinks links tasks from within tasks/ (same directory).
 func siblingLinks(ids []string) string {
 	parts := make([]string, len(ids))
 	for i, id := range ids {
-		parts[i] = fmt.Sprintf("[`%s`](%s.md)", shortID(id), id)
+		parts[i] = fmt.Sprintf("[`%s`](%s.md)", event.ShortID(id), id)
 	}
 	return strings.Join(parts, ", ")
 }
@@ -542,7 +528,7 @@ func siblingLinks(ids []string) string {
 func depLinks(s *core.State, ids []string) string {
 	parts := make([]string, len(ids))
 	for i, id := range ids {
-		parts[i] = fmt.Sprintf("[`%s`](%s.md)", shortID(id), id)
+		parts[i] = fmt.Sprintf("[`%s`](%s.md)", event.ShortID(id), id)
 		if d, ok := s.Tasks[id]; ok {
 			parts[i] += " (" + HumanStatus(d.Status) + ")"
 		}

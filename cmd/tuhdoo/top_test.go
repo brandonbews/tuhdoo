@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"strings"
 	"testing"
 	"time"
@@ -846,8 +847,8 @@ func TestShortID(t *testing.T) {
 		{"tuh-01KYT63MB28Z535SMJCA63RQJM", "tuh-rqjm"},
 	}
 	for _, tt := range tests {
-		if got := shortID(tt.in); got != tt.want {
-			t.Errorf("shortID(%q) = %q, want %q", tt.in, got, tt.want)
+		if got := event.ShortID(tt.in); got != tt.want {
+			t.Errorf("event.ShortID(%q) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }

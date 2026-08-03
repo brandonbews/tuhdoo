@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"os"
 	"sort"
@@ -780,7 +781,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.setPriority(target.task.ID, p); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: fmt.Sprintf("set %s to p%d", shortID(target.task.ID), p)}
+			return actionMsg{desc: fmt.Sprintf("set %s to p%d", event.ShortID(target.task.ID), p)}
 		}
 	case modeConfirmCancel:
 		m.mode, m.input, m.status = m.back, textInput{}, "cancelling…"
@@ -788,7 +789,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.cancelTask(target.task.ID); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "cancelled " + shortID(target.task.ID)}
+			return actionMsg{desc: "cancelled " + event.ShortID(target.task.ID)}
 		}
 	case modeCapture:
 		if input == "" {
@@ -816,7 +817,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.setTitle(target.task.ID, input); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "updated title of " + shortID(target.task.ID)}
+			return actionMsg{desc: "updated title of " + event.ShortID(target.task.ID)}
 		}
 	case modeEditDesc:
 		// The description is kept byte-for-byte as typed — an editor
@@ -832,7 +833,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			if err := api.setDescription(target.task.ID, raw); err != nil {
 				return actionMsg{err: err}
 			}
-			return actionMsg{desc: "updated description of " + shortID(target.task.ID)}
+			return actionMsg{desc: "updated description of " + event.ShortID(target.task.ID)}
 		}
 	}
 	return m, nil
@@ -918,12 +919,12 @@ func (m topModel) detailLines() []detailLine {
 	// Header block: title line on the two-cell mark column (a focusable
 	// stop carries the selection gutter there), then the field grid with
 	// bold names.
-	addBlock(nextStop(), sgr(col, col.bold, shortID(t.ID))+" — "+oneLine(t.Title))
+	addBlock(nextStop(), sgr(col, col.bold, event.ShortID(t.ID))+" — "+oneLine(t.Title))
 	add(-1, "")
 	field := func(stop int, name, value string) {
 		add(stop, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
 	}
-	field(-1, "id", sgr(col, col.dim, shortID(t.ID)))
+	field(-1, "id", sgr(col, col.dim, event.ShortID(t.ID)))
 	status := views.HumanStatus(t.Status)
 	switch {
 	case h.Claim != nil:
@@ -1382,7 +1383,7 @@ func edgeText(s *snapshot, id string) string {
 	t := s.tasks[id].Task
 	var parts []string
 	if n := len(t.Parents); n > 0 {
-		p := "in " + shortID(t.Parents[0])
+		p := "in " + event.ShortID(t.Parents[0])
 		if n > 1 {
 			p += fmt.Sprintf(" +%d", n-1)
 		}
@@ -1430,7 +1431,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 		et := s.tasks[e.Task].Task
 		suffix := labelSuffix(et.Labels) + edgeText(s, e.Task)
 		meta := fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
-		text = gridRow(col, shortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
+		text = gridRow(col, event.ShortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
 			"\n" + secondLine(col, "question: ", col.magenta, e.Question, width) +
 			"\n" + secondLine(col, "", "", meta, width)
 	} else {
@@ -1442,26 +1443,26 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 			if t.Priority == 0 {
 				badgeStyle = col.yellow
 			}
-			text = gridRow(col, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+			text = gridRow(col, event.ShortID(t.ID), fmt.Sprintf("p%d", t.Priority),
 				badgeStyle, t.Title, suffix, col.dim, width)
 		case "inprogress":
-			text = gridRow(col, shortID(t.ID), "", "", t.Title, "  ← "+t.Holder, col.yellow, width)
+			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, "  ← "+t.Holder, col.yellow, width)
 		case "held":
 			// Priority is stored but inert while held (it bites again at
 			// resume), so the badge renders — dim, like the rest of the row.
-			text = gridRow(col, shortID(t.ID), fmt.Sprintf("p%d", t.Priority),
+			text = gridRow(col, event.ShortID(t.ID), fmt.Sprintf("p%d", t.Priority),
 				col.dim, t.Title, suffix, col.dim, width)
 		case "inbox":
 			// No priority badge: an untriaged capture has no meaningful one.
-			text = gridRow(col, shortID(t.ID), "", "", t.Title, suffix, col.dim, width)
+			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width)
 		case "done", "cancelled":
 			// History rows (history view, 2026-08-02): the ready-row
 			// anatomy — title, dim labels, edge markers — plus a dim
 			// close stamp and closing actor. No priority badge: recency
 			// is the browse axis here, not priority.
-			text = gridRow(col, shortID(t.ID), "", "", t.Title, suffix+closeSuffix(t), col.dim, width)
+			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix+closeSuffix(t), col.dim, width)
 		default: // blocked
-			text = gridRow(col, shortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
+			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
 				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width)
 		}
 	}
@@ -1567,24 +1568,6 @@ func joinChunks(cs []chunk) string {
 	return b.String()
 }
 
-// shortID abbreviates a task ID for TUI display: the ID's own type
-// prefix (everything through the first hyphen — `tuh-` for tasks
-// minted after the 2026-07-31 rebrand, `t-` for older ones) plus the
-// ULID's last four characters, lowercased (`tuh-d83w`). The tail is
-// where same-batch ULIDs actually differ — their timestamp prefixes
-// match — so abbreviation comes from the right-hand end. Display and
-// input sugar only (T7): stored and transmitted IDs stay full-length,
-// and the full ULID has no TUI surface at all (2026-08-02 revision) —
-// a human who needs it runs one-shot `tuhdoo task <fragment>`.
-func shortID(id string) string {
-	i := strings.Index(id, "-")
-	tail := id[i+1:]
-	if len(tail) <= 4 {
-		return id
-	}
-	return id[:i+1] + strings.ToLower(tail[len(tail)-4:])
-}
-
 // inputFooter is the active input prompt, or "" when no input mode is
 // live — shared by the list and detail footers so each steering write
 // reads identically from either screen. Text entry renders through the
@@ -1597,11 +1580,11 @@ func (m topModel) inputFooter() string {
 	case modeAnswer:
 		return m.input.view(col, "answer · "+oneLine(m.target.esc.Question), "submits", m.width)
 	case modePriority:
-		label := fmt.Sprintf("priority %s (%s)", shortID(m.target.task.ID), oneLine(m.target.task.Title))
+		label := fmt.Sprintf("priority %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
 		return m.input.view(col, label, "submits", m.width)
 	case modeConfirmCancel:
 		return wrapTo(fmt.Sprintf("%scancel%s %s (%s)? y/n %s— history stays on the ledger%s\n",
-			col.bold, col.reset, shortID(m.target.task.ID), oneLine(m.target.task.Title),
+			col.bold, col.reset, event.ShortID(m.target.task.ID), oneLine(m.target.task.Title),
 			col.dim, col.reset), m.width)
 	case modeCapture:
 		// No y/n: capture is cheap by design, and cancel reverses it.
@@ -1609,9 +1592,9 @@ func (m topModel) inputFooter() string {
 	case modeEditTitle:
 		// The box carries the title being edited; the label only needs
 		// to name whose it is.
-		return m.input.view(col, "title "+shortID(m.target.task.ID), "saves", m.width)
+		return m.input.view(col, "title "+event.ShortID(m.target.task.ID), "saves", m.width)
 	case modeEditDesc:
-		label := fmt.Sprintf("description %s (%s)", shortID(m.target.task.ID), oneLine(m.target.task.Title))
+		label := fmt.Sprintf("description %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
 		return m.input.view(col, label, "saves", m.width)
 	}
 	return ""

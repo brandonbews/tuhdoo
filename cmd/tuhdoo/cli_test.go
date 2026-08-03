@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"net"
 	"net/http"
@@ -416,9 +417,9 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 
 	// task <short-form>: resolves to the same task — the short form is
 	// the human input contract (T7); output still carries the full ID.
-	out, code = runCLI(t, repo, "task", shortID(flake))
+	out, code = runCLI(t, repo, "task", event.ShortID(flake))
 	if code != 0 {
-		t.Fatalf("task %s exit %d; output:\n%s", shortID(flake), code, out)
+		t.Fatalf("task %s exit %d; output:\n%s", event.ShortID(flake), code, out)
 	}
 	mustContain(t, out, flake, "investigate the flake", "claimed by brandon/a1")
 
@@ -430,7 +431,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	if code == 0 {
 		t.Errorf("ambiguous fragment exited 0; output:\n%s", out)
 	}
-	mustContain(t, out, "ambiguous", shortID(parser), shortID(flake))
+	mustContain(t, out, "ambiguous", event.ShortID(parser), event.ShortID(flake))
 	out, code = runCLI(t, repo, "task", "t-0")
 	if code == 0 {
 		t.Errorf("old-era fragment matched tuh- tasks; output:\n%s", out)
