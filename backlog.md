@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 4 blocked · 5 on hold · 2 inbox · 45 done · 10 cancelled
+0 in progress · 1 ready · 4 blocked · 5 on hold · 1 inbox · 45 done · 10 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
@@ -10,7 +10,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) | One classifier: the daemon serves the derived situation | 0 | `cleanup` `datashape` |
 
 ## Blocked / waiting
 
@@ -37,7 +39,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) One classifier: the daemon serves the derived situation
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) differentiate on hold and inbox (on hold should be dimmer). differentiate the control shortcut bar tat the bottom from inbox and on hold (dont know what to do for that design -- grill it)
 
 ## Done
