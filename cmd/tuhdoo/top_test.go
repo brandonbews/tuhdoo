@@ -660,9 +660,14 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"t-flak — investigate the flake",
 		"DESCRIPTION", "The parser test flakes on CI.",
 		"HISTORY", "note by brandon/a1", "Repros only under -race.",
-		"run by brandon/a1", "interrupted", "Bisecting the flake.",
+		"run by brandon/a1 — interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
+		// One blank line between consecutive history entries (entry
+		// formatting, 2026-08-03) — the separator survives the per-entry
+		// TrimRight because it leads the next entry.
+		"Skip it, link the issue.\n\n  2026-07-29 15:00 UTC  note by brandon/a1",
+		"Repros only under -race.\n\n  (unknown time)  run by brandon/a1 — interrupted",
 		// A plain open focuses the title stop at the top of the view.
 		"▌ t-flak — investigate the flake",
 		// The armed legend: the ring is always live, enter opens editors.
@@ -984,6 +989,83 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 		if strings.Contains(v, reject) {
 			t.Errorf("one-shot rendering grew TUI sugar %q; output:\n%s", reject, v)
 		}
+	}
+}
+
+// History entry formatting (2026-08-03) on the one-shot rendering: one
+// blank line between consecutive entries — none before the first or
+// after the last, the section framing owns the edges — and each
+// header's descriptor bold while its stamp stays dim; the run outcome
+// folds into the bold descriptor. Both surfaces share historyOf, so
+// this pins the shape once at the source.
+func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
+	h := hydratedTask{
+		Task: taskJSON{ID: "t-hist", Title: "the biography"},
+		Notes: []noteJSON{{
+			ID: "01N1", Task: "t-hist", Actor: "brandon/a1",
+			Text:    "Repros only under -race.",
+			AddedAt: time.Date(2026, 7, 29, 15, 0, 0, 0, time.UTC),
+		}},
+		Runs: []runJSON{{
+			ID: "01R1", Task: "t-hist", Actor: "brandon/a1",
+			Outcome: "interrupted", Summary: "Bisecting the flake.",
+		}},
+		Escalations: []escalationJSON{{
+			ID: "01E2", Task: "t-hist", Actor: "brandon/a7",
+			Question: "Skip it?",
+			RaisedAt: time.Date(2026, 7, 29, 15, 30, 0, 0, time.UTC),
+		}},
+	}
+	var b strings.Builder
+	printTask(&b, colors{}, h)
+	// ULID order: escalation 01E2, then note 01N1, then run 01R1. The
+	// suffix match proves no blank line trails the last entry.
+	wantHist := strings.Join([]string{
+		"History",
+		"  2026-07-29 15:30 UTC  escalation from brandon/a7",
+		"    Q: Skip it?",
+		"    unanswered",
+		"",
+		"  2026-07-29 15:00 UTC  note by brandon/a1",
+		"    Repros only under -race.",
+		"",
+		"  (unknown time)  run by brandon/a1 — interrupted",
+		"    Bisecting the flake.",
+		"",
+	}, "\n")
+	if v := b.String(); !strings.HasSuffix(v, wantHist) {
+		t.Errorf("plain history section diverged.\nwant suffix:\n%s\ngot:\n%s", wantHist, v)
+	}
+
+	// With real colors: dim stamp, bold descriptor, on every kind.
+	b.Reset()
+	printTask(&b, ansiColors, h)
+	v := b.String()
+	for _, want := range []string{
+		"  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a7\x1b[0m\n",
+		"  \x1b[2m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n",
+		"  \x1b[2m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("colored history missing %q; output:\n%q", want, v)
+		}
+	}
+
+	// A single entry earns no separator anywhere.
+	single := hydratedTask{
+		Task:  h.Task,
+		Notes: h.Notes,
+	}
+	b.Reset()
+	printTask(&b, colors{}, single)
+	wantSingle := strings.Join([]string{
+		"History",
+		"  2026-07-29 15:00 UTC  note by brandon/a1",
+		"    Repros only under -race.",
+		"",
+	}, "\n")
+	if v := b.String(); !strings.HasSuffix(v, wantSingle) || strings.Contains(v, "\n\n  2026") {
+		t.Errorf("single-entry history grew a stray blank line.\ngot:\n%s", v)
 	}
 }
 

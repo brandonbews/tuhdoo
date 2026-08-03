@@ -459,6 +459,31 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 	}
 }
 
+// The task view's history entries with real colors (entry formatting,
+// 2026-08-03): dim stamp, bold descriptor on all three entry kinds —
+// the run outcome folds into its bold descriptor — and exactly one
+// blank line between consecutive entries.
+func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.col = ansiColors
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-flak")
+	v := m.View()
+	// ULID order: escalation 01E2, then note 01N1, then run 01R1.
+	want := "  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a1\x1b[0m\n" +
+		"    Q: Skip the flaky test until fixed?\n" +
+		"    A (brandon, relayed by brandon/a1): Skip it, link the issue.\n" +
+		"\n" +
+		"  \x1b[2m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n" +
+		"    Repros only under -race.\n" +
+		"\n" +
+		"  \x1b[2m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n" +
+		"    Bisecting the flake."
+	if !strings.Contains(v, want) {
+		t.Errorf("task view history entries diverged.\nwant block:\n%q\nview:\n%q", want, v)
+	}
+}
+
 // Cursor-following windowing over chunks: multi-line rows (the 3-line
 // escalation row, blocked two-liners) are atomic — they never split
 // across the window edge.

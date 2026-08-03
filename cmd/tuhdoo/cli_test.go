@@ -317,6 +317,9 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	api(t, hc, "POST", "/v0/notes", "brandon/a1", map[string]any{
 		"task": flake, "text": "the flake is in the retry loop",
 	})
+	api(t, hc, "POST", "/v0/notes", "brandon/a1", map[string]any{
+		"task": flake, "text": "confirmed: the retry loop swallows the race",
+	})
 	var lic struct {
 		ID string `json:"id"`
 	}
@@ -399,7 +402,14 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		t.Fatalf("task exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, flake, "investigate the flake",
-		"claimed by brandon/a1", "the flake is in the retry loop")
+		"claimed by brandon/a1", "the flake is in the retry loop",
+		"confirmed: the retry loop swallows the race")
+	// Consecutive history entries are separated by one blank line
+	// (entry formatting, 2026-08-03): the first note's body, a blank,
+	// then the second note's header.
+	if !strings.Contains(out, "the flake is in the retry loop\n\n  ") {
+		t.Errorf("no blank separator between history entries:\n%s", out)
+	}
 
 	out, code = runCLI(t, repo, "task", parser)
 	if code != 0 {

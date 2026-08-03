@@ -346,17 +346,22 @@ type histEntry struct {
 
 // historyOf merges a task's notes, runs, and escalations into one
 // chronological (ULID-ordered) sequence, mirroring internal/views.
+// Each entry's header is a dim stamp and a bold descriptor (entry
+// formatting, 2026-08-03); consecutive entries are separated by one
+// blank line, carried as a leading newline on every entry after the
+// first — never trailing, so the TUI's per-entry TrimRight keeps it —
+// and the section framing alone handles the edges.
 func historyOf(col colors, h hydratedTask) []histEntry {
 	var out []histEntry
 	for _, n := range h.Notes {
-		text := fmt.Sprintf("  %s%s%s  note by %s\n%s\n",
-			col.dim, stamp(n.AddedAt), col.reset, n.Actor, indent(n.Text, "    "))
+		text := fmt.Sprintf("  %s%s%s  %snote by %s%s\n%s\n",
+			col.dim, stamp(n.AddedAt), col.reset, col.bold, n.Actor, col.reset, indent(n.Text, "    "))
 		out = append(out, histEntry{n.ID, text})
 	}
 	for _, r := range h.Runs {
 		var b strings.Builder
-		fmt.Fprintf(&b, "  %s%s%s  run by %s — %s%s%s\n",
-			col.dim, idStamp(r.ID), col.reset, r.Actor, col.bold, r.Outcome, col.reset)
+		fmt.Fprintf(&b, "  %s%s%s  %srun by %s — %s%s\n",
+			col.dim, idStamp(r.ID), col.reset, col.bold, r.Actor, r.Outcome, col.reset)
 		var links []string
 		if r.Branch != "" {
 			links = append(links, "branch "+r.Branch)
@@ -384,8 +389,8 @@ func historyOf(col colors, h hydratedTask) []histEntry {
 		if e.Blocking {
 			mark = fmt.Sprintf(" %s[blocking]%s", col.red, col.reset)
 		}
-		fmt.Fprintf(&b, "  %s%s%s  escalation from %s%s\n",
-			col.dim, stamp(e.RaisedAt), col.reset, e.Actor, mark)
+		fmt.Fprintf(&b, "  %s%s%s  %sescalation from %s%s%s\n",
+			col.dim, stamp(e.RaisedAt), col.reset, col.bold, e.Actor, col.reset, mark)
 		fmt.Fprintf(&b, "    Q: %s\n", oneLine(e.Question))
 		if e.Context != "" {
 			fmt.Fprintf(&b, "%s\n", indent(e.Context, "       "))
@@ -398,6 +403,9 @@ func historyOf(col colors, h hydratedTask) []histEntry {
 		out = append(out, histEntry{e.ID, b.String()})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })
+	for i := 1; i < len(out); i++ {
+		out[i].text = "\n" + out[i].text
+	}
 	return out
 }
 
