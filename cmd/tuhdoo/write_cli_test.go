@@ -5,6 +5,7 @@ package main
 // cli_test.go — real binary, real repo, real auto-spawned daemon.
 
 import (
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"os/exec"
 	"strings"
 	"testing"
@@ -65,7 +66,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 
 	// create with --desc - (stdin) and an edge given as a short ID.
 	out, code = runCLIStdin(t, repo, "Docs need the parser first.\n",
-		"create", "ship the docs", "--desc", "-", "--depends-on", shortID(parser))
+		"create", "ship the docs", "--desc", "-", "--depends-on", event.ShortID(parser))
 	if code != 0 {
 		t.Fatalf("create --desc - exit %d; output:\n%s", code, out)
 	}
@@ -78,7 +79,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 
 	// update: partial by design — only sent fields change; --as wins
 	// over git identity and lands as the recorded actor.
-	out, code = runCLI(t, repo, "update", shortID(parser),
+	out, code = runCLI(t, repo, "update", event.ShortID(parser),
 		"--priority", "2", "--labels", "go", "--as", "steer")
 	if code != 0 {
 		t.Fatalf("update exit %d; output:\n%s", code, out)
@@ -129,7 +130,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	api(t, hc, "POST", "/v0/escalations", "brandon/a1", map[string]any{
 		"task": parser, "question": "Which encoding?", "blocking": true,
 	})
-	out, code = runCLI(t, repo, "answer", shortID(parser), "UTF-8", "only.")
+	out, code = runCLI(t, repo, "answer", event.ShortID(parser), "UTF-8", "only.")
 	if code != 0 {
 		t.Fatalf("answer exit %d; output:\n%s", code, out)
 	}
@@ -157,7 +158,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	api(t, hc, "POST", "/v0/escalations", "brandon/a1", map[string]any{
 		"task": parser, "question": "Error budget?",
 	})
-	out, code = runCLI(t, repo, "answer", shortID(parser), "irrelevant")
+	out, code = runCLI(t, repo, "answer", event.ShortID(parser), "irrelevant")
 	if code == 0 {
 		t.Fatalf("ambiguous answer exited 0; output:\n%s", out)
 	}

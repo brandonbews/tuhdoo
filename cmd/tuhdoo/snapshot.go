@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"sort"
 	"strings"
 	"time"
@@ -199,10 +200,10 @@ func (s *snapshot) unmetDeps(id string, disp func(string) string) []string {
 func (s *snapshot) taskRef(id string) string {
 	for _, t := range s.state.Tasks {
 		if t.ID == id {
-			return fmt.Sprintf("%s (%s — %s)", shortID(id), views.HumanStatus(t.Status), ellipsize(oneLine(t.Title), 40))
+			return fmt.Sprintf("%s (%s — %s)", event.ShortID(id), views.HumanStatus(t.Status), ellipsize(oneLine(t.Title), 40))
 		}
 	}
-	return shortID(id)
+	return event.ShortID(id)
 }
 
 // allEscalations returns every escalation across all tasks in raise

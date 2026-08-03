@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"os"
 	"strings"
@@ -338,7 +339,7 @@ func resolveEscalation(frag string, st stateResp) (escalationJSON, error) {
 	}
 	lines := make([]string, len(cands))
 	for i, e := range cands {
-		lines[i] = fmt.Sprintf("  %s  %s  (task %s)", e.ID, oneLine(e.Question), shortID(e.Task))
+		lines[i] = fmt.Sprintf("  %s  %s  (task %s)", e.ID, oneLine(e.Question), event.ShortID(e.Task))
 	}
 	return escalationJSON{}, fmt.Errorf("%q is ambiguous — %d open escalations match:\n%s",
 		frag, len(cands), strings.Join(lines, "\n"))

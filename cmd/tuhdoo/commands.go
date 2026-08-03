@@ -250,7 +250,7 @@ func resolveTaskID(frag string, tasks []stateTask) (string, error) {
 	}
 	lines := make([]string, len(cands))
 	for i, t := range cands {
-		lines[i] = fmt.Sprintf("  %s  %s  (%s)", shortID(t.ID), oneLine(t.Title), t.ID)
+		lines[i] = fmt.Sprintf("  %s  %s  (%s)", event.ShortID(t.ID), oneLine(t.Title), t.ID)
 	}
 	return "", fmt.Errorf("%q is ambiguous — %d tasks match:\n%s",
 		frag, len(cands), strings.Join(lines, "\n"))
@@ -288,7 +288,7 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 		ref = func(id string) string { return id }
 		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
 	} else {
-		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, shortID(t.ID), col.reset, oneLine(t.Title))
+		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, event.ShortID(t.ID), col.reset, oneLine(t.Title))
 		fmt.Fprintf(w, "  %sid          %s%s\n", col.dim, t.ID, col.reset)
 	}
 	status := views.HumanStatus(t.Status)

@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -29,6 +30,22 @@ func IDTime(id string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("event: id time: invalid id %q: %w", id, err)
 	}
 	return ulid.Time(u.Time()).UTC(), nil
+}
+
+// ShortID abbreviates a prefixed task ID for display: the ID's own type
+// prefix (everything through the first hyphen — `tuh-` for tasks minted
+// after the 2026-07-31 rebrand, `t-` for older ones) plus the ULID's
+// last four characters, lowercased (`tuh-d83w`). The tail is where
+// same-batch ULIDs actually differ — their timestamp prefixes match —
+// so abbreviation comes from the right-hand end. Display and input
+// sugar only (T7): stored and transmitted IDs stay full-length.
+func ShortID(id string) string {
+	i := strings.Index(id, "-")
+	tail := id[i+1:]
+	if len(tail) <= 4 {
+		return id
+	}
+	return id[:i+1] + strings.ToLower(tail[len(tail)-4:])
 }
 
 // Path derives the date-sharded storage path for an event ID:
