@@ -9,14 +9,13 @@
 
 ## Description
 
-Gated: unpark when the edge-semantics grill cycle (docs/design/open-questions.md — edge semantics, cycle enforcement, milestones) resolves what parent edges mean vs depends_on and what a milestone is.
+Gated: unpark when the edge-semantics grill resolves what parent edges mean vs depends_on (docs/design/open-questions.md — "Edge semantics, cycle enforcement, and what a milestone is").
 
-Follow-up from Cycle 4, explicitly gated on the edge-semantics grill (docs/design/open-questions.md — edge semantics, cycle enforcement, milestones). Do NOT build until that cycle resolves what parent edges mean vs depends_on and what a milestone is; a tree view would bake an interpretation into the primary surface. Until then the list stays flat + edge-marker suffixes.
+Status of that gate as of 2026-08-03: sub-question (3), what a milestone is, is settled — a milestone is a label, not a mechanism, and its done-ness is declared, never computed. Sub-questions (1) semantics (are parents containment and depends_on scheduling? should cross-relation cycles be legal?) and (2) enforcement honesty remain open, and (1) is the load-bearing one here.
 
-When unblocked: decide how parent-grouping coexists with status-first sections (children span buckets), then implement with tests.
+Follow-up from Cycle 4. Do NOT build until (1) resolves: a tree view would bake an interpretation of parent-vs-depends_on into the primary steering surface before that interpretation has been decided. Until then the list stays flat with edge-marker suffixes.
 
-History
-no activity yet
+When unblocked: decide how parent-grouping coexists with the status-first sections (children span buckets — a parent's children can sit in ready, blocked, and done at once), then implement with tests.
 
 ## History
 
