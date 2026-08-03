@@ -656,3 +656,103 @@ func TestUpcasterLiftsOldEvents(t *testing.T) {
 		t.Fatalf("err = %v, want ErrCannotReplay without an upcaster", err)
 	}
 }
+
+// ClosedAt/ClosedBy (2026-08-02, T5 read parity / history view): the
+// event *entering* a terminal status is the closing event; leaving
+// terminal clears the stamp; a task created directly terminal (the B12
+// migration shape) closes at its creation event.
+func TestClosedMetadata(t *testing.T) {
+	st := func(s string) *string { return &s }
+	create := func(n int, status string) event.Event {
+		return evt(t, n, event.TypeTaskCreated, "brandon", "t1",
+			event.TaskCreated{Title: "one task", Status: status})
+	}
+	update := func(n int, actor, status string) event.Event {
+		return evt(t, n, event.TypeTaskUpdated, actor, "t1",
+			event.TaskUpdated{Status: st(status)})
+	}
+	at := func(n int) time.Time { return base.Add(time.Duration(n) * time.Minute) }
+
+	tests := []struct {
+		name   string
+		events []event.Event
+		wantAt time.Time // zero: no close metadata
+		wantBy string
+	}{
+		{"open task carries none",
+			[]event.Event{create(1, "")}, time.Time{}, ""},
+		{"update to done stamps",
+			[]event.Event{create(1, ""), update(2, "brandon/impl-1", StatusDone)},
+			at(2), "brandon/impl-1"},
+		{"update to cancelled stamps",
+			[]event.Event{create(1, ""), update(2, "brandon", StatusCancelled)},
+			at(2), "brandon"},
+		{"born done closes at creation",
+			[]event.Event{create(1, StatusDone)}, at(1), "brandon"},
+		{"born cancelled closes at creation",
+			[]event.Event{create(1, StatusCancelled)}, at(1), "brandon"},
+		{"leaving terminal clears",
+			[]event.Event{create(1, ""), update(2, "brandon", StatusDone), update(3, "brandon", StatusOpen)},
+			time.Time{}, ""},
+		{"done to cancelled restamps",
+			[]event.Event{create(1, ""), update(2, "sarah", StatusDone), update(3, "brandon", StatusCancelled)},
+			at(3), "brandon"},
+		{"re-asserting done keeps the original stamp",
+			[]event.Event{create(1, ""), update(2, "sarah", StatusDone), update(3, "brandon", StatusDone)},
+			at(2), "sarah"},
+		{"reopen then cancel stamps the cancel",
+			[]event.Event{create(1, ""), update(2, "sarah", StatusDone),
+				update(3, "sarah", StatusOpen), update(4, "brandon", StatusCancelled)},
+			at(4), "brandon"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := replay(t, tt.events, nil).Tasks["t1"]
+			if !task.ClosedAt.Equal(tt.wantAt) {
+				t.Errorf("ClosedAt = %v, want %v", task.ClosedAt, tt.wantAt)
+			}
+			if task.ClosedBy != tt.wantBy {
+				t.Errorf("ClosedBy = %q, want %q", task.ClosedBy, tt.wantBy)
+			}
+		})
+	}
+}
+
+// A finish_run with outcome done is a status change into done, so it is
+// a closing event like any other.
+func TestFinishRunDoneStampsClose(t *testing.T) {
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "t1", event.ClaimMade{}),
+		evt(t, 3, event.TypeRunFinished, "brandon/impl-1", "t1",
+			event.RunFinished{Outcome: event.OutcomeDone}),
+	}
+	task := replay(t, events, nil).Tasks["t1"]
+	if want := base.Add(3 * time.Minute); !task.ClosedAt.Equal(want) {
+		t.Errorf("ClosedAt = %v, want %v", task.ClosedAt, want)
+	}
+	if task.ClosedBy != "brandon/impl-1" {
+		t.Errorf("ClosedBy = %q, want brandon/impl-1", task.ClosedBy)
+	}
+}
+
+// Close metadata is a fold over ULID order, so input order is
+// irrelevant — every permutation lands the same stamps.
+func TestClosedMetadataOrderInsensitive(t *testing.T) {
+	st := func(s string) *string { return &s }
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "one task"),
+		evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Status: st(StatusDone)}),
+		evt(t, 3, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Status: st(StatusCancelled)}),
+	}
+	for _, p := range permutations(len(events)) {
+		shuffled := make([]event.Event, len(events))
+		for i, idx := range p {
+			shuffled[i] = events[idx]
+		}
+		task := replay(t, shuffled, nil).Tasks["t1"]
+		if want := base.Add(3 * time.Minute); !task.ClosedAt.Equal(want) || task.ClosedBy != "brandon" {
+			t.Fatalf("perm %v: close = %v by %q, want %v by brandon", p, task.ClosedAt, task.ClosedBy, want)
+		}
+	}
+}

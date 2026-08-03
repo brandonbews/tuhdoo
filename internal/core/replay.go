@@ -63,6 +63,12 @@ func NewReplayer() *Replayer {
 	return r
 }
 
+// terminalStatus reports whether s is a closed status — the two the
+// ClosedAt/ClosedBy stamps track.
+func terminalStatus(s string) bool {
+	return s == StatusDone || s == StatusCancelled
+}
+
 // knownStatus reports whether s is a status this binary understands.
 // An unknown value is a malformed event, never best-effort-bucketed:
 // mis-filing a status a newer binary wrote is exactly the divergence T3
@@ -172,12 +178,18 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		if !knownStatus(status) {
 			return malformed("unknown task status %q", p.Status)
 		}
-		s.Tasks[e.Task] = &Task{
+		t := &Task{
 			ID: e.Task, Title: p.Title, Description: p.Description,
 			Priority: p.Priority, Labels: p.Labels,
 			Parents: p.Parents, DependsOn: p.DependsOn,
 			Status: status, CreatedBy: e.Actor, CreatedAt: when,
 		}
+		// Born terminal (B12 migration shape): the creation event is the
+		// closing event.
+		if terminalStatus(status) {
+			t.ClosedAt, t.ClosedBy = when, e.Actor
+		}
+		s.Tasks[e.Task] = t
 		s.TaskOrder = append(s.TaskOrder, e.Task)
 
 	case event.TypeTaskUpdated:
@@ -203,6 +215,16 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			// semantics are protocol, not replay rules.
 			if !knownStatus(*p.Status) {
 				return malformed("unknown task status %q", *p.Status)
+			}
+			// Close metadata follows the status: the event *entering* a
+			// terminal status is the closing event (re-asserting the same
+			// terminal status keeps the original stamp); leaving terminal
+			// clears it.
+			switch prev := t.Status; {
+			case !terminalStatus(*p.Status):
+				t.ClosedAt, t.ClosedBy = time.Time{}, ""
+			case *p.Status != prev:
+				t.ClosedAt, t.ClosedBy = when, e.Actor
 			}
 			t.Status = *p.Status
 		}
@@ -287,6 +309,9 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			h.Status = ClaimFinished
 			holder[e.Task] = nil
 			if p.Outcome == event.OutcomeDone {
+				if t.Status != StatusDone {
+					t.ClosedAt, t.ClosedBy = when, e.Actor
+				}
 				t.Status = StatusDone
 			}
 		}

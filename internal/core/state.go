@@ -40,6 +40,15 @@ type Task struct {
 	Status      string
 	CreatedBy   string // actor of task.created
 	CreatedAt   time.Time
+
+	// ClosedAt/ClosedBy record the event that put the task in its
+	// current terminal status (done/cancelled): stamped on entering,
+	// cleared on leaving, derived at replay only — no stored-byte
+	// changes (T3). A task created directly terminal (the B12
+	// migration shape) closes at its creation event. Zero-valued on
+	// every non-terminal task.
+	ClosedAt time.Time
+	ClosedBy string
 }
 
 // ClaimStatus is the replay verdict on one claim.

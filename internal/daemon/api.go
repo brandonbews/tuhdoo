@@ -52,6 +52,38 @@ type taskJSON struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// scopeTaskJSON is the slim orientation row served by get_backlog's
+// scope sections (T5 read parity, 2026-08-02). No description by
+// design — orientation lists, hydration digs (get_task). The trailing
+// fields are per-scope payoffs: holder/lease_expires on in_progress
+// rows, waiting_on on blocked rows, closed_at/closed_by on done and
+// cancelled rows.
+type scopeTaskJSON struct {
+	ID           string     `json:"id"`
+	Title        string     `json:"title"`
+	Status       string     `json:"status"`
+	Priority     int        `json:"priority"`
+	Labels       []string   `json:"labels"`
+	Holder       string     `json:"holder,omitempty" jsonschema:"in_progress rows: the principal holding the active claim"`
+	LeaseExpires *time.Time `json:"lease_expires,omitempty" jsonschema:"in_progress rows: when the holder's lease expires unless renewed"`
+	WaitingOn    []string   `json:"waiting_on,omitempty" jsonschema:"blocked rows: condensed reasons — dep:<task-id> per unmet dependency, esc:<escalation-id> per open blocking escalation; hydrate with get_task for the story"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty" jsonschema:"done/cancelled rows: when the task entered its terminal status"`
+	ClosedBy     string     `json:"closed_by,omitempty" jsonschema:"done/cancelled rows: the actor that closed it"`
+}
+
+// openEscalationJSON is get_backlog's escalations-scope row: the open
+// question in full (the question text is the payload — not slim by
+// design), no answer fields — open only; answered escalations hydrate
+// via get_task.
+type openEscalationJSON struct {
+	ID       string    `json:"id"`
+	Task     string    `json:"task"`
+	Question string    `json:"question"`
+	Context  string    `json:"context"`
+	Blocking bool      `json:"blocking"`
+	RaisedAt time.Time `json:"raised_at"`
+}
+
 type claimJSON struct {
 	ID      string     `json:"id"`
 	Task    string     `json:"task"`
