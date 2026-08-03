@@ -18,6 +18,10 @@ type taskJSON struct {
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+	// Close metadata (history view, 2026-08-02): set on done and
+	// cancelled tasks only.
+	ClosedAt *time.Time `json:"closed_at"`
+	ClosedBy string     `json:"closed_by"`
 }
 
 type claimJSON struct {
@@ -81,6 +85,10 @@ type stateTask struct {
 	Priority int      `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder"`
+	// Close metadata (history view, 2026-08-02): what the history rows
+	// sort and stamp by; nil on open tasks and pre-upgrade daemons.
+	ClosedAt *time.Time `json:"closed_at"`
+	ClosedBy string     `json:"closed_by"`
 }
 
 // syncJSON is the sync loop's health (B7). Mode is one of local-only,

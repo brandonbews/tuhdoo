@@ -50,6 +50,10 @@ type taskJSON struct {
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+	// Close metadata (history view, 2026-08-02): present on done and
+	// cancelled tasks only — replay-derived, never stored (T3).
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	ClosedBy string     `json:"closed_by,omitempty"`
 }
 
 // scopeTaskJSON is the slim orientation row served by get_backlog's
@@ -349,6 +353,10 @@ type stateTask struct {
 	Priority int      `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder,omitempty"` // actor of the active claim
+	// Close metadata (history view, 2026-08-02): the TUI's history rows
+	// sort and stamp off the state listing, so it rides here too.
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	ClosedBy string     `json:"closed_by,omitempty"`
 }
 
 type stateResp struct {
@@ -408,6 +416,11 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 		if c := d.state.ActiveClaim(id); c != nil {
 			st.Holder = c.Actor
 		}
+		if !t.ClosedAt.IsZero() {
+			closed := t.ClosedAt
+			st.ClosedAt = &closed
+			st.ClosedBy = t.ClosedBy
+		}
 		resp.Tasks = append(resp.Tasks, st)
 	}
 	for _, e := range d.state.OpenEscalations() {
@@ -422,12 +435,18 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 // ---- shared helpers ----
 
 func taskJSONOf(t *core.Task) taskJSON {
-	return taskJSON{
+	out := taskJSON{
 		ID: t.ID, Title: t.Title, Description: t.Description,
 		Priority: t.Priority, Labels: t.Labels,
 		Parents: t.Parents, DependsOn: t.DependsOn,
 		Status: t.Status, CreatedBy: t.CreatedBy, CreatedAt: t.CreatedAt,
 	}
+	if !t.ClosedAt.IsZero() {
+		closed := t.ClosedAt
+		out.ClosedAt = &closed
+		out.ClosedBy = t.ClosedBy
+	}
+	return out
 }
 
 func claimJSONOf(c *core.Claim) claimJSON {

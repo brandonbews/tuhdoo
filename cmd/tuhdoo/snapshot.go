@@ -101,6 +101,12 @@ func (s *snapshot) classify() buckets {
 	return b
 }
 
+// terminalStatus reports whether a status closes a task (D5: done and
+// cancelled end work; nothing ever deletes it).
+func terminalStatus(status string) bool {
+	return status == "done" || status == "cancelled"
+}
+
 // claimable mirrors core.State.Ready for an open, unclaimed task: every
 // dependency done and no open blocking escalation.
 func (s *snapshot) claimable(id string) bool {

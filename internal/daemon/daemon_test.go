@@ -272,6 +272,62 @@ func TestClaimNeverServesInboxOrHeld(t *testing.T) {
 	}
 }
 
+// Close metadata rides both read payloads the TUI snapshot is built
+// from (history view, 2026-08-02): the /v0/state listing and the
+// single-task hydration. Open tasks carry none; a cancel stamps both;
+// reopening clears both.
+func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
+	_, c := startDaemon(t)
+	id := createOne(t, c, "brandon", map[string]any{"title": "short-lived"})
+	stateOf := func() stateTask {
+		var st stateResp
+		unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+		for _, task := range st.Tasks {
+			if task.ID == id {
+				return task
+			}
+		}
+		t.Fatalf("task %s missing from state", id)
+		return stateTask{}
+	}
+	hydrationOf := func() taskJSON {
+		var h hydratedTask
+		unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK), &h)
+		return h.Task
+	}
+
+	// Open: no close metadata anywhere.
+	if st := stateOf(); st.ClosedAt != nil || st.ClosedBy != "" {
+		t.Fatalf("open task's state row carries close metadata: %+v", st)
+	}
+	if hy := hydrationOf(); hy.ClosedAt != nil || hy.ClosedBy != "" {
+		t.Fatalf("open task's hydration carries close metadata: %+v", hy)
+	}
+
+	// Cancelled: both payloads stamp the close, by the cancelling actor.
+	mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon", map[string]any{"status": "cancelled"}, http.StatusOK)
+	st := stateOf()
+	if st.ClosedAt == nil || st.ClosedBy != "brandon" {
+		t.Fatalf("cancelled state row = %+v, want a close stamp by brandon", st)
+	}
+	hy := hydrationOf()
+	if hy.ClosedAt == nil || hy.ClosedBy != "brandon" {
+		t.Fatalf("cancelled hydration = %+v, want a close stamp by brandon", hy)
+	}
+	if !hy.ClosedAt.Equal(*st.ClosedAt) {
+		t.Errorf("hydration close %v != state close %v", hy.ClosedAt, st.ClosedAt)
+	}
+
+	// Reopened: the stamp clears from both.
+	mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon", map[string]any{"status": "open"}, http.StatusOK)
+	if st := stateOf(); st.ClosedAt != nil || st.ClosedBy != "" {
+		t.Fatalf("reopened task's state row still closed: %+v", st)
+	}
+	if hy := hydrationOf(); hy.ClosedAt != nil || hy.ClosedBy != "" {
+		t.Fatalf("reopened task's hydration still closed: %+v", hy)
+	}
+}
+
 // claim_task's not-ready conflict names the actual blockers
 // (tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): the open blocking escalation's ID
 // for an escalation-blocked task — never the old catch-all "unmet

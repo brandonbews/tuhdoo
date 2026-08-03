@@ -51,7 +51,10 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" INBOX (1)                                                 i capture · c cancel ",
 		"  t-idea      idea: dark mode",
 		"",
-		" ↑/↓ (j/k) move · enter open · p priority · c cancel · q quit            1 done ",
+		// The armed legend grew "h history" (2026-08-02); at exactly 80
+		// columns the done tally is the sacrificed right text (barLine's
+		// rule) — it returns on wider terminals.
+		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       ",
 		"",
 	}, "\n")
 	got := m.View()
@@ -75,6 +78,13 @@ func TestTopGoldenBars(t *testing.T) {
 		pad := func(left, right string) string {
 			return left + strings.Repeat(" ", width-len([]rune(left))-len([]rune(right))) + right
 		}
+		// The done tally survives only where the widened legend leaves
+		// room (barLine drops the right text first): gone at 80, back at
+		// 120.
+		tally := ""
+		if width >= 120 {
+			tally = "1 done "
+		}
 		for _, bar := range []string{
 			"\x1b[7m\x1b[1m" + pad(" tuhdoo · local-only", "acting as brandon ") + "\x1b[0m",
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
@@ -85,7 +95,7 @@ func TestTopGoldenBars(t *testing.T) {
 			// — present but never claiming the eye.
 			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
 			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · c cancel · q quit", "1 done ") + "\x1b[0m",
+			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit", tally) + "\x1b[0m",
 		} {
 			if !strings.Contains(v, bar) {
 				t.Errorf("width %d: view missing bar %q; view:\n%s", width, bar, v)
@@ -165,7 +175,7 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.armed = false
 	m.width, m.height = 80, 40
 	v := m.View()
-	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · q quit")
+	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · h history · q quit")
 	for _, absent := range []string{"enter answer", "p priority", "c cancel", "i capture"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
@@ -346,6 +356,106 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	}
 	if strings.Contains(wv, "▌") {
 		t.Errorf("watch task view renders a selected row; view:\n%q", wv)
+	}
+}
+
+// History mode at 80 columns, plain colors (history view, 2026-08-02):
+// the two-bar layout — DONE then CANCELLED, each newest close first —
+// rows on the ready-row anatomy with the dim close stamp and closing
+// actor appended, and the read-only footer legend. Byte-exact.
+func TestTopGoldenHistoryPlain80(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	want := strings.Join([]string{
+		" tuhdoo · local-only                                          acting as brandon ",
+		"",
+		" DONE (3)                                                                       ",
+		"▌ t-ship      ship the tui  [tui]  · 2026-07-30 · brandon/claude-code-1",
+		"  t-mgr8      migrate the backlog  · 1 dep  · 2026-07-29 · brandon",
+		"  t-chor      old chore  · 2026-07-28 · brandon/impl-1",
+		"",
+		" CANCELLED (2)                                                                  ",
+		"  t-zzzz      zombie idea  · 2026-07-31 · brandon/a2",
+		"  t-drop      drop the wiki  · 2026-07-27 · brandon",
+		"",
+		" ↑/↓ (j/k) move · enter open · esc back · q quit                                ",
+		"",
+	}, "\n")
+	got := m.View()
+	if got != want {
+		t.Errorf("plain 80-column history render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("plain history render leaked ANSI escapes:\n%q", got)
+	}
+}
+
+// History bar composition with real colors: DONE keeps the ready
+// green, CANCELLED the shelves' reverse-dim, neither carries a hint,
+// and a row's title stays bold while its close suffix rides dim with
+// the labels.
+func TestTopGoldenHistoryBars(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	m.col = ansiColors
+	m.width, m.height = 80, 40
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	v := m.View()
+	pad := func(left, right string) string {
+		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
+	}
+	for _, want := range []string{
+		"\x1b[30;42m" + pad(" DONE (3)", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" CANCELLED (2)", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · esc back · q quit", "") + "\x1b[0m",
+		"\x1b[2mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\x1b[2m  · 1 dep  · 2026-07-29 · brandon\x1b[0m",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("history view missing %q; view:\n%q", want, v)
+		}
+	}
+}
+
+// The task view of a cancelled task at 80 columns, plain colors,
+// entered from history: the status line carries the close metadata,
+// the unanswered escalation renders in HISTORY as record — no NEEDS
+// INPUT section — and the armed footer advertises no p/c. Byte-exact.
+func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m = moveTo(t, m, "t-drop")
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-drop" {
+		t.Fatalf("mode %d detail %q, want modeDetail t-drop", m.mode, m.detailID)
+	}
+	want := strings.Join([]string{
+		" tuhdoo · local-only                                          acting as brandon ",
+		"",
+		"▌ t-drop — drop the wiki",
+		"",
+		"  id          t-drop",
+		"  status      cancelled — 2026-07-27 by brandon",
+		"  priority    0",
+		"  created     2026-07-20 12:00 UTC by brandon",
+		"",
+		" DESCRIPTION                                                                    ",
+		"  none",
+		"",
+		" HISTORY                                                                        ",
+		"  2026-07-25 09:00 UTC  escalation from brandon/a7",
+		"    Q: Keep the wiki export?",
+		"    unanswered",
+		"",
+		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                ",
+		"",
+	}, "\n")
+	got := m.View()
+	if got != want {
+		t.Errorf("plain 80-column terminal task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("plain terminal task view leaked ANSI escapes:\n%q", got)
 	}
 }
 
