@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 1
 - **Labels:** `go` `storage`
-- **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (open)
+- **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (on hold)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description

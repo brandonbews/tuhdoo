@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN5SH4QM7A`
 
-- **Status:** open — blocked on dependencies
+- **Status:** on hold — deliberately paused
 - **Priority:** 0
 - **Labels:** `milestone`
 - **Depends on:** [`t-gsw5`](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (open)
