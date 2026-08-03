@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 2 inbox · 47 done · 10 cancelled
+1 in progress · 0 ready · 1 blocked · 6 on hold · 2 inbox · 47 done · 10 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine convergence: a deliberate claim-collision harness | 2 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine convergence: a deliberate claim-collision harness | 2 | `dogfood` `multiplayer` |
+_None._
 
 ## Blocked / waiting
 

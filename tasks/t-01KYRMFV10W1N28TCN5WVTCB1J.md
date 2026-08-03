@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN5WVTCB1J`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 2
 - **Labels:** `dogfood` `multiplayer`
 - **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -78,3 +78,24 @@ Resume state: no work done or possible yet — the week hasn't started. What the
 ### 2026-07-30 05:51 UTC — run by `brandon/impl-2` — blocked
 
 Blocked on escalation 01KYRS7H9003HS5H7W8QKW7KG8: the week is human-paced (Brandon must run the second machine), and a sync-latency instrumentation gap vs T8 needs his call before the week's evidence collection starts.
+
+### 2026-08-03 22:04 UTC — note from `brandon/claude-code-1`
+
+Measurement record — collision harness run, 2026-08-03, defaults (`go run ./harness/collision`, harness landed in PR #25). Two independent runs the same day produced these figures on every line; the numbers below are the second, which I ran and verified myself.
+
+    claim rounds fired            10
+    claim races observed          10   (every round contested)
+    claims made                   20
+    claims voided (D6 losers)     10
+    merge commits on data branch  2
+    non-fast-forward pushes       11   (alpha 0, bravo 11)
+    app-level merges built        13   (alpha 0, bravo 13)
+    pushes losing the ref lock    1    (alpha 0, bravo 1)
+    maxCycleRetries exhausted     1    (9.1% of non-fast-forward pushes)
+
+134 events, byte-identical replayed state, 18 byte-identical generated view files, identical data-branch trees on both clones. All ten acceptance checks green.
+
+Read the counters carefully, they are not interchangeable:
+- "non-fast-forward pushes" is `syncer.Status.Collisions` — push contention, NOT claim collisions. Voided claims are derived from replayed state (`core.ClaimVoided`), which is the only place they are counted at all.
+- "app-level merges built" is `syncer.Status.Merges`, which counts merge commits *constructed*; a merge whose ref update or push then loses a race is discarded, hence 13 built vs 2 landed on the branch. And with exactly two peers, whichever daemon is marginally faster owns the ref every time and never merges — all 13 merges were on one side. Don't read one machine's `merges` as a fleet number.
+- "pushes losing the ref lock" is push contention the daemon does not count as contention at all (finding 4 below).
