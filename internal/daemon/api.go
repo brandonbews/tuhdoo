@@ -353,6 +353,15 @@ type stateTask struct {
 	Priority int      `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder,omitempty"` // actor of the active claim
+	// One classifier (2026-08-03): core's verdict rides the wire so no
+	// client re-derives it. Situation is always present — ready /
+	// in_progress / blocked for open tasks, the status word for the
+	// rest. The blocker lists carry IDs for every task regardless of
+	// status (core.ClaimBlockers' contract); rendering the why is the
+	// client's job, deciding it is not.
+	Situation           string   `json:"situation"`
+	UnmetDeps           []string `json:"unmet_deps,omitempty"`
+	BlockingEscalations []string `json:"blocking_escalations,omitempty"`
 	// Close metadata (history view, 2026-08-02): the TUI's history rows
 	// sort and stamp off the state listing, so it rides here too.
 	ClosedAt *time.Time `json:"closed_at,omitempty"`
@@ -413,6 +422,8 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 	for _, id := range d.state.TaskOrder {
 		t := d.state.Tasks[id]
 		st := stateTask{ID: t.ID, Title: t.Title, Status: t.Status, Priority: t.Priority, Labels: t.Labels}
+		st.Situation = d.state.Situation(id)
+		st.UnmetDeps, st.BlockingEscalations = d.state.ClaimBlockers(id)
 		if c := d.state.ActiveClaim(id); c != nil {
 			st.Holder = c.Actor
 		}

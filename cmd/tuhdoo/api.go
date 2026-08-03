@@ -85,6 +85,13 @@ type stateTask struct {
 	Priority int      `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder"`
+	// One classifier (2026-08-03): the daemon serves core's verdict —
+	// situation is ready / in_progress / blocked for open tasks, the
+	// status word otherwise; the lists carry blocker IDs. The CLI
+	// renders these, it never re-derives them.
+	Situation           string   `json:"situation"`
+	UnmetDeps           []string `json:"unmet_deps"`
+	BlockingEscalations []string `json:"blocking_escalations"`
 	// Close metadata (history view, 2026-08-02): what the history rows
 	// sort and stamp by; nil on open tasks and pre-upgrade daemons.
 	ClosedAt *time.Time `json:"closed_at"`

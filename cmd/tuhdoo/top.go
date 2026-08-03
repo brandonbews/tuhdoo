@@ -166,7 +166,7 @@ func buildRows(s *snapshot) []topRow {
 		// represented by its Needs Input row alone (grill cycle,
 		// 2026-07-31); only unmet deps earn a BLOCKED row. The one-shot
 		// commands keep the full blocked bucket — their count may differ.
-		if !s.hasUnmetDeps(t.ID) {
+		if len(t.UnmetDeps) == 0 {
 			continue
 		}
 		rows = append(rows, topRow{kind: rowTask, section: "blocked", task: t})
@@ -1463,7 +1463,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix+closeSuffix(t), col.dim, width)
 		default: // blocked
 			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "waiting: ", col.red, s.blockedReasonTUI(t.ID, s.taskRef), width)
+				"\n" + secondLine(col, "waiting: ", col.red, blockedReasonTUI(t, s.taskRef), width)
 		}
 	}
 	if cursor {

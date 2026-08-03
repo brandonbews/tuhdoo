@@ -188,6 +188,37 @@ func (s *State) ClaimBlockers(taskID string) (unmetDeps, blockingEscalations []s
 	return unmetDeps, blockingEscalations
 }
 
+// Situation words for open tasks. Non-open tasks have no extra word:
+// their situation is their status.
+const (
+	SituationReady      = "ready"
+	SituationInProgress = "in_progress"
+	SituationBlocked    = "blocked"
+)
+
+// Situation is the one classifier (2026-08-03 grill): the derived
+// bucket every surface files a task under, one word per task. Open
+// tasks split into ready / in_progress / blocked; for every other
+// status the situation is the status word itself, so consumers switch
+// on a single field. Unknown tasks get "". Computed from state at read
+// time and never stored — there is no second copy to go stale.
+func (s *State) Situation(taskID string) string {
+	t, ok := s.Tasks[taskID]
+	if !ok {
+		return ""
+	}
+	if t.Status != StatusOpen {
+		return t.Status
+	}
+	if s.ActiveClaim(taskID) != nil {
+		return SituationInProgress
+	}
+	if s.Ready(taskID) {
+		return SituationReady
+	}
+	return SituationBlocked
+}
+
 // ReadyTasks returns claimable tasks, highest priority first, ULID order
 // within a priority. This is the ordering claim_next serves from.
 func (s *State) ReadyTasks() []*Task {

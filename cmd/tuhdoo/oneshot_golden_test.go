@@ -41,15 +41,15 @@ func oneshotSnapshot() *snapshot {
 	}
 	return &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: parser, Title: "write the parser", Status: "open", Priority: 5, Labels: []string{"go", "parser"}},
-			{ID: docs, Title: "ship the docs", Status: "open"},
-			{ID: flake, Title: "investigate the flake", Status: "open", Holder: "brandon/a1"},
-			{ID: license, Title: "choose a license", Status: "open"},
-			{ID: parked, Title: "polish the docs", Status: "held", Priority: 2, Labels: []string{"docs"}},
-			{ID: idea, Title: "idea: dark mode", Status: "inbox"},
-			{ID: chore, Title: "old chore", Status: "done"},
-			{ID: wrong, Title: "wrong idea", Status: "cancelled"},
-			{ID: floor, Title: "sweep the floor", Status: "open", Priority: 1},
+			{ID: parser, Title: "write the parser", Status: "open", Priority: 5, Labels: []string{"go", "parser"}, Situation: "ready"},
+			{ID: docs, Title: "ship the docs", Status: "open", Situation: "blocked", UnmetDeps: []string{parser}},
+			{ID: flake, Title: "investigate the flake", Status: "open", Holder: "brandon/a1", Situation: "in_progress"},
+			{ID: license, Title: "choose a license", Status: "open", Situation: "blocked", BlockingEscalations: []string{eLic.ID}},
+			{ID: parked, Title: "polish the docs", Status: "held", Priority: 2, Labels: []string{"docs"}, Situation: "held"},
+			{ID: idea, Title: "idea: dark mode", Status: "inbox", Situation: "inbox"},
+			{ID: chore, Title: "old chore", Status: "done", Situation: "done"},
+			{ID: wrong, Title: "wrong idea", Status: "cancelled", Situation: "cancelled"},
+			{ID: floor, Title: "sweep the floor", Status: "open", Priority: 1, Situation: "ready"},
 		}},
 		tasks: map[string]hydratedTask{
 			parser:  {Task: taskJSON{ID: parser}, Escalations: []escalationJSON{eUni}},

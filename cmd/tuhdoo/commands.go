@@ -164,7 +164,7 @@ func printBacklog(w io.Writer, s *snapshot) {
 		row(t, "in-progress", "-")
 	}
 	for _, t := range b.blocked {
-		row(t, "blocked", s.waitingOn(t.ID))
+		row(t, "blocked", waitingOn(t))
 	}
 	for _, t := range b.held {
 		row(t, "on-hold", "-")

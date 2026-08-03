@@ -322,6 +322,58 @@ func TestClaimBlockers(t *testing.T) {
 	}
 }
 
+// Situation is the one classifier (task tuh-01KZ0ES83SFH6MKWP82YRXWQD6):
+// ready / in_progress / blocked for open tasks, the status word itself
+// for everything else, "" for unknown IDs. Tested table-driven next to
+// Ready so the words and the predicates can never drift apart.
+func TestSituation(t *testing.T) {
+	st := func(s string) *string { return &s }
+	claim := tick(t, 9)
+	events := []event.Event{
+		taskCreated(t, 1, "t-ready", "no blockers"),
+		taskCreated(t, 2, "t-dep", "unmet dependency", "t-ready"),
+		taskCreated(t, 3, "t-esc", "escalation-blocked"),
+		taskCreated(t, 4, "t-claimed", "actively claimed"),
+		taskCreated(t, 5, "t-held", "parked"),
+		taskCreated(t, 6, "t-inbox", "captured"),
+		taskCreated(t, 7, "t-done", "finished"),
+		taskCreated(t, 8, "t-cancelled", "abandoned"),
+		evt(t, 9, event.TypeClaimMade, "brandon/impl-1", "t-claimed", event.ClaimMade{}),
+		evt(t, 10, event.TypeEscalationRaised, "brandon/impl-1", "t-esc",
+			event.EscalationRaised{Question: "which way?", Blocking: true}),
+		evt(t, 11, event.TypeTaskUpdated, "brandon", "t-held",
+			event.TaskUpdated{Status: st(StatusHeld)}),
+		evt(t, 12, event.TypeTaskUpdated, "brandon", "t-inbox",
+			event.TaskUpdated{Status: st(StatusInbox)}),
+		evt(t, 13, event.TypeClaimMade, "brandon/impl-2", "t-done", event.ClaimMade{}),
+		evt(t, 14, event.TypeRunFinished, "brandon/impl-2", "t-done",
+			event.RunFinished{Outcome: event.OutcomeDone}),
+		evt(t, 15, event.TypeTaskUpdated, "brandon", "t-cancelled",
+			event.TaskUpdated{Status: st(StatusCancelled)}),
+	}
+	s := replay(t, events, aliveLease(claim))
+	tests := []struct {
+		name, task, want string
+	}{
+		{"open with no blockers", "t-ready", SituationReady},
+		{"open with an unmet dep", "t-dep", SituationBlocked},
+		{"open with a blocking escalation", "t-esc", SituationBlocked},
+		{"open and actively claimed", "t-claimed", SituationInProgress},
+		{"held is its status word", "t-held", StatusHeld},
+		{"inbox is its status word", "t-inbox", StatusInbox},
+		{"done is its status word", "t-done", StatusDone},
+		{"cancelled is its status word", "t-cancelled", StatusCancelled},
+		{"unknown task", "t-nope", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := s.Situation(tt.task); got != tt.want {
+				t.Errorf("Situation(%s) = %q, want %q", tt.task, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEscalationLifecycle(t *testing.T) {
 	esc := tick(t, 2)
 	events := []event.Event{

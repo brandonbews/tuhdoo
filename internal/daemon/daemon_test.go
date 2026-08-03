@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -325,6 +326,63 @@ func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
 	}
 	if hy := hydrationOf(); hy.ClosedAt != nil || hy.ClosedBy != "" {
 		t.Fatalf("reopened task's hydration still closed: %+v", hy)
+	}
+}
+
+// One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): /v0/state serves
+// core's verdict per task — situation always present (ready /
+// in_progress / blocked for open tasks, the status word otherwise) and
+// the blocker ID lists for every task regardless of status — so no
+// client re-derives the rules.
+func TestStateServesTheDerivedSituation(t *testing.T) {
+	_, c := startDaemon(t)
+
+	unblocked := createOne(t, c, "brandon", map[string]any{"title": "ready and waiting"})
+	dep := createOne(t, c, "brandon", map[string]any{"title": "the unfinished dep"})
+	depBlocked := createOne(t, c, "brandon", map[string]any{
+		"title": "dep-blocked", "depends_on": []string{dep}})
+	escBlocked := createOne(t, c, "brandon", map[string]any{"title": "escalation-blocked"})
+	// A shelved task with an unmet dep: the lists ride regardless of
+	// status (core.ClaimBlockers' contract), while situation stays the
+	// status word.
+	captured := createOne(t, c, "brandon", map[string]any{
+		"title": "idea: dark mode", "status": "inbox", "depends_on": []string{dep}})
+
+	var esc struct {
+		ID string `json:"id"`
+	}
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/escalations", "brandon/a1",
+		map[string]any{"task": escBlocked, "question": "which way?", "blocking": true},
+		http.StatusOK), &esc)
+	mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"task": dep}, http.StatusOK)
+
+	var st stateResp
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+	rows := make(map[string]stateTask, len(st.Tasks))
+	for _, task := range st.Tasks {
+		rows[task.ID] = task
+	}
+	want := map[string]stateTask{
+		unblocked:  {Situation: "ready"},
+		dep:        {Situation: "in_progress"},
+		depBlocked: {Situation: "blocked", UnmetDeps: []string{dep}},
+		escBlocked: {Situation: "blocked", BlockingEscalations: []string{esc.ID}},
+		captured:   {Situation: "inbox", UnmetDeps: []string{dep}},
+	}
+	for id, w := range want {
+		got, ok := rows[id]
+		if !ok {
+			t.Fatalf("task %s missing from state", id)
+		}
+		if got.Situation != w.Situation {
+			t.Errorf("%s situation = %q, want %q", got.Title, got.Situation, w.Situation)
+		}
+		if !reflect.DeepEqual(got.UnmetDeps, w.UnmetDeps) {
+			t.Errorf("%s unmet_deps = %v, want %v", got.Title, got.UnmetDeps, w.UnmetDeps)
+		}
+		if !reflect.DeepEqual(got.BlockingEscalations, w.BlockingEscalations) {
+			t.Errorf("%s blocking_escalations = %v, want %v", got.Title, got.BlockingEscalations, w.BlockingEscalations)
+		}
 	}
 }
 
