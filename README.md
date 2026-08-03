@@ -9,7 +9,7 @@ views are derived from the log — never edit them by hand. The design lives in
 
 ## At a glance
 
-**[1 open question](escalations.md) is waiting on a human.**
+No open questions — the fleet is unblocked.
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|
