@@ -17,10 +17,12 @@ import (
 // in selection.go may hand it a truecolor or 256-color code; every
 // other code stays 16-color.) The bg* codes are black-on-color section
 // bars (TUI only); their zero values degrade bars to plain text with
-// the same geometry.
+// the same geometry. bgGray is the shelf bar (chrome hierarchy,
+// 2026-08-03): dim foreground on the bright-black background — palette
+// slot 8, still inside the 16-color law.
 type colors struct {
 	reset, bold, dim, rev, green, yellow, red, magenta string
-	bgMagenta, bgGreen, bgYellow, bgRed                string
+	bgMagenta, bgGreen, bgYellow, bgRed, bgGray        string
 	selBG                                              string // selection bar; set by runTUI only, never by newColors
 }
 
@@ -39,6 +41,7 @@ func newColors(out *os.File) colors {
 		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 		bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 		bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
+		bgGray: "\x1b[2;100m",
 	}
 }
 

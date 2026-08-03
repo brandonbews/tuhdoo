@@ -1148,6 +1148,15 @@ func (m topModel) detailView(body []string) string {
 	}
 	w.WriteString(strings.Join(body, "\n"))
 	w.WriteString("\n\n")
+	// Same bottom-pinning as the list (chrome hierarchy, 2026-08-03):
+	// detailWindow already reserves these rows, so only the shortfall
+	// of a short body pads. detailStopAt needs no padding awareness —
+	// clicks below the body already miss every stop.
+	if m.height > 0 {
+		if pad := m.detailWindow() - len(body); pad > 0 {
+			w.WriteString(strings.Repeat("\n", pad))
+		}
+	}
 	w.WriteString(m.detailFooter())
 	return w.String()
 }
@@ -1169,16 +1178,18 @@ func (m topModel) detailFooter() string {
 	if width <= 0 {
 		width = 80
 	}
-	legend := " ↑/↓ (j/k) scroll · esc back · q quit"
+	legend := [][2]string{{"↑/↓ (j/k)", "scroll"}, {"esc", "back"}, {"q", "quit"}}
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit"
+		legend = [][2]string{{"↑/↓ (j/k)", "move"}, {"enter", "edit"},
+			{"p", "priority"}, {"c", "cancel"}, {"esc", "back"}, {"q", "quit"}}
 		if t, ok := m.viewedTask(); ok && terminalStatus(t.Status) {
 			// p and c are dead on a closed record (history view,
 			// 2026-08-02), so the legend stops advertising them.
-			legend = " ↑/↓ (j/k) move · enter edit · esc back · q quit"
+			legend = [][2]string{{"↑/↓ (j/k)", "move"}, {"enter", "edit"},
+				{"esc", "back"}, {"q", "quit"}}
 		}
 	}
-	return barLine(col, col.rev+col.dim, legend, "", width) + "\n"
+	return legendLine(col, legend, "", width) + "\n"
 }
 
 func (m topModel) View() string {
@@ -1205,8 +1216,18 @@ func (m topModel) View() string {
 		return head + "loading...\n"
 	}
 	foot := "\n" + m.footerView(width)
-	body := joinChunks(visibleChunks(m.listChunks(width), m.height,
-		strings.Count(head, "\n"), strings.Count(foot, "\n")))
+	headN, footN := strings.Count(head, "\n"), strings.Count(foot, "\n")
+	body := joinChunks(visibleChunks(m.listChunks(width), m.height, headN, footN))
+	// The footer — or the live input prompt riding in its place — pins
+	// to the bottom row by padding a short body with blank lines (chrome
+	// hierarchy, 2026-08-03); it floats only before the first
+	// WindowSizeMsg. rowAt needs no padding awareness: the pad sits
+	// below every row chunk, where clicks already miss.
+	if m.height > 0 {
+		if pad := m.height - headN - footN - strings.Count(body, "\n"); pad > 0 {
+			body += strings.Repeat("\n", pad)
+		}
+	}
 	return head + body + foot
 }
 
@@ -1220,11 +1241,17 @@ func (m topModel) listHead(width int) string {
 	if m.snap != nil {
 		sync = syncLine(m.snap.state.Sync)
 	}
-	badge := "watch mode"
+	// Unfilled header (chrome hierarchy, 2026-08-03): the frame stops
+	// competing with content. tuhdoo bold, the sync text dim, the badge
+	// right-aligned — watch mode dim, acting-as at normal weight (armed
+	// must be glanceable).
+	badge := []seg{{col.dim, "watch mode "}}
 	if m.armed {
-		badge = "acting as " + m.actor
+		badge = []seg{{"", "acting as " + m.actor + " "}}
 	}
-	head := barLine(col, col.rev+col.bold, " tuhdoo · "+sync, badge+" ", width) + "\n"
+	head := segLine(col,
+		[]seg{{col.bold, " tuhdoo"}, {col.dim, " · " + sync}},
+		badge, width) + "\n"
 	if m.status != "" {
 		head += m.status + "\n"
 	}
@@ -1263,18 +1290,21 @@ var topSections = []topSection{
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
 	// The shelves (2026-07-31): held above inbox, both dim — parked and
 	// captured work sits below the live queue and never claims the eye.
-	// No colored bars: reverse-dim reads as "present but not active".
-	{"held", "ON HOLD", func(c colors) string { return c.rev + c.dim }, true, "c cancel"},
+	// Chrome hierarchy (2026-08-03): held is shelved and takes the
+	// dark-gray bgGray bar; inbox awaits attention and keeps reverse-dim
+	// — the two shelves are distinguishable at a glance now.
+	{"held", "ON HOLD", func(c colors) string { return c.bgGray }, true, "c cancel"},
 	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c cancel"},
 }
 
 // historySections are history mode's bars (history view, 2026-08-02):
 // finished work first under the green bar, cancellations second under
-// a reverse-dim one — closed, kept, never claiming the eye. No
-// steering hints: the shelf is read-only in both panes.
+// the shelf's dark-gray bar (chrome hierarchy, 2026-08-03) — closed,
+// kept, never claiming the eye. No steering hints: the shelf is
+// read-only in both panes.
 var historySections = []topSection{
 	{"done", "DONE", func(c colors) string { return c.bgGreen }, false, ""},
-	{"cancelled", "CANCELLED", func(c colors) string { return c.rev + c.dim }, true, ""},
+	{"cancelled", "CANCELLED", func(c colors) string { return c.bgGray }, true, ""},
 }
 
 // sections is the on-screen list's section set.
@@ -1332,6 +1362,92 @@ func barLine(col colors, style, left, right string, width int) string {
 		pad = 0
 	}
 	return sgr(col, style, string(l)+strings.Repeat(" ", pad)+string(r))
+}
+
+// seg is one styled span of a composed chrome line. barLine styles a
+// whole line at once and pads by rune count over the raw string, so
+// embedding SGRs in its text would wreck the geometry; the unfilled
+// chrome (header, footer — chrome hierarchy, 2026-08-03) mixes styles
+// on one line, so segLine tracks visible width per segment instead.
+type seg struct{ style, text string }
+
+// segWidth is the visible width of a segment list in cells
+// (rune-counted; styles occupy none).
+func segWidth(segs []seg) int {
+	n := 0
+	for _, s := range segs {
+		n += len([]rune(s.text))
+	}
+	return n
+}
+
+// segLine composes one full-width unfilled line: left segments, a plain
+// space fill, right segments. barLine's fitting rules hold — the right
+// group is dropped whole before the left is truncated — and zero-value
+// colors degrade every segment to bare text with identical geometry.
+func segLine(col colors, left, right []seg, width int) string {
+	lw, rw := segWidth(left), segWidth(right)
+	if rw > 0 && lw+rw+1 > width {
+		right, rw = nil, 0
+	}
+	if lw > width {
+		left = truncSegs(left, width)
+		lw = segWidth(left)
+	}
+	pad := width - lw - rw
+	if pad < 0 {
+		pad = 0
+	}
+	var b strings.Builder
+	for _, s := range left {
+		b.WriteString(sgr(col, s.style, s.text))
+	}
+	b.WriteString(strings.Repeat(" ", pad))
+	for _, s := range right {
+		b.WriteString(sgr(col, s.style, s.text))
+	}
+	return b.String()
+}
+
+// truncSegs cuts a segment list to width cells, ellipsizing inside the
+// segment the cut lands in and dropping the rest — barLine's left-edge
+// truncation, segment-wise.
+func truncSegs(segs []seg, width int) []seg {
+	var out []seg
+	used := 0
+	for _, s := range segs {
+		n := len([]rune(s.text))
+		if used+n <= width {
+			out = append(out, s)
+			used += n
+			continue
+		}
+		if width-used > 0 {
+			out = append(out, seg{s.style, ellipsize(s.text, width-used)})
+		}
+		break
+	}
+	return out
+}
+
+// legendLine renders the unfilled footer legend (chrome hierarchy,
+// 2026-08-03): key tokens bold, labels and the · separators dim, the
+// optional right text (the done tally) dim and right-aligned. items are
+// {key, label} pairs. Bold keys live here only — the colored section
+// bars stay single-style because barLine pads by rune count.
+func legendLine(col colors, items [][2]string, right string, width int) string {
+	left := []seg{{"", " "}}
+	for i, it := range items {
+		if i > 0 {
+			left = append(left, seg{col.dim, " · "})
+		}
+		left = append(left, seg{col.bold, it[0]}, seg{col.dim, " " + it[1]})
+	}
+	var r []seg
+	if right != "" {
+		r = []seg{{col.dim, right}}
+	}
+	return segLine(col, left, r, width)
 }
 
 // fitTitle fits a title plus an optional suffix into width runes. The
@@ -1610,21 +1726,23 @@ func (m topModel) footerView(width int) string {
 	if m.history {
 		// No steering keys and no done tally: the DONE bar above
 		// already carries the count.
-		return barLine(col, col.rev+col.dim,
-			" ↑/↓ (j/k) move · enter open · esc back · q quit", "", width) + "\n"
+		return legendLine(col, [][2]string{
+			{"↑/↓ (j/k)", "move"}, {"enter", "open"}, {"esc", "back"}, {"q", "quit"},
+		}, "", width) + "\n"
 	}
 	// "enter open" on every row: a Needs Input row opens its task's view
 	// with the question preselected — answering happens there, with the
 	// task's context on screen (task-view rework, 2026-08-01).
-	legend := " ↑/↓ (j/k) move · enter open · h history · q quit"
+	legend := [][2]string{{"↑/↓ (j/k)", "move"}, {"enter", "open"}}
 	if m.armed {
-		legend = " ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit"
+		legend = append(legend, [2]string{"p", "priority"}, [2]string{"c", "cancel"})
 	}
+	legend = append(legend, [2]string{"h", "history"}, [2]string{"q", "quit"})
 	done := ""
 	if m.snap != nil {
 		done = fmt.Sprintf("%d done ", len(m.snap.classify().done))
 	}
-	return barLine(col, col.rev+col.dim, legend, done, width) + "\n"
+	return legendLine(col, legend, done, width) + "\n"
 }
 
 // ---- entry point ----
