@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN5WVTCB1J`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `dogfood` `multiplayer`
 - **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
@@ -111,3 +111,17 @@ Findings from the run. The convergence half of the acceptance passed cleanly; th
 3. **`maxCycleRetries` (4) does exhaust under sustained symmetric eager writes**, at ~3.4 writes/s/machine with both machines writing at once: one daemon reported "remote origin kept moving for 4 attempts" and its work stopped reaching the remote for the length of the burst. Nothing was lost — the ledger converged once the burst stopped — but while it lasted one machine was invisible to the other, which is precisely the window D6 races open in. The load is ~100x realistic by design; this is a ceiling measurement, not a bug report.
 
 4. **Some push contention is not counted as contention.** Two peers pushing to one bare repo at the same instant can get `cannot lock ref 'refs/heads/tuhdoo': is at X but expected Y` — a lost ref-update race, not a stale history. `gitx.Push` classifies a rejection as `ErrNonFastForward` only on "non-fast-forward"/"fetch first" in git's output (`internal/gitx/cli.go`), so this shape falls through as a generic error: `Syncer.Cycle` returns instead of going round its retry loop, the daemon records `mode=error`, and `Status.Collisions` does not count it. The next cycle recovers, so nothing is lost — but the push-contention counter T8 says the daemon keeps is an undercount.
+
+### 2026-08-03 22:05 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-cb1j/collision-harness`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/25>
+- Commits: `a50b069e9ca3920dbcd0125104c27bd959773f70`
+
+Built and ran the collision harness; PR #25 merged to main. `harness/collision` (one plain Go program, `go run ./harness/collision`) stands up a scratch bare origin plus two clones under /tmp, one daemon and one live `tuhdoo mcp` session each, fires claim_next from both actors behind a barrier, storms the sync loop with simultaneous eager writes, waits for convergence and machine-checks every acceptance claim. It is deliberately not a test: `make test` and CI never run it. Only `harness/` was touched; no new dependencies; `make test lint` green.
+
+The D3 merge path has now actually executed: 10 of 10 rounds contested, 10 claims voided by the D6 rule with exactly one winner each (rule re-derived from replayed claims, not trusted), byte-identical replayed state and 18 byte-identical generated views on both clones, identical data-branch trees, 2 real merge commits. Full numbers in the measurement note; findings in the findings note; both also in `harness/README.md`.
+
+One thing to know before reading the acceptance as fully satisfied: the "superseded run per loser" line passes because the *harness* writes that run over `POST /v0/runs`, playing the part D6 assigns to the losing daemon. Nothing in the daemon synthesizes it — replay only ever synthesizes `interrupted` — so a real fleet today voids a loser's claim and records no run at all. That gap is captured as tuh-01KZ4TH4HT56TE4CQPKF3R76WT, along with two smaller findings: the machine-id tiebreak in D6 is vacuous (tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ) and `Status.Collisions` misses ref-lock push rejections (tuh-01KZ4TH4HT56TE4CQPKKA37A40). All three are inbox captures for human triage, not promoted.
+
+`maxCycleRetries` (4) did exhaust once under the storm — reported per acceptance rather than treated as a failure; the load is ~100x realistic by design and the ledger converged as soon as the burst stopped.

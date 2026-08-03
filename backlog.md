@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 6 on hold · 5 inbox · 47 done · 10 cancelled
+0 in progress · 0 ready · 1 blocked · 6 on hold · 5 inbox · 48 done · 10 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine convergence: a deliberate claim-collision harness | 2 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -45,6 +43,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) v0 definition of done: the dogfood week holds
 - [`t-c7km`](tasks/t-01KYRMFV10W1N28TCN5TDQC7KM.md) Grow watch into the interactive steering TUI (tuhdoo top)
+- [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) Two-machine convergence: a deliberate claim-collision harness
 - [`t-z2c1`](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) Retire full-replay-per-write and the grow-forever event overlay
 - [`t-hhzm`](tasks/t-01KYRMVT1YC2929WSQ3W6YHHZM.md) Render markdown views on local daemon writes
 - [`t-8x4g`](tasks/t-01KYRR78YKX9YHZE6W6B798X4G.md) Auto-derive session principals: git identity + daemon-minted agent names
