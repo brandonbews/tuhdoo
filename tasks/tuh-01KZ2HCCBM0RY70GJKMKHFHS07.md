@@ -2,7 +2,7 @@
 
 `tuh-01KZ2HCCBM0RY70GJKMKHFHS07`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `cli` `tui` `ux` `design-revision`
 - **Created:** 2026-08-03 00:46 UTC by `brandon/claude-code-1`
@@ -27,4 +27,10 @@ Constraints: display-layer only — stored bytes, events, HTTP API, MCP verbs un
 
 ## History
 
-_No activity yet._
+### 2026-08-03 05:20 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-hs07/short-id-only-tui`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/19>
+- Commits: `3abb75a`
+
+Merged (PR #19, squash). T7 "Short IDs are the human contract" revised in place with a dated 2026-08-02 note: the detail screen's id line shows the short form only, the full ULID has no TUI surface, one-shot output unchanged; accepted consequence (~38% tail-collision chance by ~1,000 tasks, loud resolver errors, working-set retirement bounds the pool) recorded. top.go id field now renders shortID(t.ID) dimmed; the stale shortID doc comment citing the old wording updated. TestTopRowsShowShortIDs now fails on any full-ULID occurrence in the detail view. Pre-work compatibility check: all task pointers (top.go:848, :1433, :1440) still held despite PRs #15/#16; existing TUI goldens use short fixture IDs so were unchanged by construction; oneshot goldens and markdown views untouched. The shortID-dedupe task (tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y) was not in flight — no coordination needed; when claimed, it inherits the updated comment wording in top.go.
