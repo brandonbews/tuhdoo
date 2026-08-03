@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 4 blocked · 5 on hold · 2 inbox · 44 done · 10 cancelled
+0 in progress · 0 ready · 4 blocked · 5 on hold · 2 inbox · 45 done · 10 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
@@ -10,9 +10,7 @@ _None._
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | `distribution` `ci` `npm` `investigation` |
+_None._
 
 ## Blocked / waiting
 
@@ -81,6 +79,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-a86y`](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 - [`tuh-ypww`](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) One real text-input widget: delineated box, fixed hint line, standard cursor editing
 - [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) Edit title and description from the task view
+- [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) npm provenance: trusted publishing promised attestations, the registry has none
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
 - [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) Task view field focus ring: up/down selects any editable field, enter opens its editor
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) Task-view history: blank line between entries, bold entry descriptors

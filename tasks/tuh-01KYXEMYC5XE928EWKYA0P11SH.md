@@ -2,7 +2,7 @@
 
 `tuh-01KYXEMYC5XE928EWKYA0P11SH`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `distribution` `ci` `npm` `investigation`
 - **Created:** 2026-08-01 01:22 UTC by `brandon`
@@ -49,3 +49,11 @@ Resume state: investigation complete, fix committed on branch tuh-11sh/npm-prove
 - Commits: `6913462`
 
 Fix ready on PR #13; blocked on the open workflow-review escalation.
+
+### 2026-08-03 18:37 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-11sh/npm-provenance`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/13>
+- Commits: `6913462`, `54131e5`
+
+Closing out after Brandon's escalation answer. PR #13 merged to main 2026-08-01T04:38Z (squash commit 54131e5): root cause (npm's silent auto-provenance failure under trusted publishing) documented in the PR body, fix is the explicit `--provenance` flag plus comment correction in release.yml. Workflow change was eyes-on reviewed via the escalation per the workflow-file law. Registry verification is deferred by nature: no v* tag has been pushed since the merge (latest is v0.1.1, pre-fix), so all five packages still show no dist.attestations — expected. Whoever pushes the next tag (v0.1.2+) should verify `npm view <pkg> --json` shows dist.attestations on all five packages and the npmjs provenance badge appears; if not, this comes back as a new task.
