@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 4 inbox · 48 done · 10 cancelled
+0 in progress · 0 ready · 1 blocked · 6 on hold · 4 inbox · 49 done · 10 cancelled
 
 ## In progress
 
@@ -8,9 +8,7 @@ _None._
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) | TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer | 0 | `tui` `go` |
+_None._
 
 ## Blocked / waiting
 
@@ -90,6 +88,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) One classifier: the daemon serves the derived situation
 - [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
+- [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer
 
 ## Cancelled
 

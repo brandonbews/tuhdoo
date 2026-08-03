@@ -2,7 +2,7 @@
 
 `tuh-01KZ33YQPXPK59NV1VBWZ9A3V7`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-03 06:11 UTC by `brandon`
@@ -37,4 +37,10 @@ Constraints: boring Go (T1); 16-color law untouched; one PR per the repo convent
 
 ## History
 
-_No activity yet._
+### 2026-08-03 22:37 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-a3v7/tui-chrome-hierarchy`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/26>
+- Commits: `f95dacd756598bb2c39fbfd9fae1a2a6a19102e6`
+
+Chrome hierarchy landed exactly per the settled design: header and footer unfilled (tuhdoo bold / sync dim / badge right-aligned; footer keys bold, labels dim, tally dim right-aligned), ON HOLD and CANCELLED on the new bgGray bar (\x1b[2;100m — dim on bright black, slot 8), INBOX and task-view DESCRIPTION/HISTORY bars unchanged rev+dim, footer plus live input prompts pinned to the bottom row once height is known (floats before first WindowSizeMsg). New seg/segLine/legendLine composer in top.go tracks visible width per styled segment; barLine's drop-right-first fitting rule preserved. Hit-test needed zero changes — pinning pads the body below every clickable chunk. Plain/NO_COLOR geometry byte-identical except the pad rows. Goldens updated; new TestTopGoldenFooterPinned covers all three screens plus prompts. Squash-merged to main as f95dacd (PR #26); make test lint green.
