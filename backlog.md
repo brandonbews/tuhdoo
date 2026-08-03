@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 5 blocked · 5 on hold · 1 inbox · 41 done · 10 cancelled
+0 in progress · 2 ready · 5 blocked · 5 on hold · 1 inbox · 42 done · 10 cancelled
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
@@ -12,7 +12,6 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) | History view: h opens the done/cancelled shelf in the TUI | 0 | `design` `tui` `cli` `product` |
 | [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) | shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper | 0 | `cleanup` `go` |
 | [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) | Task-view history: blank line between entries, bold entry descriptors | 0 | `cli` `tui` `ux` |
 
@@ -78,6 +77,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-t14p`](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 - [`tuh-t906`](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [`tuh-5c5p`](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) Slash command /drain-backlog: the reusable drain-the-backlog prompt
+- [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) History view: h opens the done/cancelled shelf in the TUI
 - [`tuh-7wbw`](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) Design pass on the generated markdown views: scannable, glanceable data branch
 - [`tuh-a86y`](tasks/tuh-01KYXDWWM8S1GF6N9NE5FGA86Y.md) Task view is the answering home: routed from Needs Input, dash-aligned design, selectable escalations, a to archive
 - [`tuh-ypww`](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) One real text-input widget: delineated box, fixed hint line, standard cursor editing

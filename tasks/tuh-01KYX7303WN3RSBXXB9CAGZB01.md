@@ -2,7 +2,7 @@
 
 `tuh-01KYX7303WN3RSBXXB9CAGZB01`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `design` `tui` `cli` `product`
 - **Depends on:** [`tuh-s8vt`](tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) (done)
@@ -33,4 +33,10 @@ Constraints: boring Go; no new dependencies; read-only feature — no new daemon
 
 ## History
 
-_No activity yet._
+### 2026-08-03 05:58 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-zb01/history-view`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/20>
+- Commits: `f106943`
+
+Landed via PR #20 (squash-merged to main 2026-08-03). History mode in the TUI: h opens the done/cancelled shelf from both armed and watch panes on the dashboard's list machinery — DONE then CANCELLED bars, newest close first, rows with dim day-stamp + closing-actor suffix; enter opens the task view, esc returns to history. Terminal tasks: status line shows close metadata (done — finished <day> by <actor> / cancelled — <day> by <actor>), unanswered escalations render in HISTORY instead of NEEDS INPUT, p/c dead and dropped from the footer legend, priority focus stop removed. Daemon /v0/state and hydration payloads now carry closed_at/closed_by (additive; core ClosedAt/ClosedBy replay logic had already landed with the T5 scope task and was reused, not rebuilt). Acceptance covered by interaction, golden, and daemon tests; the pre-existing core replay table-tests satisfy the replay acceptance items. Two footnotes: the widened armed footer legend pushes the right-hand done tally off an 80-column screen (returns at ≥81 cols; history is that count's successor); the one-shot `tuhdoo task <id>` status line deliberately does not show close metadata (task scoped the addition to the TUI view).
