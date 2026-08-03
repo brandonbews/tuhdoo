@@ -845,7 +845,7 @@ func (m topModel) detailLines() []detailLine {
 	field := func(stop int, name, value string) {
 		add(stop, "  "+sgr(col, col.bold, name)+strings.Repeat(" ", 12-len(name))+value)
 	}
-	field(-1, "id", sgr(col, col.dim, t.ID))
+	field(-1, "id", sgr(col, col.dim, shortID(t.ID)))
 	status := views.HumanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
@@ -1437,8 +1437,8 @@ func joinChunks(cs []chunk) string {
 // where same-batch ULIDs actually differ — their timestamp prefixes
 // match — so abbreviation comes from the right-hand end. Display and
 // input sugar only (T7): stored and transmitted IDs stay full-length,
-// and the detail screen keeps the full ULID once, on its canonical
-// `id` line.
+// and the full ULID has no TUI surface at all (2026-08-02 revision) —
+// a human who needs it runs one-shot `tuhdoo task <fragment>`.
 func shortID(id string) string {
 	i := strings.Index(id, "-")
 	tail := id[i+1:]
