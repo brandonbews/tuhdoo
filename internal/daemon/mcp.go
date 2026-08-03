@@ -286,12 +286,24 @@ func (d *Daemon) renewOnce(s *mcpSession) {
 // Field descriptions are the agent's documentation: they surface in
 // every tools/list response.
 
-type getBacklogInput struct{}
+type getBacklogInput struct {
+	Scope []string `json:"scope,omitempty" jsonschema:"extra sections to include: any of in_progress, blocked, done, cancelled, escalations. Omit for the claimable backlog — the default response never changes"`
+}
 
 type backlogResult struct {
 	Ready []taskJSON `json:"ready" jsonschema:"claimable tasks: open, unclaimed, dependencies done, no blocking escalation; highest priority first"`
 	Inbox []taskJSON `json:"inbox" jsonschema:"untriaged captures (status inbox), creation order — never served by claim_next/claim_task; promoting one to open means supplying a prompt-quality description first"`
 	Held  []taskJSON `json:"held" jsonschema:"triaged but deliberately paused tasks (status held), creation order — never served by claim_next/claim_task; resume by setting status open"`
+
+	// Scope sections (T5 read parity, 2026-08-02). Pointers so presence
+	// tracks the request exactly: a requested-but-empty section is an
+	// empty array, an unrequested one is absent, and an omitted scope
+	// leaves the response byte-identical to the three arrays above.
+	InProgress  *[]scopeTaskJSON      `json:"in_progress,omitempty" jsonschema:"scope in_progress: actively claimed tasks, creation order, each with holder and lease expiry"`
+	Blocked     *[]scopeTaskJSON      `json:"blocked,omitempty" jsonschema:"scope blocked: open, unclaimed tasks that cannot be claimed, creation order, each with dep:/esc: waiting reasons"`
+	Done        *[]scopeTaskJSON      `json:"done,omitempty" jsonschema:"scope done: finished tasks, newest close first, each with closed_at/closed_by"`
+	Cancelled   *[]scopeTaskJSON      `json:"cancelled,omitempty" jsonschema:"scope cancelled: cancelled tasks, newest close first, each with closed_at/closed_by"`
+	Escalations *[]openEscalationJSON `json:"escalations,omitempty" jsonschema:"scope escalations: open escalations across the project in raise order — where relay_answer's escalation IDs come from"`
 }
 
 type getTaskInput struct {
@@ -382,15 +394,16 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "get_backlog",
 		Description: "The claimable backlog: open tasks with met dependencies and no active claim, " +
 			"highest priority first — plus the inbox (untriaged captures) and held (deliberately " +
-			"paused) shelves, which claim verbs never serve. Nothing else is listed: in-progress, " +
-			"blocked, done, and cancelled tasks appear in no array — a known task ID is always " +
-			"readable with get_task. Orientation only — use claim_next to actually take work.",
+			"paused) shelves, which claim verbs never serve. Omit scope for exactly that — the " +
+			"work-loop call. Pass scope (any of in_progress, blocked, done, cancelled, escalations) " +
+			"to orient on the other sections as slim rows — no descriptions; hydrate a discovered " +
+			"ID with get_task. Orientation only — use claim_next to actually take work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in getBacklogInput) (*mcp.CallToolResult, backlogResult, error) {
-		ready, inbox, held, oe := d.opBacklog()
+		res, oe := d.opBacklog(in.Scope)
 		if oe != nil {
 			return nil, backlogResult{}, oe
 		}
-		return nil, backlogResult{Ready: ready, Inbox: inbox, Held: held}, nil
+		return nil, res, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{

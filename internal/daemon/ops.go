@@ -9,6 +9,7 @@ package daemon
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -610,29 +611,147 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 // served it — claim_next/claim_task take from ready alone. Lease
 // verdicts move with the clock, so replay at the current instant
 // first — a stale expiry must not hide a ready task.
-func (d *Daemon) opBacklog() (ready, inbox, held []taskJSON, oe *opError) {
+//
+// scope (T5 read parity, 2026-08-02) requests the remaining sections
+// by name: in_progress, blocked, done, cancelled, escalations. Empty
+// or omitted, the result carries exactly the three arrays above.
+func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.degraded == nil {
 		if err := d.refreshLocked(now); err != nil {
-			return nil, nil, nil, d.writeErrLocked(err)
+			return backlogResult{}, d.writeErrLocked(err)
 		}
 	}
-	ready = []taskJSON{}
+	res := backlogResult{Ready: []taskJSON{}, Inbox: []taskJSON{}, Held: []taskJSON{}}
 	for _, t := range d.state.ReadyTasks() {
-		ready = append(ready, taskJSONOf(t))
+		res.Ready = append(res.Ready, taskJSONOf(t))
 	}
-	inbox, held = []taskJSON{}, []taskJSON{}
 	for _, id := range d.state.TaskOrder {
 		switch t := d.state.Tasks[id]; t.Status {
 		case core.StatusInbox:
-			inbox = append(inbox, taskJSONOf(t))
+			res.Inbox = append(res.Inbox, taskJSONOf(t))
 		case core.StatusHeld:
-			held = append(held, taskJSONOf(t))
+			res.Held = append(res.Held, taskJSONOf(t))
 		}
 	}
-	return ready, inbox, held, nil
+	for _, name := range scope {
+		switch name {
+		case "in_progress":
+			rows := d.inProgressRowsLocked()
+			res.InProgress = &rows
+		case "blocked":
+			rows := d.blockedRowsLocked()
+			res.Blocked = &rows
+		case "done":
+			rows := d.closedRowsLocked(core.StatusDone)
+			res.Done = &rows
+		case "cancelled":
+			rows := d.closedRowsLocked(core.StatusCancelled)
+			res.Cancelled = &rows
+		case "escalations":
+			rows := d.openEscalationRowsLocked()
+			res.Escalations = &rows
+		default:
+			return backlogResult{}, opErrf(http.StatusBadRequest,
+				"unknown scope %q: valid values are in_progress, blocked, done, cancelled, escalations", name)
+		}
+	}
+	return res, nil
+}
+
+// scopeRowOf is the slim base row every scope section shares: no
+// description by design (orientation lists, hydration digs).
+func scopeRowOf(t *core.Task) scopeTaskJSON {
+	return scopeTaskJSON{ID: t.ID, Title: t.Title, Status: t.Status,
+		Priority: t.Priority, Labels: t.Labels}
+}
+
+// inProgressRowsLocked lists actively claimed open tasks in creation
+// order, each with its holder and lease expiry.
+func (d *Daemon) inProgressRowsLocked() []scopeTaskJSON {
+	rows := []scopeTaskJSON{}
+	for _, id := range d.state.TaskOrder {
+		t := d.state.Tasks[id]
+		if t.Status != core.StatusOpen {
+			continue
+		}
+		c := d.state.ActiveClaim(id)
+		if c == nil {
+			continue
+		}
+		row := scopeRowOf(t)
+		row.Holder = c.Actor
+		if exp, ok := d.leases[c.ID]; ok {
+			e := exp
+			row.LeaseExpires = &e
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// blockedRowsLocked lists open, unclaimed tasks that cannot be claimed,
+// in creation order. Membership and reasons both come from
+// core.ClaimBlockers — the daemon holds no blocking predicate of its
+// own, so this list can never disagree with what Ready withholds.
+func (d *Daemon) blockedRowsLocked() []scopeTaskJSON {
+	rows := []scopeTaskJSON{}
+	for _, id := range d.state.TaskOrder {
+		t := d.state.Tasks[id]
+		if t.Status != core.StatusOpen || d.state.ActiveClaim(id) != nil {
+			continue
+		}
+		deps, escs := d.state.ClaimBlockers(id)
+		if len(deps) == 0 && len(escs) == 0 {
+			continue // claimable — that is ready's row, not blocked's
+		}
+		row := scopeRowOf(t)
+		for _, dep := range deps {
+			row.WaitingOn = append(row.WaitingOn, "dep:"+dep)
+		}
+		for _, esc := range escs {
+			row.WaitingOn = append(row.WaitingOn, "esc:"+esc)
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// closedRowsLocked lists the tasks in one terminal status, newest close
+// first (recency is the browse axis), each with its close metadata.
+// Stable over creation order, so equal stamps keep a deterministic
+// order.
+func (d *Daemon) closedRowsLocked(status string) []scopeTaskJSON {
+	rows := []scopeTaskJSON{}
+	for _, id := range d.state.TaskOrder {
+		t := d.state.Tasks[id]
+		if t.Status != status {
+			continue
+		}
+		row := scopeRowOf(t)
+		closed := t.ClosedAt
+		row.ClosedAt = &closed
+		row.ClosedBy = t.ClosedBy
+		rows = append(rows, row)
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		return rows[i].ClosedAt.After(*rows[j].ClosedAt)
+	})
+	return rows
+}
+
+// openEscalationRowsLocked lists open escalations in raise order — the
+// discovery path for the escalation IDs relay_answer needs.
+func (d *Daemon) openEscalationRowsLocked() []openEscalationJSON {
+	rows := []openEscalationJSON{}
+	for _, e := range d.state.OpenEscalations() {
+		rows = append(rows, openEscalationJSON{ID: e.ID, Task: e.Task,
+			Question: e.Question, Context: e.Context,
+			Blocking: e.Blocking, RaisedAt: e.RaisedAt})
+	}
+	return rows
 }
 
 // holderClaimLocked resolves the active claim on taskID and enforces

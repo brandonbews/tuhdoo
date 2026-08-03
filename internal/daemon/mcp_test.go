@@ -6,6 +6,7 @@ package daemon
 // does in production.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
+	"github.com/brandonbews/tuhdoo/internal/store"
 )
 
 // mcpTestTransport injects the identity headers on every request, like
@@ -822,5 +824,155 @@ func TestSanitizeAgentName(t *testing.T) {
 		if got := sanitizeAgentName(tt.in); got != tt.want {
 			t.Errorf("sanitizeAgentName(%q) = %q, want %q", tt.in, got, tt.want)
 		}
+	}
+}
+
+// get_backlog scope (T5 read parity, 2026-08-02): omitting scope keeps
+// the response byte-identical to the three-array shape (the work-loop
+// hot path); each requested section arrives as slim, description-free
+// rows carrying its payoff fields; unknown scope values error clearly.
+func TestMCPBacklogScope(t *testing.T) {
+	d, _ := startDaemon(t)
+	const actor = "brandon/impl-1"
+	cs := mcpConnect(t, d, actor, nil)
+
+	// Seed a born-done task straight into the ledger (the B12 migration
+	// shape): the write surfaces reject born-terminal creates, so the
+	// creation-event close fallback only ever arrives as stored history.
+	// Its hour-old ULID makes it the oldest close on the shelf.
+	oldID, err := event.NewID(time.Now().Add(-time.Hour), bytes.NewReader(make([]byte, 10)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	migrated, err := event.New(oldID, event.TypeTaskCreated,
+		event.Versions[event.TypeTaskCreated], "brandon", "m-mig", "t-migrated",
+		event.TaskCreated{Title: "migrated: born done", Status: "done"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.store.AppendBatch(store.Batch{Events: []event.Event{migrated}}); err != nil {
+		t.Fatalf("seed migrated event: %v", err)
+	}
+
+	mk := func(fields map[string]any) string {
+		t.Helper()
+		var created createTasksResult
+		mustToolOK(t, cs, "create_task", map[string]any{"tasks": []map[string]any{fields}}, &created)
+		return created.IDs[0]
+	}
+	working := mk(map[string]any{"title": "being worked"})
+	depBlocked := mk(map[string]any{"title": "needs the worked one", "depends_on": []string{working}})
+	escBlocked := mk(map[string]any{"title": "stuck on a question"})
+	doneOld := mk(map[string]any{"title": "finished first"})
+	doneNew := mk(map[string]any{"title": "finished second"})
+	dropped := mk(map[string]any{"title": "not doing this"})
+
+	// Requested-but-empty sections are present as empty arrays: the key
+	// tracks the request, not the content.
+	empty := map[string]json.RawMessage{}
+	mustToolOK(t, cs, "get_backlog", map[string]any{"scope": []string{"in_progress", "escalations"}}, &empty)
+	for _, key := range []string{"in_progress", "escalations"} {
+		if got, ok := empty[key]; !ok || string(got) != "[]" {
+			t.Errorf("requested empty %s = %s (present %v), want []", key, got, ok)
+		}
+	}
+
+	// The scenario: a live claim; a blocking escalation left open; a
+	// non-blocking and an answered escalation (neither blocks, only the
+	// open ones list); two dones and a cancel.
+	mustToolOK(t, cs, "claim_task", map[string]any{"task": working}, nil)
+	var esc1, esc2, esc3 eventIDResult
+	mustToolOK(t, cs, "escalate", map[string]any{
+		"task": escBlocked, "question": "which way?", "context": "two options", "blocking": true}, &esc1)
+	mustToolOK(t, cs, "escalate", map[string]any{"task": depBlocked, "question": "still needed?"}, &esc2)
+	mustToolOK(t, cs, "escalate", map[string]any{"task": depBlocked, "question": "answered later"}, &esc3)
+	mustToolOK(t, cs, "relay_answer", map[string]any{"escalation": esc3.ID, "answer": "yes"}, nil)
+	mustToolOK(t, cs, "update_task", map[string]any{"task": doneOld, "status": "done"}, nil)
+	time.Sleep(2 * time.Millisecond) // distinct close stamps: ULID time is ms resolution
+	mustToolOK(t, cs, "update_task", map[string]any{"task": doneNew, "status": "done"}, nil)
+	mustToolOK(t, cs, "update_task", map[string]any{"task": dropped, "status": "cancelled"}, nil)
+
+	// Hot-path guard: omitted scope answers with exactly today's keys.
+	plain := map[string]json.RawMessage{}
+	mustToolOK(t, cs, "get_backlog", map[string]any{}, &plain)
+	if len(plain) != 3 {
+		t.Errorf("omitted scope carries %d keys %v, want exactly ready/inbox/held", len(plain), plain)
+	}
+	for _, key := range []string{"ready", "inbox", "held"} {
+		if _, ok := plain[key]; !ok {
+			t.Errorf("omitted scope response missing %q", key)
+		}
+	}
+
+	var backlog backlogResult
+	mustToolOK(t, cs, "get_backlog", map[string]any{
+		"scope": []string{"in_progress", "blocked", "done", "cancelled", "escalations"}}, &backlog)
+
+	// in_progress: the claimed task, with holder and lease expiry.
+	ip := *backlog.InProgress
+	if len(ip) != 1 || ip[0].ID != working || ip[0].Holder != actor || ip[0].LeaseExpires == nil {
+		t.Fatalf("in_progress = %+v, want %s held by %s with a lease expiry", ip, working, actor)
+	}
+
+	// blocked: reasons condensed to dep:/esc: IDs; the non-blocking and
+	// answered escalations on depBlocked contribute nothing.
+	bl := *backlog.Blocked
+	if len(bl) != 2 || bl[0].ID != depBlocked || bl[1].ID != escBlocked {
+		t.Fatalf("blocked = %+v, want [%s %s]", bl, depBlocked, escBlocked)
+	}
+	if len(bl[0].WaitingOn) != 1 || bl[0].WaitingOn[0] != "dep:"+working {
+		t.Errorf("dep-blocked waiting_on = %v, want [dep:%s]", bl[0].WaitingOn, working)
+	}
+	if len(bl[1].WaitingOn) != 1 || bl[1].WaitingOn[0] != "esc:"+esc1.ID {
+		t.Errorf("esc-blocked waiting_on = %v, want [esc:%s]", bl[1].WaitingOn, esc1.ID)
+	}
+
+	// done: newest close first, the born-done migration task last on its
+	// creation-event fallback stamp.
+	dn := *backlog.Done
+	if len(dn) != 3 || dn[0].ID != doneNew || dn[1].ID != doneOld || dn[2].ID != "t-migrated" {
+		t.Fatalf("done = %+v, want [%s %s t-migrated]", dn, doneNew, doneOld)
+	}
+	if dn[0].ClosedAt == nil || dn[0].ClosedBy != actor {
+		t.Errorf("done[0] close = %v by %q, want a stamp by %s", dn[0].ClosedAt, dn[0].ClosedBy, actor)
+	}
+	if dn[2].ClosedAt == nil || dn[2].ClosedBy != "brandon" {
+		t.Errorf("migrated close = %v by %q, want creation-event fallback by brandon", dn[2].ClosedAt, dn[2].ClosedBy)
+	}
+
+	// cancelled: same shape, its own array.
+	cl := *backlog.Cancelled
+	if len(cl) != 1 || cl[0].ID != dropped || cl[0].ClosedAt == nil || cl[0].ClosedBy != actor {
+		t.Fatalf("cancelled = %+v, want just %s closed by %s", cl, dropped, actor)
+	}
+
+	// escalations: open only, raise order, question text in full.
+	es := *backlog.Escalations
+	if len(es) != 2 || es[0].ID != esc1.ID || es[1].ID != esc2.ID {
+		t.Fatalf("escalations = %+v, want open [%s %s] in raise order", es, esc1.ID, esc2.ID)
+	}
+	if es[0].Task != escBlocked || es[0].Question != "which way?" || !es[0].Blocking {
+		t.Errorf("escalation row = %+v, want the full open record", es[0])
+	}
+
+	// Slim by construction: no scope row carries a description.
+	scoped := map[string]json.RawMessage{}
+	mustToolOK(t, cs, "get_backlog", map[string]any{"scope": []string{"done", "blocked"}}, &scoped)
+	for _, key := range []string{"done", "blocked"} {
+		var rows []map[string]any
+		if err := json.Unmarshal(scoped[key], &rows); err != nil {
+			t.Fatalf("decode %s rows: %v", key, err)
+		}
+		for _, row := range rows {
+			if _, ok := row["description"]; ok {
+				t.Errorf("%s row %v carries a description — scope rows are slim", key, row["id"])
+			}
+		}
+	}
+
+	// Unknown scope values are rejected, not ignored.
+	res := callTool(t, cs, "get_backlog", map[string]any{"scope": []string{"everything"}})
+	if !res.IsError || !strings.Contains(contentText(res), `unknown scope "everything"`) {
+		t.Fatalf("unknown scope = isError %v %q, want a clear rejection", res.IsError, contentText(res))
 	}
 }
