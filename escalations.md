@@ -24,12 +24,6 @@ Two things, one blocking and one a finding:
 
 2. Acceptance requires "collision/latency numbers recorded onto this task as notes", and T8 says the daemon logs collision counts *and sync latencies* — but internal/syncer only counts collisions (Status.Collisions, syncer.go:37); nothing measures or logs fetch/push latency. Options: (a) I file a well-formed prep task to add sync-latency measurement/logging before the week starts (recommended — the week's evidence is half-blind without it); (b) run the week with collisions-only and eyeball latencies from timestamps; (c) you scope it differently. I deliberately did not create the prep task or wire a depends_on edge myself: making this task depend on a new child is exactly the parent/depends_on union-cycle territory open-questions Cycle 3 flags as unsettled.
 
-### [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) · npm provenance: trusted publishing promised attestations, the registry has none
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-01 03:50 UTC
-
-> PR #13 (https://github.com/brandonbews/tuhdoo/pull/13) changes .github/workflows/release.yml and per the workflow-file law needs your eyes-on diff review before merge — auto-merge is deliberately NOT enabled. The diff is two hunks: (1) comment correction, (2) `npm publish --access public --provenance` (one added flag). Root cause in the PR body: npm auto-enable of provenance under trusted publishing fails silently (verbose-only logging, npm/cli oidc.js); explicit flag makes future failures loud. Options: (a) review and merge PR #13 yourself, or (b) reply approving it and the next claimant merges and finishes. Recommendation: (a) — one-glance diff. Registry verification (dist.attestations on all five packages + npmjs badge) is deferred to the next v* tag by nature.
-
 ## Answered
 
 ### [`t-vv29`](tasks/t-01KYRVCBE83KT62BAE1502VV29.md) · npm devDependency distribution (esbuild-pattern wrapper packages)
@@ -47,3 +41,11 @@ Asked by `brandon/claude-code-1` · 2026-08-01 00:19 UTC
 > Parity audit found real MCP visibility gaps: agents cannot list in-progress, blocked, done, or cancelled tasks, nor open escalations. Do you want a T5 design revision (grill cycle) to add an orientation path — e.g. more get_backlog arrays or a /v0/state-shaped read verb?
 
 **Answer** (`brandon`, relayed by `brandon/claude-code-1`): Yes — T5 revision grilled and settled 2026-08-01. Decisions: (1) MCP must be read-self-sufficient — the CLI one-shot contract stays the scripting surface, not the excuse; the blocking-escalation discovery hole and relay_answer's need for listable escalation IDs made the hybrid doctrine untenable. (2) Mechanism is the audit's lean: an optional scope input on get_backlog (values in_progress, blocked, done, cancelled, escalations — plumbing vocabulary); omitted scope stays byte-identical to today so the worker hot path pays nothing; verb count stays eleven. (3) Slim rows as a design constraint: id/title/status/priority/labels plus per-scope payoff fields (holder+lease, dep:/esc: reasons, closed_at/closed_by newest-first), no descriptions — get_task hydrates; escalations scope returns full open records in raise order. (4) The rider is in: T5's "curation is human work" sentence gets rewritten in the same revision — curation is mechanically open to agents via update_task, the human-direction norm lives in agent-protocol.md. Implementation task with the full settled design: tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK (docs-revision-first, priority 1).
+
+### [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) · npm provenance: trusted publishing promised attestations, the registry has none
+
+Asked by `brandon/claude-code-1` · 2026-08-01 03:50 UTC
+
+> PR #13 (https://github.com/brandonbews/tuhdoo/pull/13) changes .github/workflows/release.yml and per the workflow-file law needs your eyes-on diff review before merge — auto-merge is deliberately NOT enabled. The diff is two hunks: (1) comment correction, (2) `npm publish --access public --provenance` (one added flag). Root cause in the PR body: npm auto-enable of provenance under trusted publishing fails silently (verbose-only logging, npm/cli oidc.js); explicit flag makes future failures loud. Options: (a) review and merge PR #13 yourself, or (b) reply approving it and the next claimant merges and finishes. Recommendation: (a) — one-glance diff. Registry verification (dist.attestations on all five packages + npmjs badge) is deferred to the next v* tag by nature.
+
+**Answer** (`brandon`): i don't see any open PRs so i assume this is done

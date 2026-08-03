@@ -1,8 +1,8 @@
 # Backlog
 
-0 in progress · 0 ready · 5 blocked · 5 on hold · 2 inbox · 44 done · 10 cancelled
+0 in progress · 1 ready · 4 blocked · 5 on hold · 2 inbox · 44 done · 10 cancelled
 
-**[3 open questions](escalations.md) are waiting on a human.**
+**[2 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
@@ -10,7 +10,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | `distribution` `ci` `npm` `investigation` |
 
 ## Blocked / waiting
 
@@ -20,7 +22,6 @@ _None._
 | [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | depends on [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) |
 | [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) | Two-machine dogfood: real claim races over one remote | 2 | an [open question](escalations.md) |
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-11sh`](tasks/tuh-01KYXEMYC5XE928EWKYA0P11SH.md) | npm provenance: trusted publishing promised attestations, the registry has none | 1 | an [open question](escalations.md) |
 
 ## On hold
 
