@@ -1,4 +1,4 @@
-# Two-machine dogfood: real claim races over one remote
+# Two-machine convergence: a deliberate claim-collision harness
 
 `t-01KYRMFV10W1N28TCN5WVTCB1J`
 
@@ -11,13 +11,47 @@
 
 ## Description
 
-Context: roadmap v1 — the first real multi-machine usage. The D6 machinery (winner rule, voided claims, superseded runs) has only been proven in integration tests (B7), never across real machines. Depends on the TUI because the v1 proof includes answering an escalation from it mid-week.
+## Context
 
-The ask: run fleets on two machines against the same origin for a week. Log collision counts and sync latencies (T8's evidence-based tuning). Exercise at least one real claim race and confirm the loser's run lands superseded with a salvageable branch pointer.
+The v1 definition of done (docs/plan/roadmap.md, clause 2, rewritten 2026-08-03 by the milestone grill) asks for proof that cross-machine convergence holds. Its original form — "two machines run fleets against the same remote for a week" — was retired: a calendar proxy no agent could execute, which would also have measured the wrong number.
 
-Acceptance: a week of two-machine operation with zero divergent state (identical replayed state and branch tips after both sync); collision/latency numbers recorded onto this task as notes; any D6/T8 tuning changes proposed as design-doc revisions, never applied silently.
+The hole this closes is concrete. As of 2026-08-03 the data branch carries 369 commits and **zero merge commits**. The D3 set-union merge path — divergent histories merged by application logic, two-parent commit via `commit-tree`, deterministic view regeneration — has never executed outside unit tests, because a single machine never diverges from itself.
 
-Constraints: no force-push on the data branch, ever; no manual repair — needing one is a bug to file and fix, and it resets the week.
+Measurement caveat found during the grill: `syncer.Status.Collisions` counts non-fast-forward **pushes** (push contention), not claims voided by the D6 winner rule. Nothing anywhere counts voided claims. Do not report push collisions as claim collisions; derive claim races from replayed state (`core.ClaimVoided`).
+
+## The ask
+
+Build a deliberate collision harness and run it.
+
+Two independent daemons against one remote. **Two clones on one box is faithful** — `machineID` is minted per repo directory (internal/daemon/daemon.go:526), so the clones get distinct machine ids, and ULID ordering never trusts wall clocks (T3). No second physical machine is required.
+
+Drive many claim races in minutes rather than waiting for incidental ones: seed a scratch repo with tasks that complete in seconds, then have two scripted actors fire `claim_next` in a synchronized loop. The claim lifecycle is session-only (T7) — a scripted actor must hold an MCP session through `tuhdoo mcp`; there is deliberately no one-shot `tuhdoo claim`.
+
+Hammer the sync loop specifically while you are there: both daemons push eagerly on every claim (T8), and the push cycle retries fetch/merge/push on non-fast-forward with a bounded `maxCycleRetries` before erroring "remote kept moving". That bound has never met real contention.
+
+## Acceptance
+
+- Observed claim collisions > 0, each with exactly one winner by the D6 rule (earliest ULID, machine-id tiebreak) and a `superseded` run recorded for every loser, carrying the loser's branch.
+- Byte-identical replayed state on both clones afterward, and byte-identical generated views.
+- Identical event sets on both sides (set-union merge converged), and at least one real merge commit on the data branch.
+- The push-retry loop never exhausts `maxCycleRetries` under the harness's contention — or, if it does, that is reported as a finding with the rate.
+- Numbers recorded as notes on this task: claim races observed, voided claims, non-fast-forward pushes, merge commits produced.
+- `make test lint` green from repo root if any code lands.
+
+## Pointers
+
+- `internal/core/state.go` — `Ready`, `ClaimBlockers`
+- `internal/core/replay.go` — D6 winner rule (~line 271), `ClaimVoided`
+- `internal/syncer/syncer.go` — push cycle, `bumpCollisions`, `maxCycleRetries`
+- `internal/daemon/daemon.go:526` — `machineID`
+- `docs/design/002-technology.md` T2 (merges are application logic), T8 (cadence defaults); `001` D6 (claim semantics)
+
+## Constraints
+
+- Run the harness against a **scratch repo**, never this repo's data branch. A collision experiment must not be able to damage the live ledger.
+- No force-push on any data branch, ever (project law).
+- If instrumentation is needed to count voided claims, add it as a derived read over replayed state — never add a clock or I/O to `internal/core` (T1).
+- Host-agnostic: no host API calls (T2).
 
 ## History
 

@@ -12,7 +12,7 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 Raised at B12 cutover (2026-07-30, brandon/migrator): the markdown backlog was migrated into this data branch in one atomic create_task batch and tombstoned on main. This blocking escalation is the DoD clock and the agent fence in one: it keeps the v0 milestone out of the ready pool until a human verifies the week, and it puts the v0->v1 gate in the steering inbox. Development continues meanwhile through claim_next; the TUI task is the top ready item.
 
-### [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) · Two-machine dogfood: real claim races over one remote
+### [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) · Two-machine convergence: a deliberate claim-collision harness
 
 **Blocking** · asked by `brandon/impl-2` · 2026-07-30 05:51 UTC
 
