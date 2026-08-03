@@ -881,13 +881,14 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	if strings.Contains(v, long) {
 		t.Errorf("full ULID leaked into the list; view:\n%s", v)
 	}
-	// The detail screen leads with the short form and keeps the full ID
-	// exactly once: the dimmed canonical `id` line.
+	// The detail screen is short-form throughout — the `id` line included
+	// (T7 revision, 2026-08-02: the full ULID has no TUI surface; one-shot
+	// `tuhdoo task <id>` is where the full form lives).
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // cursor on the ready row (dep)
 	dv := m.View()
 	for _, want := range []string{
 		"t-rqjm — its dependency",
-		"id          " + dep,
+		"id          t-rqjm",
 		// Its parent edge is short and annotated too.
 		"parents     t-d83w (open — the long one)",
 	} {
@@ -895,11 +896,8 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 			t.Errorf("detail view missing %q; view:\n%s", want, dv)
 		}
 	}
-	if n := strings.Count(dv, dep); n != 1 {
-		t.Errorf("full ULID appears %d times in detail, want exactly 1 (the canonical line); view:\n%s", n, dv)
-	}
-	if strings.Contains(dv, long) {
-		t.Errorf("another task's full ULID leaked into detail; view:\n%s", dv)
+	if strings.Contains(dv, dep) || strings.Contains(dv, long) {
+		t.Errorf("a full ULID leaked into detail; view:\n%s", dv)
 	}
 }
 
