@@ -192,9 +192,9 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	near := strings.Repeat("C", 60)
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: "t-lng1", Title: long, Status: "open", Priority: 1},
-			{ID: "t-mid1", Title: mid, Status: "open", Priority: 1, Labels: []string{"quality", "testing", "golang"}},
-			{ID: "t-nea1", Title: near, Status: "open", Priority: 1, Labels: []string{"quality"}},
+			{ID: "t-lng1", Title: long, Status: "open", Priority: 1, Situation: "ready"},
+			{ID: "t-mid1", Title: mid, Status: "open", Priority: 1, Labels: []string{"quality", "testing", "golang"}, Situation: "ready"},
+			{ID: "t-nea1", Title: near, Status: "open", Priority: 1, Labels: []string{"quality"}, Situation: "ready"},
 		}},
 		tasks: map[string]hydratedTask{
 			"t-lng1": {Task: taskJSON{ID: "t-lng1"}},

@@ -28,13 +28,13 @@ func topSnapshot() *snapshot {
 		state: stateResp{
 			Sync: syncJSON{Mode: "local-only"},
 			Tasks: []stateTask{
-				{ID: "t-pars", Title: "write the parser", Status: "open", Priority: 5},
-				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: 1},
-				{ID: "t-flak", Title: "investigate the flake", Status: "open", Holder: "brandon/a1"},
-				{ID: "t-lic", Title: "choose a license", Status: "open"},
-				{ID: "t-park", Title: "polish the docs", Status: "held", Priority: 2},
-				{ID: "t-idea", Title: "idea: dark mode", Status: "inbox"},
-				{ID: "t-chor", Title: "old chore", Status: "done"},
+				{ID: "t-pars", Title: "write the parser", Status: "open", Priority: 5, Situation: "ready"},
+				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: 1, Situation: "ready"},
+				{ID: "t-flak", Title: "investigate the flake", Status: "open", Holder: "brandon/a1", Situation: "in_progress"},
+				{ID: "t-lic", Title: "choose a license", Status: "open", Situation: "blocked", BlockingEscalations: []string{"01E1"}},
+				{ID: "t-park", Title: "polish the docs", Status: "held", Priority: 2, Situation: "held"},
+				{ID: "t-idea", Title: "idea: dark mode", Status: "inbox", Situation: "inbox"},
+				{ID: "t-chor", Title: "old chore", Status: "done", Situation: "done"},
 			},
 			OpenEscalations: []escalationJSON{esc},
 		},
@@ -100,6 +100,11 @@ func newTopModelWithDep(api steeringAPI) topModel {
 	h := s.tasks["t-lic"]
 	h.Task.DependsOn = []string{"t-flor"}
 	s.tasks["t-lic"] = h
+	for i, t := range s.state.Tasks {
+		if t.ID == "t-lic" {
+			s.state.Tasks[i].UnmetDeps = []string{"t-flor"}
+		}
+	}
 	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
 }
 
@@ -865,8 +870,8 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: long, Title: "the long one", Status: "open"},
-			{ID: dep, Title: "its dependency", Status: "open"},
+			{ID: long, Title: "the long one", Status: "open", Situation: "blocked", UnmetDeps: []string{dep}},
+			{ID: dep, Title: "its dependency", Status: "open", Situation: "ready"},
 		}},
 		tasks: map[string]hydratedTask{
 			long: {Task: taskJSON{ID: long, Title: "the long one", DependsOn: []string{dep}}},
@@ -1622,7 +1627,8 @@ func multiEscSnapshot() *snapshot {
 			// blocking escalation its single home in Needs Input
 			// (2026-07-31), an unclaimed escalation-blocked task has no
 			// task row to open detail from.
-			Tasks:           []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open", Holder: "brandon/a1"}},
+			Tasks: []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open", Holder: "brandon/a1",
+				Situation: "in_progress", BlockingEscalations: []string{"01E1"}}},
 			OpenEscalations: []escalationJSON{e1, e2},
 		},
 		tasks: map[string]hydratedTask{
@@ -2454,7 +2460,8 @@ func TestTopShelfRowsOpenDetailAndCancel(t *testing.T) {
 func TestTopBlockedOnShelvedDependency(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
-		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open"})
+		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open",
+			Situation: "blocked", UnmetDeps: []string{"t-idea", "t-park"}})
 	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
 		ID: "t-wait", Title: "build on the idea",
 		DependsOn: []string{"t-idea", "t-park"},
@@ -2484,7 +2491,8 @@ func TestTopBlockedRowNamesOnlyUnmetDeps(t *testing.T) {
 		Question: "Proceed with v2?", Blocking: true,
 		RaisedAt: time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC),
 	}
-	s.state.Tasks = append(s.state.Tasks, stateTask{ID: "t-dual", Title: "port the daemon", Status: "open"})
+	s.state.Tasks = append(s.state.Tasks, stateTask{ID: "t-dual", Title: "port the daemon", Status: "open",
+		Situation: "blocked", UnmetDeps: []string{"t-flor"}, BlockingEscalations: []string{"01E9"}})
 	s.state.OpenEscalations = append(s.state.OpenEscalations, esc)
 	s.tasks["t-dual"] = hydratedTask{
 		Task:        taskJSON{ID: "t-dual", Title: "port the daemon", DependsOn: []string{"t-flor"}},
@@ -2583,21 +2591,21 @@ func historySnapshot() *snapshot {
 		s.state.Tasks = append(s.state.Tasks, st)
 		s.tasks[st.ID] = hy
 	}
-	add(stateTask{ID: "t-ship", Title: "ship the tui", Status: "done",
+	add(stateTask{ID: "t-ship", Title: "ship the tui", Status: "done", Situation: "done",
 		Labels: []string{"tui"}, ClosedAt: day(30), ClosedBy: "brandon/claude-code-1"},
 		hydratedTask{Task: taskJSON{ID: "t-ship", Title: "ship the tui", Status: "done",
 			Labels: []string{"tui"}, ClosedAt: day(30), ClosedBy: "brandon/claude-code-1"}})
-	add(stateTask{ID: "t-mgr8", Title: "migrate the backlog", Status: "done",
+	add(stateTask{ID: "t-mgr8", Title: "migrate the backlog", Status: "done", Situation: "done",
 		ClosedAt: day(29), ClosedBy: "brandon"},
 		hydratedTask{Task: taskJSON{ID: "t-mgr8", Title: "migrate the backlog", Status: "done",
 			DependsOn: []string{"t-chor"}, ClosedAt: day(29), ClosedBy: "brandon"}})
-	add(stateTask{ID: "t-zzzz", Title: "zombie idea", Status: "cancelled",
+	add(stateTask{ID: "t-zzzz", Title: "zombie idea", Status: "cancelled", Situation: "cancelled",
 		ClosedAt: day(31), ClosedBy: "brandon/a2"},
 		hydratedTask{Task: taskJSON{ID: "t-zzzz", Title: "zombie idea", Status: "cancelled",
 			ClosedAt: day(31), ClosedBy: "brandon/a2"}})
 	// A cancelled task with an unanswered escalation: on a terminal
 	// task it is record, not work — it renders in the detail's History.
-	add(stateTask{ID: "t-drop", Title: "drop the wiki", Status: "cancelled",
+	add(stateTask{ID: "t-drop", Title: "drop the wiki", Status: "cancelled", Situation: "cancelled",
 		ClosedAt: day(27), ClosedBy: "brandon"},
 		hydratedTask{
 			Task: taskJSON{ID: "t-drop", Title: "drop the wiki", Status: "cancelled",

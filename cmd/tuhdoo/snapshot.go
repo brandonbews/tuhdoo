@@ -74,7 +74,13 @@ type buckets struct {
 func (s *snapshot) classify() buckets {
 	var b buckets
 	for _, t := range s.state.Tasks {
-		switch t.Status {
+		switch t.Situation {
+		case "ready":
+			b.ready = append(b.ready, t)
+		case "in_progress":
+			b.inProgress = append(b.inProgress, t)
+		case "blocked":
+			b.blocked = append(b.blocked, t)
 		case "done":
 			b.done = append(b.done, t)
 		case "cancelled":
@@ -83,15 +89,6 @@ func (s *snapshot) classify() buckets {
 			b.held = append(b.held, t)
 		case "inbox":
 			b.inbox = append(b.inbox, t)
-		default: // open
-			switch {
-			case t.Holder != "":
-				b.inProgress = append(b.inProgress, t)
-			case s.claimable(t.ID):
-				b.ready = append(b.ready, t)
-			default:
-				b.blocked = append(b.blocked, t)
-			}
 		}
 	}
 	// Highest priority first, creation (ULID) order within a priority —
@@ -108,60 +105,20 @@ func terminalStatus(status string) bool {
 	return status == "done" || status == "cancelled"
 }
 
-// claimable mirrors core.State.Ready for an open, unclaimed task: every
-// dependency done and no open blocking escalation.
-func (s *snapshot) claimable(id string) bool {
-	return !s.hasUnmetDeps(id) && s.blockingEscalation(id) == nil
-}
-
-// hasUnmetDeps reports whether the task has any not-yet-done
-// dependency.
-func (s *snapshot) hasUnmetDeps(id string) bool {
-	for _, dep := range s.tasks[id].Task.DependsOn {
-		if st, ok := s.statusOf(dep); ok && st != "done" {
-			return true
-		}
-	}
-	return false
-}
-
-// statusOf looks a task's status up in the state listing. Linear scan:
-// boring wins at v0 volumes.
-func (s *snapshot) statusOf(id string) (string, bool) {
-	for _, t := range s.state.Tasks {
-		if t.ID == id {
-			return t.Status, true
-		}
-	}
-	return "", false
-}
-
-// blockingEscalation returns the earliest open blocking escalation on a
-// task, or nil.
-func (s *snapshot) blockingEscalation(taskID string) *escalationJSON {
-	escs := s.tasks[taskID].Escalations
-	for i := range escs {
-		if escs[i].Blocking && !escs[i].Answered {
-			return &escs[i]
-		}
-	}
-	return nil
-}
-
 // waitingOn condenses why a blocked task cannot be claimed into one
 // column cell: dep:<task-id> per unmet dependency, esc:<escalation-id>
-// for the open blocking escalation, comma-joined — IDs, never prose
+// per open blocking escalation, comma-joined — IDs, never prose
 // (T7, 2026-07-31: the serialized backlog is grep fodder; the story
-// lives in `tuhdoo task <id>`). "-" when nothing is waited on.
-func (s *snapshot) waitingOn(id string) string {
+// lives in `tuhdoo task <id>`). "-" when nothing is waited on. The
+// lists are the daemon's verdict (one classifier, 2026-08-03) — this
+// only serializes them.
+func waitingOn(t stateTask) string {
 	var parts []string
-	for _, dep := range s.tasks[id].Task.DependsOn {
-		if st, ok := s.statusOf(dep); ok && st != "done" {
-			parts = append(parts, "dep:"+dep)
-		}
+	for _, dep := range t.UnmetDeps {
+		parts = append(parts, "dep:"+dep)
 	}
-	if e := s.blockingEscalation(id); e != nil {
-		parts = append(parts, "esc:"+e.ID)
+	for _, esc := range t.BlockingEscalations {
+		parts = append(parts, "esc:"+esc)
 	}
 	if len(parts) == 0 {
 		return "-"
@@ -175,20 +132,12 @@ func (s *snapshot) waitingOn(id string) string {
 // escalation. On this screen the Needs Input row is the single home for
 // escalation blockage (grill cycle, 2026-07-31), and a task blocked by
 // escalation alone renders no BLOCKED row at all (see buildRows).
-func (s *snapshot) blockedReasonTUI(id string, disp func(string) string) string {
-	return strings.Join(s.unmetDeps(id, disp), "; ")
-}
-
-// unmetDeps lists a task's not-yet-done dependencies as "depends on X"
-// parts, IDs rendered through disp.
-func (s *snapshot) unmetDeps(id string, disp func(string) string) []string {
-	var parts []string
-	for _, dep := range s.tasks[id].Task.DependsOn {
-		if st, ok := s.statusOf(dep); ok && st != "done" {
-			parts = append(parts, "depends on "+disp(dep))
-		}
+func blockedReasonTUI(t stateTask, disp func(string) string) string {
+	parts := make([]string, 0, len(t.UnmetDeps))
+	for _, dep := range t.UnmetDeps {
+		parts = append(parts, "depends on "+disp(dep))
 	}
-	return parts
+	return strings.Join(parts, "; ")
 }
 
 // taskRef renders one task reference for TUI display: the short form,

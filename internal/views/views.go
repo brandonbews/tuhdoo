@@ -100,19 +100,15 @@ type buckets struct {
 
 func classify(s *core.State) buckets {
 	var b buckets
-	// A task the core calls ready can still be waiting on a blocking
-	// escalation answer (the escalate → release → finish_run(blocked)
-	// protocol returns it to the pool). The view files it under
-	// blocked/waiting: claiming it would burn an agent on an unanswered
-	// question.
-	for _, t := range s.ReadyTasks() {
-		if blockingEscalation(s, t.ID) == nil {
-			b.ready = append(b.ready, t)
-		}
-	}
 	for _, id := range s.TaskOrder {
 		t := s.Tasks[id]
-		switch t.Status {
+		switch s.Situation(id) {
+		case core.SituationReady:
+			b.ready = append(b.ready, t)
+		case core.SituationInProgress:
+			b.inProgress = append(b.inProgress, t)
+		case core.SituationBlocked:
+			b.blocked = append(b.blocked, t)
 		case core.StatusDone:
 			b.done = append(b.done, t)
 		case core.StatusCancelled:
@@ -121,27 +117,14 @@ func classify(s *core.State) buckets {
 			b.held = append(b.held, t)
 		case core.StatusInbox:
 			b.inbox = append(b.inbox, t)
-		default: // open
-			switch {
-			case s.ActiveClaim(id) != nil:
-				b.inProgress = append(b.inProgress, t)
-			case !s.Ready(id) || blockingEscalation(s, id) != nil:
-				b.blocked = append(b.blocked, t)
-			}
 		}
 	}
+	// Highest priority first, creation (ULID) order within a priority —
+	// the same ordering core.ReadyTasks serves claim_next from.
+	sort.SliceStable(b.ready, func(i, j int) bool {
+		return b.ready[i].Priority > b.ready[j].Priority
+	})
 	return b
-}
-
-// blockingEscalation returns the earliest open blocking escalation on a
-// task, or nil.
-func blockingEscalation(s *core.State, taskID string) *core.Escalation {
-	for _, id := range s.EscOrder {
-		if e := s.Escalations[id]; e.Task == taskID && e.Blocking && !e.Answered {
-			return e
-		}
-	}
-	return nil
 }
 
 func readme(s *core.State, b buckets) []byte {
@@ -276,13 +259,12 @@ func compactList(w *strings.Builder, tasks []*core.Task) {
 // inbox instead (the same doctrine the TUI settled: rows stop
 // repeating the question).
 func waitingOn(s *core.State, t *core.Task) string {
+	deps, escs := s.ClaimBlockers(t.ID)
 	var parts []string
-	for _, dep := range t.DependsOn {
-		if d, ok := s.Tasks[dep]; ok && d.Status != core.StatusDone {
-			parts = append(parts, "depends on "+rootLink(dep))
-		}
+	for _, dep := range deps {
+		parts = append(parts, "depends on "+rootLink(dep))
 	}
-	if blockingEscalation(s, t.ID) != nil {
+	if len(escs) > 0 {
 		parts = append(parts, "an [open question](escalations.md)")
 	}
 	return strings.Join(parts, "; ")
@@ -391,7 +373,7 @@ func taskPage(s *core.State, t *core.Task) []byte {
 }
 
 func statusLine(s *core.State, t *core.Task) string {
-	switch t.Status {
+	switch s.Situation(t.ID) {
 	case core.StatusDone:
 		return "done"
 	case core.StatusCancelled:
@@ -400,15 +382,15 @@ func statusLine(s *core.State, t *core.Task) string {
 		return HumanStatus(core.StatusHeld) + " — deliberately paused"
 	case core.StatusInbox:
 		return "inbox — untriaged capture"
-	}
-	if c := s.ActiveClaim(t.ID); c != nil {
-		return fmt.Sprintf("open — in progress, claimed by `%s`", c.Actor)
-	}
-	if blockingEscalation(s, t.ID) != nil {
-		return "open — waiting on an escalation answer"
-	}
-	if s.Ready(t.ID) {
+	case core.SituationInProgress:
+		return fmt.Sprintf("open — in progress, claimed by `%s`", s.ActiveClaim(t.ID).Actor)
+	case core.SituationReady:
 		return "open — ready"
+	}
+	// Blocked: an open escalation outranks dependencies in the telling —
+	// it names the human who can unblock.
+	if _, escs := s.ClaimBlockers(t.ID); len(escs) > 0 {
+		return "open — waiting on an escalation answer"
 	}
 	return "open — blocked on dependencies"
 }
