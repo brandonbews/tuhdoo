@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 1 inbox · 47 done · 10 cancelled
+0 in progress · 1 ready · 1 blocked · 6 on hold · 2 inbox · 47 done · 10 cancelled
 
 ## In progress
 
@@ -36,6 +36,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) differentiate on hold and inbox (on hold should be dimmer). differentiate the control shortcut bar tat the bottom from inbox and on hold (dont know what to do for that design -- grill it)
+- [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 
 ## Done
 
