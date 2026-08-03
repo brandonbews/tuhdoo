@@ -20,7 +20,17 @@ var ansiColors = colors{
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
+	bgGray: "\x1b[2;100m",
 }
+
+// legendKey and legendSep compose the expected bytes of the unfilled
+// footer legend (chrome hierarchy, 2026-08-03): bold key token, dim
+// label, dim · separators.
+func legendKey(key, label string) string {
+	return "\x1b[1m" + key + "\x1b[0m\x1b[2m " + label + "\x1b[0m"
+}
+
+const legendSep = "\x1b[2m · \x1b[0m"
 
 // The seeded fake at 80 columns, plain colors (the NO_COLOR / non-TTY
 // degradation): byte-exact geometry, no escapes, no fill.
@@ -50,13 +60,14 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"",
 		" INBOX (1)                                                 i capture · c cancel ",
 		"  t-idea      idea: dark mode",
-		"",
+	}, "\n") + "\n" +
+		// The footer pins to the bottom row (chrome hierarchy,
+		// 2026-08-03): rows 23-39 are the blank pad, row 40 the footer.
+		strings.Repeat("\n", 17) +
 		// The armed legend grew "h history" (2026-08-02); at exactly 80
 		// columns the done tally is the sacrificed right text (barLine's
-		// rule) — it returns on wider terminals.
-		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       ",
-		"",
-	}, "\n")
+		// rule, kept by segLine) — it returns on wider terminals.
+		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       \n"
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -78,24 +89,35 @@ func TestTopGoldenBars(t *testing.T) {
 		pad := func(left, right string) string {
 			return left + strings.Repeat(" ", width-len([]rune(left))-len([]rune(right))) + right
 		}
-		// The done tally survives only where the widened legend leaves
-		// room (barLine drops the right text first): gone at 80, back at
-		// 120.
-		tally := ""
+		// The unfilled footer (chrome hierarchy, 2026-08-03): bold keys,
+		// dim labels and separators, an unstyled space fill. The done
+		// tally survives only where the widened legend leaves room
+		// (segLine keeps barLine's drop-the-right-first rule): gone at
+		// 80, back at 120. The legend's visible width is 73 cells.
+		foot := " " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
+			legendSep + legendKey("p", "priority") + legendSep + legendKey("c", "cancel") +
+			legendSep + legendKey("h", "history") + legendSep + legendKey("q", "quit")
 		if width >= 120 {
-			tally = "1 done "
+			foot += strings.Repeat(" ", width-73-7) + "\x1b[2m1 done \x1b[0m"
+		} else {
+			foot += strings.Repeat(" ", width-73)
 		}
 		for _, bar := range []string{
-			"\x1b[7m\x1b[1m" + pad(" tuhdoo · local-only", "acting as brandon ") + "\x1b[0m",
+			// The unfilled header (chrome hierarchy, 2026-08-03): tuhdoo
+			// bold, sync text dim, the armed badge at normal weight — no
+			// fill, so the frame stops competing with content.
+			"\x1b[1m tuhdoo\x1b[0m\x1b[2m · local-only\x1b[0m" +
+				strings.Repeat(" ", width-38) + "acting as brandon ",
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + pad(" READY (2)", "p priority · c cancel ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
 			"\x1b[30;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
-			// The shelves (2026-07-31): reverse-dim bars, no section color
-			// — present but never claiming the eye.
-			"\x1b[7m\x1b[2m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
+			// The shelves split (chrome hierarchy, 2026-08-03): ON HOLD is
+			// shelved and takes the dark-gray bar (dim on bright black);
+			// INBOX awaits attention and keeps reverse-dim.
+			"\x1b[2;100m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
 			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit", tally) + "\x1b[0m",
+			foot,
 		} {
 			if !strings.Contains(v, bar) {
 				t.Errorf("width %d: view missing bar %q; view:\n%s", width, bar, v)
@@ -261,10 +283,11 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"",
 		" HISTORY                                                                        ",
 		"  no activity yet",
-		"",
-		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        ",
-		"",
-	}, "\n")
+	}, "\n") + "\n" +
+		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
+		// 19-39 are the blank pad.
+		strings.Repeat("\n", 21) +
+		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        \n"
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -315,9 +338,16 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	}
 	for _, want := range []string{
 		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
+		// DESCRIPTION and HISTORY keep reverse-dim: neutral structural
+		// chrome, not shelf (chrome hierarchy, 2026-08-03).
 		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit", "") + "\x1b[0m",
+		// The unfilled footer: bold keys, dim labels, no fill. The
+		// legend's visible width is 72 cells, so 8 cells of plain pad.
+		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "edit") +
+			legendSep + legendKey("p", "priority") + legendSep + legendKey("c", "cancel") +
+			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
+			strings.Repeat(" ", 8),
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",
@@ -378,10 +408,11 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 		" CANCELLED (2)                                                                  ",
 		"  t-zzzz      zombie idea  · 2026-07-31 · brandon/a2",
 		"  t-drop      drop the wiki  · 2026-07-27 · brandon",
-		"",
-		" ↑/↓ (j/k) move · enter open · esc back · q quit                                ",
-		"",
-	}, "\n")
+	}, "\n") + "\n" +
+		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
+		// 11-39 are the blank pad.
+		strings.Repeat("\n", 29) +
+		" ↑/↓ (j/k) move · enter open · esc back · q quit                                \n"
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column history render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -406,8 +437,14 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 	}
 	for _, want := range []string{
 		"\x1b[30;42m" + pad(" DONE (3)", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" CANCELLED (2)", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" ↑/↓ (j/k) move · enter open · esc back · q quit", "") + "\x1b[0m",
+		// CANCELLED is shelved: the dark-gray bar (chrome hierarchy,
+		// 2026-08-03), same as ON HOLD on the dashboard.
+		"\x1b[2;100m" + pad(" CANCELLED (2)", "") + "\x1b[0m",
+		// The unfilled footer: bold keys, dim labels, no fill. The
+		// legend's visible width is 48 cells, so 32 cells of plain pad.
+		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
+			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
+			strings.Repeat(" ", 32),
 		"\x1b[2mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\x1b[2m  · 1 dep  · 2026-07-29 · brandon\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
@@ -446,10 +483,11 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"  2026-07-25 09:00 UTC  escalation from brandon/a7",
 		"    Q: Keep the wiki export?",
 		"    unanswered",
-		"",
-		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                ",
-		"",
-	}, "\n")
+	}, "\n") + "\n" +
+		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
+		// 17-39 are the blank pad.
+		strings.Repeat("\n", 23) +
+		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                \n"
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column terminal task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -481,6 +519,52 @@ func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 		"    Bisecting the flake."
 	if !strings.Contains(v, want) {
 		t.Errorf("task view history entries diverged.\nwant block:\n%q\nview:\n%q", want, v)
+	}
+}
+
+// The footer — and a live input prompt riding its slot — pins to the
+// bottom row whenever the height is known (chrome hierarchy,
+// 2026-08-03): a short body pads with blank lines to a full-height
+// frame, on all three screens. Before the first WindowSizeMsg the
+// footer floats after the body, as it always did.
+func TestTopGoldenFooterPinned(t *testing.T) {
+	bottom := func(t *testing.T, v string, height int, want string) {
+		t.Helper()
+		if n := strings.Count(v, "\n"); n != height {
+			t.Errorf("frame is %d lines, want the full %d; view:\n%s", n, height, v)
+		}
+		lines := strings.Split(strings.TrimRight(v, "\n"), "\n")
+		if last := lines[len(lines)-1]; !strings.Contains(last, want) {
+			t.Errorf("bottom row is %q, want it to carry %q", last, want)
+		}
+	}
+	// The list.
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	bottom(t, m.View(), 40, "q quit")
+	// A live input prompt (priority, opened from a ready row) rides the
+	// same pinned slot: the widget's hint line is the bottom row.
+	mp, _ := press(t, m, keyOf(tea.KeyDown), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	if mp.mode != modePriority {
+		t.Fatalf("p on a ready row: mode %d, want modePriority", mp.mode)
+	}
+	bottom(t, mp.View(), 40, "enter submits · esc cancels")
+	// History.
+	mh, _ := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	bottom(t, mh.View(), 40, "q quit")
+	// The task view, and an edit prompt opened from it.
+	md := openDetail(t, m, "t-pars")
+	bottom(t, md.View(), 40, "q quit")
+	md, _ = press(t, md, keyOf(tea.KeyEnter)) // the focused title stop's editor
+	if md.mode != modeEditTitle {
+		t.Fatalf("enter on the title stop: mode %d, want modeEditTitle", md.mode)
+	}
+	bottom(t, md.View(), 40, "enter saves · esc cancels")
+	// No WindowSizeMsg yet: the footer floats — no blank pad appears.
+	mf := newTopModel(newFakeSteering())
+	mf.width = 80
+	if v := mf.View(); strings.Contains(v, "\n\n\n") {
+		t.Errorf("height unknown: footer should float, found a blank pad; view:\n%s", v)
 	}
 }
 
