@@ -2,7 +2,7 @@
 
 `tuh-01KYXVK1TV66GR1JV8TCG8VTFA`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `cli` `tui` `ux`
 - **Created:** 2026-08-01 05:08 UTC by `brandon`
@@ -25,4 +25,10 @@ Constraints: rendering only — no daemon/API/event changes; boring Go.
 
 ## History
 
-_No activity yet._
+### 2026-08-03 06:11 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-vtfa/history-entry-formatting`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/22>
+- Commits: `8a604f6`
+
+Landed via PR #22 (squash-merged to main 2026-08-03). Both changes in the shared historyOf so the TUI task view and one-shot tuhdoo task render identically: one blank line between consecutive history entries (leading newline on entries 2..n — survives the TUI's per-entry TrimRight; section framing owns the edges) and bold descriptors on all entry headers (note by / run by — outcome / escalation from) with stamps staying dim. Unanswered escalations on terminal tasks (PR #20 routing) share the escalation header and are covered. Golden + one-shot + seeded CLI tests updated; empty-history and single-entry goldens unchanged byte-for-byte, pinning the no-stray-blanks edge cases. make test lint green.
