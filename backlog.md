@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 6 on hold · 1 inbox · 46 done · 10 cancelled
+0 in progress · 1 ready · 1 blocked · 6 on hold · 1 inbox · 47 done · 10 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
@@ -18,7 +18,6 @@ _None._
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
-| [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) | v0 definition of done: the dogfood week holds | 0 | an [open question](escalations.md) |
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 
 ## On hold
@@ -42,6 +41,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 ## Done
 
+- [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) v0 definition of done: the dogfood week holds
 - [`t-c7km`](tasks/t-01KYRMFV10W1N28TCN5TDQC7KM.md) Grow watch into the interactive steering TUI (tuhdoo top)
 - [`t-z2c1`](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) Retire full-replay-per-write and the grow-forever event overlay
 - [`t-hhzm`](tasks/t-01KYRMVT1YC2929WSQ3W6YHHZM.md) Render markdown views on local daemon writes
