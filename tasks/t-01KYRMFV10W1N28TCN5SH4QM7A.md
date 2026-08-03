@@ -10,9 +10,17 @@
 
 ## Description
 
-Context: docs/plan/roadmap.md v1. Milestones are just tasks other tasks point into (001 D5); the TUI and two-machine tasks carry parent edges into this one. Readiness gates on the v0 milestone only (the batch cycle check treats parent + dependency edges as one graph, so a milestone cannot also depend on its own children); completion is judged by a human against the children, not by this task becoming ready.
+Context: docs/plan/roadmap.md v1. A milestone is a label, not a mechanism (001 D5, revised by the milestone grill 2026-08-03): its done-ness is declared by a human, never computed. This task is a container and a gate, not a unit of work — the v1 children carry parent edges into it (the steering TUI, done; the two-machine convergence harness, ready), and Epoch compaction (D9) depends on it, so declaring this done is what unparks compaction. It stays `held` until the evidence below exists; parked work is held, never fenced with a blocking escalation.
 
-Definition of done (human-verified): a blocking escalation raised by an agent is answered from the TUI and picked up by a successor agent without the human touching git; two machines run fleets against the same remote for a week with collision counts logged and zero divergent state; a 5-person team could be onboarded with tuhdoo init + docs alone (whether or not they are).
+Definition of done (human-verified — mirrors docs/plan/roadmap.md v1, which is authoritative if the two ever disagree):
+
+1. a blocking escalation is raised by an agent, answered from the TUI, and picked up by a successor agent without the human touching git;
+2. two daemons against one remote produce observed claim collisions with one winner each, a `superseded` run recorded for every loser, and byte-identical replayed state and views on both sides afterward;
+3. Brandon's 5-person work team could be onboarded with `tuhdoo init` + docs alone (whether or not they are).
+
+Clause 3 is a judgment call on purpose; mechanizing it would swap in a proxy.
+
+Constraints: agents must not work this task. If you are an agent holding this claim, release it with reason "human-declared milestone".
 
 ## History
 
