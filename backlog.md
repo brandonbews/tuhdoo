@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 4 ready · 5 blocked · 5 on hold · 1 inbox · 39 done · 10 cancelled
+0 in progress · 4 ready · 5 blocked · 5 on hold · 1 inbox · 40 done · 10 cancelled
 
 **[3 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) | get_backlog scope input: MCP read parity with the TUI sections (T5 revision) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -86,6 +84,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ypww`](tasks/tuh-01KYXE40ES9YSEGW9Z0GXKYPWW.md) One real text-input widget: delineated box, fixed hint line, standard cursor editing
 - [`tuh-85m6`](tasks/tuh-01KYXE5376YPXHDS98V3K985M6.md) Edit title and description from the task view
 - [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) Task view field focus ring: up/down selects any editable field, enter opens its editor
+- [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) get_backlog scope input: MCP read parity with the TUI sections (T5 revision)
 - [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping
 - [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous
 

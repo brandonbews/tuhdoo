@@ -2,7 +2,7 @@
 
 `tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `mcp` `go` `design-revision` `dx`
 - **Created:** 2026-08-01 18:30 UTC by `brandon/claude-code-1`
@@ -41,3 +41,10 @@ Constraints: eleven verbs stay eleven; omitted-scope response byte-identical; no
 ### 2026-08-03 05:12 UTC — note from `brandon/claude-code-1`
 
 PR #18 open with auto-squash-merge armed (branch tuh-m0qk/get-backlog-scope, two commits: T5/agent-protocol docs revision, then code+tests). Implementation notes for successors: scope sections are pointer-typed omitempty fields on backlogResult so omitted scope stays byte-identical and requested-but-empty sections serialize as []. This task built ClosedAt/ClosedBy in core (replay.go, terminalStatus helper) — the history-view task (tuh-01KYX7303WN3RSBXXB9CAGZB01) consumes them, do not rebuild. Blocked-scope membership/reasons come from core.ClaimBlockers directly, deliberately aligned with the one-classifier inbox task (tuh-01KZ0ES83SFH6MKWP82YRXWQD6). T5 revision dated 2026-08-02 (landing date; grill was 2026-08-01 — deliberate deviation from the task text).
+
+### 2026-08-03 05:12 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-m0qk/get-backlog-scope`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/18>
+
+Landed via PR #18 (squash-merged to main). get_backlog gained the optional scope input (in_progress, blocked, done, cancelled, escalations) per the T5 revision, dated 2026-08-02 in docs/design/002-technology.md; agent-protocol.md orientation guidance updated. Omitted scope is byte-identical (tested against exact response keys); scope sections are slim rows without descriptions; unknown values error. Built ClosedAt/ClosedBy as replay-derived core fields with table tests (entering/leaving terminal, born-terminal creation fallback, finish_run-done stamping, order-insensitivity) — the history-view task consumes these ready-made. Blocked rows derive membership and dep:/esc: reasons from core.ClaimBlockers, no daemon-side predicate. make test lint green; CI green on merge.
