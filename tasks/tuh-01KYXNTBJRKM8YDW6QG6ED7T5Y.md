@@ -2,7 +2,7 @@
 
 `tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `cleanup` `go`
 - **Created:** 2026-08-01 03:27 UTC by `brandon/claude-code-1`
@@ -19,4 +19,10 @@ Constraints: pure refactor — no behavior change, no new package, boring Go.
 
 ## History
 
-_No activity yet._
+### 2026-08-03 06:02 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-7t5y/shortid-shared-helper`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/21>
+- Commits: `7980500`
+
+Landed via PR #21 (squash-merged to main 2026-08-03). Pure refactor exactly as scoped: both byte-identical shortID copies deleted; the one definition is event.ShortID in internal/event/id.go next to IDTime (the task's suggested home). All call sites across cmd/tuhdoo and internal/views use it; doc comment merges the TUI copy's fuller rationale. No behavior change, no golden changes; make test lint green.
