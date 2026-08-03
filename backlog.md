@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 6 on hold · 5 inbox · 48 done · 10 cancelled
+0 in progress · 1 ready · 1 blocked · 6 on hold · 4 inbox · 48 done · 10 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) | TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer | 0 | `tui` `go` |
 
 ## Blocked / waiting
 
@@ -33,7 +35,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) differentiate on hold and inbox (on hold should be dimmer). differentiate the control shortcut bar tat the bottom from inbox and on hold (dont know what to do for that design -- grill it)
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) Nothing writes the superseded run D6 promises — voided claims leave no run at all
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
