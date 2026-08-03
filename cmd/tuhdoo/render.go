@@ -67,6 +67,13 @@ func stamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04 UTC")
 }
 
+// dayStamp is stamp at day precision, for the history surfaces
+// (history view, 2026-08-02): when a task closed matters to the day;
+// the exact instant lives on the ledger.
+func dayStamp(t time.Time) string {
+	return t.UTC().Format("2006-01-02")
+}
+
 // stampCompact is stamp for serialized column output (T7, 2026-07-31):
 // the same UTC instant at the same minute precision, with no interior
 // spaces, so a timestamp stays one awk/grep token. The trailing Z is a

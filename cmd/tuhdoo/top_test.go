@@ -222,6 +222,7 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 
 func TestTopViewRendersSeededState(t *testing.T) {
 	m := newTopModel(newFakeSteering())
+	m.width = 100 // wide enough for the legend and the done tally together
 	v := m.View()
 	for _, want := range []string{
 		"tuhdoo · local-only", "acting as brandon",
@@ -230,7 +231,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (0)",
 		"▌ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
-		"↑/↓ (j/k) move · enter open · p priority · c cancel · q quit",
+		"↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -621,7 +622,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · q quit"} {
+	for _, want := range []string{"watch mode", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · h history · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
@@ -2065,7 +2066,7 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 		{"held row", "polish the docs", 4},
 		{"section bar", "READY (2)", -1},
 		{"header bar", "acting as brandon", -1},
-		{"footer bar", "1 done", -1},
+		{"footer bar", "h history", -1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2472,4 +2473,335 @@ func TestTopNonBlockingEscalationRow(t *testing.T) {
 func wrapForSearch(v string) string {
 	out := strings.ReplaceAll(v, "\n", "")
 	return strings.Join(strings.Fields(out), " ")
+}
+
+// ---- history mode (history view, 2026-08-02): the done/cancelled shelf ----
+
+// historySnapshot extends topSnapshot with close metadata and more
+// terminal tasks: three done and two cancelled, created in one order
+// and closed in another, so reverse-chron-by-close is distinguishable
+// from creation order.
+func historySnapshot() *snapshot {
+	s := topSnapshot()
+	day := func(d int) *time.Time {
+		t := time.Date(2026, 7, d, 9, 0, 0, 0, time.UTC)
+		return &t
+	}
+	// The seeded done task gets its close stamp, in both payloads.
+	for i := range s.state.Tasks {
+		if s.state.Tasks[i].ID == "t-chor" {
+			s.state.Tasks[i].ClosedAt, s.state.Tasks[i].ClosedBy = day(28), "brandon/impl-1"
+		}
+	}
+	ch := s.tasks["t-chor"]
+	ch.Task.Status, ch.Task.ClosedAt, ch.Task.ClosedBy = "done", day(28), "brandon/impl-1"
+	s.tasks["t-chor"] = ch
+	add := func(st stateTask, hy hydratedTask) {
+		s.state.Tasks = append(s.state.Tasks, st)
+		s.tasks[st.ID] = hy
+	}
+	add(stateTask{ID: "t-ship", Title: "ship the tui", Status: "done",
+		Labels: []string{"tui"}, ClosedAt: day(30), ClosedBy: "brandon/claude-code-1"},
+		hydratedTask{Task: taskJSON{ID: "t-ship", Title: "ship the tui", Status: "done",
+			Labels: []string{"tui"}, ClosedAt: day(30), ClosedBy: "brandon/claude-code-1"}})
+	add(stateTask{ID: "t-mgr8", Title: "migrate the backlog", Status: "done",
+		ClosedAt: day(29), ClosedBy: "brandon"},
+		hydratedTask{Task: taskJSON{ID: "t-mgr8", Title: "migrate the backlog", Status: "done",
+			DependsOn: []string{"t-chor"}, ClosedAt: day(29), ClosedBy: "brandon"}})
+	add(stateTask{ID: "t-zzzz", Title: "zombie idea", Status: "cancelled",
+		ClosedAt: day(31), ClosedBy: "brandon/a2"},
+		hydratedTask{Task: taskJSON{ID: "t-zzzz", Title: "zombie idea", Status: "cancelled",
+			ClosedAt: day(31), ClosedBy: "brandon/a2"}})
+	// A cancelled task with an unanswered escalation: on a terminal
+	// task it is record, not work — it renders in the detail's History.
+	add(stateTask{ID: "t-drop", Title: "drop the wiki", Status: "cancelled",
+		ClosedAt: day(27), ClosedBy: "brandon"},
+		hydratedTask{
+			Task: taskJSON{ID: "t-drop", Title: "drop the wiki", Status: "cancelled",
+				CreatedAt: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC), CreatedBy: "brandon",
+				ClosedAt: day(27), ClosedBy: "brandon"},
+			Escalations: []escalationJSON{{
+				ID: "01E7", Task: "t-drop", Actor: "brandon/a7",
+				Question: "Keep the wiki export?",
+				RaisedAt: time.Date(2026, 7, 25, 9, 0, 0, 0, time.UTC),
+			}},
+		})
+	return s
+}
+
+func newHistoryModel(api steeringAPI) topModel {
+	s := historySnapshot()
+	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+}
+
+// h opens history from the top list of both panes — browsing is
+// reading — with DONE then CANCELLED, each newest close first; esc
+// returns to the dashboard.
+func TestTopHistoryOpensFromBothPanes(t *testing.T) {
+	s := historySnapshot()
+	for name, m := range map[string]topModel{
+		"armed": newHistoryModel(newFakeSteering()),
+		"watch": {snap: s, rows: buildRows(s)},
+	} {
+		m, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+		if !m.history || m.mode != modeNav || m.cursor != 0 || cmd != nil {
+			t.Fatalf("%s: h left history %v mode %d cursor %d cmd %v", name, m.history, m.mode, m.cursor, cmd)
+		}
+		// Reverse-chron within each bar, DONE before CANCELLED — not
+		// creation order (t-chor was created first, closed 07-28).
+		want := []struct{ section, id string }{
+			{"done", "t-ship"}, {"done", "t-mgr8"}, {"done", "t-chor"},
+			{"cancelled", "t-zzzz"}, {"cancelled", "t-drop"},
+		}
+		if len(m.rows) != len(want) {
+			t.Fatalf("%s: %d history rows, want %d: %+v", name, len(m.rows), len(want), m.rows)
+		}
+		for i, w := range want {
+			if m.rows[i].section != w.section || m.rows[i].id() != w.id {
+				t.Errorf("%s: row %d = %s %s, want %+v", name, i, m.rows[i].section, m.rows[i].id(), w)
+			}
+		}
+		v := m.View()
+		for _, wantS := range []string{
+			"DONE (3)", "CANCELLED (2)",
+			// Ready-row anatomy plus the dim close stamp and closing actor.
+			"▌ t-ship      ship the tui  [tui]  · 2026-07-30 · brandon/claude-code-1",
+			"  t-mgr8      migrate the backlog  · 1 dep  · 2026-07-29 · brandon",
+			"  t-chor      old chore  · 2026-07-28 · brandon/impl-1",
+			"  t-zzzz      zombie idea  · 2026-07-31 · brandon/a2",
+			"  t-drop      drop the wiki  · 2026-07-27 · brandon",
+			"↑/↓ (j/k) move · enter open · esc back · q quit",
+		} {
+			if !strings.Contains(v, wantS) {
+				t.Errorf("%s: history view missing %q; view:\n%s", name, wantS, v)
+			}
+		}
+		// The open queue does not render here, and no steering or
+		// history key is advertised.
+		for _, reject := range []string{"READY", "NEEDS INPUT", "INBOX", "write the parser",
+			"h history", "p priority", "c cancel", "i capture", "done "} {
+			if strings.Contains(v, reject) {
+				t.Errorf("%s: history view still contains %q; view:\n%s", name, reject, v)
+			}
+		}
+		// q quits from history.
+		if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}); cmd == nil {
+			t.Errorf("%s: q in history should quit", name)
+		}
+		// esc returns to the dashboard.
+		m, cmd = press(t, m, keyOf(tea.KeyEsc))
+		if m.history || m.mode != modeNav || cmd != nil {
+			t.Fatalf("%s: esc left history %v mode %d", name, m.history, m.mode)
+		}
+		if v := m.View(); !strings.Contains(v, "READY (2)") || strings.Contains(v, "CANCELLED") {
+			t.Errorf("%s: esc did not restore the dashboard; view:\n%s", name, v)
+		}
+	}
+}
+
+// The esc stack: enter on a history row opens the ordinary task view,
+// esc from there returns to the history list — not the dashboard — and
+// a second esc reaches the dashboard. h inside the task view is dead.
+func TestTopHistoryEscStack(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m = moveTo(t, m, "t-chor")
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-chor" {
+		t.Fatalf("enter on a history row: mode %d detail %q, want the task view of t-chor", m.mode, m.detailID)
+	}
+	// h in the task view changes nothing.
+	m, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	if m.mode != modeDetail || cmd != nil {
+		t.Errorf("h in detail: mode %d cmd %v, want modeDetail nil", m.mode, cmd)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav || !m.history {
+		t.Fatalf("esc from a history-opened detail: mode %d history %v, want the history list", m.mode, m.history)
+	}
+	if m.cursor >= len(m.rows) || m.rows[m.cursor].id() != "t-chor" {
+		t.Errorf("history cursor lost across the detail round trip: %d", m.cursor)
+	}
+	if v := m.View(); !strings.Contains(v, "DONE (3)") {
+		t.Errorf("history list not restored; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.history || m.mode != modeNav {
+		t.Fatalf("second esc: history %v mode %d, want the dashboard", m.history, m.mode)
+	}
+}
+
+// Enter and click open detail from history exactly like the dashboard:
+// click selects the row under the pointer, click on the selected row
+// opens its task view.
+func TestTopHistoryEnterAndClickOpenDetail(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	// enter on the selected top row.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-ship" {
+		t.Fatalf("enter: mode %d detail %q, want modeDetail t-ship", m.mode, m.detailID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Click an unselected row: selection moves, nothing opens.
+	y := screenLineOf(t, m, "old chore")
+	m, cmd := mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeNav || m.cursor != 2 || cmd != nil {
+		t.Fatalf("click on unselected history row: mode %d cursor %d, want selection moved", m.mode, m.cursor)
+	}
+	// A section bar stays chrome.
+	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "CANCELLED (2)")))
+	if m2.mode != modeNav || m2.cursor != 2 {
+		t.Errorf("click on the CANCELLED bar: mode %d cursor %d, want unchanged", m2.mode, m2.cursor)
+	}
+	// Click the selected row: acts as enter.
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || m.detailID != "t-chor" {
+		t.Fatalf("click on selected history row: mode %d detail %q, want modeDetail t-chor", m.mode, m.detailID)
+	}
+}
+
+// History scrolls exactly like the dashboard: the cursor-following
+// window keeps the selected row visible, j/k and the wheel clamp.
+func TestTopHistoryScrollMatchesDashboard(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
+	m = mm.(topModel)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	for i := 0; i < 10; i++ {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	if want := len(m.rows) - 1; m.cursor != want {
+		t.Fatalf("j past bottom left cursor at %d, want clamp at %d", m.cursor, want)
+	}
+	v := m.View()
+	if !strings.Contains(v, "▌ t-drop") {
+		t.Errorf("cursor row not visible after scrolling; view:\n%s", v)
+	}
+	if strings.Contains(v, "ship the tui") {
+		t.Errorf("top of history should have scrolled off; view:\n%s", v)
+	}
+	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 8 {
+		t.Errorf("frame taller than terminal: %d > 8 lines; view:\n%s", n, v)
+	}
+	// The wheel mirrors j/k, clamping at both ends.
+	for i := 0; i < 10; i++ {
+		m, _ = mouseTo(t, m, wheelMsg(tea.MouseButtonWheelUp))
+	}
+	if m.cursor != 0 {
+		t.Errorf("wheel past the top left cursor at %d, want 0", m.cursor)
+	}
+}
+
+// The history list is read-only in the armed pane too: p, c, and i are
+// dead on its rows.
+func TestTopHistorySteeringKeysDead(t *testing.T) {
+	fake := newFakeSteering()
+	m := newHistoryModel(fake)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	for _, r := range []rune{'p', 'c', 'i'} {
+		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		if mm.mode != modeNav || cmd != nil {
+			t.Errorf("%q on a history row: mode %d cmd %v, want dead", r, mm.mode, cmd)
+		}
+	}
+	if len(fake.cancelled) != 0 || len(fake.priorities) != 0 || len(fake.captured) != 0 {
+		t.Errorf("history keys still wrote: %+v", fake)
+	}
+}
+
+// A refresh while history is open rebuilds history rows — not the
+// dashboard's — and keeps the selection on its row.
+func TestTopHistoryRefreshKeepsRowsAndSelection(t *testing.T) {
+	m := newHistoryModel(newFakeSteering())
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m = moveTo(t, m, "t-chor")
+	mm, _ := m.Update(snapMsg{snap: historySnapshot()})
+	m = mm.(topModel)
+	if !m.history {
+		t.Fatal("refresh knocked the model out of history")
+	}
+	if r, ok := m.selected(); !ok || r.id() != "t-chor" || r.section != "done" {
+		t.Errorf("selection lost across refresh: %+v", r)
+	}
+	if v := m.View(); !strings.Contains(v, "DONE (3)") || strings.Contains(v, "READY") {
+		t.Errorf("refresh rebuilt the wrong rows; view:\n%s", v)
+	}
+}
+
+// The task view of a terminal task refuses steering: p and c are dead,
+// the armed footer stops advertising them, and priority is not a ring
+// stop — one j from the title lands on the description.
+func TestTopDetailTerminalTaskSteeringDead(t *testing.T) {
+	fake := newFakeSteering()
+	m := newHistoryModel(fake)
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // t-ship, done
+	if m.mode != modeDetail || m.detailID != "t-ship" {
+		t.Fatalf("mode %d detail %q, want modeDetail t-ship", m.mode, m.detailID)
+	}
+	for _, r := range []rune{'p', 'c'} {
+		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		if mm.mode != modeDetail || cmd != nil {
+			t.Errorf("%q on a terminal task's detail: mode %d cmd %v, want dead", r, mm.mode, cmd)
+		}
+	}
+	if len(fake.cancelled) != 0 || len(fake.priorities) != 0 {
+		t.Errorf("terminal detail still wrote: %+v", fake)
+	}
+	v := m.View()
+	if !strings.Contains(v, " ↑/↓ (j/k) move · enter edit · esc back · q quit") {
+		t.Errorf("terminal detail footer wrong; view:\n%s", v)
+	}
+	for _, reject := range []string{"p priority", "c cancel"} {
+		if strings.Contains(v, reject) {
+			t.Errorf("terminal detail advertises %q; view:\n%s", reject, v)
+		}
+	}
+	// The ring skips priority: title, then description.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeEditDesc {
+		t.Errorf("enter one stop below the title: mode %d, want modeEditDesc (no priority stop)", m.mode)
+	}
+}
+
+// A terminal task's status line carries its close metadata, and its
+// unanswered escalation renders in History — the NEEDS INPUT section
+// only serves open work. Both panes render the same lines.
+func TestTopDetailTerminalStatusAndEscalationRecord(t *testing.T) {
+	s := historySnapshot()
+	for name, m := range map[string]topModel{
+		"armed": newHistoryModel(newFakeSteering()),
+		"watch": {snap: s, rows: buildRows(s)},
+	} {
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+		m = moveTo(t, m, "t-drop")
+		m, _ = press(t, m, keyOf(tea.KeyEnter))
+		v := m.View()
+		for _, want := range []string{
+			"t-drop — drop the wiki",
+			"status      cancelled — 2026-07-27 by brandon",
+			"HISTORY",
+			"escalation from brandon/a7",
+			"Q: Keep the wiki export?",
+			"unanswered",
+		} {
+			if !strings.Contains(v, want) {
+				t.Errorf("%s: terminal detail missing %q; view:\n%s", name, want, v)
+			}
+		}
+		if strings.Contains(v, "NEEDS INPUT") {
+			t.Errorf("%s: a terminal task's unanswered escalation still solicits answers; view:\n%s", name, v)
+		}
+		// The done wording: "finished <day> by <actor>".
+		m, _ = press(t, m, keyOf(tea.KeyEsc))
+		m = moveTo(t, m, "t-ship")
+		m, _ = press(t, m, keyOf(tea.KeyEnter))
+		if v := m.View(); !strings.Contains(v, "status      done — finished 2026-07-30 by brandon/claude-code-1") {
+			t.Errorf("%s: done status line missing close metadata; view:\n%s", name, v)
+		}
+	}
 }
