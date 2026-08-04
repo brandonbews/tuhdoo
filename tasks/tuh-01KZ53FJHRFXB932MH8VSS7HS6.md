@@ -8,7 +8,7 @@
 
 ## Description
 
-_No description._
+i think ready, in progress, blocked and on hold are realted and inbox and needs input are related. i dont know hick chunk should be on top. i also feel like what blocked has become (basically just does this have a dependency... correct me if im wrong) doenst warrant a red banner. is there an orange or something?
 
 ## History
 
