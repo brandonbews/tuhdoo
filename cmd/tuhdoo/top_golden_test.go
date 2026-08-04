@@ -66,8 +66,11 @@ func TestTopGoldenPlain80(t *testing.T) {
 		strings.Repeat("\n", 17) +
 		// The armed legend grew "h history" (2026-08-02); at exactly 80
 		// columns the done tally is the sacrificed right text (barLine's
-		// rule, kept by segLine) — it returns on wider terminals.
-		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       \n"
+		// rule, kept by segLine) — it returns on wider terminals. The
+		// pinned frame's last line is unterminated: bubbletea drops
+		// overflow from the top, so a trailing newline (an extra empty
+		// split-line) would cost the header row.
+		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -287,7 +290,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
 		// 19-39 are the blank pad.
 		strings.Repeat("\n", 21) +
-		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        \n"
+		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -412,7 +415,7 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
 		// 11-39 are the blank pad.
 		strings.Repeat("\n", 29) +
-		" ↑/↓ (j/k) move · enter open · esc back · q quit                                \n"
+		" ↑/↓ (j/k) move · enter open · esc back · q quit                                "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column history render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -487,7 +490,7 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
 		// 17-39 are the blank pad.
 		strings.Repeat("\n", 23) +
-		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                \n"
+		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column terminal task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -526,14 +529,19 @@ func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 // bottom row whenever the height is known (chrome hierarchy,
 // 2026-08-03): a short body pads with blank lines to a full-height
 // frame, on all three screens. Before the first WindowSizeMsg the
-// footer floats after the body, as it always did.
+// footer floats after the body, as it always did. The invariant is
+// bubbletea's, not an abstract one: the renderer splits the view on \n
+// and drops overflow from the TOP, so a pinned frame must split into
+// exactly height lines with the footer last and unterminated — one
+// trailing newline is an extra empty split-line that costs the header
+// row (the off-by-one shipped in the first chrome-hierarchy cut).
 func TestTopGoldenFooterPinned(t *testing.T) {
 	bottom := func(t *testing.T, v string, height int, want string) {
 		t.Helper()
-		if n := strings.Count(v, "\n"); n != height {
-			t.Errorf("frame is %d lines, want the full %d; view:\n%s", n, height, v)
+		lines := strings.Split(v, "\n")
+		if len(lines) != height {
+			t.Errorf("frame splits into %d lines, want exactly %d; view:\n%s", len(lines), height, v)
 		}
-		lines := strings.Split(strings.TrimRight(v, "\n"), "\n")
 		if last := lines[len(lines)-1]; !strings.Contains(last, want) {
 			t.Errorf("bottom row is %q, want it to carry %q", last, want)
 		}
@@ -560,6 +568,16 @@ func TestTopGoldenFooterPinned(t *testing.T) {
 		t.Fatalf("enter on the title stop: mode %d, want modeEditTitle", md.mode)
 	}
 	bottom(t, md.View(), 40, "enter saves · esc cancels")
+	// Full-height content — the terminal shorter than the list, so
+	// visibleChunks windows the body — keeps the same invariant: no
+	// pad, and still no line lost off the top.
+	ms := newTopModel(newFakeSteering())
+	ms.width, ms.height = 80, 12
+	v := ms.View()
+	bottom(t, v, 12, "q quit")
+	if !strings.Contains(strings.Split(v, "\n")[0], "tuhdoo") {
+		t.Errorf("full window: header missing from the top row; view:\n%s", v)
+	}
 	// No WindowSizeMsg yet: the footer floats — no blank pad appears.
 	mf := newTopModel(newFakeSteering())
 	mf.width = 80

@@ -1151,11 +1151,16 @@ func (m topModel) detailView(body []string) string {
 	// Same bottom-pinning as the list (chrome hierarchy, 2026-08-03):
 	// detailWindow already reserves these rows, so only the shortfall
 	// of a short body pads. detailStopAt needs no padding awareness —
-	// clicks below the body already miss every stop.
+	// clicks below the body already miss every stop. Same trailing-
+	// newline trim as View: the pinned frame is exactly height
+	// split-lines, footer last and unterminated, or bubbletea drops the
+	// header row from the top.
 	if m.height > 0 {
 		if pad := m.detailWindow() - len(body); pad > 0 {
 			w.WriteString(strings.Repeat("\n", pad))
 		}
+		w.WriteString(m.detailFooter())
+		return strings.TrimSuffix(w.String(), "\n")
 	}
 	w.WriteString(m.detailFooter())
 	return w.String()
@@ -1222,11 +1227,16 @@ func (m topModel) View() string {
 	// to the bottom row by padding a short body with blank lines (chrome
 	// hierarchy, 2026-08-03); it floats only before the first
 	// WindowSizeMsg. rowAt needs no padding awareness: the pad sits
-	// below every row chunk, where clicks already miss.
+	// below every row chunk, where clicks already miss. The pinned frame
+	// must be exactly height split-lines with the footer last and
+	// unterminated: bubbletea splits the view on \n — a trailing newline
+	// is an extra (empty) line — and drops any overflow from the TOP, so
+	// an unstripped final newline costs the header row.
 	if m.height > 0 {
 		if pad := m.height - headN - footN - strings.Count(body, "\n"); pad > 0 {
 			body += strings.Repeat("\n", pad)
 		}
+		return strings.TrimSuffix(head+body+foot, "\n")
 	}
 	return head + body + foot
 }

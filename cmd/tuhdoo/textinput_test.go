@@ -448,11 +448,12 @@ func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
 	m, _ = press(t, m, runes("idea")...)
 	v := m.View()
+	// The pinned frame's bottom row is unterminated (no trailing
+	// newline): the hint line is the view's last byte.
 	want := strings.Join([]string{
 		" capture (to inbox)" + strings.Repeat(" ", 61),
 		"> idea█",
 		"  enter captures · esc cancels",
-		"",
 	}, "\n")
 	if !strings.HasSuffix(v, want) {
 		t.Errorf("capture box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
@@ -534,7 +535,6 @@ func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 		" title t-flak" + strings.Repeat(" ", 67),
 		"> investigate the flake█",
 		"  enter saves · esc cancels",
-		"",
 	}, "\n")
 	if !strings.HasSuffix(v, want) {
 		t.Errorf("title box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
@@ -561,7 +561,6 @@ func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 		"> The parser test flakes on CI.",
 		"> Find out why.█",
 		"  ctrl+s saves · enter newline · esc cancels",
-		"",
 	}, "\n")
 	if !strings.HasSuffix(v, want) {
 		t.Errorf("description box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
