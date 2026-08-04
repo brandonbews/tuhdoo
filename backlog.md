@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 6 on hold · 5 inbox · 49 done · 10 cancelled
+0 in progress · 1 ready · 1 blocked · 6 on hold · 5 inbox · 49 done · 10 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-3595`](tasks/tuh-01KZ53K4DF7Y0TYX3H5XP43595.md) | Pinned frame off-by-one: trailing newline clips the header row | 0 | `tui` `go` `bug` |
 
 ## Blocked / waiting
 
