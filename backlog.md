@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 3 blocked · 6 on hold · 3 inbox · 50 done · 11 cancelled
+0 in progress · 2 ready · 3 blocked · 6 on hold · 2 inbox · 50 done · 11 cancelled
 
 ## In progress
 
@@ -11,6 +11,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) | Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04) | 2 | `daemon` `core` `syncer` `d6` |
+| [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `tui` |
 
 ## Blocked / waiting
 
@@ -39,7 +40,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
-- [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) assess order of sections. what would a user really expect in order from top to bottom?
 
 ## Done
 
