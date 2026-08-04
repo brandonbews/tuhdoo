@@ -2,7 +2,7 @@
 
 `tuh-01KZ53K4DF7Y0TYX3H5XP43595`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui` `go` `bug`
 - **Created:** 2026-08-04 00:43 UTC by `brandon/claude-code-2`
@@ -26,4 +26,10 @@ Constraints: boring Go (T1); do not change visibleChunks' window accounting (ava
 
 ## History
 
-_No activity yet._
+### 2026-08-04 00:47 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-3595/pinned-frame-off-by-one`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/27>
+- Commits: `ebf6e80ef01235ac868bf90850c2ad59b012e3e6`
+
+Root cause confirmed and fixed: the chrome-hierarchy pinning (PR #26) made every frame height newlines, still newline-terminated; bubbletea splits the view on \n (trailing newline = extra empty line) and drops overflow from the TOP (standard_renderer.go:186-187, v1.3.10), clipping the header row on every render. Fix: pinned frames (height known) are exactly height split-lines with the footer/input-prompt hint as the last unterminated line — View and detailView trim the final newline; floating pre-WindowSizeMsg frames keep it; visibleChunks/detailWindow accounting and hit-test replay untouched. TestTopGoldenFooterPinned now asserts the renderer's real invariant (split count == height, header present on the top row at a full 12-row window) — its previous newline-count assertion had baked the bug in. Squash-merged to main as ebf6e80 (PR #27); make test lint green. Deploy restart follows this finish.
