@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 3 blocked · 6 on hold · 4 inbox · 50 done · 10 cancelled
+0 in progress · 1 ready · 3 blocked · 6 on hold · 3 inbox · 50 done · 11 cancelled
 
 ## In progress
 
@@ -38,7 +38,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
-- [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
 - [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
 - [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) assess order of sections. what would a user really expect in order from top to bottom?
 
@@ -107,3 +106,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-kw85`](tasks/tuh-01KYXT6GSA20QPJ5ME1KP6KW85.md) i suspect that t-sy1p lists a dependency as why its on hold bu tthat dependency appears cleared. what the deal there
 - [`tuh-qt4g`](tasks/tuh-01KYZ34E3NR1HM02P8P3G7QT4G.md) there should be a concept of codereview for workflows that work that way/require it. it's almost a normal escalation but not quite. lets explore ways to do it. my current hunch is maybe an IN CODE REVIEW section that only appears if a task actually has that status. if we go that route, i could see ON HOLD, and NEEDS INPUT only showing when relevant too. def need a grill session for this
 - [`tuh-h4k6`](tasks/tuh-01KYZ9BJWWE0NZ89FJZW5KH4K6.md) status vs section in the dashoboard is a little confusing. grill and align behavior for ux. we need vocab alignment between data and surfaces this early in the project.
+- [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
