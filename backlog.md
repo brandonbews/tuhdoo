@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 6 on hold · 5 inbox · 50 done · 10 cancelled
+0 in progress · 1 ready · 3 blocked · 6 on hold · 4 inbox · 50 done · 10 cancelled
 
 ## In progress
 
@@ -17,6 +17,7 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) | Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision) | 1 | depends on [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) |
 | [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | depends on [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md); depends on [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) |
 
 ## On hold
@@ -37,7 +38,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
-- [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) Nothing writes the superseded run D6 promises — voided claims leave no run at all
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
 - [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
 - [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) assess order of sections. what would a user really expect in order from top to bottom?
