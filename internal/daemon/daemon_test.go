@@ -829,18 +829,21 @@ func TestFinishRunGuard(t *testing.T) {
 	}
 	release := func(t *testing.T, actor, task string) {
 		t.Helper()
-		if _, oe := d.opReleaseClaim(actor, task, "standing down"); oe != nil {
+		if _, _, oe := d.opReleaseClaim(actor, task, "standing down"); oe != nil {
 			t.Fatalf("release %s as %s: %v", task, actor, oe)
 		}
 	}
-	finish := func(t *testing.T, actor, task, outcome string) *opError {
+	finish := func(t *testing.T, actor, task, outcome string) (finishRunResult, *opError) {
 		t.Helper()
-		_, oe := d.opFinishRun(actor, finishRunReq{Task: task, Outcome: outcome, Summary: "attempt closed"})
-		return oe
+		return d.opFinishRun(actor, finishRunReq{Task: task, Outcome: outcome, Summary: "attempt closed"})
 	}
 	// mintClaim writes a claim.made event directly, the way a peer's
-	// claim arrives by sync — replay voids it when someone already holds.
-	mintClaim := func(t *testing.T, actor, task string) {
+	// claim arrives by sync — replay voids it when someone already
+	// holds. Like a real peer's daemon, it leases the claim (an unleased
+	// voided claim counts as already expired, and replay closes it with
+	// a synthesized superseded run); rows that want the loser's window
+	// shut re-point the lease at the past.
+	mintClaim := func(t *testing.T, actor, task string) string {
 		t.Helper()
 		d.mu.Lock()
 		ev, err := d.newEventLocked(event.TypeClaimMade, actor, task, event.ClaimMade{})
@@ -851,6 +854,10 @@ func TestFinishRunGuard(t *testing.T) {
 		if err != nil {
 			t.Fatalf("mint claim by %s on %s: %v", actor, task, err)
 		}
+		if err := d.store.WriteLease(ev.ID, time.Now().Add(time.Hour)); err != nil {
+			t.Fatalf("lease minted claim: %v", err)
+		}
+		return ev.ID
 	}
 	// taskRuns returns the task's runs as (non-synthesized, synthesized)
 	// counts from freshly replayed state.
@@ -874,16 +881,17 @@ func TestFinishRunGuard(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		setup     func(t *testing.T, task string)
-		actor     string
-		outcome   string
-		noTask    bool // attempt against a task ID that does not exist
-		wantOK    bool
-		wantCode  int    // when !wantOK
-		wantErr   string // substring of the rejection
-		wantRuns  int    // non-synthesized runs on the task afterwards
-		wantSynth int    // synthesized runs on the task afterwards
+		name        string
+		setup       func(t *testing.T, task string)
+		actor       string
+		outcome     string
+		noTask      bool // attempt against a task ID that does not exist
+		wantOK      bool
+		wantOutcome string // recorded outcome when wantOK; "" means as reported
+		wantCode    int    // when !wantOK
+		wantErr     string // substring of the rejection
+		wantRuns    int    // non-synthesized runs on the task afterwards
+		wantSynth   int    // synthesized runs on the task afterwards
 	}{
 		{
 			name:     "no claim on the task is rejected",
@@ -924,11 +932,22 @@ func TestFinishRunGuard(t *testing.T) {
 			wantRuns: 1,
 		},
 		{
+			name: "done after own release is not certifiable (2026-08-04: done is refereed)",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				release(t, "brandon/a1", task)
+			},
+			actor:    "brandon/a1",
+			outcome:  event.OutcomeDone,
+			wantCode: http.StatusConflict,
+			wantErr:  "nothing to confirm",
+		},
+		{
 			name: "a released attempt closes once, not twice",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
 				release(t, "brandon/a1", task)
-				if oe := finish(t, "brandon/a1", task, event.OutcomeBlocked); oe != nil {
+				if _, oe := finish(t, "brandon/a1", task, event.OutcomeBlocked); oe != nil {
 					t.Fatalf("first finish after release: %v", oe)
 				}
 			},
@@ -942,7 +961,7 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "a finished attempt cannot be finished again",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
-				if oe := finish(t, "brandon/a1", task, event.OutcomeDone); oe != nil {
+				if _, oe := finish(t, "brandon/a1", task, event.OutcomeDone); oe != nil {
 					t.Fatalf("first finish: %v", oe)
 				}
 			},
@@ -974,10 +993,50 @@ func TestFinishRunGuard(t *testing.T) {
 				claim(t, "brandon/a1", task)
 				mintClaim(t, "brandon/a2", task)
 			},
-			actor:    "brandon/a2",
-			outcome:  event.OutcomeSuperseded,
-			wantOK:   true,
-			wantRuns: 1,
+			actor:       "brandon/a2",
+			outcome:     event.OutcomeSuperseded,
+			wantOK:      true,
+			wantOutcome: event.OutcomeSuperseded,
+			wantRuns:    1,
+		},
+		{
+			name: "race loser reporting done is coerced to superseded (D6)",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				mintClaim(t, "brandon/a2", task)
+			},
+			actor:       "brandon/a2",
+			outcome:     event.OutcomeDone,
+			wantOK:      true,
+			wantOutcome: event.OutcomeSuperseded,
+			wantRuns:    1,
+		},
+		{
+			name: "race loser reporting failed is coerced to superseded (D6)",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				mintClaim(t, "brandon/a2", task)
+			},
+			actor:       "brandon/a2",
+			outcome:     event.OutcomeFailed,
+			wantOK:      true,
+			wantOutcome: event.OutcomeSuperseded,
+			wantRuns:    1,
+		},
+		{
+			name: "a loser whose lease expired is closed by its synthesized superseded run",
+			setup: func(t *testing.T, task string) {
+				claim(t, "brandon/a1", task)
+				id := mintClaim(t, "brandon/a2", task)
+				if err := d.store.WriteLease(id, time.Now().Add(-time.Minute)); err != nil {
+					t.Fatalf("expire loser lease: %v", err)
+				}
+			},
+			actor:     "brandon/a2",
+			outcome:   event.OutcomeDone,
+			wantCode:  http.StatusConflict,
+			wantErr:   "record it with add_note",
+			wantSynth: 1,
 		},
 		{
 			name:     "a mistyped task ID fabricates nothing",
@@ -998,10 +1057,16 @@ func TestFinishRunGuard(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup(t, task)
 			}
-			oe := finish(t, tc.actor, task, tc.outcome)
+			res, oe := finish(t, tc.actor, task, tc.outcome)
 			if tc.wantOK {
 				if oe != nil {
 					t.Fatalf("finish_run = %v, want success", oe)
+				}
+				if want := tc.wantOutcome; want != "" && res.Outcome != want {
+					t.Fatalf("recorded outcome = %q, want %q", res.Outcome, want)
+				}
+				if res.Outcome != tc.outcome && res.Message == "" {
+					t.Fatal("coerced record carried no referee message")
 				}
 			} else {
 				if oe == nil {

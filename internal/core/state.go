@@ -88,8 +88,10 @@ type Claim struct {
 
 // Run is one attempt record (D5). Most runs come from run.finished
 // events; runs with Synthesized true are derived by replay for claims
-// that expired without one (outcome "interrupted") — the daemon may
-// later materialize those as real events, but state never waits for it.
+// whose lease lapsed without one — outcome "interrupted" for a holder
+// that went silent, "superseded" for a race loser that never reported
+// (D6, 2026-08-04) — the daemon may later materialize those as real
+// events, but state never waits for it.
 type Run struct {
 	ID          string // the run.finished event ID, or the claim ID when synthesized
 	Task        string

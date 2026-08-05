@@ -141,6 +141,11 @@ type hydratedTask struct {
 	Notes       []noteJSON       `json:"notes"`
 	Runs        []runJSON        `json:"runs"`
 	Escalations []escalationJSON `json:"escalations"`
+
+	// Warning carries the standing confirm-before-merge rule on claim
+	// responses (agent protocol step 5; D6 verb-time stand-down) and is
+	// empty on plain hydration (get_task).
+	Warning string `json:"warning,omitempty" jsonschema:"on claim responses: the standing rule — call confirm_claim and merge only on a confirmed verdict; merging on an unconfirmed claim is a protocol violation"`
 }
 
 // ---- handlers ----
@@ -255,12 +260,16 @@ func (d *Daemon) handleReleaseClaim(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	claim, oe := d.opReleaseClaim(actor, req.Task, req.Reason)
+	claim, message, oe := d.opReleaseClaim(actor, req.Task, req.Reason)
 	if oe != nil {
 		writeOpError(w, oe)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"released": claim})
+	body := map[string]any{"released": claim}
+	if message != "" {
+		body["message"] = message
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (d *Daemon) handleFinishRun(w http.ResponseWriter, r *http.Request) {
@@ -272,12 +281,12 @@ func (d *Daemon) handleFinishRun(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	id, oe := d.opFinishRun(actor, req)
+	res, oe := d.opFinishRun(actor, req)
 	if oe != nil {
 		writeOpError(w, oe)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"id": id})
+	writeJSON(w, http.StatusOK, res)
 }
 
 func (d *Daemon) handleEscalate(w http.ResponseWriter, r *http.Request) {
@@ -289,12 +298,16 @@ func (d *Daemon) handleEscalate(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	id, oe := d.opEscalate(actor, req)
+	id, warning, oe := d.opEscalate(actor, req)
 	if oe != nil {
 		writeOpError(w, oe)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"id": id})
+	body := map[string]any{"id": id}
+	if warning != "" {
+		body["warning"] = warning
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (d *Daemon) handleAnswerEscalation(w http.ResponseWriter, r *http.Request) {
@@ -329,12 +342,16 @@ func (d *Daemon) handleAddNote(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	id, oe := d.opAddNote(actor, req.Task, req.Text)
+	id, warning, oe := d.opAddNote(actor, req.Task, req.Text)
 	if oe != nil {
 		writeOpError(w, oe)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"id": id})
+	body := map[string]any{"id": id}
+	if warning != "" {
+		body["warning"] = warning
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func (d *Daemon) handleGetTask(w http.ResponseWriter, r *http.Request) {
