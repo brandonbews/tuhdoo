@@ -2,7 +2,7 @@
 
 `tuh-01KYXVSRVK2GFW439G1T0GBQKM`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui` `design`
 - **Created:** 2026-08-01 05:12 UTC by `brandon`
@@ -32,4 +32,10 @@ Constraints: TUI-only change; platform label-agnosticism untouched (no ops-side 
 
 ## History
 
-_No activity yet._
+### 2026-08-05 20:12 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-bqkm/labels-editable-task-view`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/35>
+- Commits: `d02ebc8`
+
+Landed as PR #35 (squash-merged to main, checks green). Labels are now editable from the TUI task detail view exactly per the settled design: labels stop in the focus ring after priority (absent on terminal tasks), always-rendered meta line with dim none placeholder, shared single-line editor prefilled comma-joined, splitList reused for parsing, empty submit clears, element-wise unchanged comparison (respace no-op, reorder real edit), steeringAPI.setLabels over the existing PATCH. Goldens updated; stale top.go comment rewritten. No daemon/ops/CLI/MCP changes.

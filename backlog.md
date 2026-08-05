@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 1 ready · 1 blocked · 5 on hold · 2 inbox · 55 done · 11 cancelled
+0 in progress · 1 ready · 1 blocked · 5 on hold · 2 inbox · 56 done · 11 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -84,6 +82,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7t5y`](tasks/tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y.md) shortID is duplicated between cmd/tuhdoo and internal/views — extract one shared helper
 - [`tuh-s8vt`](tasks/tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) Task view field focus ring: up/down selects any editable field, enter opens its editor
 - [`tuh-vtfa`](tasks/tuh-01KYXVK1TV66GR1JV8TCG8VTFA.md) Task-view history: blank line between entries, bold entry descriptors
+- [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) Labels editable from the task view
 - [`tuh-m0qk`](tasks/tuh-01KYZ9FJH4N2XFRXJ9ANV1M0QK.md) get_backlog scope input: MCP read parity with the TUI sections (T5 revision)
 - [`tuh-ntpk`](tasks/tuh-01KZ0ES83SFH6MKWP82Y2HNTPK.md) Status vocabulary: cancelled replaces archived everywhere; "on hold" stays as the one display mapping
 - [`tuh-wqd6`](tasks/tuh-01KZ0ES83SFH6MKWP82YRXWQD6.md) One classifier: the daemon serves the derived situation
