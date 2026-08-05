@@ -15,14 +15,21 @@ import (
 // survive. (Revised 2026-07-31: selBG, the TUI selection-bar
 // background, is the one sanctioned exception — the capability ladder
 // in selection.go may hand it a truecolor or 256-color code; every
-// other code stays 16-color.) The bg* codes are black-on-color section
-// bars (TUI only); their zero values degrade bars to plain text with
-// the same geometry. bgGray is the shelf bar (chrome hierarchy,
-// 2026-08-03): dim foreground on the bright-black background — palette
-// slot 8, still inside the 16-color law.
+// other code stays 16-color.) The bg* codes are the TUI's section
+// bars; their zero values degrade bars to plain text with the same
+// geometry. Most are black-on-color; bgGray is the shelf bar (chrome
+// hierarchy, 2026-08-03): dim foreground on the bright-black
+// background — palette slot 8. Bar recolors (2026-08-04): bgRed is
+// dim foreground on red — BLOCKED holds only unmet-dependency tasks,
+// ordinary sequencing, so it keeps the hue family and drops the
+// alarm — and bgWhite (black on bright-white, slot 15) is the INBOX
+// bar, replacing reverse-dim. dimRed is the matching foreground for
+// the blocked row's waiting: lead. All still inside the 16-color law.
 type colors struct {
 	reset, bold, dim, rev, green, yellow, red, magenta string
+	dimRed                                             string
 	bgMagenta, bgGreen, bgYellow, bgRed, bgGray        string
+	bgWhite                                            string
 	selBG                                              string // selection bar; set by runTUI only, never by newColors
 }
 
@@ -39,9 +46,10 @@ func newColors(out *os.File) colors {
 	return colors{
 		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
 		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
+		dimRed:    "\x1b[2;31m",
 		bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
-		bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
-		bgGray: "\x1b[2;100m",
+		bgYellow: "\x1b[30;43m", bgRed: "\x1b[2;41m",
+		bgGray: "\x1b[2;100m", bgWhite: "\x1b[30;107m",
 	}
 }
 

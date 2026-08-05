@@ -1297,14 +1297,18 @@ var topSections = []topSection{
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, false, "enter answer"},
 	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · c cancel"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, false, ""},
+	// BLOCKED's bgRed went dim red (bar recolors, 2026-08-04): the
+	// section holds only unmet-dependency tasks — ordinary sequencing,
+	// not a fire — so the bar keeps the hue and drops the alarm.
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
-	// The shelves (2026-07-31): held above inbox, both dim — parked and
-	// captured work sits below the live queue and never claims the eye.
-	// Chrome hierarchy (2026-08-03): held is shelved and takes the
-	// dark-gray bgGray bar; inbox awaits attention and keeps reverse-dim
-	// — the two shelves are distinguishable at a glance now.
+	// The shelves (2026-07-31): held above inbox, both dim rows — parked
+	// and captured work sits below the live queue and never claims the
+	// eye. Chrome hierarchy (2026-08-03): held is shelved and takes the
+	// dark-gray bgGray bar. Bar recolors (2026-08-04): inbox awaits
+	// attention and takes the bright-white bgWhite bar (was reverse-dim)
+	// — its rows stay dim, but the bar no longer reads as shelf chrome.
 	{"held", "ON HOLD", func(c colors) string { return c.bgGray }, true, "c cancel"},
-	{"inbox", "INBOX", func(c colors) string { return c.rev + c.dim }, true, "i capture · c cancel"},
+	{"inbox", "INBOX", func(c colors) string { return c.bgWhite }, true, "i capture · c cancel"},
 }
 
 // historySections are history mode's bars (history view, 2026-08-02):
@@ -1588,8 +1592,11 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 			// is the browse axis here, not priority.
 			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix+closeSuffix(t), col.dim, width)
 		default: // blocked
+			// The waiting: lead is dim red (bar recolors, 2026-08-04):
+			// full-brightness red would be louder than the section's own
+			// dim-red bar.
 			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "waiting: ", col.red, blockedReasonTUI(t, s.taskRef), width)
+				"\n" + secondLine(col, "waiting: ", col.dimRed, blockedReasonTUI(t, s.taskRef), width)
 		}
 	}
 	if cursor {

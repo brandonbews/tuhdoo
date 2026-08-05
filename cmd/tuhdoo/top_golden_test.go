@@ -18,9 +18,10 @@ import (
 var ansiColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
+	dimRed:    "\x1b[2;31m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
-	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;41m",
-	bgGray: "\x1b[2;100m",
+	bgYellow: "\x1b[30;43m", bgRed: "\x1b[2;41m",
+	bgGray: "\x1b[2;100m", bgWhite: "\x1b[30;107m",
 }
 
 // legendKey and legendSep compose the expected bytes of the unfilled
@@ -114,12 +115,15 @@ func TestTopGoldenBars(t *testing.T) {
 			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + pad(" READY (2)", "p priority · c cancel ") + "\x1b[0m",
 			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
-			"\x1b[30;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
+			// BLOCKED is dim red (bar recolors, 2026-08-04): unmet deps
+			// are sequencing, not a fire.
+			"\x1b[2;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
 			// The shelves split (chrome hierarchy, 2026-08-03): ON HOLD is
 			// shelved and takes the dark-gray bar (dim on bright black);
-			// INBOX awaits attention and keeps reverse-dim.
+			// INBOX awaits attention and takes black on bright-white (bar
+			// recolors, 2026-08-04 — was reverse-dim).
 			"\x1b[2;100m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
-			"\x1b[7m\x1b[2m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
+			"\x1b[30;107m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
 			foot,
 		} {
 			if !strings.Contains(v, bar) {
@@ -146,6 +150,28 @@ func TestTopGoldenBars(t *testing.T) {
 				t.Errorf("width %d: row styling wrong %q; view:\n%q", width, row, v)
 			}
 		}
+	}
+}
+
+// The blocked row's waiting: lead is dim red, matching its section bar
+// (bar recolors, 2026-08-04): a full-brightness red lead would be
+// louder than the bar above it.
+func TestTopGoldenBlockedWaitingLead(t *testing.T) {
+	s := topSnapshot()
+	s.state.Tasks = append(s.state.Tasks,
+		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open",
+			Situation: "blocked", UnmetDeps: []string{"t-flor"}})
+	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
+		ID: "t-wait", Title: "build on the idea", DependsOn: []string{"t-flor"},
+	}}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
+		col: ansiColors, width: 120, height: 60}
+	v := m.View()
+	if !strings.Contains(v, "\x1b[2;31mwaiting: \x1b[0m\x1b[2m") {
+		t.Errorf("blocked waiting: lead is not dim red; view:\n%q", v)
+	}
+	if strings.Contains(v, "\x1b[31mwaiting:") {
+		t.Errorf("blocked waiting: lead still full-brightness red; view:\n%q", v)
 	}
 }
 
