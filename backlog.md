@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 3 ready · 2 blocked · 5 on hold · 18 inbox · 61 done · 12 cancelled
+1 in progress · 2 ready · 2 blocked · 5 on hold · 18 inbox · 61 done · 12 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
 | [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) | init hardening: loud unknown-flag errors and the MCP snippet in init output | 2 | `cli` |
 | [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) | Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward | 1 | `syncer` `t8` |
 
