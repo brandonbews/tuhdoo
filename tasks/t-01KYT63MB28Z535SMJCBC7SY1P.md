@@ -2,12 +2,16 @@
 
 `t-01KYT63MB28Z535SMJCBC7SY1P`
 
-- **Status:** on hold — deliberately paused
+- **Status:** cancelled
 - **Priority:** 0
 - **Labels:** `cli` `tui` `design`
 - **Created:** 2026-07-30 18:55 UTC by `4099114+brandonbews`
 
 ## Description
+
+Cancelled 2026-08-05 (edge grill, at Brandon's direction): the parents field is being removed entirely (see the edge-grill revision to 001 D5) — epics are now depends_on containers, so a parent-grouped tree view has no relation left to render. The successor exploration is the inbox capture "Epics after parents removal: is any epic UX worth having?" (tuh-01KZ9Y3THHH5B8GT22T92BPEZ8).
+
+Original description follows for the record:
 
 Gated: unpark when the edge-semantics grill resolves what parent edges mean vs depends_on (docs/design/open-questions.md — "Edge semantics, cycle enforcement, and what a milestone is").
 

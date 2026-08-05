@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 4 blocked · 5 on hold · 3 inbox · 57 done · 11 cancelled
+0 in progress · 4 ready · 4 blocked · 4 on hold · 3 inbox · 57 done · 12 cancelled
 
 ## In progress
 
@@ -32,7 +32,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 |---|---|---:|---|
 | [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | `milestone` |
 | [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | `go` `platform` |
-| [`t-sy1p`](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | `cli` `tui` `design` |
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
 
@@ -106,6 +105,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 ## Cancelled
 
+- [`t-sy1p`](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) Tree/parent-grouped rendering in the TUI list
 - [`tuh-ktq0`](tasks/tuh-01KYWE39DD1VWJVZZT3KHAKTQ0.md) just a test
 - [`tuh-rg1q`](tasks/tuh-01KYWJT42G4CXYPMB6VBX0RG1Q.md) stronger visual hierarchy, maybe make tasks titles bold?
 - [`tuh-z7xm`](tasks/tuh-01KYX2JXT30YBT4ZQNEZP3Z7XM.md) confirm there is a complete test suite that is running changes get merged to main (especially as we light up the PR flow)
