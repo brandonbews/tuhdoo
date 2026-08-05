@@ -241,11 +241,12 @@ func TestMCPFullLoop(t *testing.T) {
 	}
 
 	// The ledger: exactly the loop's events, all stamped with the
-	// session principal.
+	// session principal. finish_run(done) is refereed (D6): the gate's
+	// claim.confirmed lands with it — remoteless, via the T2 local arm.
 	events := flushedEvents(t, d)
 	wantTypes := []string{
-		event.TypeTaskCreated, event.TypeClaimMade,
-		event.TypeNoteAdded, event.TypeRunFinished,
+		event.TypeTaskCreated, event.TypeClaimMade, event.TypeNoteAdded,
+		event.TypeClaimConfirmed, event.TypeRunFinished,
 	}
 	if len(events) != len(wantTypes) {
 		t.Fatalf("event count = %d, want %d", len(events), len(wantTypes))

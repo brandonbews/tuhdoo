@@ -123,6 +123,27 @@ func (r *Replayer) Replay(in Input) (*State, error) {
 		}
 	}
 
+	// Loser expiry check (D6 clause 3, 2026-08-04): a voided claim is an
+	// attempt the race ended, and its loser owes a closing run — the
+	// daemon coerces any finish_run on it to "superseded". A loser that
+	// never reports leaves a trace anyway: once the voided claim's lease
+	// lapses with no run of that actor's closing the attempt, replay
+	// synthesizes a branch-less superseded run, exactly as interruptedRun
+	// does for expired holders. Deterministic at every instant: leases
+	// and Now are replay inputs, and only real runs count as closes
+	// (s.Runs holds no synthesized runs yet). The write-side finish guard
+	// mirrors this rule, refusing a late close once the run exists here —
+	// one close per attempt.
+	for _, c := range s.Claims {
+		if c.Status != ClaimVoided || !leaseExpiredBy(in.Leases, c.ID, in.Now) {
+			continue
+		}
+		if closedByRun(s.Runs, c) {
+			continue
+		}
+		synthesized = append(synthesized, supersededRun(c))
+	}
+
 	// Synthesized runs sort after real ones, in claim order (still
 	// deterministic: claim IDs are ULIDs).
 	sort.Slice(synthesized, func(i, j int) bool { return synthesized[i].Claim < synthesized[j].Claim })
@@ -437,6 +458,30 @@ func interruptedRun(c *Claim) Run {
 	return Run{ID: c.ID, Task: c.Task, Claim: c.ID, Actor: c.Actor,
 		Machine: c.Machine, Outcome: event.OutcomeInterrupted,
 		Summary: "lease expired without a finish or release", Synthesized: true}
+}
+
+// supersededRun is the trace a race loser that never reported leaves
+// behind (D6, 2026-08-04). Branch-less by construction: the branch name
+// is knowable only to the losing agent, so a synthesized close cannot
+// carry one — salvage with a branch pointer exists only when the loser
+// reported through finish_run.
+func supersededRun(c *Claim) Run {
+	return Run{ID: c.ID, Task: c.Task, Claim: c.ID, Actor: c.Actor,
+		Machine: c.Machine, Outcome: event.OutcomeSuperseded,
+		Summary: "claim lost its race; lease expired without a report", Synthesized: true}
+}
+
+// closedByRun reports whether a real run of the claim's actor, minted
+// after the claim, closes the attempt — the same one-close-per-attempt
+// rule the daemon's finish guard enforces at write time, so guard and
+// synthesis can never disagree about whether a close is still owed.
+func closedByRun(runs []Run, c *Claim) bool {
+	for i := range runs {
+		if r := &runs[i]; r.Task == c.Task && r.Actor == c.Actor && r.ID > c.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func unmarshal(e event.Event, dst any) error {

@@ -344,6 +344,7 @@ type releaseClaimInput struct {
 
 type releaseClaimResult struct {
 	Released string `json:"released" jsonschema:"the released claim ID"`
+	Message  string `json:"message,omitempty" jsonschema:"the daemon's acknowledgment when this release was a race loser standing down (D6): the attempt is recorded as superseded; salvage via add_note"`
 }
 
 type finishRunInput struct {
@@ -373,7 +374,8 @@ type addNoteInput struct {
 }
 
 type eventIDResult struct {
-	ID string `json:"id" jsonschema:"the recorded event's ID"`
+	ID      string `json:"id" jsonschema:"the recorded event's ID"`
+	Warning string `json:"warning,omitempty" jsonschema:"a stand-down notice when your claim on this task has lost its race (D6: losers learn at verb-time) — stand down, do not merge, close any open PR, and record the attempt with finish_run"`
 }
 
 type createTasksInput struct {
@@ -435,7 +437,9 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "claim_next",
 		Description: "Atomically claim the best ready task and return it hydrated. " +
 			"An empty pool returns claimed:false — a normal outcome, not an error. " +
-			"The claim's lease auto-renews while this session stays connected.",
+			"The claim's lease auto-renews while this session stays connected. " +
+			"A claim is provisional (D6): before merging anything from the work, call " +
+			"confirm_claim and merge only on a confirmed verdict.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimNextInput) (*mcp.CallToolResult, claimNextResult, error) {
 		h, oe := d.opClaimNext(s.principal(), in.Labels)
 		if oe != nil {
@@ -454,7 +458,9 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "claim_task",
 		Description: "Claim one specific task (the human-directed path) and return it hydrated. " +
 			"Fails if the task is already claimed, not open, blocked by unmet dependencies, " +
-			"or blocked by an open blocking escalation; the error names the specific blockers.",
+			"or blocked by an open blocking escalation; the error names the specific blockers. " +
+			"A claim is provisional (D6): before merging anything from the work, call " +
+			"confirm_claim and merge only on a confirmed verdict.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimTaskInput) (*mcp.CallToolResult, hydratedTask, error) {
 		h, oe := d.opClaimTask(s.principal(), in.Task)
 		if oe != nil {
@@ -494,39 +500,43 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "release_claim",
 		Description: "Voluntarily stand down from a task you hold, returning it to the pool with " +
 			"your reason on record. The reason is the handoff; add_note first only for " +
-			"resume-state it cannot carry.",
+			"resume-state it cannot carry. A race loser standing down from a voided claim is " +
+			"acknowledged the same way — the attempt is then recorded as superseded.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in releaseClaimInput) (*mcp.CallToolResult, releaseClaimResult, error) {
-		claim, oe := d.opReleaseClaim(s.principal(), in.Task, in.Reason)
+		claim, message, oe := d.opReleaseClaim(s.principal(), in.Task, in.Reason)
 		if oe != nil {
 			return nil, releaseClaimResult{}, oe
 		}
 		s.untrack(in.Task)
-		return nil, releaseClaimResult{Released: claim}, nil
+		return nil, releaseClaimResult{Released: claim, Message: message}, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "finish_run",
 		Description: "Record how your attempt ended: outcome, links (branch/PR/commits), and a " +
-			"summary for whoever comes next. Every claim should end in a finish_run or a release_claim.",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, in finishRunInput) (*mcp.CallToolResult, eventIDResult, error) {
+			"summary for whoever comes next. Every claim should end in a finish_run or a " +
+			"release_claim. done is refereed (D6): the daemon runs the confirmation gate, and " +
+			"an attempt that lost its claim race is recorded superseded instead — your links " +
+			"and summary are kept as the salvage record, and the result says so.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in finishRunInput) (*mcp.CallToolResult, finishRunResult, error) {
 		// Agents report their own verdicts only; "interrupted" and
 		// "superseded" are daemon-synthesized (T5) and rejected here
 		// even though the shared op accepts them for the HTTP surface.
 		switch in.Outcome {
 		case event.OutcomeDone, event.OutcomeFailed, event.OutcomeAbandoned, event.OutcomeBlocked:
 		default:
-			return nil, eventIDResult{}, opErrf(http.StatusBadRequest,
+			return nil, finishRunResult{}, opErrf(http.StatusBadRequest,
 				"invalid outcome %q: agents report done, failed, abandoned, or blocked", in.Outcome)
 		}
-		id, oe := d.opFinishRun(s.principal(), finishRunReq{
+		res, oe := d.opFinishRun(s.principal(), finishRunReq{
 			Task: in.Task, Outcome: in.Outcome, Branch: in.Branch,
 			PR: in.PR, Commits: in.Commits, Summary: in.Summary,
 		})
 		if oe != nil {
-			return nil, eventIDResult{}, oe
+			return nil, finishRunResult{}, oe
 		}
 		s.untrack(in.Task)
-		return nil, eventIDResult{ID: id}, nil
+		return nil, res, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -535,13 +545,13 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"ends: for a blocking question, escalate, note where you stopped, release_claim, then " +
 			"finish_run with outcome blocked — the next claimant inherits question and answer.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in escalateInput) (*mcp.CallToolResult, eventIDResult, error) {
-		id, oe := d.opEscalate(s.principal(), escalateReq{
+		id, warning, oe := d.opEscalate(s.principal(), escalateReq{
 			Task: in.Task, Question: in.Question, Context: in.Context, Blocking: in.Blocking,
 		})
 		if oe != nil {
 			return nil, eventIDResult{}, oe
 		}
-		return nil, eventIDResult{ID: id}, nil
+		return nil, eventIDResult{ID: id, Warning: warning}, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
@@ -565,11 +575,11 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"transitions (claim, finish_run, release_claim, escalate) carry the record; write " +
 			"a note only when it would save a successor real work.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in addNoteInput) (*mcp.CallToolResult, eventIDResult, error) {
-		id, oe := d.opAddNote(s.principal(), in.Task, in.Text)
+		id, warning, oe := d.opAddNote(s.principal(), in.Task, in.Text)
 		if oe != nil {
 			return nil, eventIDResult{}, oe
 		}
-		return nil, eventIDResult{ID: id}, nil
+		return nil, eventIDResult{ID: id, Warning: warning}, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{
