@@ -4,7 +4,7 @@ A coordination fabric for agent fleets, steered by humans: a shared backlog, wor
 
 ## State of the project
 
-v0 is built and dogfooding itself. The binary (`make build` → `bin/tuhdoo`) carries the daemon, MCP surface, and CLI portal; on 2026-07-30 the markdown backlog was migrated into tuhdoo (B12 cutover) and now lives on the `tuhdoo` data branch of this repo. `docs/plan/backlog.md` is a tombstone; the live queue is `tuhdoo backlog`. Everything decided so far lives in `docs/` — do not re-litigate settled decisions from scratch; revise them explicitly (see conventions below).
+v0 is built and dogfooding itself; its definition of done — the five checkable facts in `docs/plan/roadmap.md` — was declared done on 2026-08-03, and **v1 (steering, and a second machine) is the live phase**. The binary (`make build` → `bin/tuhdoo`) carries the daemon, MCP surface, and CLI portal; on 2026-07-30 the markdown backlog was migrated into tuhdoo (B12 cutover) and now lives on the `tuhdoo` data branch of this repo. `docs/plan/backlog.md` is a tombstone; the live queue is `tuhdoo backlog`. Everything decided so far lives in `docs/` — do not re-litigate settled decisions from scratch; revise them explicitly (see conventions below).
 
 ## Read in this order
 
@@ -12,7 +12,7 @@ v0 is built and dogfooding itself. The binary (`make build` → `bin/tuhdoo`) ca
 2. `docs/design/002-technology.md` — stack and technical contracts (T1–T8)
 3. `docs/plan/roadmap.md` — phases and definitions of done
 4. the live work queue: `tuhdoo backlog` / `tuhdoo escalations` (agents: `docs/agent-protocol.md`, then `claim_next` through the shim) — `docs/plan/backlog.md` is a tombstone pointing there
-5. `docs/design/open-questions.md` — what's unresolved, and which cycle it belongs to
+5. `docs/design/open-questions.md` — a tombstone; open questions live on the ledger now (`tuhdoo backlog`, inbox/held)
 
 ## Project laws (non-negotiable unless a design doc is revised first)
 
@@ -21,7 +21,7 @@ v0 is built and dogfooding itself. The binary (`make build` → `bin/tuhdoo`) ca
 - **The deterministic core is pure functions**: replay, winner rules, lease expiry, compaction, view generation — data in, data out, no I/O, table-driven tests (T1).
 - **Host-agnostic by construction**: tuhdoo speaks the git protocol only; never call a host API from core paths; remoteless operation is a normal state, not an error (T2).
 - **Stored event bytes are never rewritten**; schema evolution is additive-first with in-memory upcasters; incomprehensible events trigger fail-safe read-only mode, never best-effort skipping (T3).
-- **Fewer, better MCP verbs**: the agent surface is eleven tools (T5); additions need a design-doc revision.
+- **Fewer, better MCP verbs**: the agent surface is twelve tools (T5); additions need a design-doc revision.
 
 ## Building tasks
 
