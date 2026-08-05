@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 1
 - **Labels:** `harness` `d6`
-- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (open), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (open)
+- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (open)
 - **Created:** 2026-08-04 08:01 UTC by `brandon/claude-code-1`
 
 ## Description

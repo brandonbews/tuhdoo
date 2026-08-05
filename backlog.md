@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 3 blocked · 6 on hold · 2 inbox · 50 done · 11 cancelled
+0 in progress · 2 ready · 2 blocked · 6 on hold · 2 inbox · 51 done · 11 cancelled
 
 ## In progress
 
@@ -10,7 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) | Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04) | 2 | `daemon` `core` `syncer` `d6` |
+| [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) | Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision) | 1 | `daemon` `d6` |
 | [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `tui` |
 
 ## Blocked / waiting
@@ -18,8 +18,7 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) | Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision) | 1 | depends on [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) |
-| [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | depends on [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md); depends on [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) |
+| [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | depends on [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) |
 
 ## On hold
 
@@ -93,6 +92,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer
 - [`tuh-3595`](tasks/tuh-01KZ53K4DF7Y0TYX3H5XP43595.md) Pinned frame off-by-one: trailing newline clips the header row
+- [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04)
 
 ## Cancelled
 

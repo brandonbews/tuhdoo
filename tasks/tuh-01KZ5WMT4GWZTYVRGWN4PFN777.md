@@ -2,7 +2,7 @@
 
 `tuh-01KZ5WMT4GWZTYVRGWN4PFN777`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `daemon` `core` `syncer` `d6`
 - **Created:** 2026-08-04 08:01 UTC by `brandon/claude-code-1`
@@ -29,4 +29,10 @@ Constraints: boring Go (T1) — the gate is a plain loop over existing sync prim
 
 ## History
 
-_No activity yet._
+### 2026-08-05 01:21 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-n777/confirmation-gate`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/29>
+- Commits: `a7da5f82e4e4cbcc129903c60f07e5857a79700d`
+
+Confirmation gate built and merged (PR #29, squash a7da5f8). claim.confirmed event type (additive, v1, payload = confirmed claim's event ID); pure replay rule — confirmed claim wins its contest unconditionally, one confirmation per contest (not per task forever), corrupt double-confirmation resolves to earliest ULID deterministically; writers' invariant at the merge chokepoint (confirmGuard in internal/syncer/merge.go, judged at frozen tree timestamps); gate ops GateHead/GatePush in internal/syncer/gate.go — the event touches no ref until the remote CAS accepts the push; daemon opConfirmClaim with bounded 4-retry loop, instant remoteless arm (T2), 503-nothing-written on unreachable remote; MCP verb confirm_claim (twelfth verb) requiring session-held claim. All acceptance tests exist and pass incl. two-daemon race integration (5 rounds, one confirmation per contest, zero duplicates); make test lint green. DEPLOY NOTE: all fleet binaries must be rebuilt before the first confirmation lands — older binaries go read-only fail-safe on meeting claim.confirmed. Successor task tuh-01KZ4TH4HT56TE4CQPKF3R76WT (loser handling in finish_run) is now unblocked and deliberately untouched here.

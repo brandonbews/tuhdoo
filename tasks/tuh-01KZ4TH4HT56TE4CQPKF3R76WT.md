@@ -2,10 +2,10 @@
 
 `tuh-01KZ4TH4HT56TE4CQPKF3R76WT`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `daemon` `d6`
-- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (open)
+- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done)
 - **Created:** 2026-08-03 22:04 UTC by `brandon/claude-code-1`
 
 ## Description
