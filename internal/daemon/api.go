@@ -45,7 +45,6 @@ type taskJSON struct {
 	Description string    `json:"description"`
 	Priority    int       `json:"priority"`
 	Labels      []string  `json:"labels"`
-	Parents     []string  `json:"parents"`
 	DependsOn   []string  `json:"depends_on"`
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
@@ -465,8 +464,7 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 func taskJSONOf(t *core.Task) taskJSON {
 	out := taskJSON{
 		ID: t.ID, Title: t.Title, Description: t.Description,
-		Priority: t.Priority, Labels: t.Labels,
-		Parents: t.Parents, DependsOn: t.DependsOn,
+		Priority: t.Priority, Labels: t.Labels, DependsOn: t.DependsOn,
 		Status: t.Status, CreatedBy: t.CreatedBy, CreatedAt: t.CreatedAt,
 	}
 	if !t.ClosedAt.IsZero() {

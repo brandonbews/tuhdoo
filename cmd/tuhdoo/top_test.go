@@ -41,8 +41,9 @@ func topSnapshot() *snapshot {
 		tasks: map[string]hydratedTask{
 			"t-pars": {Task: taskJSON{
 				ID: "t-pars", Title: "write the parser",
-				// Edges: t-chor is done, so t-pars still classifies ready.
-				Parents: []string{"t-epic"}, DependsOn: []string{"t-chor"},
+				// Edges: t-chor is done, so t-pars still classifies ready;
+				// t-epic is unknown to the snapshot (annotates bare).
+				DependsOn: []string{"t-chor", "t-epic"},
 			}},
 			"t-flor": {Task: taskJSON{ID: "t-flor", Title: "sweep the floor"}},
 			"t-flak": {
@@ -789,17 +790,16 @@ func TestTopDetailScrollClamps(t *testing.T) {
 	}
 }
 
-// Edge markers: a row whose task has parents or dependencies says so
-// on its dim meta line (two-line rows, 2026-08-05); edge-free rows
-// stay one line — the "no labels, no edges" signal. Same renderer in
-// both modes.
+// Edge markers: a row whose task has dependencies says so on its dim
+// meta line (two-line rows, 2026-08-05); edge-free rows stay one line
+// — the "no labels, no edges" signal. Same renderer in both modes.
 func TestTopEdgeMarkers(t *testing.T) {
 	for name, m := range map[string]topModel{
 		"steer": newTopModel(newFakeSteering()),
 		"watch": newWatchModel(),
 	} {
 		v := m.View()
-		if !strings.Contains(v, "write the parser\n              in t-epic · 1 dep") {
+		if !strings.Contains(v, "write the parser\n              2 deps") {
 			t.Errorf("%s: parser row missing its edge meta line; view:\n%s", name, v)
 		}
 		if !strings.Contains(v, "sweep the floor\n\n") {
@@ -887,14 +887,14 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 		}},
 		tasks: map[string]hydratedTask{
 			long: {Task: taskJSON{ID: long, Title: "the long one", DependsOn: []string{dep}}},
-			dep:  {Task: taskJSON{ID: dep, Title: "its dependency", Parents: []string{long}}},
+			dep:  {Task: taskJSON{ID: dep, Title: "its dependency", DependsOn: []string{long}}},
 		},
 	}
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s)}
 	v := m.View()
 	for _, want := range []string{
 		"▌ t-rqjm  p0  its dependency", // ready row, selected
-		"▌             in t-d83w",      // its parent marker on the meta line, barred too
+		"▌             1 dep",          // its edge marker on the meta line, barred too
 		"t-d83w      the long one",     // blocked row: blank badge cell
 		// The waiting: reason annotates its dep with status and title.
 		"waiting: depends on t-rqjm (open — its dependency)",
@@ -914,8 +914,8 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	for _, want := range []string{
 		"t-rqjm — its dependency",
 		"id          t-rqjm",
-		// Its parent edge is short and annotated too.
-		"parents     t-d83w (open — the long one)",
+		// Its dependency edge is short and annotated too.
+		"depends on  t-d83w (open — the long one)",
 	} {
 		if !strings.Contains(dv, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, dv)
@@ -969,8 +969,9 @@ func TestTopDetailAnnotatesEdges(t *testing.T) {
 	for _, want := range []string{
 		"t-pars — write the parser",
 		"id          t-pars",
-		"parents     t-epic", // unknown to the snapshot: bare
-		"depends on  t-chor (done — old chore)",
+		// t-chor resolves and annotates; t-epic is unknown to the
+		// snapshot and stays bare.
+		"depends on  t-chor (done — old chore), t-epic",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -987,23 +988,21 @@ func TestTopDetailAnnotatesEdges(t *testing.T) {
 func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 	long := "t-01KYT63MB28Z535SMJC9B0D83W"
 	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
-	parent := "t-01KYT63MB28Z535SMJCBC7SY1P"
 	var b strings.Builder
 	printTask(&b, colors{}, hydratedTask{Task: taskJSON{
 		ID: long, Title: "the long one",
-		Parents: []string{parent}, DependsOn: []string{dep},
+		DependsOn: []string{dep},
 	}})
 	v := b.String()
 	for _, want := range []string{
 		long + " — the long one",
-		"parents     " + parent + "\n",
 		"depends on  " + dep + "\n",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("one-shot rendering missing %q; output:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"t-d83w", "t-rqjm", "t-sy1p", "id          "} {
+	for _, reject := range []string{"t-d83w", "t-rqjm", "id          "} {
 		if strings.Contains(v, reject) {
 			t.Errorf("one-shot rendering grew TUI sugar %q; output:\n%s", reject, v)
 		}

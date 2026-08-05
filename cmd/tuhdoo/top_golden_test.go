@@ -51,7 +51,7 @@ func TestTopGoldenPlain80(t *testing.T) {
 		// and a bare row (t-flor) stays one line, the "no labels, no
 		// edges" signal.
 		"  t-pars  p5  write the parser",
-		"              in t-epic · 1 dep",
+		"              2 deps",
 		"  t-flor  p1  sweep the floor",
 		"",
 		" IN PROGRESS (1)                                                                ",
@@ -218,12 +218,12 @@ func TestTopGoldenEscalationExtendedMeta(t *testing.T) {
 	s := topSnapshot()
 	h := s.tasks["t-lic"]
 	h.Task.Labels = []string{"legal"}
-	h.Task.Parents = []string{"t-epic"}
+	h.Task.DependsOn = []string{"t-chor"}
 	s.tasks["t-lic"] = h
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 40}
 	want := "▌ t-lic   !   choose a license\n" +
 		"▌             question: Which license?\n" +
-		"▌             [legal] · in t-epic · brandon/a2 · 2026-07-29 14:03 UTC"
+		"▌             [legal] · 1 dep · brandon/a2 · 2026-07-29 14:03 UTC"
 	if v := m.View(); !strings.Contains(v, want) {
 		t.Errorf("escalation row's extended meta line diverged; want:\n%q\nview:\n%s", want, v)
 	}
@@ -246,7 +246,7 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 		}},
 		tasks: map[string]hydratedTask{
 			newID: {Task: taskJSON{ID: newID, Title: "the new-era task",
-				Labels: []string{"era"}, Parents: []string{oldID}}},
+				Labels: []string{"era"}, DependsOn: []string{oldID}}},
 			oldID: {Task: taskJSON{ID: oldID, Title: "the old-era task", Labels: []string{"infra"}}},
 			blkID: {Task: taskJSON{ID: blkID, Title: "the waiting task", DependsOn: []string{oldID}}},
 		},
@@ -259,7 +259,7 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	mustContain(t, v,
 		// A ready row with labels and edges: two lines, both barred.
 		"▌ tuh-d83w  p2  the new-era task",
-		"▌               [era] · in t-rqjm",
+		"▌               [era] · 1 dep",
 		"  t-rqjm    p1  the old-era task",
 		"                [infra]",
 		"  t-sy1p        the waiting task",

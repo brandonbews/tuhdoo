@@ -277,11 +277,11 @@ func printTask(w io.Writer, col colors, h hydratedTask) {
 	printTaskRef(w, col, h, nil)
 }
 
-// printTaskRef is printTask with the task references — parents and
-// depends_on — passed through ref: the TUI shortens and annotates them
-// for display, and gets the full ULID exactly once, dimmed on its own
-// line as the copyable canonical form. A nil ref keeps the one-shot
-// rendering byte-identical.
+// printTaskRef is printTask with the task references — depends_on —
+// passed through ref: the TUI shortens and annotates them for display,
+// and gets the full ULID exactly once, dimmed on its own line as the
+// copyable canonical form. A nil ref keeps the one-shot rendering
+// byte-identical.
 func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) string) {
 	t := h.Task
 	if ref == nil {
@@ -302,9 +302,6 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 	fmt.Fprintf(w, "  priority    %d\n", t.Priority)
 	if len(t.Labels) > 0 {
 		fmt.Fprintf(w, "  labels      %s\n", strings.Join(t.Labels, ", "))
-	}
-	if len(t.Parents) > 0 {
-		fmt.Fprintf(w, "  parents     %s\n", joinRefs(t.Parents, ref))
 	}
 	if len(t.DependsOn) > 0 {
 		fmt.Fprintf(w, "  depends on  %s\n", joinRefs(t.DependsOn, ref))

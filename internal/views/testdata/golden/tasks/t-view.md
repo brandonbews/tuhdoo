@@ -5,7 +5,6 @@
 - **Status:** open — ready
 - **Priority:** 5
 - **Labels:** `core`
-- **Parents:** [`t-epic`](t-epic.md)
 - **Depends on:** [`t-core`](t-core.md) (done)
 - **Created:** 2026-07-29 12:03 UTC by `brandon`
 

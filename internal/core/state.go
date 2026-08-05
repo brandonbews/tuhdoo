@@ -35,8 +35,7 @@ type Task struct {
 	Description string
 	Priority    int
 	Labels      []string
-	Parents     []string // parent-task edges ("epics" are just tasks)
-	DependsOn   []string // prerequisite-task edges
+	DependsOn   []string // prerequisite-task edges ("epics" are container tasks that depend on their children)
 	Status      string
 	CreatedBy   string // actor of task.created
 	CreatedAt   time.Time

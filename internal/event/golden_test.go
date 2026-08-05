@@ -48,7 +48,6 @@ func goldenEvents(t *testing.T) map[string]Event {
 			Status:      "inbox",
 			Priority:    2,
 			Labels:      []string{"core", "v0"},
-			Parents:     []string{"t-01BX5ZZKBKACTAV9WEVGEMMVRX"},
 			DependsOn:   []string{"t-01BX5ZZKBKACTAV9WEVGEMMVRW"},
 		}},
 		TypeTaskUpdated: {0x02, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", TaskUpdated{

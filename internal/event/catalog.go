@@ -70,17 +70,18 @@ const (
 // Each struct has an Unknown map holding payload fields this binary does
 // not recognize, so decoded payloads re-encode byte-identically.
 
-// TaskCreated is the payload of "task.created". Parents and DependsOn
-// are DAG edges: task IDs of parent tasks and prerequisite tasks.
-// Status (v2, 2026-07-31) is the task's initial status; empty means
-// "open", the only reading v1 events could carry.
+// TaskCreated is the payload of "task.created". DependsOn is the DAG
+// edge: task IDs of prerequisite tasks. Status (v2, 2026-07-31) is the
+// task's initial status; empty means "open", the only reading v1 events
+// could carry. Stored events may still carry "parents" (retired
+// 2026-08-05, display-only while it lived); it rides the Unknown map
+// like any other field this binary has no place for.
 type TaskCreated struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
 	Status      string   `json:"status"`
 	Priority    int      `json:"priority"`
 	Labels      []string `json:"labels"`
-	Parents     []string `json:"parents"`
 	DependsOn   []string `json:"depends_on"`
 
 	Unknown map[string]json.RawMessage `json:"-"`
@@ -94,7 +95,6 @@ type TaskUpdated struct {
 	Status      *string   `json:"status"`
 	Priority    *int      `json:"priority"`
 	Labels      *[]string `json:"labels"`
-	Parents     *[]string `json:"parents"`
 	DependsOn   *[]string `json:"depends_on"`
 
 	Unknown map[string]json.RawMessage `json:"-"`

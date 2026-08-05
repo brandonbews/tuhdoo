@@ -201,8 +201,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		}
 		t := &Task{
 			ID: e.Task, Title: p.Title, Description: p.Description,
-			Priority: p.Priority, Labels: p.Labels,
-			Parents: p.Parents, DependsOn: p.DependsOn,
+			Priority: p.Priority, Labels: p.Labels, DependsOn: p.DependsOn,
 			Status: status, CreatedBy: e.Actor, CreatedAt: when,
 		}
 		// Born terminal (B12 migration shape): the creation event is the
@@ -254,9 +253,6 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		}
 		if p.Labels != nil {
 			t.Labels = *p.Labels
-		}
-		if p.Parents != nil {
-			t.Parents = *p.Parents
 		}
 		if p.DependsOn != nil {
 			t.DependsOn = *p.DependsOn

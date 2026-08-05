@@ -343,9 +343,6 @@ func taskPage(s *core.State, t *core.Task) []byte {
 	if len(t.Labels) > 0 {
 		fmt.Fprintf(&w, "- **Labels:** %s\n", labelSpans(t.Labels))
 	}
-	if len(t.Parents) > 0 {
-		fmt.Fprintf(&w, "- **Parents:** %s\n", siblingLinks(t.Parents))
-	}
 	if len(t.DependsOn) > 0 {
 		fmt.Fprintf(&w, "- **Depends on:** %s\n", depLinks(s, t.DependsOn))
 	}
@@ -496,17 +493,9 @@ func rootLink(id string) string {
 	return fmt.Sprintf("[`%s`](tasks/%s.md)", event.ShortID(id), id)
 }
 
-// siblingLinks links tasks from within tasks/ (same directory).
-func siblingLinks(ids []string) string {
-	parts := make([]string, len(ids))
-	for i, id := range ids {
-		parts[i] = fmt.Sprintf("[`%s`](%s.md)", event.ShortID(id), id)
-	}
-	return strings.Join(parts, ", ")
-}
-
-// depLinks is siblingLinks plus each dependency's status, so a reader
-// sees at a glance which prerequisites still gate this task.
+// depLinks links tasks from within tasks/ (same directory), plus each
+// dependency's status, so a reader sees at a glance which prerequisites
+// still gate this task.
 func depLinks(s *core.State, ids []string) string {
 	parts := make([]string, len(ids))
 	for i, id := range ids {

@@ -91,11 +91,11 @@ the life of the pane — the dashboard that sits beside a working agent.
   escalations   every escalation, one line each, open before answered —
                 same plain-column form; grep open or blocking
   create <t>    add a task: --desc <text|-> --priority <n> --labels a,b
-                --parents <ids> --depends-on <ids> (- reads stdin)
+                --depends-on <ids> (- reads stdin)
                 --status inbox|held captures without opening the task
                 (inbox: title-only is fine; agents never get served it)
   update <id>   change fields: --title --desc --priority --status
-                (open|inbox|held|done|cancelled) --labels --parents
+                (open|inbox|held|done|cancelled) --labels
                 --depends-on (lists replace in full)
   answer <id>   answer an open escalation by its ID or its task's ID;
                 the rest of the line is the answer text

@@ -84,7 +84,7 @@ func resolveRefs(refs []string, tasks []stateTask) ([]string, error) {
 func runCreate(args []string) int {
 	const use = `usage: tuhdoo create <title> [--desc <text>|--desc -] [--priority <n>]
                      [--status open|inbox|held] [--labels a,b]
-                     [--parents <ids>] [--depends-on <ids>] [--as <human>]
+                     [--depends-on <ids>] [--as <human>]
 (--status inbox is capture: title-only is fine, agents are never served it;
  --status held parks a triaged task; both promote later via update --status open)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
@@ -94,13 +94,12 @@ func runCreate(args []string) int {
 	title := args[0]
 	fs := flag.NewFlagSet("tuhdoo create", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var desc, status, labels, parents, dependsOn, as string
+	var desc, status, labels, dependsOn, as string
 	var priority int
 	fs.StringVar(&desc, "desc", "", "")
 	fs.StringVar(&status, "status", "", "")
 	fs.IntVar(&priority, "priority", 0, "")
 	fs.StringVar(&labels, "labels", "", "")
-	fs.StringVar(&parents, "parents", "", "")
 	fs.StringVar(&dependsOn, "depends-on", "", "")
 	fs.StringVar(&as, "as", "", "")
 	if err := fs.Parse(args[1:]); err != nil || fs.NArg() > 0 {
@@ -131,23 +130,18 @@ func runCreate(args []string) int {
 	if labels != "" {
 		item["labels"] = splitList(labels)
 	}
-	if parents != "" || dependsOn != "" {
+	if dependsOn != "" {
 		st, err := fetchState(c)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tuhdoo create:", err)
 			return 1
 		}
-		for flagName, v := range map[string]string{"parents": parents, "depends_on": dependsOn} {
-			if v == "" {
-				continue
-			}
-			refs, err := resolveRefs(splitList(v), st.Tasks)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "tuhdoo create:", err)
-				return 1
-			}
-			item[flagName] = refs
+		refs, err := resolveRefs(splitList(dependsOn), st.Tasks)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "tuhdoo create:", err)
+			return 1
 		}
+		item["depends_on"] = refs
 	}
 	var resp struct {
 		IDs []string `json:"ids"`
@@ -169,8 +163,7 @@ func runCreate(args []string) int {
 func runUpdate(args []string) int {
 	const use = `usage: tuhdoo update <id> [--title <t>] [--desc <text>|--desc -]
                      [--priority <n>] [--status open|inbox|held|done|cancelled]
-                     [--labels a,b] [--parents <ids>] [--depends-on <ids>]
-                     [--as <human>]
+                     [--labels a,b] [--depends-on <ids>] [--as <human>]
 (list flags are full replacements; an empty value clears the list;
  --status open promotes/resumes, --status held pauses — promotion from
  inbox deserves a real description in the same breath)`
@@ -181,14 +174,13 @@ func runUpdate(args []string) int {
 	id := args[0]
 	fs := flag.NewFlagSet("tuhdoo update", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var title, desc, status, labels, parents, dependsOn, as string
+	var title, desc, status, labels, dependsOn, as string
 	var priority int
 	fs.StringVar(&title, "title", "", "")
 	fs.StringVar(&desc, "desc", "", "")
 	fs.StringVar(&status, "status", "", "")
 	fs.IntVar(&priority, "priority", 0, "")
 	fs.StringVar(&labels, "labels", "", "")
-	fs.StringVar(&parents, "parents", "", "")
 	fs.StringVar(&dependsOn, "depends-on", "", "")
 	fs.StringVar(&as, "as", "", "")
 	if err := fs.Parse(args[1:]); err != nil || fs.NArg() > 0 {
@@ -241,20 +233,13 @@ func runUpdate(args []string) int {
 	if set["labels"] {
 		body["labels"] = splitList(labels)
 	}
-	for flagName, key := range map[string]string{"parents": "parents", "depends-on": "depends_on"} {
-		if !set[flagName] {
-			continue
-		}
-		v := parents
-		if flagName == "depends-on" {
-			v = dependsOn
-		}
-		refs, err := resolveRefs(splitList(v), st.Tasks)
+	if set["depends-on"] {
+		refs, err := resolveRefs(splitList(dependsOn), st.Tasks)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tuhdoo update:", err)
 			return 1
 		}
-		body[key] = refs
+		body["depends_on"] = refs
 	}
 	if err := c.write("PATCH", "/v0/tasks/"+full, actor, body); err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo update:", err)

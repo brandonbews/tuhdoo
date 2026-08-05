@@ -1016,9 +1016,6 @@ func (m topModel) detailLines() []detailLine {
 		labels = strings.Join(t.Labels, ", ")
 	}
 	field(labelsStop, "labels", labels)
-	if len(t.Parents) > 0 {
-		field(-1, "parents", joinRefs(t.Parents, m.snap.taskRef))
-	}
 	if len(t.DependsOn) > 0 {
 		field(-1, "depends on", joinRefs(t.DependsOn, m.snap.taskRef))
 	}
@@ -1620,27 +1617,14 @@ func metaParts(s *snapshot, id string) []string {
 	return parts
 }
 
-// edgeText marks that a task is part of a structure — containment
-// (parents) and scheduling (depends_on) — without imposing a tree on
-// the flat list: edge semantics are still an open question, so rows
-// only mark that edges exist.
+// edgeText marks that a task is part of a structure — scheduling
+// (depends_on) — without imposing a tree on the flat list: rows only
+// mark that edges exist.
 func edgeText(s *snapshot, id string) string {
-	t := s.tasks[id].Task
-	var parts []string
-	if n := len(t.Parents); n > 0 {
-		p := "in " + event.ShortID(t.Parents[0])
-		if n > 1 {
-			p += fmt.Sprintf(" +%d", n-1)
-		}
-		parts = append(parts, p)
+	if n := len(s.tasks[id].Task.DependsOn); n > 0 {
+		return plural(n, "dep")
 	}
-	if n := len(t.DependsOn); n > 0 {
-		parts = append(parts, plural(n, "dep"))
-	}
-	if len(parts) == 0 {
-		return ""
-	}
-	return strings.Join(parts, " · ")
+	return ""
 }
 
 // closeText is a history row's close stamp and closing actor — the

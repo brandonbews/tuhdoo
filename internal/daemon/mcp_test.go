@@ -377,7 +377,7 @@ func TestMCPCurationUpdates(t *testing.T) {
 	mustToolOK(t, cs, "create_task", map[string]any{
 		"tasks": []map[string]any{
 			{"title": "idea: stale capture", "status": "inbox"},
-			{"title": "the epic", "description": "parent for edge tests"},
+			{"title": "the epic", "description": "container for edge tests"},
 			{"title": "the dep", "description": "dependency for edge tests"},
 			{"title": "worked task", "description": "original body", "priority": 1},
 		},
@@ -429,13 +429,14 @@ func TestMCPCurationUpdates(t *testing.T) {
 		t.Fatalf("unsent fields changed: %+v", updated)
 	}
 
-	// Edges land as full replacements: add a parent and a dependency…
+	// Edges land as full replacements: add dependencies alongside a
+	// label list…
 	mustToolOK(t, cs, "update_task", map[string]any{
-		"task": worked, "parents": []string{epic}, "depends_on": []string{dep},
+		"task": worked, "labels": []string{"edge-test"}, "depends_on": []string{epic, dep},
 	}, &updated)
-	if len(updated.Parents) != 1 || updated.Parents[0] != epic ||
-		len(updated.DependsOn) != 1 || updated.DependsOn[0] != dep {
-		t.Fatalf("edges = parents %v depends_on %v, want [%s] / [%s]", updated.Parents, updated.DependsOn, epic, dep)
+	if len(updated.Labels) != 1 || updated.Labels[0] != "edge-test" ||
+		len(updated.DependsOn) != 2 || updated.DependsOn[0] != epic || updated.DependsOn[1] != dep {
+		t.Fatalf("lists = labels %v depends_on %v, want [edge-test] / [%s %s]", updated.Labels, updated.DependsOn, epic, dep)
 	}
 	// …which dep-blocks the task out of ready…
 	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
@@ -444,21 +445,21 @@ func TestMCPCurationUpdates(t *testing.T) {
 			t.Fatalf("dep-blocked task %s still in ready: %+v", worked, backlog.Ready)
 		}
 	}
-	// …and an explicit empty list is the removal, leaving the parent
-	// edge (unsent) untouched.
+	// …and an explicit empty list is the removal, leaving the label
+	// list (unsent) untouched.
 	mustToolOK(t, cs, "update_task", map[string]any{
 		"task": worked, "depends_on": []string{},
 	}, &updated)
 	if len(updated.DependsOn) != 0 {
 		t.Fatalf("depends_on after clearing = %v, want empty", updated.DependsOn)
 	}
-	if len(updated.Parents) != 1 || updated.Parents[0] != epic {
-		t.Fatalf("parents after clearing depends_on = %v, want still [%s]", updated.Parents, epic)
+	if len(updated.Labels) != 1 || updated.Labels[0] != "edge-test" {
+		t.Fatalf("labels after clearing depends_on = %v, want still [edge-test]", updated.Labels)
 	}
 
 	// An edge naming an unknown task is rejected whole.
 	res = callTool(t, cs, "update_task", map[string]any{
-		"task": worked, "parents": []string{"tuh-01NOPE"},
+		"task": worked, "depends_on": []string{"tuh-01NOPE"},
 	})
 	if !res.IsError || !strings.Contains(contentText(res), "unknown task") {
 		t.Fatalf("bad edge = isError %v %q, want unknown-task tool error", res.IsError, contentText(res))
@@ -697,16 +698,21 @@ func TestMCPBatchDAGAtomic(t *testing.T) {
 	d, _ := startDaemon(t)
 	cs := mcpConnect(t, d, "brandon", nil)
 
-	// One epic, seven children of it, and a seven-deep dependency chain
-	// hanging off the last child: 15 tasks, every edge a tmp ref.
-	batch := []map[string]any{{"tmp": "epic", "title": "the epic"}}
+	// One epic depending on its seven children (epics are container
+	// tasks: done when the children are), and a seven-deep dependency
+	// chain hanging off the last child: 15 tasks, every edge a tmp ref —
+	// the epic's are forward refs to items later in the batch.
+	epic := map[string]any{"tmp": "epic", "title": "the epic"}
+	batch := []map[string]any{epic}
+	var children []string
 	for i := 1; i <= 7; i++ {
 		batch = append(batch, map[string]any{
-			"tmp":     fmt.Sprintf("child-%d", i),
-			"title":   fmt.Sprintf("child %d", i),
-			"parents": []string{"tmp:epic"},
+			"tmp":   fmt.Sprintf("child-%d", i),
+			"title": fmt.Sprintf("child %d", i),
 		})
+		children = append(children, fmt.Sprintf("tmp:child-%d", i))
 	}
+	epic["depends_on"] = children
 	prev := "tmp:child-7"
 	for i := 1; i <= 7; i++ {
 		name := fmt.Sprintf("step-%d", i)
@@ -725,10 +731,10 @@ func TestMCPBatchDAGAtomic(t *testing.T) {
 	}
 
 	// Spot-check resolved edges through the MCP surface itself.
-	var child hydratedTask
-	mustToolOK(t, cs, "get_task", map[string]any{"task": created.Tmp["child-3"]}, &child)
-	if len(child.Task.Parents) != 1 || child.Task.Parents[0] != created.Tmp["epic"] {
-		t.Fatalf("child-3 parents = %v, want [%s]", child.Task.Parents, created.Tmp["epic"])
+	var ep hydratedTask
+	mustToolOK(t, cs, "get_task", map[string]any{"task": created.Tmp["epic"]}, &ep)
+	if len(ep.Task.DependsOn) != 7 || ep.Task.DependsOn[2] != created.Tmp["child-3"] {
+		t.Fatalf("epic depends_on = %v, want its seven children in batch order", ep.Task.DependsOn)
 	}
 	var step hydratedTask
 	mustToolOK(t, cs, "get_task", map[string]any{"task": created.Tmp["step-2"]}, &step)
