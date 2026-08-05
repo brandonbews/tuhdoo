@@ -2,7 +2,7 @@
 
 `tuh-01KZ86YH64K9D2AKVQF57KD9BK`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `daemon` `core` `syncer` `store` `d6`
 - **Created:** 2026-08-05 05:39 UTC by `brandon/claude-code-1`
@@ -47,7 +47,7 @@ Two candidate semantics (both keep voided claims tracked so the verbs answer hon
 
 My recommendation: (i), folded into this same task (the acceptance bar already names 17/17 as the definition of done), then re-run the harness for a real 17/17 and merge PR #32 with the renewal fix included — one PR, since the bar is only meetable with both. If you'd rather treat finding 3 as its own grilled decision first, the alternative is: merge PR #32 as-is now (it is necessary under either finding-3 outcome and independently tested) and spawn a finding-3 task; the dependent harness-merge task tuh-01KZ5WMT4GWZTYVRGWN56TYSVN stays gated either way until the bar is green.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Take the agent's recommendation: option (i) — voided claims stay tracked in the MCP session but are never renewed — folded into this same task, then re-run the harness for 17/17 and merge PR #32 with the renewal fix included, as one PR. (Brandon, live in session: "i really dont understand any of this problem. i'll take your recommendation on the escalation")
 
 ### 2026-08-05 06:13 UTC — note from `brandon/claude-code-1`
 
