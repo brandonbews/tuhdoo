@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T5D72HVF`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `docs`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done)
@@ -32,4 +32,9 @@ Constraints: edit design docs in place with dated revision notes (the Cycle-2 pa
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:41 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-2hvf/doc-sync-sweep`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/40>
+
+Landed via PR #40 (squash-merged, checks green). All twelve sweep items done: CLAUDE.md law now says twelve tools and v1 is the live phase; docs/README.md rewritten post-B12; roadmap and backlog.md staleness fixed; 002 verb-count history reworded, envelope example at v2, no-delete wording reconciled with D9; both headers carry the revisions-through-2026-08-05 line; 001 D6 has the two-layer confirmation note (writers CAS invariant = the guarantee, replay earliest-confirmation = defensive backstop) with T8 aligned; 001 D5 has the edge-grill revision (parents removed, loop posture detection-never-prevention, cancelled deps block loudly, dangling deps met); stored-vs-derived status vocabulary stated in D5 and T7; root README refreshed (data branch named, un-stale-able release link, MCP snippet). open-questions.md is a tombstone: 5 settled threads recorded, 14 migrated to ledger tasks (IDs in the file; created this session as inbox + one held pointer). Design docs are now the decision record only; open questions live on the ledger.

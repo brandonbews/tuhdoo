@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 3 ready · 2 blocked · 5 on hold · 18 inbox · 60 done · 12 cancelled
+0 in progress · 3 ready · 2 blocked · 5 on hold · 18 inbox · 61 done · 12 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) | Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger | 2 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -21,7 +19,7 @@
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | depends on [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md); depends on [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md); depends on [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md); depends on [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) |
+| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | depends on [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md); depends on [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md); depends on [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) |
 
 ## On hold
 
@@ -120,6 +118,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) Remove the parents edge: epics are depends_on containers (edge grill 2026-08-05)
 - [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05)
 - [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root
+- [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger
 
 ## Cancelled
 
