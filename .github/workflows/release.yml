@@ -87,6 +87,17 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+
+      - name: Smoke test the npm distribution
+        # npm/smoke.sh is self-contained: it cross-compiles the binaries,
+        # assembles the packages with prepare.js, installs the tarballs into
+        # a fresh repo, and exercises init/status/MCP/SIGTERM. Runs before
+        # publish so a tag can never ship a package that fails smoke.
+        run: npm/smoke.sh
+
       - name: Fetch release binaries
         # Download rather than rebuild: npm ships byte-identical binaries
         # to the GitHub Release. Archive names look like

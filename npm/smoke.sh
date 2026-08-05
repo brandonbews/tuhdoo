@@ -4,7 +4,7 @@
 # installs the main + current-platform tarballs into a fresh git repo, and
 # checks the acceptance behaviors: init works, status reports local-only,
 # the launcher adds nothing to the binary's output, the MCP shim serves the
-# eleven verbs through it, and SIGTERM on the launcher reaches the binary.
+# twelve verbs through it, and SIGTERM on the launcher reaches the binary.
 #
 #   npm/smoke.sh            # uses a temp dir, cleans up after itself
 set -euo pipefail
@@ -73,7 +73,7 @@ case "$status_out" in
   *) echo "FAIL: status does not report local-only:" >&2; echo "$status_out" >&2; exit 1 ;;
 esac
 
-echo "== MCP shim serves the eleven verbs through the launcher"
+echo "== MCP shim serves the twelve verbs through the launcher"
 mcp_out="$(
   {
     printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}'
@@ -82,15 +82,37 @@ mcp_out="$(
     sleep 2
   } | ./node_modules/.bin/tuhdoo mcp
 )"
-tool_count="$(printf '%s\n' "$mcp_out" | node -e '
-  let n = -1;
+# Named comparison, not a count: a missing or extra verb fails with its
+# name. The list mirrors the registrations in internal/daemon/mcp.go.
+expected_tools="get_backlog get_task claim_next claim_task confirm_claim release_claim finish_run escalate relay_answer add_note create_task update_task"
+actual_tools="$(printf '%s\n' "$mcp_out" | node -e '
+  let names = null;
   require("readline").createInterface({ input: process.stdin }).on("line", (l) => {
     if (!l.trim()) return;
     const m = JSON.parse(l); // any non-JSON line on stdout = shim garbled it
-    if (m.id === 2) n = m.result.tools.length;
-  }).on("close", () => { console.log(n); });
+    if (m.id === 2) names = m.result.tools.map((t) => t.name);
+  }).on("close", () => { console.log((names || []).join(" ")); });
 ')"
-[ "$tool_count" = "11" ] || { echo "FAIL: expected 11 tools, got $tool_count" >&2; exit 1; }
+missing=""
+unexpected=""
+for t in $expected_tools; do
+  case " $actual_tools " in
+    *" $t "*) ;;
+    *) missing="$missing $t" ;;
+  esac
+done
+for t in $actual_tools; do
+  case " $expected_tools " in
+    *" $t "*) ;;
+    *) unexpected="$unexpected $t" ;;
+  esac
+done
+if [ -n "$missing" ] || [ -n "$unexpected" ]; then
+  echo "FAIL: tools/list does not match the twelve expected verbs" >&2
+  if [ -n "$missing" ]; then echo "  missing:$missing" >&2; fi
+  if [ -n "$unexpected" ]; then echo "  unexpected:$unexpected" >&2; fi
+  exit 1
+fi
 
 echo "== SIGTERM on the launcher reaches the binary"
 # stdin must stay open — on EOF the MCP shim exits by design. $! of a

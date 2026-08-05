@@ -1,7 +1,7 @@
 .PHONY: build test lint
 
 build:
-	go build -o bin/tuhdoo ./cmd/tuhdoo
+	go build -ldflags "-X main.version=$$(git describe --tags --always --dirty)" -o bin/tuhdoo ./cmd/tuhdoo
 
 test:
 	go test ./...
