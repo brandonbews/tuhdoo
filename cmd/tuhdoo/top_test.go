@@ -992,7 +992,7 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 	printTask(&b, colors{}, hydratedTask{Task: taskJSON{
 		ID: long, Title: "the long one",
 		DependsOn: []string{dep},
-	}})
+	}}, stateTask{})
 	v := b.String()
 	for _, want := range []string{
 		long + " — the long one",
@@ -1006,6 +1006,43 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 		if strings.Contains(v, reject) {
 			t.Errorf("one-shot rendering grew TUI sugar %q; output:\n%s", reject, v)
 		}
+	}
+}
+
+// The task view's waiting line (2026-08-05 edge grill) carries the loud
+// annotations only: loop membership and cancelled deps render, a plain
+// unmet dep grows no line — the depends-on line already tells that.
+func TestPrintTaskWaitingLine(t *testing.T) {
+	h := hydratedTask{Task: taskJSON{ID: "t-x", Title: "stuck", DependsOn: []string{"t-dep"}}}
+	var b strings.Builder
+	printTask(&b, colors{}, h, stateTask{ID: "t-x", UnmetDeps: []string{"t-dep"}})
+	if strings.Contains(b.String(), "waiting") {
+		t.Errorf("plain unmet dep grew a waiting line:\n%s", b.String())
+	}
+
+	b.Reset()
+	printTask(&b, colors{}, h, stateTask{ID: "t-x", UnmetDeps: []string{"t-dep"},
+		CancelledDeps: []string{"t-dep"}, Cyclic: true})
+	want := "  waiting     cyclic — a human must cut an edge; waiting on cancelled t-dep\n"
+	if !strings.Contains(b.String(), want) {
+		t.Errorf("annotated task view missing %q; output:\n%s", want, b.String())
+	}
+}
+
+// The dashboard's waiting: line marks loop members and cancelled deps
+// distinctly from ordinary waiting (2026-08-05 edge grill), rendering
+// only the daemon's verdicts — never re-deriving them.
+func TestBlockedReasonTUIMarks(t *testing.T) {
+	id := func(s string) string { return s }
+	row := stateTask{UnmetDeps: []string{"t-a", "t-b"}, CancelledDeps: []string{"t-b"}, Cyclic: true}
+	want := "cyclic — a human must cut an edge; depends on t-a; waiting on cancelled t-b"
+	if got := blockedReasonTUI(row, id); got != want {
+		t.Errorf("blockedReasonTUI = %q, want %q", got, want)
+	}
+	// Unannotated rows keep their old line exactly.
+	plain := stateTask{UnmetDeps: []string{"t-a"}}
+	if got := blockedReasonTUI(plain, id); got != "depends on t-a" {
+		t.Errorf("plain blockedReasonTUI = %q, want %q", got, "depends on t-a")
 	}
 }
 
@@ -1034,7 +1071,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 		}},
 	}
 	var b strings.Builder
-	printTask(&b, colors{}, h)
+	printTask(&b, colors{}, h, stateTask{})
 	// ULID order: escalation 01E2, then note 01N1, then run 01R1. The
 	// suffix match proves no blank line trails the last entry.
 	wantHist := strings.Join([]string{
@@ -1056,7 +1093,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 
 	// With real colors: dim stamp, bold descriptor, on every kind.
 	b.Reset()
-	printTask(&b, ansiColors, h)
+	printTask(&b, ansiColors, h, stateTask{})
 	v := b.String()
 	for _, want := range []string{
 		"  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a7\x1b[0m\n",
@@ -1074,7 +1111,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 		Notes: h.Notes,
 	}
 	b.Reset()
-	printTask(&b, colors{}, single)
+	printTask(&b, colors{}, single, stateTask{})
 	wantSingle := strings.Join([]string{
 		"History",
 		"  2026-07-29 15:00 UTC  note by brandon/a1",

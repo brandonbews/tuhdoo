@@ -394,6 +394,110 @@ func TestStateServesTheDerivedSituation(t *testing.T) {
 	}
 }
 
+// update_task refuses a depends_on replacement that would close a
+// dependency loop visible in current local state, naming the loop's
+// tasks (2026-08-05 edge grill). Local hygiene only, not prevention:
+// set-union merge can still union two individually-acyclic writes into
+// a loop no daemon ever saw — replay marks those instead.
+func TestUpdateTaskRefusesLoopClosingEdit(t *testing.T) {
+	_, c := startDaemon(t)
+
+	a := createOne(t, c, "brandon", map[string]any{"title": "task a"})
+	b := createOne(t, c, "brandon", map[string]any{"title": "task b", "depends_on": []string{a}})
+	cc := createOne(t, c, "brandon", map[string]any{"title": "task c", "depends_on": []string{b}})
+
+	// a → c would close a → c → b → a; the 400 names every member.
+	body := string(mustDo(t, c, "PATCH", "/v0/tasks/"+a, "brandon",
+		map[string]any{"depends_on": []string{cc}}, http.StatusBadRequest))
+	want := fmt.Sprintf("would create a dependency loop: %s → %s → %s → %s", a, cc, b, a)
+	if !strings.Contains(body, want) {
+		t.Errorf("loop rejection = %s, want it to contain %q", body, want)
+	}
+
+	// Self-dependency is the one-task loop.
+	body = string(mustDo(t, c, "PATCH", "/v0/tasks/"+a, "brandon",
+		map[string]any{"depends_on": []string{a}}, http.StatusBadRequest))
+	if !strings.Contains(body, fmt.Sprintf("would create a dependency loop: %s → %s", a, a)) {
+		t.Errorf("self-loop rejection = %s, want the a → a loop named", body)
+	}
+
+	// A loop through a done task is still refused: the raw edge graph is
+	// what the edit would write, and the loop bites the moment the done
+	// task reopens.
+	mustDo(t, c, "PATCH", "/v0/tasks/"+b, "brandon",
+		map[string]any{"status": "done"}, http.StatusOK)
+	mustDo(t, c, "PATCH", "/v0/tasks/"+a, "brandon",
+		map[string]any{"depends_on": []string{cc}}, http.StatusBadRequest)
+
+	// Rewiring that closes nothing passes: c's edge moves from b to a.
+	mustDo(t, c, "PATCH", "/v0/tasks/"+cc, "brandon",
+		map[string]any{"depends_on": []string{a}}, http.StatusOK)
+}
+
+// seedDepLoop appends two mutually-dependent task.created events
+// straight into stored history — the union-merge arrival shape: each
+// write was individually acyclic, and no verb on this daemon ever saw
+// the loop (the write surfaces refuse to close one knowingly).
+func seedDepLoop(t *testing.T, d *Daemon, a, b string) {
+	t.Helper()
+	mk := func(n byte, task, dep string) event.Event {
+		ent := make([]byte, 10)
+		ent[9] = n
+		id, err := event.NewID(time.Now().Add(-time.Hour), bytes.NewReader(ent))
+		if err != nil {
+			t.Fatal(err)
+		}
+		e, err := event.New(id, event.TypeTaskCreated,
+			event.Versions[event.TypeTaskCreated], "brandon", "m-peer", task,
+			event.TaskCreated{Title: "seeded " + task, DependsOn: []string{dep}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	if err := d.store.AppendBatch(store.Batch{Events: []event.Event{mk(1, a, b), mk(2, b, a)}}); err != nil {
+		t.Fatalf("seed loop: %v", err)
+	}
+}
+
+// /v0/state carries the loud blockage annotations (2026-08-05 edge
+// grill): cyclic on loop members, cancelled_deps on waiters of a
+// cancelled dependency — while situation stays plain "blocked".
+func TestStateMarksLoopsAndCancelledDeps(t *testing.T) {
+	d, c := startDaemon(t)
+	seedDepLoop(t, d, "t-loopa", "t-loopb")
+
+	dep := createOne(t, c, "brandon", map[string]any{"title": "doomed dep"})
+	waiter := createOne(t, c, "brandon", map[string]any{
+		"title": "waits on the doomed", "depends_on": []string{dep}})
+	mustDo(t, c, "PATCH", "/v0/tasks/"+dep, "brandon",
+		map[string]any{"status": "cancelled"}, http.StatusOK)
+
+	var st stateResp
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+	rows := make(map[string]stateTask, len(st.Tasks))
+	for _, task := range st.Tasks {
+		rows[task.ID] = task
+	}
+	want := map[string]stateTask{
+		"t-loopa": {Situation: "blocked", UnmetDeps: []string{"t-loopb"}, Cyclic: true},
+		"t-loopb": {Situation: "blocked", UnmetDeps: []string{"t-loopa"}, Cyclic: true},
+		waiter:    {Situation: "blocked", UnmetDeps: []string{dep}, CancelledDeps: []string{dep}},
+	}
+	for id, w := range want {
+		got, ok := rows[id]
+		if !ok {
+			t.Fatalf("task %s missing from state", id)
+		}
+		if got.Situation != w.Situation || got.Cyclic != w.Cyclic ||
+			!reflect.DeepEqual(got.UnmetDeps, w.UnmetDeps) ||
+			!reflect.DeepEqual(got.CancelledDeps, w.CancelledDeps) {
+			t.Errorf("%s = situation %q deps %v cancelled %v cyclic %v, want %+v",
+				id, got.Situation, got.UnmetDeps, got.CancelledDeps, got.Cyclic, w)
+		}
+	}
+}
+
 // claim_task's not-ready conflict names the actual blockers
 // (tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): the open blocking escalation's ID
 // for an escalation-blocked task — never the old catch-all "unmet

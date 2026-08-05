@@ -16,6 +16,7 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -35,7 +36,9 @@ import (
 // 6: status-vocabulary revision (2026-08-01) — displayed words are the
 // stored words: cancelled renders as "cancelled" (archive retired);
 // "on hold" for held stays as the one sanctioned display mapping.
-const FormatVersion = 6
+// 7: blocked rows mark dependency-loop members and cancelled
+// dependencies (2026-08-05 edge grill).
+const FormatVersion = 7
 
 // MetaPath is where the view-format stamp lives. T6 named "views/.meta",
 // but the views render at the branch root (README.md and friends), so
@@ -257,14 +260,25 @@ func compactList(w *strings.Builder, tasks []*core.Task) {
 // dependency, and/or an open blocking escalation. The escalation's
 // question is not repeated here — blocked rows link to the steering
 // inbox instead (the same doctrine the TUI settled: rows stop
-// repeating the question).
+// repeating the question). The loud annotations (2026-08-05 edge
+// grill) render distinctly from ordinary waiting: loop membership
+// leads the cell — a cyclic task can never become ready on its own —
+// and a cancelled dependency reads "waiting on cancelled", because
+// re-pointing that edge is a human decision.
 func waitingOn(s *core.State, t *core.Task) string {
-	deps, escs := s.ClaimBlockers(t.ID)
+	b := s.Blockage(t.ID)
 	var parts []string
-	for _, dep := range deps {
-		parts = append(parts, "depends on "+rootLink(dep))
+	if b.Cyclic {
+		parts = append(parts, "**cyclic** — a human must cut an edge")
 	}
-	if len(escs) > 0 {
+	for _, dep := range b.UnmetDeps {
+		if slices.Contains(b.CancelledDeps, dep) {
+			parts = append(parts, "waiting on cancelled "+rootLink(dep))
+		} else {
+			parts = append(parts, "depends on "+rootLink(dep))
+		}
+	}
+	if len(b.BlockingEscalations) > 0 {
 		parts = append(parts, "an [open question](escalations.md)")
 	}
 	return strings.Join(parts, "; ")

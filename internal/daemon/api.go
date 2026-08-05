@@ -70,8 +70,12 @@ type scopeTaskJSON struct {
 	Holder       string     `json:"holder,omitempty" jsonschema:"in_progress rows: the principal holding the active claim"`
 	LeaseExpires *time.Time `json:"lease_expires,omitempty" jsonschema:"in_progress rows: when the holder's lease expires unless renewed"`
 	WaitingOn    []string   `json:"waiting_on,omitempty" jsonschema:"blocked rows: condensed reasons — dep:<task-id> per unmet dependency, esc:<escalation-id> per open blocking escalation; hydrate with get_task for the story"`
-	ClosedAt     *time.Time `json:"closed_at,omitempty" jsonschema:"done/cancelled rows: when the task entered its terminal status"`
-	ClosedBy     string     `json:"closed_by,omitempty" jsonschema:"done/cancelled rows: the actor that closed it"`
+	// Loud blockage annotations (2026-08-05 edge grill). Annotations
+	// only: blocked stays the status, these say more about why.
+	CancelledDeps []string   `json:"cancelled_deps,omitempty" jsonschema:"blocked rows: the unmet dependencies sitting cancelled — cancelled never counts as done; re-pointing the edge is a human decision"`
+	Cyclic        bool       `json:"cyclic,omitempty" jsonschema:"blocked rows: this task sits on a depends_on loop among not-done tasks and can never become ready until a human cuts an edge"`
+	ClosedAt      *time.Time `json:"closed_at,omitempty" jsonschema:"done/cancelled rows: when the task entered its terminal status"`
+	ClosedBy      string     `json:"closed_by,omitempty" jsonschema:"done/cancelled rows: the actor that closed it"`
 }
 
 // openEscalationJSON is get_backlog's escalations-scope row: the open
@@ -378,6 +382,12 @@ type stateTask struct {
 	Situation           string   `json:"situation"`
 	UnmetDeps           []string `json:"unmet_deps,omitempty"`
 	BlockingEscalations []string `json:"blocking_escalations,omitempty"`
+	// Loud blockage annotations (2026-08-05 edge grill): the unmet deps
+	// sitting cancelled, and membership in a depends_on loop among
+	// not-done tasks. Annotations, not statuses — a marked task is
+	// still just blocked; clients render the why, never re-derive it.
+	CancelledDeps []string `json:"cancelled_deps,omitempty"`
+	Cyclic        bool     `json:"cyclic,omitempty"`
 	// Close metadata (history view, 2026-08-02): the TUI's history rows
 	// sort and stamp off the state listing, so it rides here too.
 	ClosedAt *time.Time `json:"closed_at,omitempty"`
@@ -439,7 +449,9 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 		t := d.state.Tasks[id]
 		st := stateTask{ID: t.ID, Title: t.Title, Status: t.Status, Priority: t.Priority, Labels: t.Labels}
 		st.Situation = d.state.Situation(id)
-		st.UnmetDeps, st.BlockingEscalations = d.state.ClaimBlockers(id)
+		b := d.state.Blockage(id)
+		st.UnmetDeps, st.BlockingEscalations = b.UnmetDeps, b.BlockingEscalations
+		st.CancelledDeps, st.Cyclic = b.CancelledDeps, b.Cyclic
 		if c := d.state.ActiveClaim(id); c != nil {
 			st.Holder = c.Actor
 		}

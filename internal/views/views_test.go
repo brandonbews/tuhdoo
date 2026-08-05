@@ -172,6 +172,22 @@ func goldenInput(t *testing.T) core.Input {
 			Title:     "Route claims by label",
 			DependsOn: []string{"t-idea"},
 		}),
+		// Loud blockage marks (2026-08-05 edge grill): a two-task
+		// depends_on loop — two individually-acyclic creates whose union
+		// is a loop, the merge shape no daemon knowingly writes — and a
+		// task waiting on the cancelled t-old.
+		evt(t, 24, event.TypeTaskCreated, "brandon", "t-lpa", event.TaskCreated{
+			Title:     "Extract the store interface",
+			DependsOn: []string{"t-lpb"},
+		}),
+		evt(t, 25, event.TypeTaskCreated, "brandon", "t-lpb", event.TaskCreated{
+			Title:     "Rework store tests on the interface",
+			DependsOn: []string{"t-lpa"},
+		}),
+		evt(t, 26, event.TypeTaskCreated, "brandon", "t-onit", event.TaskCreated{
+			Title:     "Build on the go-git spike",
+			DependsOn: []string{"t-old"},
+		}),
 		// An open non-blocking escalation raised BEFORE t-flak's open
 		// blocking one (tick 17): escalations.md must list the blocking
 		// question first regardless of raise order, and a non-blocking
@@ -272,8 +288,34 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":6}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":7}\n" {
 		t.Errorf("meta stamp = %q", meta)
+	}
+}
+
+// The loud blockage marks (2026-08-05 edge grill) in the rendered
+// backlog: loop members read cyclic — distinctly from ordinary waiting —
+// and a waiter on a cancelled dep says so; blocked stays the section,
+// no new status words.
+func TestBacklogMarksLoopsAndCancelledDeps(t *testing.T) {
+	backlog := string(views.Render(goldenState(t))["backlog.md"])
+
+	cyclic := "**cyclic** — a human must cut an edge"
+	if got := strings.Count(backlog, cyclic); got != 2 {
+		t.Errorf("backlog carries %d cyclic marks, want exactly the 2 loop members:\n%s", got, backlog)
+	}
+	for _, want := range []string{
+		"| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | 0 | " + cyclic + "; depends on [`t-lpb`](tasks/t-lpb.md) |",
+		"waiting on cancelled [`t-old`](tasks/t-old.md)",
+	} {
+		if !strings.Contains(backlog, want) {
+			t.Errorf("backlog missing %q:\n%s", want, backlog)
+		}
+	}
+	// The plain waiter's row must not read cyclic or borrow the
+	// cancelled phrasing for its live dep: t-onit waits on t-old only.
+	if strings.Contains(backlog, "depends on [`t-old`](tasks/t-old.md)") {
+		t.Errorf("cancelled dep rendered as ordinary waiting:\n%s", backlog)
 	}
 }
 
@@ -331,8 +373,8 @@ func TestCanWrite(t *testing.T) {
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
 		{"lower", []byte(`{"format":2}`), true},
-		{"equal", []byte(`{"format":6}`), true},
-		{"higher", []byte(`{"format":7}`), false},
+		{"equal", []byte(`{"format":7}`), true},
+		{"higher", []byte(`{"format":8}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

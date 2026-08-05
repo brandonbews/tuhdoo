@@ -320,7 +320,7 @@ type backlogResult struct {
 	// empty array, an unrequested one is absent, and an omitted scope
 	// leaves the response byte-identical to the three arrays above.
 	InProgress  *[]scopeTaskJSON      `json:"in_progress,omitempty" jsonschema:"scope in_progress: actively claimed tasks, creation order, each with holder and lease expiry"`
-	Blocked     *[]scopeTaskJSON      `json:"blocked,omitempty" jsonschema:"scope blocked: open, unclaimed tasks that cannot be claimed, creation order, each with dep:/esc: waiting reasons"`
+	Blocked     *[]scopeTaskJSON      `json:"blocked,omitempty" jsonschema:"scope blocked: open, unclaimed tasks that cannot be claimed, creation order, each with dep:/esc: waiting reasons plus cyclic and cancelled_deps annotations where they apply"`
 	Done        *[]scopeTaskJSON      `json:"done,omitempty" jsonschema:"scope done: finished tasks, newest close first, each with closed_at/closed_by"`
 	Cancelled   *[]scopeTaskJSON      `json:"cancelled,omitempty" jsonschema:"scope cancelled: cancelled tasks, newest close first, each with closed_at/closed_by"`
 	Escalations *[]openEscalationJSON `json:"escalations,omitempty" jsonschema:"scope escalations: open escalations across the project in raise order — where relay_answer's escalation IDs come from"`

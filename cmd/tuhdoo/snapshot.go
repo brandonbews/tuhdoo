@@ -6,11 +6,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/brandonbews/tuhdoo/internal/event"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/brandonbews/tuhdoo/internal/event"
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
@@ -109,13 +110,22 @@ func terminalStatus(status string) bool {
 // column cell: dep:<task-id> per unmet dependency, esc:<escalation-id>
 // per open blocking escalation, comma-joined — IDs, never prose
 // (T7, 2026-07-31: the serialized backlog is grep fodder; the story
-// lives in `tuhdoo task <id>`). "-" when nothing is waited on. The
-// lists are the daemon's verdict (one classifier, 2026-08-03) — this
-// only serializes them.
+// lives in `tuhdoo task <id>`). The loud annotations (2026-08-05 edge
+// grill) keep the same register: a leading "cyclic" marker for a task
+// on a depends_on loop, a ":cancelled" suffix on a dep sitting
+// cancelled. "-" when nothing is waited on. The verdicts are the
+// daemon's (one classifier, 2026-08-03) — this only serializes them.
 func waitingOn(t stateTask) string {
 	var parts []string
+	if t.Cyclic {
+		parts = append(parts, "cyclic")
+	}
 	for _, dep := range t.UnmetDeps {
-		parts = append(parts, "dep:"+dep)
+		entry := "dep:" + dep
+		if slices.Contains(t.CancelledDeps, dep) {
+			entry += ":cancelled"
+		}
+		parts = append(parts, entry)
 	}
 	for _, esc := range t.BlockingEscalations {
 		parts = append(parts, "esc:"+esc)
@@ -131,13 +141,50 @@ func waitingOn(t stateTask) string {
 // for the screen), and only unmet deps are named — never the
 // escalation. On this screen the Needs Input row is the single home for
 // escalation blockage (grill cycle, 2026-07-31), and a task blocked by
-// escalation alone renders no BLOCKED row at all (see buildRows).
+// escalation alone renders no BLOCKED row at all (see buildRows). Loop
+// membership leads the line and a cancelled dep reads "waiting on
+// cancelled" (2026-08-05 edge grill) — marks a human must act on,
+// distinct from ordinary waiting.
 func blockedReasonTUI(t stateTask, disp func(string) string) string {
-	parts := make([]string, 0, len(t.UnmetDeps))
+	var parts []string
+	if t.Cyclic {
+		parts = append(parts, "cyclic — a human must cut an edge")
+	}
 	for _, dep := range t.UnmetDeps {
-		parts = append(parts, "depends on "+disp(dep))
+		if slices.Contains(t.CancelledDeps, dep) {
+			parts = append(parts, "waiting on cancelled "+disp(dep))
+		} else {
+			parts = append(parts, "depends on "+disp(dep))
+		}
 	}
 	return strings.Join(parts, "; ")
+}
+
+// waitingNote is the task view's loud-annotation line (2026-08-05 edge
+// grill), shared by the one-shot task command and the TUI detail: only
+// the marks a human must act on — loop membership and cancelled deps —
+// never the ordinary unmet-dep list, which the depends-on line already
+// carries. "" when there is nothing to shout.
+func waitingNote(t stateTask, disp func(string) string) string {
+	var parts []string
+	if t.Cyclic {
+		parts = append(parts, "cyclic — a human must cut an edge")
+	}
+	for _, dep := range t.CancelledDeps {
+		parts = append(parts, "waiting on cancelled "+disp(dep))
+	}
+	return strings.Join(parts, "; ")
+}
+
+// stateTaskOf finds one task's state-listing row; the zero row (no
+// annotations, no verdicts) when the ID is unknown.
+func (s *snapshot) stateTaskOf(id string) stateTask {
+	for _, t := range s.state.Tasks {
+		if t.ID == id {
+			return t
+		}
+	}
+	return stateTask{}
 }
 
 // taskRef renders one task reference for TUI display: the short form,

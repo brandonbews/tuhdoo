@@ -322,6 +322,71 @@ func TestClaimBlockers(t *testing.T) {
 	}
 }
 
+// Blockage is the annotated "why is this blocked" answer every surface
+// reads (2026-08-05 edge grill, tuh-01KZ9Y3THHH5B8GT22T1A1WPYP):
+// ClaimBlockers' lists plus loop membership among not-done tasks and
+// cancelled-dep marking. Loops arrive by set-union merge of two
+// individually-acyclic writes, so the fixtures build them from raw
+// creation events — exactly the shape replay meets after such a merge.
+func TestBlockage(t *testing.T) {
+	st := func(s string) *string { return &s }
+	events := []event.Event{
+		// A two-task loop.
+		taskCreated(t, 1, "t-2a", "two-loop a", "t-2b"),
+		taskCreated(t, 2, "t-2b", "two-loop b", "t-2a"),
+		// A three-task loop, plus a tail hanging off it.
+		taskCreated(t, 3, "t-3a", "three-loop a", "t-3b"),
+		taskCreated(t, 4, "t-3b", "three-loop b", "t-3c"),
+		taskCreated(t, 5, "t-3c", "three-loop c", "t-3a"),
+		taskCreated(t, 6, "t-tail", "tail into the loop", "t-3a"),
+		// A cancelled dep and a live one on the same waiter.
+		taskCreated(t, 7, "t-gone", "the cancelled dep"),
+		taskCreated(t, 8, "t-live", "the live dep"),
+		taskCreated(t, 9, "t-wait", "waits on both", "t-gone", "t-live"),
+		// A structural loop with a done member: the done edge is
+		// satisfied, so nothing is cyclic.
+		taskCreated(t, 10, "t-da", "done-loop a", "t-db"),
+		taskCreated(t, 11, "t-db", "done-loop b", "t-da"),
+		// A loop with a cancelled member: cancelled never counts as
+		// done, so the loop stands and the dep is marked cancelled too.
+		taskCreated(t, 12, "t-ca", "cancelled-loop a", "t-cb"),
+		taskCreated(t, 13, "t-cb", "cancelled-loop b", "t-ca"),
+		evt(t, 14, event.TypeTaskUpdated, "brandon", "t-gone",
+			event.TaskUpdated{Status: st(StatusCancelled)}),
+		evt(t, 15, event.TypeTaskUpdated, "brandon", "t-db",
+			event.TaskUpdated{Status: st(StatusDone)}),
+		evt(t, 16, event.TypeTaskUpdated, "brandon", "t-cb",
+			event.TaskUpdated{Status: st(StatusCancelled)}),
+	}
+	s := replay(t, events, nil)
+	tests := []struct {
+		name, task string
+		want       Blockage
+	}{
+		{"two-loop member a", "t-2a", Blockage{UnmetDeps: []string{"t-2b"}, Cyclic: true}},
+		{"two-loop member b", "t-2b", Blockage{UnmetDeps: []string{"t-2a"}, Cyclic: true}},
+		{"three-loop member a", "t-3a", Blockage{UnmetDeps: []string{"t-3b"}, Cyclic: true}},
+		{"three-loop member b", "t-3b", Blockage{UnmetDeps: []string{"t-3c"}, Cyclic: true}},
+		{"three-loop member c", "t-3c", Blockage{UnmetDeps: []string{"t-3a"}, Cyclic: true}},
+		// The tail waits on the loop but is not in it: only the members
+		// carry the marker a human must cut an edge between.
+		{"tail off a loop is not cyclic", "t-tail", Blockage{UnmetDeps: []string{"t-3a"}}},
+		{"cancelled dep marked, live dep not", "t-wait",
+			Blockage{UnmetDeps: []string{"t-gone", "t-live"}, CancelledDeps: []string{"t-gone"}}},
+		{"loop through a done task is no loop", "t-da", Blockage{}},
+		{"cancelled member keeps the loop alive", "t-ca",
+			Blockage{UnmetDeps: []string{"t-cb"}, CancelledDeps: []string{"t-cb"}, Cyclic: true}},
+		{"unknown task", "t-nope", Blockage{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := s.Blockage(tt.task); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Blockage(%s) = %+v, want %+v", tt.task, got, tt.want)
+			}
+		})
+	}
+}
+
 // Situation is the one classifier (task tuh-01KZ0ES83SFH6MKWP82YRXWQD6):
 // ready / in_progress / blocked for open tasks, the status word itself
 // for everything else, "" for unknown IDs. Tested table-driven next to

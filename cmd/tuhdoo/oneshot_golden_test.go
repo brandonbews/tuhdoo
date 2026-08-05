@@ -26,6 +26,9 @@ func oneshotSnapshot() *snapshot {
 		idea    = "tuh-01K1G0000000000000000QC01"
 		chore   = "t-01K1G00000000000000000CH0R"
 		wrong   = "tuh-01K1G0000000000000000WRNG"
+		cyca    = "tuh-01K1G0000000000000000CYCA"
+		cycb    = "tuh-01K1G0000000000000000CYCB"
+		stuck   = "tuh-01K1G0000000000000000STCK"
 	)
 	eLic := escalationJSON{
 		ID: "01K1G000000000000000000ESCB", Task: license, Actor: "brandon/a2",
@@ -50,6 +53,11 @@ func oneshotSnapshot() *snapshot {
 			{ID: chore, Title: "old chore", Status: "done", Situation: "done"},
 			{ID: wrong, Title: "wrong idea", Status: "cancelled", Situation: "cancelled"},
 			{ID: floor, Title: "sweep the floor", Status: "open", Priority: 1, Situation: "ready"},
+			// The loud blockage marks (2026-08-05 edge grill): a
+			// depends_on loop pair and a waiter on the cancelled task.
+			{ID: cyca, Title: "refactor auth", Status: "open", Situation: "blocked", UnmetDeps: []string{cycb}, Cyclic: true},
+			{ID: cycb, Title: "split the auth pkg", Status: "open", Situation: "blocked", UnmetDeps: []string{cyca}, Cyclic: true},
+			{ID: stuck, Title: "build on the wrong idea", Status: "open", Situation: "blocked", UnmetDeps: []string{wrong}, CancelledDeps: []string{wrong}},
 		}},
 		tasks: map[string]hydratedTask{
 			parser:  {Task: taskJSON{ID: parser}, Escalations: []escalationJSON{eUni}},
@@ -61,6 +69,9 @@ func oneshotSnapshot() *snapshot {
 			chore:   {Task: taskJSON{ID: chore}},
 			wrong:   {Task: taskJSON{ID: wrong}},
 			floor:   {Task: taskJSON{ID: floor}},
+			cyca:    {Task: taskJSON{ID: cyca, DependsOn: []string{cycb}}},
+			cycb:    {Task: taskJSON{ID: cycb, DependsOn: []string{cyca}}},
+			stuck:   {Task: taskJSON{ID: stuck, DependsOn: []string{wrong}}},
 		},
 	}
 }
@@ -72,16 +83,19 @@ func TestOneshotBacklogGolden(t *testing.T) {
 	var buf bytes.Buffer
 	printBacklog(&buf, oneshotSnapshot())
 	want := strings.Join([]string{
-		"ID                             STATE        PRI  HOLDER      LABELS     WAITING                            TITLE",
-		"tuh-01K1G0000000000000000PARS  ready        5    -           go,parser  -                                  write the parser",
-		"tuh-01K1G0000000000000000SWEP  ready        1    -           -          -                                  sweep the floor",
-		"tuh-01K1G0000000000000000FAKE  in-progress  0    brandon/a1  -          -                                  investigate the flake",
-		"tuh-01K1G0000000000000000D0CS  blocked      0    -           -          dep:tuh-01K1G0000000000000000PARS  ship the docs",
-		"tuh-01K1G0000000000000000CENS  blocked      0    -           -          esc:01K1G000000000000000000ESCB    choose a license",
-		"tuh-01K1G0000000000000000PARK  on-hold      2    -           docs       -                                  polish the docs",
-		"tuh-01K1G0000000000000000QC01  inbox        0    -           -          -                                  idea: dark mode",
-		"t-01K1G00000000000000000CH0R   done         0    -           -          -                                  old chore",
-		"tuh-01K1G0000000000000000WRNG  cancelled    0    -           -          -                                  wrong idea",
+		"ID                             STATE        PRI  HOLDER      LABELS     WAITING                                      TITLE",
+		"tuh-01K1G0000000000000000PARS  ready        5    -           go,parser  -                                            write the parser",
+		"tuh-01K1G0000000000000000SWEP  ready        1    -           -          -                                            sweep the floor",
+		"tuh-01K1G0000000000000000FAKE  in-progress  0    brandon/a1  -          -                                            investigate the flake",
+		"tuh-01K1G0000000000000000D0CS  blocked      0    -           -          dep:tuh-01K1G0000000000000000PARS            ship the docs",
+		"tuh-01K1G0000000000000000CENS  blocked      0    -           -          esc:01K1G000000000000000000ESCB              choose a license",
+		"tuh-01K1G0000000000000000CYCA  blocked      0    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCB     refactor auth",
+		"tuh-01K1G0000000000000000CYCB  blocked      0    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCA     split the auth pkg",
+		"tuh-01K1G0000000000000000STCK  blocked      0    -           -          dep:tuh-01K1G0000000000000000WRNG:cancelled  build on the wrong idea",
+		"tuh-01K1G0000000000000000PARK  on-hold      2    -           docs       -                                            polish the docs",
+		"tuh-01K1G0000000000000000QC01  inbox        0    -           -          -                                            idea: dark mode",
+		"t-01K1G00000000000000000CH0R   done         0    -           -          -                                            old chore",
+		"tuh-01K1G0000000000000000WRNG  cancelled    0    -           -          -                                            wrong idea",
 		"",
 	}, "\n")
 	got := buf.String()
@@ -92,10 +106,12 @@ func TestOneshotBacklogGolden(t *testing.T) {
 		t.Errorf("serialized backlog contains ANSI escapes:\n%q", got)
 	}
 	// The STATE column is the grep contract: a state name selects
-	// exactly that state's rows.
+	// exactly that state's rows — plus, for "cancelled", the waiting
+	// column's :cancelled dep mark (annotation and status share the
+	// stored word by design; the :cancelled suffix keeps it greppable).
 	for name, n := range map[string]int{
-		"ready": 2, "in-progress": 1, "blocked": 2,
-		"on-hold": 1, "inbox": 1, "done": 1, "cancelled": 1,
+		"ready": 2, "in-progress": 1, "blocked": 5,
+		"on-hold": 1, "inbox": 1, "done": 1, "cancelled": 2, "cyclic": 2,
 	} {
 		var hits int
 		for _, l := range strings.Split(strings.TrimRight(got, "\n"), "\n") {

@@ -285,6 +285,7 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 		t.Errorf("scrolling narrowed the derived column; view:\n%s", sv)
 	}
 }
+
 // opens with the bg code and the ▌ gutter, the bg re-applies after
 // each internal reset, and each line pads to the full width — one
 // continuous bar. Unselected rows carry neither bg nor gutter.
@@ -387,7 +388,7 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	v := m.View()
 	// 80 cols - 14 grid = 66 title cells; the meta line gets the same 66.
 	mustContain(t, v,
-		strings.Repeat("A", 65)+"…", // title alone: ellipsized at 66
+		strings.Repeat("A", 65)+"…",      // title alone: ellipsized at 66
 		near+"\n              [quality]", // near-full title whole, labels intact below
 		"              ["+strings.Repeat("L", 40)+", "+strings.Repeat("M", 22)+"…") // meta ellipsized at 66
 	if strings.Contains(v, strings.Repeat("A", 66)) {

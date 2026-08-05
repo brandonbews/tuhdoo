@@ -185,6 +185,11 @@ func (s *State) ClaimBlockers(taskID string) (unmetDeps, blockingEscalations []s
 		return nil, nil
 	}
 	for _, dep := range t.DependsOn {
+		// A dep ID that resolves to no task counts as met — deliberate
+		// defensive posture, not an oversight: an edge to a task this
+		// replica has never seen (a reference minted elsewhere and lost,
+		// or hand-typed wrong) would otherwise block its dependent
+		// forever, with nothing anyone could finish to unblock it.
 		if d, ok := s.Tasks[dep]; ok && d.Status != StatusDone {
 			unmetDeps = append(unmetDeps, dep)
 		}
@@ -195,6 +200,77 @@ func (s *State) ClaimBlockers(taskID string) (unmetDeps, blockingEscalations []s
 		}
 	}
 	return unmetDeps, blockingEscalations
+}
+
+// Blockage is the annotated "why is this blocked" answer (2026-08-05
+// edge grill): ClaimBlockers' two lists plus the two conditions every
+// surface must mark loudly rather than fold into ordinary waiting.
+// Cyclic-freedom structurally cannot be a global invariant — set-union
+// merge (D2/D3) can union two individually-acyclic writes into a loop
+// no daemon ever saw — so loops are surfaced, never assumed away. A
+// cancelled dependency keeps blocking (cancelled never counts as done);
+// re-pointing the edge is a human decision, and the annotation is what
+// puts it in front of one. Neither annotation is a status: a marked
+// task is still just blocked.
+type Blockage struct {
+	UnmetDeps           []string // not-yet-done dependency IDs, stored order
+	CancelledDeps       []string // the UnmetDeps whose task is cancelled, stored order
+	Cyclic              bool     // task sits on a depends_on loop among not-done tasks
+	BlockingEscalations []string // open blocking escalation IDs, raise order
+}
+
+// Blockage assembles the annotated answer for one task. Built on
+// ClaimBlockers, so it can never disagree with Ready about whether the
+// task is blocked — the annotations only say more about why. Returns
+// the zero Blockage for an unknown task.
+func (s *State) Blockage(taskID string) Blockage {
+	if _, ok := s.Tasks[taskID]; !ok {
+		return Blockage{}
+	}
+	deps, escs := s.ClaimBlockers(taskID)
+	b := Blockage{UnmetDeps: deps, BlockingEscalations: escs}
+	for _, dep := range deps {
+		if s.Tasks[dep].Status == StatusCancelled {
+			b.CancelledDeps = append(b.CancelledDeps, dep)
+		}
+	}
+	b.Cyclic = s.inDepLoop(taskID)
+	return b
+}
+
+// inDepLoop reports whether taskID can reach itself along depends_on
+// edges through not-done tasks: a plain seen-set DFS, computed per task
+// on demand — state is small, and a global strongly-connected pass
+// would buy nothing but harder reading. Edges to done tasks drop out
+// (a done dep is a satisfied edge); cancelled tasks stay in the graph —
+// cancelled never counts as done. Unknown dep IDs are skipped, matching
+// ClaimBlockers' defensive posture. Membership is deliberate: a task
+// whose dependency chain merely runs INTO a loop reports false — the
+// marker names the tasks a human must cut an edge between, not
+// everything downstream of them.
+func (s *State) inDepLoop(taskID string) bool {
+	seen := make(map[string]bool)
+	var walk func(id string) bool
+	walk = func(id string) bool {
+		for _, dep := range s.Tasks[id].DependsOn {
+			d, ok := s.Tasks[dep]
+			if !ok || d.Status == StatusDone {
+				continue
+			}
+			if dep == taskID {
+				return true
+			}
+			if seen[dep] {
+				continue
+			}
+			seen[dep] = true
+			if walk(dep) {
+				return true
+			}
+		}
+		return false
+	}
+	return walk(taskID)
 }
 
 // Situation words for open tasks. Non-open tasks have no extra word:
