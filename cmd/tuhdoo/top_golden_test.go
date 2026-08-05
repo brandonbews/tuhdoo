@@ -289,7 +289,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 	m.snap.tasks["t-lic"] = h
 	m.width, m.height = 80, 40
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 2 {
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 3 {
 		t.Fatalf("enter on the Needs Input row: mode %d detail %q focus %d, want t-lic with its escalation stop preselected",
 			m.mode, m.detailID, m.detailFocus)
 	}
@@ -301,6 +301,9 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"  id          t-lic",
 		"  status      open",
 		"  priority    0",
+		// The labels line always renders — the dim placeholder degrades
+		// to plain "none" here (labels editable, 2026-08-05).
+		"  labels      none",
 		"  created     2026-07-29 12:00 UTC by brandon",
 		"",
 		" NEEDS INPUT (1)                                                   enter answer ",
@@ -314,8 +317,8 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"  no activity yet",
 	}, "\n") + "\n" +
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 19-39 are the blank pad.
-		strings.Repeat("\n", 21) +
+		// 20-39 are the blank pad.
+		strings.Repeat("\n", 20) +
 		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        "
 	got := m.View()
 	if got != want {
@@ -337,8 +340,9 @@ func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 	v := m.View()
 	mustContain(t, v,
 		"▌ t-pars — write the parser",
-		"  priority    0", // an unfocused stop keeps the blank mark column
-		"  none")          // the empty-description placeholder, unfocused
+		"  priority    0",    // an unfocused stop keeps the blank mark column
+		"  labels      none", // the always-rendered labels line, unfocused
+		"  none")             // the empty-description placeholder, unfocused
 	if n := strings.Count(v, "▌"); n != 1 {
 		t.Errorf("%d gutter lines, want exactly 1 (the title); view:\n%s", n, v)
 	}
@@ -380,6 +384,9 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",
+		// The empty labels line: the placeholder is dim, like the empty
+		// description body (labels editable, 2026-08-05).
+		"  \x1b[1mlabels\x1b[0m      \x1b[2mnone\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("task view missing %q; view:\n%q", want, v)
@@ -503,6 +510,9 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"  id          t-drop",
 		"  status      cancelled — 2026-07-27 by brandon",
 		"  priority    0",
+		// Rendered on terminal tasks too — one uniform rule — but never
+		// a stop there (labels editable, 2026-08-05).
+		"  labels      none",
 		"  created     2026-07-20 12:00 UTC by brandon",
 		"",
 		" DESCRIPTION                                                                    ",
@@ -514,8 +524,8 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"    unanswered",
 	}, "\n") + "\n" +
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 17-39 are the blank pad.
-		strings.Repeat("\n", 23) +
+		// 18-39 are the blank pad.
+		strings.Repeat("\n", 22) +
 		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                "
 	got := m.View()
 	if got != want {

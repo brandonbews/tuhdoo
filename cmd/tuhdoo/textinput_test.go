@@ -551,7 +551,8 @@ func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-flak")
-	m, _ = press(t, m, // walk the ring past priority to the description
+	m, _ = press(t, m, // walk the ring past priority and labels to the description
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		keyOf(tea.KeyEnter))
@@ -576,7 +577,8 @@ func TestTopDetailInputBoxFitsHeight(t *testing.T) {
 	m := openDetail(t, newTopModelWithDep(newFakeSteering()), "t-lic")
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})
 	m = mm.(topModel)
-	m, _ = press(t, m, // ring past priority to the escalation, then answer entry
+	m, _ = press(t, m, // ring past priority and labels to the escalation, then answer entry
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		keyOf(tea.KeyEnter))
