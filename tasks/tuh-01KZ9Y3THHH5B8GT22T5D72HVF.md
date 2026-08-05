@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T5D72HVF`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 2
 - **Labels:** `docs`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done)
