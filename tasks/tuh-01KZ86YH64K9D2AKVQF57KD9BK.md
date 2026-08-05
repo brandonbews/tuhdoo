@@ -48,3 +48,7 @@ Two candidate semantics (both keep voided claims tracked so the verbs answer hon
 My recommendation: (i), folded into this same task (the acceptance bar already names 17/17 as the definition of done), then re-run the harness for a real 17/17 and merge PR #32 with the renewal fix included — one PR, since the bar is only meetable with both. If you'd rather treat finding 3 as its own grilled decision first, the alternative is: merge PR #32 as-is now (it is necessary under either finding-3 outcome and independently tested) and spawn a finding-3 task; the dependent harness-merge task tuh-01KZ5WMT4GWZTYVRGWN56TYSVN stays gated either way until the bar is green.
 
 _Unanswered._
+
+### 2026-08-05 06:13 UTC — note from `brandon/claude-code-1`
+
+Resume state: all decided tombstone work is done on branch tuh-d9bk/lease-tombstones (commit 2204873, pushed; PR #32, held as draft pending escalation 01KZ88VCEP4AZ8CXY5DW1R72C6). make test lint green. To reproduce the acceptance bar: git worktree at the branch commit, then `git checkout origin/tuh-ysvn/collision-harness-real-machinery -- harness/`, then `go run ./harness/collision` (~10 min); this run passed seeding + confirmation-race storm + convergence and exited 1 at the settle phase on the finding-3 eviction (fix site if answer is option (i): internal/daemon/mcp.go renewOnce — stop untracking ClaimVoided claims; keep the renewal skip; heldClaim gate then answers correctly). After the answer lands: implement, re-run harness for 17/17, mark PR #32 ready, confirm_claim before arming auto-merge.
