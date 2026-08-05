@@ -221,7 +221,15 @@ func runTask(id string) int {
 		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
 		return 1
 	}
-	printTask(os.Stdout, newColors(os.Stdout), h)
+	// The state listing already fetched for ID resolution carries the
+	// daemon's blockage verdicts — the waiting line renders off those.
+	var row stateTask
+	for _, t := range st.Tasks {
+		if t.ID == full {
+			row = t
+		}
+	}
+	printTask(os.Stdout, newColors(os.Stdout), h, row)
 	return 0
 }
 
@@ -272,17 +280,20 @@ func idMatches(id, frag string) bool {
 
 // printTask renders one task's full biography the way the one-shot
 // `tuhdoo task <id>` prints it: full IDs throughout, the scriptable
-// plumbing form.
-func printTask(w io.Writer, col colors, h hydratedTask) {
-	printTaskRef(w, col, h, nil)
+// plumbing form. st is the task's state-listing row (zero when the
+// caller has none): its loud blockage annotations — loop membership,
+// cancelled deps (2026-08-05 edge grill) — render as a waiting line.
+func printTask(w io.Writer, col colors, h hydratedTask, st stateTask) {
+	printTaskRef(w, col, h, nil, waitingNote(st, func(id string) string { return id }))
 }
 
 // printTaskRef is printTask with the task references — depends_on —
 // passed through ref: the TUI shortens and annotates them for display,
 // and gets the full ULID exactly once, dimmed on its own line as the
 // copyable canonical form. A nil ref keeps the one-shot rendering
-// byte-identical.
-func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) string) {
+// byte-identical. waiting is the pre-rendered loud-annotation line
+// (waitingNote), "" for no line.
+func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) string, waiting string) {
 	t := h.Task
 	if ref == nil {
 		ref = func(id string) string { return id }
@@ -305,6 +316,9 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 	}
 	if len(t.DependsOn) > 0 {
 		fmt.Fprintf(w, "  depends on  %s\n", joinRefs(t.DependsOn, ref))
+	}
+	if waiting != "" {
+		fmt.Fprintf(w, "  waiting     %s\n", waiting)
 	}
 	fmt.Fprintf(w, "  created     %s by %s\n", stamp(t.CreatedAt), t.CreatedBy)
 

@@ -91,6 +91,12 @@ type stateTask struct {
 	Situation           string   `json:"situation"`
 	UnmetDeps           []string `json:"unmet_deps"`
 	BlockingEscalations []string `json:"blocking_escalations"`
+	// Loud blockage annotations (2026-08-05 edge grill): the unmet deps
+	// sitting cancelled, and membership in a depends_on loop among
+	// not-done tasks. The daemon's verdict like the lists above — the
+	// CLI renders these, it never re-derives them.
+	CancelledDeps []string `json:"cancelled_deps"`
+	Cyclic        bool     `json:"cyclic"`
 	// Close metadata (history view, 2026-08-02): what the history rows
 	// sort and stamp by; nil on open tasks and pre-upgrade daemons.
 	ClosedAt *time.Time `json:"closed_at"`

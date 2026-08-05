@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 2 ready · 2 blocked · 2 on hold · 1 inbox · 1 done · 1 cancelled
+1 in progress · 2 ready · 5 blocked · 2 on hold · 1 inbox · 1 done · 1 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
@@ -23,6 +23,9 @@
 |---|---|---:|---|
 | [`t-flak`](tasks/t-flak.md) | Fix flaky TestFoo | 8 | an [open question](escalations.md) |
 | [`t-rout`](tasks/t-rout.md) | Route claims by label | 0 | depends on [`t-idea`](tasks/t-idea.md) |
+| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | 0 | **cyclic** — a human must cut an edge; depends on [`t-lpb`](tasks/t-lpb.md) |
+| [`t-lpb`](tasks/t-lpb.md) | Rework store tests on the interface | 0 | **cyclic** — a human must cut an edge; depends on [`t-lpa`](tasks/t-lpa.md) |
+| [`t-onit`](tasks/t-onit.md) | Build on the go-git spike | 0 | waiting on cancelled [`t-old`](tasks/t-old.md) |
 
 ## On hold
 

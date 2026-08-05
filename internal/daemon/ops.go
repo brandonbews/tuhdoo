@@ -237,6 +237,14 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 				return taskJSON{}, opErrf(http.StatusBadRequest, "unknown task %q in edges", ref)
 			}
 		}
+		// Refuse to knowingly write a dependency loop. Local hygiene
+		// only, never prevention: a set-union merge can still union two
+		// individually-acyclic writes into a loop no daemon ever saw
+		// (D2/D3) — replay marks those loudly instead (core.Blockage).
+		if loop := d.depLoopLocked(id, *req.DependsOn); loop != nil {
+			return taskJSON{}, opErrf(http.StatusBadRequest,
+				"would create a dependency loop: %s", strings.Join(loop, " → "))
+		}
 	}
 	ev, err := d.newEventLocked(event.TypeTaskUpdated, actor, id, event.TaskUpdated{
 		Title:       req.Title,
@@ -1069,9 +1077,10 @@ func (d *Daemon) inProgressRowsLocked() []scopeTaskJSON {
 }
 
 // blockedRowsLocked lists open, unclaimed tasks that cannot be claimed,
-// in creation order. Membership and reasons both come from
-// core.ClaimBlockers — the daemon holds no blocking predicate of its
-// own, so this list can never disagree with what Ready withholds.
+// in creation order. Membership, reasons, and the loud annotations all
+// come from core.Blockage (built on core.ClaimBlockers) — the daemon
+// holds no blocking predicate of its own, so this list can never
+// disagree with what Ready withholds.
 func (d *Daemon) blockedRowsLocked() []scopeTaskJSON {
 	rows := []scopeTaskJSON{}
 	for _, id := range d.state.TaskOrder {
@@ -1079,17 +1088,19 @@ func (d *Daemon) blockedRowsLocked() []scopeTaskJSON {
 		if t.Status != core.StatusOpen || d.state.ActiveClaim(id) != nil {
 			continue
 		}
-		deps, escs := d.state.ClaimBlockers(id)
-		if len(deps) == 0 && len(escs) == 0 {
+		b := d.state.Blockage(id)
+		if len(b.UnmetDeps) == 0 && len(b.BlockingEscalations) == 0 {
 			continue // claimable — that is ready's row, not blocked's
 		}
 		row := scopeRowOf(t)
-		for _, dep := range deps {
+		for _, dep := range b.UnmetDeps {
 			row.WaitingOn = append(row.WaitingOn, "dep:"+dep)
 		}
-		for _, esc := range escs {
+		for _, esc := range b.BlockingEscalations {
 			row.WaitingOn = append(row.WaitingOn, "esc:"+esc)
 		}
+		row.CancelledDeps = b.CancelledDeps
+		row.Cyclic = b.Cyclic
 		rows = append(rows, row)
 	}
 	return rows
@@ -1291,6 +1302,45 @@ func (d *Daemon) hydrateLocked(id string) hydratedTask {
 		}
 	}
 	return h
+}
+
+// depLoopLocked reports the dependency loop that replacing id's edges
+// with proposed would close, as the ID path id → … → id, or nil when
+// none would. It walks only the graph this daemon can see right now —
+// the raw depends_on edges, terminal tasks included, since a loop
+// through a done task is still a knowingly-written loop that bites the
+// moment that task reopens. Caller holds d.mu.
+func (d *Daemon) depLoopLocked(id string, proposed []string) []string {
+	// DFS from each proposed edge through the current graph, looking
+	// for a path back to id; path carries the tasks walked so the
+	// rejection can name the loop's members.
+	seen := make(map[string]bool)
+	var path []string
+	var walk func(cur string) bool
+	walk = func(cur string) bool {
+		if cur == id {
+			return true
+		}
+		t, ok := d.state.Tasks[cur]
+		if !ok || seen[cur] {
+			return false
+		}
+		seen[cur] = true
+		path = append(path, cur)
+		for _, dep := range t.DependsOn {
+			if walk(dep) {
+				return true
+			}
+		}
+		path = path[:len(path)-1]
+		return false
+	}
+	for _, dep := range proposed {
+		if walk(dep) {
+			return append(append([]string{id}, path...), id)
+		}
+	}
+	return nil
 }
 
 // hasCycle reports whether the intra-batch edge graph has a cycle

@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -981,5 +982,51 @@ func TestMCPBacklogScope(t *testing.T) {
 	res := callTool(t, cs, "get_backlog", map[string]any{"scope": []string{"everything"}})
 	if !res.IsError || !strings.Contains(contentText(res), `unknown scope "everything"`) {
 		t.Fatalf("unknown scope = isError %v %q, want a clear rejection", res.IsError, contentText(res))
+	}
+}
+
+// get_backlog's blocked rows carry the loud annotations (2026-08-05
+// edge grill) additively: cyclic on loop members, cancelled_deps on
+// waiters of a cancelled dependency, plain rows unchanged. The loop is
+// seeded as stored history — the merge arrival shape — since no verb
+// knowingly writes one.
+func TestMCPBlockedRowsCarryLoopAndCancelledMarks(t *testing.T) {
+	d, _ := startDaemon(t)
+	cs := mcpConnect(t, d, "brandon/impl-1", nil)
+	seedDepLoop(t, d, "t-loopa", "t-loopb")
+
+	var created createTasksResult
+	mustToolOK(t, cs, "create_task", map[string]any{"tasks": []map[string]any{
+		{"title": "doomed dep"}}}, &created)
+	dep := created.IDs[0]
+	mustToolOK(t, cs, "create_task", map[string]any{"tasks": []map[string]any{
+		{"title": "waits on the doomed", "depends_on": []string{dep}}}}, &created)
+	waiter := created.IDs[0]
+	mustToolOK(t, cs, "update_task", map[string]any{"task": dep, "status": "cancelled"}, nil)
+
+	var backlog backlogResult
+	mustToolOK(t, cs, "get_backlog", map[string]any{"scope": []string{"blocked"}}, &backlog)
+	rows := make(map[string]scopeTaskJSON)
+	for _, row := range *backlog.Blocked {
+		rows[row.ID] = row
+	}
+	for _, id := range []string{"t-loopa", "t-loopb"} {
+		row, ok := rows[id]
+		if !ok {
+			t.Fatalf("loop member %s missing from blocked rows %v", id, rows)
+		}
+		if !row.Cyclic || len(row.CancelledDeps) != 0 {
+			t.Errorf("%s = cyclic %v cancelled_deps %v, want cyclic with no cancelled deps",
+				id, row.Cyclic, row.CancelledDeps)
+		}
+	}
+	row, ok := rows[waiter]
+	if !ok {
+		t.Fatalf("waiter %s missing from blocked rows %v", waiter, rows)
+	}
+	if row.Cyclic || !reflect.DeepEqual(row.CancelledDeps, []string{dep}) ||
+		!reflect.DeepEqual(row.WaitingOn, []string{"dep:" + dep}) {
+		t.Errorf("waiter row = %+v, want waiting_on [dep:%s] with cancelled_deps [%s], not cyclic",
+			row, dep, dep)
 	}
 }

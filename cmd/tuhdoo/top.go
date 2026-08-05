@@ -1019,6 +1019,12 @@ func (m topModel) detailLines() []detailLine {
 	if len(t.DependsOn) > 0 {
 		field(-1, "depends on", joinRefs(t.DependsOn, m.snap.taskRef))
 	}
+	// Loud blockage annotations only (2026-08-05 edge grill): the line
+	// renders when a human must act — loop membership, cancelled deps —
+	// never for ordinary waiting, which the depends-on refs already tell.
+	if wn := waitingNote(m.snap.stateTaskOf(t.ID), m.snap.taskRef); wn != "" {
+		field(-1, "waiting", wn)
+	}
 	field(-1, "created", fmt.Sprintf("%s by %s", stamp(t.CreatedAt), t.CreatedBy))
 
 	// The escalations section: every open escalation, selectable.
