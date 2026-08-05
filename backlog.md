@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 4 blocked · 4 on hold · 3 inbox · 57 done · 12 cancelled
+0 in progress · 5 ready · 4 blocked · 4 on hold · 2 inbox · 57 done · 12 cancelled
 
 ## In progress
 
@@ -14,6 +14,7 @@ _None._
 | [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) | Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root | 3 | `go` `store` `syncer` |
 | [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
 | [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) | init hardening: loud unknown-flag errors and the MCP snippet in init output | 2 | `cli` |
+| [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) | Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward | 1 | `syncer` `t8` |
 
 ## Blocked / waiting
 
@@ -40,7 +41,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
-- [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
 
 ## Done
