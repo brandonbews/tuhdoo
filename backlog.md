@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 2 inbox · 54 done · 11 cancelled
+1 in progress · 0 ready · 1 blocked · 6 on hold · 2 inbox · 54 done · 11 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | `harness` `d6` |
+_None._
 
 ## Blocked / waiting
 
