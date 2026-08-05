@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 4 ready · 4 blocked · 4 on hold · 3 inbox · 57 done · 12 cancelled
+1 in progress · 4 ready · 4 blocked · 4 on hold · 4 inbox · 57 done · 12 cancelled
 
 ## In progress
 
@@ -44,6 +44,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
+- [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
 
 ## Done
 
