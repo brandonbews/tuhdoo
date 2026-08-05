@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 6 ready · 2 blocked · 4 on hold · 4 inbox · 58 done · 12 cancelled
+1 in progress · 5 ready · 2 blocked · 4 on hold · 5 inbox · 58 done · 12 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) | Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root | 3 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) | Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root | 3 | `go` `store` `syncer` |
 | [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) | Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05) | 2 | `go` `edges` `tui` |
 | [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) | Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger | 2 | `docs` |
 | [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
@@ -43,6 +44,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
+- [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 
 ## Done
 

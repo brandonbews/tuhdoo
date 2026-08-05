@@ -5,7 +5,6 @@
 - **Status:** done
 - **Priority:** 2
 - **Labels:** `dogfood` `multiplayer`
-- **Parents:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md)
 - **Depends on:** [`t-c7km`](t-01KYRMFV10W1N28TCN5TDQC7KM.md) (done)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 

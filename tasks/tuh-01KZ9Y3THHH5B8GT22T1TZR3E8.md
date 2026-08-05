@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T1TZR3E8`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 3
 - **Labels:** `go` `store` `syncer`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
