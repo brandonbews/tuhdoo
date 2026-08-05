@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 6 on hold · 2 inbox · 53 done · 11 cancelled
+0 in progress · 1 ready · 2 blocked · 6 on hold · 2 inbox · 53 done · 11 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
@@ -10,7 +10,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) | Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04) | 1 | `daemon` `core` `syncer` `store` `d6` |
 
 ## Blocked / waiting
 

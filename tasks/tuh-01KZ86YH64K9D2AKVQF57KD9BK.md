@@ -1,0 +1,36 @@
+# Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04)
+
+`tuh-01KZ86YH64K9D2AKVQF57KD9BK`
+
+- **Status:** open — ready
+- **Priority:** 1
+- **Labels:** `daemon` `core` `syncer` `store` `d6`
+- **Created:** 2026-08-05 05:39 UTC by `brandon/claude-code-1`
+
+## Description
+
+Context: the reworked collision harness (branch tuh-ysvn/collision-harness-real-machinery, commit 5c4d547, pushed unmerged) exposed two production gaps in the PR #30 stand-down path, escalated as 01KZ7W28PB9GPHM0CSQQ2QFABM and design-decided by Brandon in a 2026-08-04 short grill: (1) deleting a voided claim's lease rewrites replay history — leaseExpiredBy (internal/core/replay.go) counts a missing lease as lapsed at every instant, so past claim contests re-adjudicate and the promised superseded run becomes interrupted/expired; (2) the union merge resurrects deleted lease files, making immediate closure a merge-timing coin flip.
+
+The decision (implement exactly this):
+- Lease tombstones with an explicit marker: stand-down and release overwrite the lease file with {"expires": "<the instant>", "released": true} instead of deleting. Add the released field to store.leaseFile; Encode/DecodeLease grow tombstone support (old binaries ignore the unknown field and read an ordinary lapsed lease — acceptable degradation; leases are mutable files, no T3 concern).
+- Retire lease deletion everywhere: both DeleteLease call sites in internal/daemon/ops.go (normal holder release ~line 454 and releaseVoidedLocked ~line 484) switch to tombstone writes; delete store.DeleteLease itself so no future caller re-imports the bug. New invariant: lease files are never deleted, only overwritten.
+- Merge rule for leases/ same-path conflicts (internal/syncer/merge.go): released beats plain regardless of expiry; two released -> earlier expiry wins (fail-safe determinism, same posture as replay's earliest-confirmation rule); two plain -> later expiry wins (unchanged). Union resurrection of one-sided lease files stays and is now harmless. Rewrite the stale merge.go lease comment to state the new invariant — its staleness is what hid finding 2.
+- Replay changes: NONE. The tombstone's expiry makes leaseExpiredBy answer correctly at every instant (live before stand-down, lapsed after). Do not touch leaseExpiredBy semantics for genuinely-missing leases.
+- Doc revisions with dated notes (2026-08-04 grill), the D5/D6/D8 in-place pattern: 002 T8 lease wording (never deleted, tombstone rule), D6 clause 3 mechanism note in 001, and the merge comment above.
+
+Why released-beats-plain is safe (recorded so it isn't re-litigated): a claim's lease is written only by the claiming machine's own daemon under one mutex, and a daemon never renews after standing down — so a renewal later than the tombstone structurally cannot exist; any plain copy losing to a tombstone is by construction stale.
+
+Acceptance criteria:
+- Store tests: tombstone round-trip; old-format lease still decodes.
+- Syncer literal-tree table tests: released-vs-plain both directions -> identical trees, tombstone kept; released-vs-released -> earlier expiry; plain-vs-plain unchanged.
+- Core tests: a voided claim with a tombstoned lease synthesizes the branch-less superseded run from the stand-down instant onward and never re-adjudicates past contests (the finding-1 shape: confirmation out-ranked an earlier-ULID claim, loser stood down — the loser stays superseded, the winner's contest history is stable at every replay instant).
+- go run ./harness/collision passes 17/17 including the confirmation-race storm — this is the bar; then merge branch tuh-ysvn/collision-harness-real-machinery (its own PR, body citing roadmap v1 DoD clause 2 evidence) after this fix lands.
+- make test lint green from the repo root.
+
+Pointers: internal/store/lease.go, internal/syncer/merge.go (lease arm + comment block ~lines 25-40), internal/daemon/ops.go (two DeleteLease sites), internal/core/replay.go leaseExpiredBy (read, do not change), harness/README.md findings section (mark resolved with date when green).
+
+Constraints: boring Go (T1); replay stays pure; stored event bytes untouched (leases are not events); daemon sole writer (D2); do not weaken any harness check to pass. All fleet binaries must be rebuilt after landing (merge-rule change) — same deploy posture as the confirmation gate.
+
+## History
+
+_No activity yet._
