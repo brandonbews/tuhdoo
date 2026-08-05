@@ -320,17 +320,32 @@ func (g *CLI) Push(remote, refspec string) error {
 	// --porcelain gives a stable per-ref status line on stdout, which
 	// is what classifies a rejection. --no-follow-tags/--no-signed pin
 	// behavior the user's config could otherwise change.
-	stdout, _, err := g.run(nil, nil, "push", "--porcelain", "--no-follow-tags", "--no-signed", remote, refspec)
+	stdout, stderr, err := g.run(nil, nil, "push", "--porcelain", "--no-follow-tags", "--no-signed", remote, refspec)
 	if err != nil {
-		// "fetch first" is git's wording for the same situation when
-		// the remote ref is entirely unknown locally.
-		s := string(stdout)
-		if strings.Contains(s, "non-fast-forward") || strings.Contains(s, "fetch first") {
+		if pushRejectionIsContention(string(stdout), string(stderr)) {
 			return fmt.Errorf("gitx: push %s %s: %w", remote, refspec, ErrNonFastForward)
 		}
 		return fmt.Errorf("gitx: %w", err)
 	}
 	return nil
+}
+
+// pushRejectionIsContention classifies a failed push's output: true means
+// another writer got to the ref first and the caller should fetch, merge,
+// and retry (ErrNonFastForward); false means some other failure.
+func pushRejectionIsContention(stdout, stderr string) bool {
+	// The per-ref --porcelain status on stdout: "non-fast-forward" for a
+	// stale local history; "fetch first" is git's wording for the same
+	// situation when the remote ref is entirely unknown locally.
+	if strings.Contains(stdout, "non-fast-forward") || strings.Contains(stdout, "fetch first") {
+		return true
+	}
+	// Two pushes landing at the same instant can lose the remote's own
+	// ref-update race instead: the remote relays "cannot lock ref '…':
+	// is at X but expected Y" on stderr. Contention all the same — not
+	// counting it undercounts Status.Collisions (T8) and skips the retry
+	// loop for a cycle (observed in the collision-harness storm).
+	return strings.Contains(stderr, "cannot lock ref")
 }
 
 func (g *CLI) RemoteURL(remote string) (string, error) {
