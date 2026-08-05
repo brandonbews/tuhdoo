@@ -1,9 +1,9 @@
 # tuhdoo
 
 A coordination fabric for agent fleets, steered by humans: a shared backlog,
-work queue, and activity ledger living in a git orphan branch inside the repo
-it plans. Synced through an ordinary git remote — no server, no vendor, no
-accounts.
+work queue, and activity ledger living in a git orphan branch (`tuhdoo`)
+inside the repo it plans. Synced through an ordinary git remote — no server,
+no vendor, no accounts.
 
 ## Install
 
@@ -33,11 +33,13 @@ Every tagged release publishes checksummed archives for
 <https://github.com/brandonbews/tuhdoo/releases>.
 
 ```sh
-# example: Apple Silicon macOS, release v0.1.0
-curl -LO https://github.com/brandonbews/tuhdoo/releases/download/v0.1.0/tuhdoo_v0.1.0_darwin_arm64.tar.gz
-curl -LO https://github.com/brandonbews/tuhdoo/releases/download/v0.1.0/checksums.txt
+# example: Apple Silicon macOS — set TAG to the latest tag from
+# https://github.com/brandonbews/tuhdoo/releases/latest
+TAG=v0.x.y
+curl -LO "https://github.com/brandonbews/tuhdoo/releases/download/$TAG/tuhdoo_${TAG}_darwin_arm64.tar.gz"
+curl -LO "https://github.com/brandonbews/tuhdoo/releases/download/$TAG/checksums.txt"
 shasum -a 256 --check --ignore-missing checksums.txt
-tar -xzf tuhdoo_v0.1.0_darwin_arm64.tar.gz
+tar -xzf "tuhdoo_${TAG}_darwin_arm64.tar.gz"
 install -m 755 tuhdoo /usr/local/bin/tuhdoo
 ```
 
@@ -63,8 +65,16 @@ make build   # → bin/tuhdoo
 ## Start here
 
 Run `tuhdoo init` inside the repository you want to plan, then bare `tuhdoo`
-for the interactive TUI. Agents connect through the stdio MCP shim
-(`command: tuhdoo, args: [mcp]`); see `docs/agent-protocol.md`.
+for the interactive TUI (`tuhdoo --watch` is the same screen read-only —
+safe to leave open in a pane). One-shot commands cover reads (`status`,
+`backlog`, `task <id>`, `escalations`) and session-free writes (`create`,
+`update`, `answer`). Agents connect through the stdio MCP shim:
+
+```json
+{ "mcpServers": { "tuhdoo": { "command": "tuhdoo", "args": ["mcp"] } } }
+```
+
+See `docs/agent-protocol.md` for the agent loop.
 
 The design record lives in `docs/` — start with
 `docs/design/001-core-design.md`.

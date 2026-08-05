@@ -14,13 +14,13 @@ data branch of this repository, managed by the system it built.
   follow `docs/agent-protocol.md`, and drive work through `claim_next`.
   Development sessions on this repo are driven that way from now on.
 
-## The v0 clock
+## The v0 clock *(retired 2026-08-05)*
 
-The v0 definition-of-done clock (one week of tuhdoo managing its own
-development, zero manual repair of the data branch — `docs/plan/roadmap.md`)
-started **2026-07-30**. The gate is the blocking escalation on the
-*"v0 definition of done: the dogfood week holds"* milestone task: answer it
-on or after **2026-08-06** from `tuhdoo escalations`.
+A week-clock definition of done once ticked here. It was superseded
+2026-08-03 by five checkable facts (`docs/plan/roadmap.md`), and the gate
+escalation was answered the same day. The escalation-as-fence pattern the
+gate used is now the documented wrong fence — "no attempt, no escalation"
+(`docs/agent-protocol.md`); parked work is `held`.
 
 ## History
 
