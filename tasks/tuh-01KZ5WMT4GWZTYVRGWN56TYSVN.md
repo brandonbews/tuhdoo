@@ -2,7 +2,7 @@
 
 `tuh-01KZ5WMT4GWZTYVRGWN56TYSVN`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — blocked on dependencies
 - **Priority:** 1
 - **Labels:** `harness` `d6`
 - **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (done), [`tuh-d9bk`](tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) (open)
@@ -35,7 +35,7 @@ Constraints: the harness stays outside the daemons' internals; do not weaken fin
 >
 > My recommendation: (a), decided through a grill cycle since it amends the T8/merge lease rules and D6 clause 3's mechanism. The harness rewrite itself is complete and is the evidence instrument for roadmap v1 DoD clause 2: its marquee checks pass (zero duplicate confirmations across 40 raced contests, one claim.confirmed per contest, byte-identical state/views both sides); the 3 failing checks are precisely these findings, written up in harness/README.md on the branch. The harness cannot go green (its acceptance bar) until the lease design is settled and fixed in a follow-up task.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Decision (Brandon, 2026-08-04 short grill in-session): option (a) with a correction found during the grill — a plain lapsed-expiry overwrite is insufficient because the merge's later-expiry-wins rule would let a peer's stale lease copy beat it. Decided: (1) lease tombstones carry an explicit marker — overwrite with {expires: <stand-down instant>, released: true}; (2) lease deletion is retired everywhere (both DeleteLease call sites; the invariant becomes 'lease files are never deleted, only overwritten'), which also defuses union resurrection; (3) merge rule for leases: released beats plain regardless of expiry, two released -> earlier expiry wins, two plain -> later expiry wins (unchanged); (4) replay unchanged — the tombstone's expiry makes leaseExpiredBy correct at every instant. Rationale recorded: a claim's lease has one writer (its own daemon, one mutex) and a daemon never renews after standing down, so released-beats-plain can never undo a live renewal. Implementation is task tuh-01KZ86YH64K9D2AKVQF57KD9BK (full spec + doc-revision list in its description); the harness task now depends on it and its acceptance bar stays harness 17/17.
 
 ### 2026-08-05 02:29 UTC — note from `brandon/claude-code-1`
 

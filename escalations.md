@@ -4,19 +4,7 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-### [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) · Collision harness: drive the real D6 machinery, add a confirmation-race storm
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-05 02:29 UTC
-
-> The reworked collision harness (branch tuh-ysvn/collision-harness-real-machinery, commit 5c4d547) found two production gaps in PR #30's silent-loser path; fixing them changes lease semantics, which is design territory — how should leases end when a voided claimant stands down?
->
-> Finding 1 — lease deletion rewrites replay history. releaseVoidedLocked (internal/daemon/ops.go) deletes the loser's lease, but leaseExpiredBy (internal/core/replay.go) counts a MISSING lease as lapsed at EVERY instant, including past ones. In exactly the contests where a confirmation out-ranked an earlier-ULID claim, replay thereafter sees the earlier claim as lease-less at claim-apply time and records it expired with a synthesized interrupted run — not the promised superseded run. Deterministic on both machines, but the verb's 'recorded as superseded' acknowledgment is false. Hit 13/40 storm contests.
->
-> Finding 2 — merge resurrects deleted leases. The union merge (internal/syncer/merge.go) brings deleted lease files back; its comment ('a resurrected lease only matters to an ACTIVE claim') predates PR #30 making voided-lease deletion load-bearing. Whether a stand-down closes immediately or waits out the 15-min TTL is a merge-timing coin flip (5/10 silent losers un-closed at verify).
->
-> Options I see: (a) releaseVoidedLocked overwrites the lease with an already-lapsed expiry (a tombstone) instead of deleting — fixes finding 1 since the lease exists with a real expiry; but the merge's 'later expiry wins' rule then lets a racing renewal beat the tombstone, so finding 2 needs the rule to let releases beat renewals (e.g. tombstones win, or lease files carry a released marker). (b) Keep deletion but make leaseExpiredBy time-aware (missing lease = lapsed only from some instant) — needs a durable record of WHEN it vanished, which deletion doesn't leave; seems structurally worse. (c) Don't touch leases on stand-down: the attempt closes by natural TTL expiry (up to 15 min later); simplest, costs only latency of the synthesized close, but the ack text must stop promising immediate closure.
->
-> My recommendation: (a), decided through a grill cycle since it amends the T8/merge lease rules and D6 clause 3's mechanism. The harness rewrite itself is complete and is the evidence instrument for roadmap v1 DoD clause 2: its marquee checks pass (zero duplicate confirmations across 40 raced contests, one claim.confirmed per contest, byte-identical state/views both sides); the 3 failing checks are precisely these findings, written up in harness/README.md on the branch. The harness cannot go green (its acceptance bar) until the lease design is settled and fixed in a follow-up task.
+_None — the fleet is unblocked._
 
 ## Answered
 
@@ -75,3 +63,19 @@ Asked by `brandon/claude-code-1` · 2026-08-01 03:50 UTC
 > PR #13 (https://github.com/brandonbews/tuhdoo/pull/13) changes .github/workflows/release.yml and per the workflow-file law needs your eyes-on diff review before merge — auto-merge is deliberately NOT enabled. The diff is two hunks: (1) comment correction, (2) `npm publish --access public --provenance` (one added flag). Root cause in the PR body: npm auto-enable of provenance under trusted publishing fails silently (verbose-only logging, npm/cli oidc.js); explicit flag makes future failures loud. Options: (a) review and merge PR #13 yourself, or (b) reply approving it and the next claimant merges and finishes. Recommendation: (a) — one-glance diff. Registry verification (dist.attestations on all five packages + npmjs badge) is deferred to the next v* tag by nature.
 
 **Answer** (`brandon`): i don't see any open PRs so i assume this is done
+
+### [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) · Collision harness: drive the real D6 machinery, add a confirmation-race storm
+
+Asked by `brandon/claude-code-1` · 2026-08-05 02:29 UTC
+
+> The reworked collision harness (branch tuh-ysvn/collision-harness-real-machinery, commit 5c4d547) found two production gaps in PR #30's silent-loser path; fixing them changes lease semantics, which is design territory — how should leases end when a voided claimant stands down?
+>
+> Finding 1 — lease deletion rewrites replay history. releaseVoidedLocked (internal/daemon/ops.go) deletes the loser's lease, but leaseExpiredBy (internal/core/replay.go) counts a MISSING lease as lapsed at EVERY instant, including past ones. In exactly the contests where a confirmation out-ranked an earlier-ULID claim, replay thereafter sees the earlier claim as lease-less at claim-apply time and records it expired with a synthesized interrupted run — not the promised superseded run. Deterministic on both machines, but the verb's 'recorded as superseded' acknowledgment is false. Hit 13/40 storm contests.
+>
+> Finding 2 — merge resurrects deleted leases. The union merge (internal/syncer/merge.go) brings deleted lease files back; its comment ('a resurrected lease only matters to an ACTIVE claim') predates PR #30 making voided-lease deletion load-bearing. Whether a stand-down closes immediately or waits out the 15-min TTL is a merge-timing coin flip (5/10 silent losers un-closed at verify).
+>
+> Options I see: (a) releaseVoidedLocked overwrites the lease with an already-lapsed expiry (a tombstone) instead of deleting — fixes finding 1 since the lease exists with a real expiry; but the merge's 'later expiry wins' rule then lets a racing renewal beat the tombstone, so finding 2 needs the rule to let releases beat renewals (e.g. tombstones win, or lease files carry a released marker). (b) Keep deletion but make leaseExpiredBy time-aware (missing lease = lapsed only from some instant) — needs a durable record of WHEN it vanished, which deletion doesn't leave; seems structurally worse. (c) Don't touch leases on stand-down: the attempt closes by natural TTL expiry (up to 15 min later); simplest, costs only latency of the synthesized close, but the ack text must stop promising immediate closure.
+>
+> My recommendation: (a), decided through a grill cycle since it amends the T8/merge lease rules and D6 clause 3's mechanism. The harness rewrite itself is complete and is the evidence instrument for roadmap v1 DoD clause 2: its marquee checks pass (zero duplicate confirmations across 40 raced contests, one claim.confirmed per contest, byte-identical state/views both sides); the 3 failing checks are precisely these findings, written up in harness/README.md on the branch. The harness cannot go green (its acceptance bar) until the lease design is settled and fixed in a follow-up task.
+
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Decision (Brandon, 2026-08-04 short grill in-session): option (a) with a correction found during the grill — a plain lapsed-expiry overwrite is insufficient because the merge's later-expiry-wins rule would let a peer's stale lease copy beat it. Decided: (1) lease tombstones carry an explicit marker — overwrite with {expires: <stand-down instant>, released: true}; (2) lease deletion is retired everywhere (both DeleteLease call sites; the invariant becomes 'lease files are never deleted, only overwritten'), which also defuses union resurrection; (3) merge rule for leases: released beats plain regardless of expiry, two released -> earlier expiry wins, two plain -> later expiry wins (unchanged); (4) replay unchanged — the tombstone's expiry makes leaseExpiredBy correct at every instant. Rationale recorded: a claim's lease has one writer (its own daemon, one mutex) and a daemon never renews after standing down, so released-beats-plain can never undo a live renewal. Implementation is task tuh-01KZ86YH64K9D2AKVQF57KD9BK (full spec + doc-revision list in its description); the harness task now depends on it and its acceptance bar stays harness 17/17.
