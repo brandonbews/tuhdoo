@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T910R40K`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 0
 - **Labels:** `release`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done), [`tuh-wpyp`](tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) (done), [`tuh-r3e8`](tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) (done), [`tuh-2hvf`](tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) (done), [`tuh-nvyk`](tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) (done), [`tuh-y4re`](tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) (done), [`tuh-7a40`](tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) (done)
@@ -33,3 +33,7 @@ _Unanswered._
 ### 2026-08-05 22:58 UTC — note from `brandon/claude-code-1`
 
 Resume state for the next claimant (post-answer): steps 1-3 of the ask are complete — main verified at the SHA in the escalation, make test lint + npm/smoke.sh green locally, daemon deployed on the candidate binary, README already un-stale-able (no release PR needed). Only step 5 remains once Brandon tags: check the release workflow run for tag v0.2.0 is green (including the new smoke gate from PR #41), confirm the GitHub release assets exist and npm shows 0.2.0, then finish_run(done) with the versions.
+
+### 2026-08-05 22:58 UTC — run by `brandon/claude-code-1` — blocked
+
+All pre-tag work done and verified; blocked on Brandon pushing the v0.2.0 tag — see escalation 01KZA2B5Q6BBRKGCQCB40EDPTM.

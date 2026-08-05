@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 5 on hold · 18 inbox · 64 done · 12 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 18 inbox · 64 done · 12 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -19,6 +17,7 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | an [open question](escalations.md) |
 
 ## On hold
 
