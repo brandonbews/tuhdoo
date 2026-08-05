@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 var testIdent = Identity{Name: "Test Bot", Email: "bot@example.com"}
@@ -327,6 +328,61 @@ func TestFetchAndPush(t *testing.T) {
 	err = a.Push("origin", spec)
 	if !errors.Is(err, ErrNonFastForward) {
 		t.Fatalf("divergent push: err = %v, want ErrNonFastForward", err)
+	}
+}
+
+// TestFetchTimeoutClassifiesLikeFetch: the bounded variant preserves
+// Fetch's error classification when the remote answers promptly.
+func TestFetchTimeoutClassifiesLikeFetch(t *testing.T) {
+	const spec = "refs/heads/tuhdoo:refs/tuhdoo/remote"
+
+	g := newRepo(t)
+	remote := newBareRemote(t)
+	runGit(t, g.dir, "remote", "add", "origin", remote)
+
+	err := g.FetchTimeout("origin", spec, 30*time.Second)
+	if !errors.Is(err, ErrRemoteRefMissing) {
+		t.Fatalf("fetch of a branch the remote lacks: err = %v, want ErrRemoteRefMissing", err)
+	}
+
+	c1 := writeCommit(t, g, map[string][]byte{"events/x.json": []byte(`{"id":"x"}`)}, "c1\n")
+	if err := g.UpdateRef("refs/heads/tuhdoo", c1, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.Push("origin", "refs/heads/tuhdoo:refs/heads/tuhdoo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.FetchTimeout("origin", spec, 30*time.Second); err != nil {
+		t.Fatalf("FetchTimeout: %v", err)
+	}
+	if got, err := g.ReadRef("refs/tuhdoo/remote"); err != nil || got != c1 {
+		t.Fatalf("tracking ref after fetch = %s, %v; want %s", got, err, c1)
+	}
+}
+
+// TestFetchTimeoutBoundsAHangingRemote: a transport that never answers
+// (an ssh command that just sleeps) must not stall the caller past the
+// bound — this is the daemon-startup guarantee behind clone-join.
+func TestFetchTimeoutBoundsAHangingRemote(t *testing.T) {
+	g := newRepo(t)
+	runGit(t, g.dir, "remote", "add", "origin", "ssh://tuhdoo-test.invalid/repo.git")
+	// git appends the host and remote command; the sh -c wrapper eats
+	// them as ignored positional args and just hangs.
+	t.Setenv("GIT_SSH_COMMAND", "sh -c 'sleep 60' hang-transport")
+
+	start := time.Now()
+	err := g.FetchTimeout("origin", "refs/heads/tuhdoo:refs/tuhdoo/remote", 500*time.Millisecond)
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("fetch through a hanging transport succeeded, want a timeout error")
+	}
+	// Generous ceiling: the bound plus WaitDelay's pipe cleanup, with
+	// slack for a loaded CI box — the point is seconds, not minutes.
+	if elapsed > 10*time.Second {
+		t.Fatalf("fetch not bounded: took %s", elapsed)
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("timeout error should say so, got: %v", err)
 	}
 }
 

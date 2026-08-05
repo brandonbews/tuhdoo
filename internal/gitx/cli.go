@@ -2,12 +2,14 @@ package gitx
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Minimum supported git version (design doc 002, T2).
@@ -76,11 +78,22 @@ func parseGitVersion(s string) (major, minor int, err error) {
 // LC_ALL=C pins the message language: some failures below are
 // classified by matching git's error text.
 func (g *CLI) run(stdin []byte, extraEnv []string, args ...string) (stdout []byte, stderr string, err error) {
-	cmd := exec.Command("git", args...)
+	return g.runCtx(context.Background(), stdin, extraEnv, args...)
+}
+
+// runCtx is run with a context: git is killed when the context expires.
+// WaitDelay matters for the timeout path — killing git can orphan a
+// transport helper (ssh) still holding our stdout/stderr pipes, and
+// without the delay cmd.Run would keep waiting on those pipes, undoing
+// the bound. In the normal path git exits with its pipes closed, so the
+// delay never engages.
+func (g *CLI) runCtx(ctx context.Context, stdin []byte, extraEnv []string, args ...string) (stdout []byte, stderr string, err error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = g.dir
 	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
 	cmd.Env = append(cmd.Env, extraEnv...)
 	cmd.Stdin = bytes.NewReader(stdin)
+	cmd.WaitDelay = 2 * time.Second
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -264,8 +277,23 @@ func (g *CLI) LsTree(rev string) ([]TreeEntry, error) {
 }
 
 func (g *CLI) Fetch(remote, refspec string) error {
-	_, stderr, err := g.run(nil, nil, "fetch", "--quiet", remote, refspec)
+	return g.fetch(context.Background(), remote, refspec)
+}
+
+func (g *CLI) FetchTimeout(remote, refspec string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return g.fetch(ctx, remote, refspec)
+}
+
+func (g *CLI) fetch(ctx context.Context, remote, refspec string) error {
+	_, stderr, err := g.runCtx(ctx, nil, nil, "fetch", "--quiet", remote, refspec)
 	if err != nil {
+		// The deadline check comes first: a killed git prints nothing
+		// classifiable, and callers deserve a message naming the bound.
+		if ctx.Err() != nil {
+			return fmt.Errorf("gitx: fetch %s %s: timed out: %w", remote, refspec, ctx.Err())
+		}
 		if strings.Contains(stderr, "couldn't find remote ref") {
 			return fmt.Errorf("gitx: fetch %s %s: %w", remote, refspec, ErrRemoteRefMissing)
 		}

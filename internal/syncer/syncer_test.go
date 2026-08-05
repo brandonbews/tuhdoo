@@ -49,6 +49,7 @@ func runGit(t *testing.T, dir string, args ...string) {
 }
 
 type peer struct {
+	dir   string
 	git   gitx.Git
 	store *store.Store
 	sync  *Syncer
@@ -84,7 +85,7 @@ func newPair(t *testing.T) (peer, peer) {
 			t.Fatal(err)
 		}
 		sy := New(g, Options{Ident: gitx.Identity{Name: name, Email: name + "@test.invalid"}})
-		return peer{git: g, store: st, sync: sy}
+		return peer{dir: dir, git: g, store: st, sync: sy}
 	}
 	return mk("machine-a"), mk("machine-b")
 }

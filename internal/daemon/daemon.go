@@ -178,9 +178,6 @@ func New(root string, opts Options) (*Daemon, error) {
 		return nil, fmt.Errorf("daemon: %w", err)
 	}
 	st := store.New(g, opts.Ref, ident)
-	if err := st.Init(); err != nil {
-		return nil, fmt.Errorf("daemon: %w", err)
-	}
 
 	d := &Daemon{
 		root:         root,
@@ -209,6 +206,17 @@ func New(root string, opts Options) (*Daemon, error) {
 		},
 		Log: logger,
 	})
+
+	// Clone-join before Init: a fresh clone whose remote already carries
+	// the data branch adopts that history instead of minting a second
+	// orphan root. Best-effort — on any failure (no remote, unreachable,
+	// branch absent) Init mints exactly as before, and the app-level
+	// union merge remains the correctness backstop for two-root histories.
+	d.sync.AdoptRemoteBranch()
+	if err := st.Init(); err != nil {
+		return nil, fmt.Errorf("daemon: %w", err)
+	}
+
 	d.state = emptyState()
 
 	if err := d.Refresh(); err != nil {
