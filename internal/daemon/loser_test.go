@@ -259,8 +259,9 @@ func TestReleaseByVoidedClaimantIsAcknowledgedStandDown(t *testing.T) {
 		}
 	}
 
-	// The stand-down closed the attempt: lease deleted, superseded run
-	// synthesized, and a later finish is turned away.
+	// The stand-down closed the attempt: lease tombstoned at the
+	// stand-down instant, superseded run synthesized, and a later
+	// finish is turned away.
 	d.mu.Lock()
 	winnerClaim := d.state.ActiveClaim(task)
 	var synthesized bool
@@ -525,5 +526,67 @@ func TestTwoDaemonLoserStory(t *testing.T) {
 	}
 	if done != 1 || superseded != 1 {
 		t.Fatalf("runs on the branch: %d done, %d superseded — want exactly one of each", done, superseded)
+	}
+}
+
+// TestRenewOnceKeepsVoidedClaimsTracked: the renewal tick must not
+// evict a provisionally-voided claim from session tracking — a race
+// loser has to hear "lost" from its own confirm_claim, which gates on
+// that tracking (D6 clause 3; escalation-decided 2026-08-04, the
+// collision harness's settle phase is the field shape). The voided
+// claim stays tracked but is never renewed, so its lease still lapses
+// on schedule and expiry synthesis closes a loser that never reports.
+// Closed and unknown claims are still dropped.
+func TestRenewOnceKeepsVoidedClaimsTracked(t *testing.T) {
+	d, c := startDaemon(t)
+	const winner, loser = "brandon/win", "brandon/lose"
+	raced := createOne(t, c, "brandon", map[string]any{"title": "raced work"})
+	mine := createOne(t, c, "brandon", map[string]any{"title": "solo work"})
+
+	if _, oe := d.opClaimTask(winner, raced); oe != nil {
+		t.Fatalf("winner claim: %v", oe)
+	}
+	voided := mintVoidedClaim(t, d, raced, loser, time.Hour)
+	h, oe := d.opClaimTask(loser, mine)
+	if oe != nil {
+		t.Fatalf("loser's solo claim: %v", oe)
+	}
+	active := h.Claim.ID
+	// Rewind the active lease below a renewal's now+TTL so the renewal
+	// is visible as a strictly later expiry (leases store second
+	// precision, and claim and renewal land in the same instant here).
+	if err := d.store.WriteLease(active, time.Now().Add(time.Minute)); err != nil {
+		t.Fatalf("rewind active lease: %v", err)
+	}
+
+	s := &mcpSession{actor: loser, stop: make(chan struct{}), claims: make(map[string]string)}
+	s.track(raced, voided)
+	s.track(mine, active)
+	s.track("tuh-gone", "01JUNKCLAIMID0000000000000")
+
+	before, err := d.store.ReadLeases()
+	if err != nil {
+		t.Fatalf("ReadLeases before: %v", err)
+	}
+	d.renewOnce(s)
+	after, err := d.store.ReadLeases()
+	if err != nil {
+		t.Fatalf("ReadLeases after: %v", err)
+	}
+
+	if _, held := s.heldClaim(raced); !held {
+		t.Fatal("voided claim evicted from tracking — confirm_claim would answer \"holds no claim\" instead of \"lost\"")
+	}
+	if _, held := s.heldClaim(mine); !held {
+		t.Fatal("active claim evicted from tracking")
+	}
+	if _, held := s.heldClaim("tuh-gone"); held {
+		t.Fatal("unknown claim survived the renewal tick")
+	}
+	if !after[voided].Equal(before[voided]) {
+		t.Fatalf("voided lease renewed (%s -> %s) — expiry synthesis would never close a silent loser", before[voided], after[voided])
+	}
+	if !after[active].After(before[active]) {
+		t.Fatalf("active lease not renewed (%s -> %s)", before[active], after[active])
 	}
 }

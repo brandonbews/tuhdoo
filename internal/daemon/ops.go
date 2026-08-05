@@ -451,8 +451,8 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 	if err := d.batcher.Flush(); err != nil {
 		return "", "", d.writeErrLocked(err)
 	}
-	if err := d.store.DeleteLease(c.ID); err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "delete lease: %v", err)
+	if err := d.store.ReleaseLease(c.ID, now); err != nil {
+		return "", "", opErrf(http.StatusInternalServerError, "release lease: %v", err)
 	}
 	if err := d.refreshLocked(now); err != nil {
 		return "", "", d.writeErrLocked(err)
@@ -463,10 +463,12 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 // releaseVoidedLocked is the stand-down arm of opReleaseClaim: the
 // actor's latest claim on the task lost its race (voided), and they are
 // standing down as asked. The release event carries the reason onto the
-// ledger; deleting the loser's lease closes the attempt — replay's next
-// pass synthesizes the branch-less superseded run — so the ack points
-// any remaining salvage at add_note. Caller holds d.mu with freshly
-// replayed state.
+// ledger; tombstoning the loser's lease at this instant closes the
+// attempt — replay's next pass synthesizes the branch-less superseded
+// run — so the ack points any remaining salvage at add_note. The lease
+// is overwritten, never deleted: a missing lease reads as lapsed at
+// every instant and would re-adjudicate the contest's past. Caller
+// holds d.mu with freshly replayed state.
 func (d *Daemon) releaseVoidedLocked(actor, taskID, reason string, mine *core.Claim, now time.Time) (claimID, message string, oe *opError) {
 	if closed, synth := d.attemptCloseLocked(mine); closed || synth {
 		return "", "", opErrf(http.StatusConflict,
@@ -481,8 +483,8 @@ func (d *Daemon) releaseVoidedLocked(actor, taskID, reason string, mine *core.Cl
 	if err := d.batcher.Flush(); err != nil {
 		return "", "", d.writeErrLocked(err)
 	}
-	if err := d.store.DeleteLease(mine.ID); err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "delete lease: %v", err)
+	if err := d.store.ReleaseLease(mine.ID, now); err != nil {
+		return "", "", opErrf(http.StatusInternalServerError, "release lease: %v", err)
 	}
 	if err := d.refreshLocked(now); err != nil {
 		return "", "", d.writeErrLocked(err)

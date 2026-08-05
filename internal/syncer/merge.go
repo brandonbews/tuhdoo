@@ -24,16 +24,25 @@ import (
 // Per-area rules:
 //   - events/  : set union. The same path holding different content is
 //     impossible for honest writers (events are immutable, path = ULID),
-//     so it fails loudly as corruption. Union also means a file deleted
-//     on one side but present on the other comes back; for events that
-//     is correctness (append-only), for leases it is accepted junk — a
-//     resurrected lease only matters to an ACTIVE claim, and active
-//     claims never had their lease deleted. One exception to the union
-//     (D6 writers' invariant, 2026-08-04): a one-sided claim.confirmed
-//     that competes with the other head's active confirmed claim is
-//     refused — see confirmGuard below.
-//   - leases/  : same path on both sides → the later expiry wins
-//     (a renewal must never be undone by an older copy).
+//     so it fails loudly as corruption. Union also means a file present
+//     on only one side always survives; for events that is correctness
+//     (append-only), and for leases it is harmless by construction —
+//     lease files are never deleted, only overwritten (2026-08-04), so
+//     a one-sided lease is simply news the other head hasn't heard yet,
+//     never a resurrection. One exception to the union (D6 writers'
+//     invariant, 2026-08-04): a one-sided claim.confirmed that competes
+//     with the other head's active confirmed claim is refused — see
+//     confirmGuard below.
+//   - leases/  : same path on both sides → a released tombstone beats a
+//     plain lease regardless of expiry; two tombstones → the earlier
+//     expiry wins (fail-safe determinism, the same posture as replay's
+//     earliest-confirmation rule); two plain leases → the later expiry
+//     wins (a renewal must never be undone by an older copy).
+//     Released-beats-plain is safe, not a heuristic: a claim's lease is
+//     written only by the claiming machine's own daemon under one
+//     mutex, and a daemon never renews after standing down — a renewal
+//     later than the tombstone structurally cannot exist, so any plain
+//     copy losing to a tombstone is by construction stale.
 //   - views + everything else: decided by the view-format stamps — see
 //     resolveOther below.
 func (s *Syncer) merge(ours, theirs string) (string, error) {
@@ -70,7 +79,7 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 		case strings.HasPrefix(path, "events/"):
 			return "", fmt.Errorf("syncer: merge: event %s differs between heads — data corruption", path)
 		case strings.HasPrefix(path, "leases/"):
-			winner, err := s.laterLease(path, ourOID, theirOID)
+			winner, err := s.mergeLease(path, ourOID, theirOID)
 			if err != nil {
 				return "", err
 			}
@@ -363,36 +372,47 @@ func treeMap(g gitx.Git, rev string) (map[string]string, error) {
 	return m, nil
 }
 
-// laterLease picks the lease blob with the later expiry; ties fall back
-// to the lexically greater OID so both merge directions agree.
-func (s *Syncer) laterLease(path, a, b string) (string, error) {
-	ta, err := s.leaseExpiry(path, a)
+// mergeLease picks the winning lease blob when the same leases/ path
+// holds different content on both heads. Released beats plain, two
+// released picks the earlier expiry, two plain picks the later expiry —
+// the rationale lives in the per-area rules on merge above. Ties fall
+// back to the lexically greater OID so both merge directions agree.
+func (s *Syncer) mergeLease(path, a, b string) (string, error) {
+	ta, releasedA, err := s.leaseState(path, a)
 	if err != nil {
 		return "", err
 	}
-	tb, err := s.leaseExpiry(path, b)
+	tb, releasedB, err := s.leaseState(path, b)
 	if err != nil {
 		return "", err
 	}
-	if ta.After(tb) {
+	switch {
+	case releasedA && !releasedB:
 		return a, nil
-	}
-	if tb.After(ta) {
+	case releasedB && !releasedA:
+		return b, nil
+	case releasedA && releasedB && ta.Before(tb):
+		return a, nil
+	case releasedA && releasedB && tb.Before(ta):
+		return b, nil
+	case !releasedA && !releasedB && ta.After(tb):
+		return a, nil
+	case !releasedA && !releasedB && tb.After(ta):
 		return b, nil
 	}
 	return maxOID(a, b), nil
 }
 
-func (s *Syncer) leaseExpiry(path, oid string) (time.Time, error) {
+func (s *Syncer) leaseState(path, oid string) (time.Time, bool, error) {
 	data, err := s.git.CatFile(oid)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("syncer: merge %s: %w", path, err)
+		return time.Time{}, false, fmt.Errorf("syncer: merge %s: %w", path, err)
 	}
-	t, err := store.DecodeLease(data)
+	t, released, err := store.DecodeLeaseState(data)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("syncer: merge %s: %w", path, err)
+		return time.Time{}, false, fmt.Errorf("syncer: merge %s: %w", path, err)
 	}
-	return t, nil
+	return t, released, nil
 }
 
 func maxOID(a, b string) string {

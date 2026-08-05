@@ -322,7 +322,7 @@ func TestLeasesDoNotTouchEvents(t *testing.T) {
 		{"write c1", func() error { return s.WriteLease("c1", exp1) }},
 		{"overwrite c1", func() error { return s.WriteLease("c1", exp2) }},
 		{"write c2", func() error { return s.WriteLease("c2", exp2) }},
-		{"delete c1", func() error { return s.DeleteLease("c1") }},
+		{"release c1", func() error { return s.ReleaseLease("c1", exp1) }},
 	}
 	for _, step := range steps {
 		if err := step.op(); err != nil {
@@ -337,10 +337,16 @@ func TestLeasesDoNotTouchEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadLeases: %v", err)
 	}
-	if len(leases) != 1 {
-		t.Fatalf("ReadLeases = %v, want only c2", leases)
+	// Releasing never deletes: c1's file survives as a tombstone whose
+	// expiry is the release instant.
+	if len(leases) != 2 {
+		t.Fatalf("ReadLeases = %v, want c1 (tombstoned) and c2", leases)
 	}
-	got, ok := leases["c2"]
+	got, ok := leases["c1"]
+	if !ok || !got.Equal(exp1) {
+		t.Errorf("released lease c1 expiry = %v, want the release instant %v", got, exp1)
+	}
+	got, ok = leases["c2"]
 	if !ok || !got.Equal(exp2) {
 		t.Errorf("lease c2 expiry = %v, want %v", got, exp2)
 	}
@@ -359,6 +365,55 @@ func TestLeasesDoNotTouchEvents(t *testing.T) {
 	}
 
 	assertNoWorktreeFiles(t, dir)
+}
+
+// Lease bytes round-trip through the encode/decode pair in both shapes,
+// and the pre-tombstone format (no released field) still decodes — old
+// leases on the data branch stay readable forever.
+func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
+	instant := time.Date(2026, 8, 4, 9, 30, 0, 999_999_999, time.UTC)
+	truncated := time.Date(2026, 8, 4, 9, 30, 0, 0, time.UTC)
+
+	cases := []struct {
+		name         string
+		data         []byte
+		wantExpiry   time.Time
+		wantReleased bool
+	}{
+		{"plain lease", EncodeLease(instant), truncated, false},
+		{"released tombstone", EncodeLeaseTombstone(instant), truncated, true},
+		{"old format without released field", []byte(`{"expires":"2026-08-04T09:30:00Z"}`), truncated, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			expiry, released, err := DecodeLeaseState(tc.data)
+			if err != nil {
+				t.Fatalf("DecodeLeaseState(%s): %v", tc.data, err)
+			}
+			if !expiry.Equal(tc.wantExpiry) || released != tc.wantReleased {
+				t.Errorf("DecodeLeaseState(%s) = %v, %v; want %v, %v",
+					tc.data, expiry, released, tc.wantExpiry, tc.wantReleased)
+			}
+			// The expiry-only reader (replay's path) agrees: a tombstone
+			// is just a lease lapsed at its instant.
+			expiryOnly, err := DecodeLease(tc.data)
+			if err != nil {
+				t.Fatalf("DecodeLease(%s): %v", tc.data, err)
+			}
+			if !expiryOnly.Equal(tc.wantExpiry) {
+				t.Errorf("DecodeLease(%s) = %v, want %v", tc.data, expiryOnly, tc.wantExpiry)
+			}
+		})
+	}
+
+	// Plain leases keep their pre-tombstone bytes: the released field is
+	// omitted, not written false, so old binaries see nothing new.
+	if plain := EncodeLease(instant); bytes.Contains(plain, []byte("released")) {
+		t.Errorf("EncodeLease bytes carry a released field: %s", plain)
+	}
+	if tomb := EncodeLeaseTombstone(instant); !bytes.Contains(tomb, []byte(`"released":true`)) {
+		t.Errorf("EncodeLeaseTombstone bytes lack the released marker: %s", tomb)
+	}
 }
 
 func TestAppendBatchRetriesWhenRefMoves(t *testing.T) {
@@ -547,17 +602,20 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 		t.Errorf("post-append reload read %d extra blobs, want 1", cg.catFiles-5)
 	}
 
-	// Deleting a lease costs nothing and empties the lease cache.
-	if err := s.DeleteLease("c1"); err != nil {
-		t.Fatalf("DeleteLease: %v", err)
+	// Releasing a lease overwrites it with a tombstone blob: one new
+	// read, the release instant served as the expiry, and the cache
+	// still tracks exactly the one live blob.
+	releasedAt := exp1.Add(5 * time.Minute)
+	if err := s.ReleaseLease("c1", releasedAt); err != nil {
+		t.Fatalf("ReleaseLease: %v", err)
 	}
 	_, leases5, err := s.LoadReplayInput()
 	if err != nil {
-		t.Fatalf("post-delete LoadReplayInput: %v", err)
+		t.Fatalf("post-release LoadReplayInput: %v", err)
 	}
-	if len(leases5) != 0 || len(s.leaseByOID) != 0 || cg.catFiles != 6 {
-		t.Errorf("post-delete: leases %v, cache %d, blob reads %d; want none, 0, 6",
-			leases5, len(s.leaseByOID), cg.catFiles)
+	if len(leases5) != 1 || !leases5["c1"].Equal(releasedAt) || len(s.leaseByOID) != 1 || cg.catFiles != 7 {
+		t.Errorf("post-release: leases %v, cache %d, blob reads %d; want c1 -> %v, 1, 7",
+			leases5, len(s.leaseByOID), cg.catFiles, releasedAt)
 	}
 
 	assertNoWorktreeFiles(t, dir)

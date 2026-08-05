@@ -975,10 +975,11 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "an expired claim is closed by its synthesized interrupted run",
 			setup: func(t *testing.T, task string) {
 				cl := claim(t, "brandon/a1", task)
-				// A missing lease counts as lapsed (core replay), so
-				// deleting it expires the claim deterministically.
-				if err := d.store.DeleteLease(cl.ID); err != nil {
-					t.Fatalf("DeleteLease: %v", err)
+				// Rewind the lease to an already-lapsed expiry so the
+				// claim expires deterministically (leases are only ever
+				// overwritten, never deleted).
+				if err := d.store.WriteLease(cl.ID, time.Now().Add(-time.Minute)); err != nil {
+					t.Fatalf("WriteLease: %v", err)
 				}
 			},
 			actor:     "brandon/a1",

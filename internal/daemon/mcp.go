@@ -246,10 +246,14 @@ func (d *Daemon) renewSessionLeases(s *mcpSession) {
 	}
 }
 
-// renewOnce re-checks each tracked claim under d.mu — still active,
-// still held by this session's actor — renewing the live ones and
-// dropping the rest from tracking (released elsewhere, expired, or
-// lost to a cross-machine race).
+// renewOnce re-checks each tracked claim under d.mu, renewing the
+// active ones and dropping closed ones (released elsewhere, expired,
+// finished) from tracking. A provisionally-voided claim is the one
+// exception (escalation-decided 2026-08-04, D6 clause 3): it stays
+// tracked but is never renewed — the loser must be able to hear "lost"
+// from its own verbs (confirm_claim gates on this session's tracking),
+// while the unrenewed lease lapses on schedule so expiry synthesis
+// still closes a loser that never reports.
 func (d *Daemon) renewOnce(s *mcpSession) {
 	claims := s.snapshot()
 	if len(claims) == 0 {
@@ -268,15 +272,22 @@ func (d *Daemon) renewOnce(s *mcpSession) {
 	renewed := false
 	for task, claim := range claims {
 		c := d.state.Claims[claim]
-		if c == nil || c.Status != core.ClaimActive || c.Actor != s.principal() {
+		if c == nil || c.Actor != s.principal() {
 			stale = append(stale, task)
 			continue
 		}
-		if err := d.store.WriteLease(claim, now.Add(d.leaseTTL)); err != nil {
-			d.log.Printf("daemon: mcp: renew lease %s for %s: %v", claim, s.principal(), err)
-			continue
+		switch c.Status {
+		case core.ClaimActive:
+			if err := d.store.WriteLease(claim, now.Add(d.leaseTTL)); err != nil {
+				d.log.Printf("daemon: mcp: renew lease %s for %s: %v", claim, s.principal(), err)
+				continue
+			}
+			renewed = true
+		case core.ClaimVoided:
+			// Tracked but never renewed — see the doc comment above.
+		default:
+			stale = append(stale, task)
 		}
-		renewed = true
 	}
 	if renewed {
 		if err := d.refreshLocked(now); err != nil {
