@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22SY3FWZRG`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 3
 - **Labels:** `go` `edges`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -21,4 +21,9 @@ Constraints: stored event bytes never rewritten (T3); no version bump; boring Go
 
 ## History
 
-_No activity yet._
+### 2026-08-05 21:58 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-wzrg/remove-parents-edge`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/37>
+
+Landed via PR #37 (squash-merged, checks green). parents removed from core state, replay mapping, event payload structs, all daemon verb schemas (ops/mcp/api), CLI flags, TUI rendering, and views. Stored events carrying parents replay tolerated — the field rides the event layer's Unknown map and re-encodes byte-identically, so no version bump was needed (T3 additive read in reverse). New table-driven tolerance test in internal/core/replay_test.go. Note for the doc-sweep claimant (tuh-01KZ9Y3THHH5B8GT22T5D72HVF): newly written task.created/task.updated events no longer carry a parents key — a wire-shape change for new events only, worth a line in the D5/T5 revision notes. The loop task (tuh-01KZ9Y3THHH5B8GT22T1A1WPYP) is now unblocked; its cycle logic covers a single edge type as intended.

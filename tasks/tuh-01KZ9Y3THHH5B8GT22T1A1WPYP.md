@@ -2,10 +2,10 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T1A1WPYP`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 2
 - **Labels:** `go` `edges` `tui`
-- **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (open)
+- **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done)
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
 
 ## Description

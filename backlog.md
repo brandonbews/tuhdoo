@@ -1,18 +1,18 @@
 # Backlog
 
-1 in progress · 4 ready · 4 blocked · 4 on hold · 4 inbox · 57 done · 12 cancelled
+0 in progress · 6 ready · 2 blocked · 4 on hold · 4 inbox · 58 done · 12 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) | Remove the parents edge: epics are depends_on containers (edge grill 2026-08-05) | 3 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) | Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root | 3 | `go` `store` `syncer` |
+| [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) | Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05) | 2 | `go` `edges` `tui` |
+| [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) | Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger | 2 | `docs` |
 | [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
 | [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) | init hardening: loud unknown-flag errors and the MCP snippet in init output | 2 | `cli` |
 | [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) | Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward | 1 | `syncer` `t8` |
@@ -22,9 +22,7 @@
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) | Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05) | 2 | depends on [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) |
-| [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) | Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger | 2 | depends on [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) |
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | depends on [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md); depends on [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md); depends on [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md); depends on [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md); depends on [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md); depends on [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md); depends on [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) |
+| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | depends on [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md); depends on [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md); depends on [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md); depends on [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md); depends on [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md); depends on [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) |
 
 ## On hold
 
@@ -105,6 +103,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) Collision harness: drive the real D6 machinery, add a confirmation-race storm
 - [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04)
 - [`tuh-0xjx`](tasks/tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX.md) Dashboard list hides most row metadata past page width — resurface labels, dep counts, priority
+- [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) Remove the parents edge: epics are depends_on containers (edge grill 2026-08-05)
 
 ## Cancelled
 
