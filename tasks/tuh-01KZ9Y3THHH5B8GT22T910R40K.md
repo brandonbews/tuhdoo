@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `release`
-- **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done), [`tuh-wpyp`](tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) (open), [`tuh-r3e8`](tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) (open), [`tuh-2hvf`](tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) (open), [`tuh-nvyk`](tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) (open), [`tuh-y4re`](tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) (open), [`tuh-7a40`](tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) (open)
+- **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done), [`tuh-wpyp`](tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) (open), [`tuh-r3e8`](tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) (done), [`tuh-2hvf`](tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) (open), [`tuh-nvyk`](tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) (open), [`tuh-y4re`](tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) (open), [`tuh-7a40`](tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) (open)
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
 
 ## Description

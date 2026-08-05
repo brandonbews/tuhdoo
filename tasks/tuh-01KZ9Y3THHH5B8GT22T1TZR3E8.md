@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T1TZR3E8`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 3
 - **Labels:** `go` `store` `syncer`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -21,4 +21,9 @@ Constraints: host-agnostic — git protocol only (T2); no force-push on the data
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:10 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-r3e8/clone-join-adopt-remote`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/38>
+
+Landed via PR #38 (squash-merged, checks green). Daemon startup now runs syncer.AdoptRemoteBranch before store.Init: local ref absent + remote carries the data branch -> bounded fetch (10s, new gitx.FetchTimeout with WaitDelay so a dead transport cannot hang startup) and a must-not-exist CAS onto the local ref. All failure arms fall back to minting; remoteless stays normal (T2). The unpreventable simultaneous-init race is proven convergent by TestSimultaneousInitRaceConverges (two roots, one bare remote, byte-identical trees and states both sides, both roots preserved). Fresh-clone adoption proven end-to-end in internal/daemon/adopt_test.go. Project #2 second-machine flow is now clean-by-default with a tested safety net.
