@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 0 ready · 2 blocked · 6 on hold · 2 inbox · 52 done · 11 cancelled
+0 in progress · 0 ready · 2 blocked · 6 on hold · 2 inbox · 53 done · 11 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -93,6 +91,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer
 - [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision)
+- [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged)
 - [`tuh-3595`](tasks/tuh-01KZ53K4DF7Y0TYX3H5XP43595.md) Pinned frame off-by-one: trailing newline clips the header row
 - [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04)
 

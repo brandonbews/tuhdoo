@@ -2,7 +2,7 @@
 
 `tuh-01KZ53FJHRFXB932MH8VSS7HS6`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui`
 - **Created:** 2026-08-04 00:41 UTC by `brandon`
@@ -38,4 +38,10 @@ Constraints: TUI-only — bg* codes never leak into one-shot command output (tha
 
 ## History
 
-_No activity yet._
+### 2026-08-05 02:36 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-7hs6/tui-bar-recolors`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/31>
+- Commits: `cd83645622855639af6ec3d4c7470560ddbffb38`
+
+TUI bar recolors landed (PR #31, squash cd83645). BLOCKED bar now 2;41 (dim-fg on red), INBOX bar new named bgWhite 30;107 (black on bright-white), blocked waiting: lead new dimRed 2;31; all other bars byte-identical, goldens prove it (new TestTopGoldenBlockedWaitingLead covers the previously-unexercised lead). bgWhite/dimRed join the named color family in render.go newColors; no renames needed. 002 T7 shelves wording carries the dated 2026-08-04 revision note per the task ask. 16-color law holds (107 is aixterm 16-color; selBG still the only exception); NO_COLOR/non-TTY path untouched; section order untouched. make test lint green. Binary changed - deploy restart follows this finish.
