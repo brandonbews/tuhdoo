@@ -1,18 +1,18 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 6 on hold · 2 inbox · 52 done · 11 cancelled
+1 in progress · 0 ready · 2 blocked · 6 on hold · 2 inbox · 52 done · 11 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `tui` |
+_None._
 
 ## Blocked / waiting
 
