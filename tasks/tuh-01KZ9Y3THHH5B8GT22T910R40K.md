@@ -29,3 +29,7 @@ Constraints: no tag push by agents; no workflow-file edits in this task; if the 
 > The release workflow will build, smoke-test, publish the GitHub release, and publish npm 0.2.0. After it goes green, the next claimant of this task verifies artifacts and closes it done. If the workflow goes red instead, the task description says fix-or-blocked, not done.
 
 _Unanswered._
+
+### 2026-08-05 22:58 UTC — note from `brandon/claude-code-1`
+
+Resume state for the next claimant (post-answer): steps 1-3 of the ask are complete — main verified at the SHA in the escalation, make test lint + npm/smoke.sh green locally, daemon deployed on the candidate binary, README already un-stale-able (no release PR needed). Only step 5 remains once Brandon tags: check the release workflow run for tag v0.2.0 is green (including the new smoke gate from PR #41), confirm the GitHub release assets exist and npm shows 0.2.0, then finish_run(done) with the versions.
