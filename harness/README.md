@@ -14,9 +14,11 @@ Each harness is a plain `package main` under `harness/<name>/`, so
 go run ./harness/collision
 ```
 
-Flags: `-rounds` (claim rounds, default 10), `-storm` / `-storm-gap` (the
-eager-write burst aimed at the sync loop), `-converge-timeout` (default 5m),
-`-keep` (leave the scratch repos behind for inspection).
+Flags: `-rounds` (claim rounds, default 10), `-confirm-storm` (deliberate
+claim collisions whose `confirm_claim` verdicts are raced from both
+machines, default 40), `-storm` / `-storm-gap` (the eager-write burst aimed
+at the sync loop), `-converge-timeout` (default 5m), `-keep` (leave the
+scratch repos behind for inspection).
 
 ### What it proves, and why it exists
 
@@ -44,10 +46,23 @@ The run, end to end:
    design (T7): there is deliberately no one-shot `tuhdoo claim`, so a
    scripted actor has to hold a session, and holding it is what keeps the
    leases renewed;
-5. fires `claim_next` from both actors behind a barrier, once per round;
-6. storms the sync loop with simultaneous eager writes on both machines;
-7. lets the two machines converge, records D6's loser handling, and
-   verifies.
+5. storms the D6 confirmation gate: both actors deliberately claim the
+   same task (`claim_task` behind a barrier — claims are optimistic and
+   judged locally, so both succeed: a certain collision), then race
+   `confirm_claim` from both sessions at once. The remote's ref CAS is the
+   referee; exactly one `claim.confirmed` may land per contest, and a
+   contest where both actors are told "confirmed" fails the run on the
+   spot. Winners record `done`; losers alternate between the two honest
+   exits — reporting `finish_run(done)` and being coerced to `superseded`
+   (branch kept), or standing down via `release_claim` and being closed by
+   replay's branch-less synthesized run;
+6. fires `claim_next` from both actors behind a barrier, once per round;
+7. storms the sync loop with simultaneous eager writes on both machines;
+8. lets the two machines converge, then settles the claim rounds through
+   the public verbs alone — every fate is discovered from a daemon's
+   answer (`confirm_claim` answering lost, or `finish_run(done)` refereed
+   through the gate), never decided by the harness reading state — and
+   verifies. The harness writes no outcome on any daemon's behalf.
 
 ### How to read the output
 
@@ -61,11 +76,16 @@ machine-checked; `[FAIL]` on any of them exits non-zero.
 | byte-identical generated views | D3's "all machines converge to byte-identical views" |
 | identical data-branch trees | the strongest single check: one tree hash covers stored events *and* generated views |
 | at least one real merge commit | the two-parent `commit-tree` path actually executed |
+| no task carries more than one `claim.confirmed` | D6 clause 2's at-most-one-confirmation, counted straight off the stored events — a duplicate is a hard failure at any probability |
+| every storm contest: one confirmation, one done, one superseded | the confirmation-race storm settled every deliberate collision through the real gate |
 | claim races observed | both actors claimed the same task in the same round |
 | claims voided by the winner rule | replay called the race, i.e. `core.ClaimVoided` |
-| exactly one winner, earliest ULID | D6 re-derived from the replayed claims, not trusted |
+| exactly one survivor — the confirmed claim, else earliest ULID | the refereed D6 rule re-derived from the replayed claims, not trusted; the storm makes confirmations that out-rank an earlier ULID actually happen |
 | every race crossed machines | winner and loser carry different machine ids |
-| a superseded run carrying the loser's branch | D6 clause 2 (see the finding below about who writes it) |
+| every verb-discovered fate matches replay | what each daemon told its agent (done / lost) is what the ledger says |
+| every done is certified | a `done` run's claim carries its `claim.confirmed` — no uncertified `done` exists |
+| reporting losers coerced, branch kept | D6 clause 3's real coercion: `finish_run(done)` on a lost attempt recorded `superseded` with the reported branch as salvage |
+| silent losers closed by synthesis | D6 clause 3's other arm: a stand-down with no report is closed by replay's branch-less synthesized `superseded` run |
 
 `[note]` lines are things the acceptance asks to be *reported* rather than
 passed — currently only the `maxCycleRetries` clause.
@@ -114,24 +134,69 @@ checks passed. Wall time about four minutes, three of them quiet convergence
 waits. Two independent runs on the same day produced the same figures on every
 line — the per-round race is reliable, not lucky.
 
+### Findings from running it (2026-08-04, driving the real D6 machinery)
+
+The first run of the harness against the revised D6 machinery (PRs #28/#30)
+left the convergence checks, the winner rule, the coercion arm, and the
+zero-duplicate-confirmations storm all green — and turned up two real gaps
+in the silent-loser arm, both downstream of the same design decision:
+release-by-a-voided-claimant *deletes the loser's lease file* so that
+replay synthesizes the superseded close immediately.
+
+**Deleting a voided claim's lease rewrites history when the loser held the
+earlier claim.** `leaseExpiredBy` (`internal/core/replay.go`) counts a
+*missing* lease as lapsed at every instant, including past ones. When a
+stand-down's lease deletion lands for a loser whose claim was the earlier
+ULID — which is precisely the contests where the confirmation gate
+out-ranked the provisional rule, the new machinery's marquee case — every
+future replay re-adjudicates the winner's claim-time: the incumbent loser
+now looks lease-less, so it is recorded `expired` with a synthesized
+`interrupted` run, the confirmation binds via the ordinary
+provisional-winner arm, and the promised `superseded` run never exists.
+Deterministic, converged, and permanent on both machines — but the ledger
+says `interrupted` where the verb told the agent "recorded as superseded"
+(13 of 40 storm contests in the observed run).
+
+**The union merge resurrects deleted lease files, and that now matters.**
+The merge comment (`internal/syncer/merge.go`) accepts resurrection with
+the rationale "a resurrected lease only matters to an ACTIVE claim, and
+active claims never had their lease deleted" — written before the D6
+revision made a *voided* claim's lease deletion load-bearing. When the
+peer's next merge unions a lease-bearing head back in, the synthesized
+close vanishes again until the resurrected lease's natural 15-minute
+expiry (5 of 10 still-voided silent losers were un-closed at verify time
+in the observed run; the other half's deletions happened to survive). The
+state self-heals after the TTL, but "the attempt is closed now" is not
+true cross-machine, and whether a stand-down closes immediately is a
+merge-timing coin flip.
+
+Until those are resolved, a default run exits red on three checks (the
+storm-contest record shape, fate-vs-replay agreement, and silent-loser
+synthesis); everything else — including byte-identical convergence and
+exactly one `claim.confirmed` per contest — passes. The harness asserts
+the design's promises, not the implementation's current behavior, on
+purpose.
+
 ### Findings from running it (2026-08-03)
 
-**The daemon never writes the `superseded` run D6 promises.** D6 clause 2
-says "the losing daemon tells its agent to stand down; half-done work is
+**The daemon never writes the `superseded` run D6 promises.** *(Resolved
+2026-08-04: this finding triggered the confirmation-gate grill that revised
+D6 — the daemon now referees every finish, coercing a lost attempt's report
+to `superseded` with its links kept, and replay synthesizes a branch-less
+`superseded` close for a loser that never reports. The harness no longer
+plays the losing daemon's part: `POST /v0/runs` is not called at all, and
+every outcome it checks was written through the public verbs. The original
+text is kept below as the record of what was found.)* D6 clause 2
+said "the losing daemon tells its agent to stand down; half-done work is
 recorded as a Run with outcome `superseded` (branch name included)". Replay
-voids the loser's claim (`internal/core/replay.go`, the D6 winner rule) and
-that is where it stops: the only run replay ever synthesizes is
-`interrupted`, for lease expiry. The MCP surface rejects `superseded` from
-agents on the grounds that it is "daemon-synthesized" (`internal/daemon/
-mcp.go`), and no daemon code synthesizes it. There is also no CLI verb for
-it (the work loop is deliberately session-only, T7). The only surface that
-accepts it is `POST /v0/runs` on the daemon's unix socket — and
-`finishGuardLocked` explicitly admits exactly this case, "a race loser
-recording superseded work over HTTP, possibly while the winner still
-holds". So the shape is anticipated in code but has no writer. The harness
-plays the part D6 assigns to the losing daemon, over that HTTP surface, and
-the run it writes is what the acceptance line checks. A real fleet today
-would leave voided claims with no run at all.
+voided the loser's claim (`internal/core/replay.go`, the D6 winner rule) and
+that is where it stopped: the only run replay ever synthesized was
+`interrupted`, for lease expiry. The MCP surface rejected `superseded` from
+agents on the grounds that it is "daemon-synthesized", and no daemon code
+synthesized it. The only surface that accepted it was `POST /v0/runs` on
+the daemon's unix socket, so the shape was anticipated in code but had no
+writer, and the harness played the part D6 assigned to the losing daemon. A
+real fleet at the time would have left voided claims with no run at all.
 
 **D6's "machine-id tiebreak" is vacuous.** The winner rule as implemented is
 "earliest event ID wins": replay sorts events by ULID and the first claim to
