@@ -284,6 +284,144 @@ func TestLeaseRenewalSurvivesMerge(t *testing.T) {
 	}
 }
 
+// TestLeaseMergeTombstoneRules is the literal-tree table test for the
+// leases/ same-path rule (2026-08-04): a released tombstone beats a
+// plain lease in either direction, two tombstones keep the earlier
+// close, two plain leases keep the later expiry — and both merge
+// directions produce the identical tree, so a stand-down's immediate
+// closure is never a merge-timing coin flip.
+func TestLeaseMergeTombstoneRules(t *testing.T) {
+	sharedExp := testBase.Add(30 * time.Minute)
+	standDown := testBase.Add(45 * time.Minute)
+	laterClose := testBase.Add(50 * time.Minute)
+	renewal := testBase.Add(2 * time.Hour)
+	shorterRenewal := testBase.Add(90 * time.Minute)
+
+	cases := []struct {
+		name         string
+		writeA       func(p peer, claim string) error
+		writeB       func(p peer, claim string) error
+		wantExpiry   time.Time
+		wantReleased bool
+	}{
+		{
+			// The plain copy expires LATER than the tombstone — expiry
+			// alone would resurrect the lease; the marker must win.
+			name:         "A's tombstone beats B's later plain expiry",
+			writeA:       func(p peer, c string) error { return p.store.ReleaseLease(c, standDown) },
+			writeB:       func(p peer, c string) error { return p.store.WriteLease(c, renewal) },
+			wantExpiry:   standDown,
+			wantReleased: true,
+		},
+		{
+			name:         "B's tombstone beats A's later plain expiry",
+			writeA:       func(p peer, c string) error { return p.store.WriteLease(c, renewal) },
+			writeB:       func(p peer, c string) error { return p.store.ReleaseLease(c, standDown) },
+			wantExpiry:   standDown,
+			wantReleased: true,
+		},
+		{
+			// Cannot happen with honest writers (one daemon owns each
+			// lease); resolved fail-safe anyway: the earlier close wins.
+			name:         "two tombstones keep the earlier close",
+			writeA:       func(p peer, c string) error { return p.store.ReleaseLease(c, laterClose) },
+			writeB:       func(p peer, c string) error { return p.store.ReleaseLease(c, standDown) },
+			wantExpiry:   standDown,
+			wantReleased: true,
+		},
+		{
+			name:         "two plain leases keep the later expiry",
+			writeA:       func(p peer, c string) error { return p.store.WriteLease(c, renewal) },
+			writeB:       func(p peer, c string) error { return p.store.WriteLease(c, shorterRenewal) },
+			wantExpiry:   renewal,
+			wantReleased: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a, b := newPair(t)
+			claim := tick(t, 2)
+
+			// Shared history: the task, the claim, and its lease.
+			if err := a.store.AppendBatch(store.Batch{Events: []event.Event{
+				evt(t, 1, event.TypeTaskCreated, "brandon", "m-a", "t1", event.TaskCreated{Title: "fix login"}),
+				evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "m-a", "t1", event.ClaimMade{}),
+			}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := a.store.WriteLease(claim, sharedExp); err != nil {
+				t.Fatal(err)
+			}
+			cycle(t, a)
+			cycle(t, b)
+
+			// Divergence: each side overwrites the same lease path.
+			if err := tc.writeA(a, claim); err != nil {
+				t.Fatal(err)
+			}
+			if err := tc.writeB(b, claim); err != nil {
+				t.Fatal(err)
+			}
+
+			// Publish B's head so A's object database holds both sides,
+			// then merge the two heads directly, in both orders.
+			cycle(t, b)
+			remoteHead, err := a.sync.fetch()
+			if err != nil {
+				t.Fatal(err)
+			}
+			localHead, err := a.git.ReadRef(store.DefaultRef)
+			if err != nil {
+				t.Fatal(err)
+			}
+			m1, err := a.sync.merge(localHead, remoteHead)
+			if err != nil {
+				t.Fatal(err)
+			}
+			m2, err := a.sync.merge(remoteHead, localHead)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			t1, err := treeMap(a.git, m1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t2, err := treeMap(a.git, m2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(t1) != len(t2) {
+				t.Fatalf("merge directions disagree: %d vs %d entries", len(t1), len(t2))
+			}
+			for p, oid := range t1 {
+				if t2[p] != oid {
+					t.Fatalf("merge directions disagree at %s: %s vs %s", p, oid, t2[p])
+				}
+			}
+
+			leasePath := "leases/" + claim + ".json"
+			oid, ok := t1[leasePath]
+			if !ok {
+				t.Fatalf("merged tree lost the lease file %s", leasePath)
+			}
+			data, err := a.git.CatFile(oid)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expiry, released, err := store.DecodeLeaseState(data)
+			if err != nil {
+				t.Fatalf("decode merged lease %s: %v", data, err)
+			}
+			if !expiry.Equal(tc.wantExpiry) || released != tc.wantReleased {
+				t.Fatalf("merged lease = expiry %v, released %v; want %v, %v",
+					expiry, released, tc.wantExpiry, tc.wantReleased)
+			}
+		})
+	}
+}
+
 func TestNewerPeerOwnsViews(t *testing.T) {
 	a, b := newPair(t)
 

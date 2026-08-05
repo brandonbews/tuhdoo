@@ -184,3 +184,95 @@ func TestEveryExpiredLoserLeavesItsOwnTrace(t *testing.T) {
 		t.Fatalf("synthesized runs out of claim order: %+v", synth)
 	}
 }
+
+func TestStoodDownLoserTombstoneKeepsContestHistoryStable(t *testing.T) {
+	// The finding-1 shape from the collision harness (2026-08-04 grill):
+	// a confirmation out-ranked the earlier-ULID claim, the loser stood
+	// down, and the daemon closed its lease by OVERWRITING it with a
+	// released tombstone pinned to the stand-down instant — never by
+	// deleting it. A deleted lease reads as "lapsed at every instant",
+	// so the tick-3 claim event would have found the incumbent already
+	// expired and rewritten the contest (interrupted, not superseded).
+	// The tombstone keeps the lease live before the stand-down and
+	// lapsed after it, so the contest verdict is identical at every
+	// replay instant and only the synthesis timing moves.
+	standDown := base.Add(40 * time.Minute)
+	cLose, cWin := tick(t, 2), tick(t, 3)
+	confirmID := tick(t, 4)
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "t1", event.ClaimMade{}),
+		evt(t, 3, event.TypeClaimMade, "sarah/impl-9", "t1", event.ClaimMade{}),
+		// The referee confirmed the later-ULID claim: the provisional
+		// winner (tick 2) becomes the loser.
+		evt(t, 4, event.TypeClaimConfirmed, "sarah/impl-9", "t1", event.ClaimConfirmed{Claim: cWin}),
+		// The loser's stand-down record; a release from a voided
+		// claimant never disturbs the holder.
+		evt(t, 40, event.TypeClaimReleased, "brandon/impl-1", "t1", event.ClaimReleased{Reason: "lost the race"}),
+	}
+
+	instants := []struct {
+		name      string
+		now       time.Time
+		wantSynth int
+	}{
+		{"well before the stand-down", base.Add(5 * time.Minute), 0},
+		{"just before the stand-down", standDown.Add(-time.Minute), 0},
+		{"at the stand-down instant", standDown, 1},
+		{"just after the stand-down", standDown.Add(time.Minute), 1},
+		{"hours later", base.Add(4 * time.Hour), 1},
+	}
+	for _, in := range instants {
+		t.Run(in.name, func(t *testing.T) {
+			leases := map[string]time.Time{
+				cWin:  in.now.Add(time.Hour),
+				cLose: standDown, // the tombstone's expiry is the stand-down instant
+			}
+			forward, err := NewReplayer().Replay(Input{Events: events, Leases: leases, Now: in.now})
+			if err != nil {
+				t.Fatalf("replay: %v", err)
+			}
+			reversed := make([]event.Event, 0, len(events))
+			for i := len(events) - 1; i >= 0; i-- {
+				reversed = append(reversed, events[i])
+			}
+			backward, err := NewReplayer().Replay(Input{Events: reversed, Leases: leases, Now: in.now})
+			if err != nil {
+				t.Fatalf("reversed replay: %v", err)
+			}
+			if !reflect.DeepEqual(forward, backward) {
+				t.Fatal("replay verdict depends on event arrival order")
+			}
+
+			s := forward
+			// The contest never re-adjudicates: winner and loser hold
+			// their verdicts at every instant.
+			if got := s.Claims[cWin]; got.Status != ClaimActive || got.Confirmation != confirmID {
+				t.Fatalf("winner = %s/%q, want active with confirmation %s", got.Status, got.Confirmation, confirmID)
+			}
+			if got := s.Claims[cLose]; got.Status != ClaimVoided || got.Confirmation != "" {
+				t.Fatalf("loser = %s/%q, want voided with no confirmation", got.Status, got.Confirmation)
+			}
+			// No instant ever reads the contest as an expiry: the
+			// promised superseded run must never degrade to interrupted.
+			for _, r := range s.Runs {
+				if r.Outcome == event.OutcomeInterrupted {
+					t.Fatalf("run %+v is interrupted — the tombstoned lease re-adjudicated as an expiry", r)
+				}
+			}
+			synth := supersededRuns(s)
+			if len(synth) != in.wantSynth {
+				t.Fatalf("synthesized superseded runs = %+v, want %d", synth, in.wantSynth)
+			}
+			if len(s.Runs) != in.wantSynth {
+				t.Fatalf("runs = %+v, want only the synthesized close (if due)", s.Runs)
+			}
+			if in.wantSynth == 1 {
+				r := synth[0]
+				if r.Claim != cLose || r.Actor != "brandon/impl-1" || r.Branch != "" {
+					t.Fatalf("synthesized run %+v not the loser's branch-less close", r)
+				}
+			}
+		})
+	}
+}

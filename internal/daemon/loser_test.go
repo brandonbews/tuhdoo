@@ -259,8 +259,9 @@ func TestReleaseByVoidedClaimantIsAcknowledgedStandDown(t *testing.T) {
 		}
 	}
 
-	// The stand-down closed the attempt: lease deleted, superseded run
-	// synthesized, and a later finish is turned away.
+	// The stand-down closed the attempt: lease tombstoned at the
+	// stand-down instant, superseded run synthesized, and a later
+	// finish is turned away.
 	d.mu.Lock()
 	winnerClaim := d.state.ActiveClaim(task)
 	var synthesized bool
