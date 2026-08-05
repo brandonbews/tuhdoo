@@ -2,7 +2,7 @@
 
 `tuh-01KZ4TH4HT56TE4CQPKF3R76WT`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `daemon` `d6`
 - **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done)
@@ -26,4 +26,10 @@ Constraints: boring Go (T1); replay stays pure; stored bytes never rewritten and
 
 ## History
 
-_No activity yet._
+### 2026-08-05 01:53 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-76wt/loser-handling`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/30>
+- Commits: `dfc745d9f0442813d24399272139e981857e6315`
+
+Loser handling built and merged (PR #30, squash dfc745d). opFinishRun now referees every done-recording path via shared gateVerdict (extracted from opConfirmClaim): confirmed winner records done fast-path, protocol-skipping winner's finish mints the confirmation at the remote, lost attempt coerced to superseded keeping branch/PR/commits/summary as salvage, with referee statement in the result. Non-done outcomes from a lost attempt also coerce (D6 clause 3 unqualified). Expiry synthesis in pure replay: voided + lease-lapsed + unclosed -> synthesized branch-less superseded run mirroring interruptedRun; guard and synthesis share one close predicate so one-close-per-attempt holds at every instant; post-synthesis finish rejected with add_note salvage pointer. Verb-time stand-down: claim responses carry the confirm-before-merge warning, add_note/escalate state the loss while unclosed, release_claim by a voided claimant is an acknowledged stand-down (deletes loser lease so synthesis closes immediately). Behavior changes flagged in the PR: done-after-own-release now rejected; release-then-finish gets the add_note pointer. Tests incl. TestTwoDaemonLoserStory two-daemon race; make test lint green. DEPLOY NOTE: binary changed - rebuild/restart required (this session will do it next). D6 clause 3 is now fully mechanized; no known successor tasks from this work.
