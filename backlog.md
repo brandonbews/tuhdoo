@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 6 on hold · 2 inbox · 55 done · 11 cancelled
+0 in progress · 1 ready · 1 blocked · 5 on hold · 3 inbox · 55 done · 11 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `tui` `design` |
 
 ## Blocked / waiting
 
@@ -27,7 +29,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`t-sy1p`](tasks/t-01KYT63MB28Z535SMJCBC7SY1P.md) | Tree/parent-grouped rendering in the TUI list | 0 | `cli` `tui` `design` |
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
-| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `tui` `design` |
 
 ## Inbox
 
@@ -35,6 +36,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
+- [`tuh-0xjx`](tasks/tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX.md) Dashboard list hides most row metadata past page width — resurface labels, dep counts, priority
 
 ## Done
 

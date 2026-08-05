@@ -2,27 +2,33 @@
 
 `tuh-01KYXVSRVK2GFW439G1T0GBQKM`
 
-- **Status:** on hold — deliberately paused
+- **Status:** open — ready
 - **Priority:** 0
 - **Labels:** `tui` `design`
 - **Created:** 2026-08-01 05:12 UTC by `brandon`
 
 ## Description
 
-Gated: design-shaped — unpark for its own grill cycle before any scoping or code. Held at triage 2026-08-01; this description records the recon, not a settled design.
+Grilled 2026-08-05 (labels grill) — this description is the settled design; build it as written.
 
-Original capture: labels should be editable from the task view; needs a design for the edit medium (list-valued field) and the write path.
+Context: labels are agnostic decoration to the platform — no label value is weight-bearing (001 D5, label-agnosticism revision 2026-08-05). The TUI is the only surface that cannot edit them (CLI `update --labels` and MCP update_task already write full-replacement lists over PATCH /v0/tasks/{id}); that is a steering gap in the primary steering surface — e.g. tagging a milestone from the TUI means dropping to the CLI.
 
-Recon facts (2026-08-01, so the grill starts from truth):
-- The write path already exists end-to-end: PATCH /v0/tasks/{id} accepts labels as a full-replacement *[]string; CLI `tuhdoo update --labels a,b` and MCP update_task already use it. Only a steeringAPI setLabels method is missing — a one-liner over the existing PATCH (cmd/tuhdoo/top.go httpSteering). The capture's "needs a labels write path in daemon API" premise is stale.
-- CLI precedent for the medium: comma-separated via splitList (trim, drop empties); an explicitly-set empty --labels clears the list.
-- The detail view renders the labels meta line only when non-empty (top.go detailLines) — a task with no labels currently has nothing to focus/edit.
+The ask: make labels editable from the task detail view, as a focus-ring stop.
 
-Questions reserved for the grill:
-- Interaction model: does labels become a stop in the task-view focus ring (tuh-01KYXT2KAG7QXZGF1W47E6S8VT — its settled design currently says meta lines are never stops and names this task as the separate home for labels), or a standalone binding? Ring membership implies depends_on the ring task and always rendering the labels line with a dim "none" placeholder (description's pattern) so empty is reachable.
-- Edit medium: single-line comma-separated text (CLI-consistent, reuses textInput) vs anything fancier.
-- Clear semantics: empty submit clears all labels vs no-op, and the interplay with the editWas unchanged-submit-writes-nothing rule.
-- Normalization: dedup/trim/case at parse time, and whether that lives TUI-side only (matching splitList) or in ops.
+Settled design:
+- The labels meta line always renders, dim `none` placeholder when empty (the description-body pattern, cmd/tuhdoo/top.go detailLines ~975), in watch and armed modes and on terminal tasks alike — one uniform rule replaces render-only-when-non-empty.
+- Labels joins the focus ring in render order: title → priority → labels → escalations → description. Terminal tasks lose the labels stop, same rule as priority (closed records are browsed, not steered). No dedicated key binding — ring only.
+- enter opens the shared single-line textInput prefilled with the current list comma-joined ("tui, design").
+- Submit parses with splitList exactly (split on commas, trim, drop empties) — reuse the parser, not a copy; no dedup, no case-folding; store what was typed. A comma inside a label is unrepresentable on every surface — accepted constraint.
+- Empty submit clears all labels (the CLI's explicit-empty --labels precedent). "Unchanged" is semantic and order-sensitive: parse, compare the resulting slice element-wise to the task's current labels, write nothing when equal (respacing is a no-op; reordering is a real edit). The raw-string editWas guard still short-circuits first.
+- Write path: steeringAPI gains a setLabels method over the existing PATCH (cmd/tuhdoo/top.go httpSteering); no daemon/ops/CLI/MCP changes.
+
+Acceptance:
+- top_test (and goldens as needed) cover: ring order including the labels stop; stop absent on terminal tasks; always-rendered labels line with dim none; editor prefill; empty submit clears; a respaced submit writes nothing; a real edit writes the parsed list.
+- The stale comment at top.go ~625-627 ("labels editing is a separate task") is rewritten to describe the shipped ring.
+- make test lint green; land as one PR per the repo's git shape.
+
+Constraints: TUI-only change; platform label-agnosticism untouched (no ops-side normalization).
 
 ## History
 
