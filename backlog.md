@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 6 on hold · 2 inbox · 54 done · 11 cancelled
+0 in progress · 0 ready · 1 blocked · 6 on hold · 2 inbox · 55 done · 11 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -93,6 +91,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged)
 - [`tuh-3595`](tasks/tuh-01KZ53K4DF7Y0TYX3H5XP43595.md) Pinned frame off-by-one: trailing newline clips the header row
 - [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04)
+- [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) Collision harness: drive the real D6 machinery, add a confirmation-race storm
 - [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04)
 
 ## Cancelled
