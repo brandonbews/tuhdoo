@@ -2,7 +2,7 @@
 
 `tuh-01KZ86YH64K9D2AKVQF57KD9BK`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `daemon` `core` `syncer` `store` `d6`
 - **Created:** 2026-08-05 05:39 UTC by `brandon/claude-code-1`
