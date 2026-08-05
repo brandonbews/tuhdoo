@@ -2,7 +2,7 @@
 
 `tuh-01KZ5WMT4GWZTYVRGWN56TYSVN`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `harness` `d6`
 - **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (done)
@@ -40,3 +40,10 @@ _Unanswered._
 ### 2026-08-05 02:29 UTC — note from `brandon/claude-code-1`
 
 Resume state: harness rewrite is COMPLETE on branch tuh-ysvn/collision-harness-real-machinery (commit 5c4d547, pushed, unmerged). Impersonation removed (no harness-written outcomes, POST /v0/runs gone), confirmation-race storm added (-confirm-storm, default 40), printed checks updated; findings written up in harness/README.md on the branch. make test lint green; the only red is 3/17 live-harness checks, all tracing to the lease findings in escalation 01KZ7W28PB9GPHM0CSQQ2QFABM. When the answer lands: fix the lease mechanism per the decision (likely a new task touching internal/daemon/ops.go releaseVoidedLocked, internal/core/replay.go leaseExpiredBy, internal/syncer/merge.go lease rule), then rerun go run ./harness/collision — expect 17/17 — and merge the harness branch; PR body should cite it as roadmap v1 DoD clause 2 evidence.
+
+### 2026-08-05 02:30 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-ysvn/collision-harness-real-machinery`
+- Commits: `5c4d547`
+
+Harness rewrite complete and pushed (unmerged); blocked on escalation 01KZ7W28PB9GPHM0CSQQ2QFABM — two production lease-semantics gaps the storm exposed must be design-decided and fixed before the harness can go green (its acceptance bar).
