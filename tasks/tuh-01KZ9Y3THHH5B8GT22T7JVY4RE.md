@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T7JVY4RE`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `cli`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -21,4 +21,9 @@ Constraints: init must not assume a remote (T2); output stays plain and line-ori
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:51 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-y4re/init-hardening`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/42>
+
+Landed via PR #42 (squash-merged, checks green). init rejects any argument before spawning anything: --as gets the specific no-events explanation (principal comes from git identity / git config tuhdoo.principal), everything else gets unexpected-argument + usage, exit 1. Success output now includes the universal MCP harness snippet alongside the CI path-filter snippet. Tests cover both rejection forms, no-daemon-on-rejection, and snippet presence.
