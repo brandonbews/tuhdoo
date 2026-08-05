@@ -21,10 +21,19 @@
 //  4. opens one MCP session per clone (`tuhdoo mcp --as <principal>`) —
 //     the claim lifecycle is session-only by design (T7), so a scripted
 //     actor must hold a session;
-//  5. fires claim_next from both actors behind a barrier, repeatedly;
-//  6. lets both daemons converge, then records the D6 loser handling
-//     (a superseded run per voided claim) and finishes the winners;
-//  7. verifies convergence and the winner rule, and prints a report.
+//  5. storms the D6 confirmation gate: both actors deliberately claim
+//     the same task (claim_task behind a barrier), then race
+//     confirm_claim — the remote's ref CAS is the referee, and exactly
+//     one claim.confirmed may land per contest;
+//  6. fires claim_next from both actors behind a barrier, repeatedly;
+//  7. lets both daemons converge, then closes every attempt through the
+//     public verbs alone: winners record done through the gate, and
+//     losers discover their fate from the daemon — a reported finish
+//     coerced to superseded, or a stand-down closed by replay's
+//     branch-less synthesized run. The harness never writes an outcome
+//     on a daemon's behalf;
+//  8. verifies convergence, the refereed winner rule, and the loser
+//     records, and prints a report.
 //
 // Everything it asserts is machine-checked; a failed check exits
 // non-zero. It cleans up its temp dirs and kills the daemons it spawned,
@@ -78,6 +87,7 @@ type config struct {
 	rounds   int
 	spare    int
 	storm    int
+	contests int
 	gap      time.Duration
 	converge time.Duration
 	keep     bool
@@ -88,6 +98,8 @@ func main() {
 	flag.IntVar(&cfg.rounds, "rounds", 10, "claim rounds to fire (one contested task per round)")
 	flag.IntVar(&cfg.spare, "spare", 3, "extra seeded tasks beyond the rounds, so the pool never runs dry")
 	flag.IntVar(&cfg.storm, "storm", 40, "simultaneous eager-write bursts aimed at the sync loop's push cycle")
+	flag.IntVar(&cfg.contests, "confirm-storm", 40,
+		"confirmation-race storm: deliberately collided claims whose confirm_claim verdicts are raced from both machines")
 	flag.DurationVar(&cfg.gap, "storm-gap", 0, "pause between storm bursts; 0 is back-to-back, the harshest setting")
 	flag.DurationVar(&cfg.converge, "converge-timeout", 5*time.Minute,
 		"how long to wait for the two clones to reach identical data-branch trees "+
@@ -150,11 +162,15 @@ type lab struct {
 	origin    string // bare remote
 	bin       string
 	actors    []*actor
-	tasks     []string // seeded claimable task IDs, creation order
+	tasks     []string // seeded claimable task IDs for the claim_next rounds
+	contest   []string // seeded task IDs for the confirmation-race storm
 	carrier   string   // held task the sync-storm escalations hang off
 	stormTook time.Duration
 	watch     *syncWatch
 	closing   sync.Once
+
+	statMu      sync.Mutex
+	gateRetries int // verb-level retries of the gate's honest 503 refusals
 }
 
 func setup(cfg config) (*lab, error) {
@@ -222,14 +238,27 @@ func (l *lab) close() {
 // the experiment
 // ---------------------------------------------------------------------
 
-// attempt is one actor's claim_next call in one round.
+// attempt is one actor's claim in one contest: a claim_next call in a
+// race round, or a deliberate claim_task in a storm contest.
 type attempt struct {
 	round  int
 	actor  *actor
 	task   string
 	claim  string
 	branch string // the branch this attempt would have worked on
+	fate   string // how the daemon said it ended (fateDone/fateReported/fateSilent)
+	runID  string // the real run.finished event recorded, when the attempt wrote one
 }
+
+// How an attempt's actor learned its attempt ended — always from a
+// daemon verb's answer, never from the harness reading replayed state
+// and deciding for it (that was the impersonation this harness used to
+// commit before the 2026-08-04 D6 machinery existed).
+const (
+	fateDone     = "done"          // finish_run recorded done, refereed through the gate
+	fateReported = "lost-reported" // finish_run(done) coerced to superseded, branch kept
+	fateSilent   = "lost-silent"   // stood down via release_claim; replay synthesizes the close
+)
 
 func (l *lab) experiment() error {
 	alpha, bravo := l.actors[0], l.actors[1]
@@ -251,7 +280,15 @@ func (l *lab) experiment() error {
 		return err
 	}
 
-	attempts, races, err := l.race()
+	// The confirmation-race storm runs first, on its own task pool:
+	// every contest ends with the task done, so the claim_next rounds
+	// below can never be served a contest task.
+	stormAttempts, stats, err := l.confirmStorm()
+	if err != nil {
+		return err
+	}
+
+	raceAttempts, races, err := l.race()
 	if err != nil {
 		return err
 	}
@@ -260,15 +297,17 @@ func (l *lab) experiment() error {
 		return err
 	}
 
-	// The losers cannot stand down until their own daemons have replayed
-	// the merged claim set, so the claims have to have crossed before
-	// settle runs.
-	if err := l.converge("post-race", claimIDs(attempts)); err != nil {
+	// The race attempts settle after the claims have crossed. The gate
+	// would referee correctly either way — that is its whole point — but
+	// waiting here makes the split deterministic: every loser discovers
+	// its fate at verb-time from local state, and every winner's gate
+	// round-trip certifies against a remote that already holds the
+	// loser's claim.
+	if err := l.converge("post-race", append(claimIDs(raceAttempts), requiredEvents(stormAttempts)...)); err != nil {
 		return err
 	}
 
-	runs, err := l.settle(attempts)
-	if err != nil {
+	if err := l.settle(raceAttempts); err != nil {
 		return err
 	}
 
@@ -280,11 +319,27 @@ func (l *lab) experiment() error {
 		a.closeSession()
 	}
 
-	if err := l.converge("final", runs); err != nil {
+	attempts := append(stormAttempts, raceAttempts...)
+	if err := l.converge("final", requiredEvents(attempts)); err != nil {
 		return err
 	}
 
-	return l.verify(attempts, races)
+	return l.verify(attempts, races, stats)
+}
+
+// requiredEvents lists the stored events these attempts produced — the
+// claims and the real run records. Synthesized closes are replay-derived
+// and never stored (D6 clause 3), so they have no event to wait for;
+// tree equality covers them.
+func requiredEvents(attempts []attempt) []string {
+	var ids []string
+	for _, at := range attempts {
+		ids = append(ids, at.claim)
+		if at.runID != "" {
+			ids = append(ids, at.runID)
+		}
+	}
+	return ids
 }
 
 // seed creates the scratch task pool on the first clone and hands it to
@@ -292,7 +347,8 @@ func (l *lab) experiment() error {
 // pending events and runs a final sync cycle, which is what publishes the
 // seed without waiting out the 60s fetch cadence (T8).
 func (l *lab) seed(a *actor) error {
-	fmt.Printf("== seeding %d tasks on %s\n", l.cfg.rounds+l.cfg.spare, a.name)
+	fmt.Printf("== seeding %d tasks on %s (%d race bait, %d storm contests)\n",
+		l.cfg.rounds+l.cfg.spare+l.cfg.contests, a.name, l.cfg.rounds+l.cfg.spare, l.cfg.contests)
 	if out, err := runCmd(l.work, "git", "clone", "--quiet", l.origin, a.root); err != nil {
 		return fmt.Errorf("clone %s: %w: %s", a.name, err, out)
 	}
@@ -332,13 +388,22 @@ func (l *lab) seed(a *actor) error {
 				"claiming it is the whole run.",
 		})
 	}
+	for i := 0; i < l.cfg.contests; i++ {
+		items = append(items, map[string]any{
+			"title": fmt.Sprintf("confirm-storm contest %02d", i+1),
+			"description": "Scratch task for the confirmation-race storm: both machines claim it " +
+				"deliberately, then race confirm_claim for the one verdict.",
+		})
+	}
 	var created struct {
 		IDs []string `json:"ids"`
 	}
 	if err := a.post("/v0/tasks", a.principal, items, &created); err != nil {
 		return fmt.Errorf("seed tasks: %w", err)
 	}
-	l.carrier, l.tasks = created.IDs[0], created.IDs[1:]
+	l.carrier = created.IDs[0]
+	l.tasks = created.IDs[1 : 1+l.cfg.rounds+l.cfg.spare]
+	l.contest = created.IDs[1+l.cfg.rounds+l.cfg.spare:]
 
 	// The commit debounce is 2s (T8); give it room, then let the
 	// shutdown's final flush + sync cycle publish the branch.
@@ -375,16 +440,17 @@ func (l *lab) joinSecondClone(a *actor) error {
 
 	// Both machines must be looking at the same pool, or a "race" would
 	// just be two actors picking different tasks.
+	seeded := len(l.tasks) + len(l.contest)
 	for _, x := range l.actors {
 		ready, err := x.readyTasks()
 		if err != nil {
 			return err
 		}
-		if len(ready) != len(l.tasks) {
-			return fmt.Errorf("%s sees %d ready tasks, seeded %d", x.name, len(ready), len(l.tasks))
+		if len(ready) != seeded {
+			return fmt.Errorf("%s sees %d ready tasks, seeded %d", x.name, len(ready), seeded)
 		}
 	}
-	fmt.Printf("   both machines see %d ready tasks\n", len(l.tasks))
+	fmt.Printf("   both machines see %d ready tasks\n", seeded)
 	return nil
 }
 
@@ -437,7 +503,7 @@ func (l *lab) race() ([]attempt, int, error) {
 					round: round, actor: a,
 					task:   out.Task.Task.ID,
 					claim:  out.Task.Claim.ID,
-					branch: fmt.Sprintf("%s/round-%02d", event.ShortID(out.Task.Task.ID), round),
+					branch: fmt.Sprintf("%s/round-%02d-%s", event.ShortID(out.Task.Task.ID), round, a.name),
 				}
 			}(i, a)
 		}
@@ -472,53 +538,284 @@ func (l *lab) race() ([]attempt, int, error) {
 	return all, races, nil
 }
 
-// settle plays out D6's loser handling. Replay has already picked the
-// winner of every race; each actor now closes its own attempt: a voided
-// claim becomes a run with outcome "superseded" carrying the branch the
-// work would have lived on, an active claim becomes an ordinary "done".
+// settle closes every race attempt through the public verbs alone. The
+// harness never reads replayed state to decide who won — the daemons'
+// answers are the only oracle (D6, 2026-08-04: the daemon is the referee
+// of how attempts ended). Two agent styles alternate, both
+// protocol-legal:
 //
-// The superseded run is written over the daemon's HTTP API, not through
-// the MCP session, because the MCP surface rejects the outcome as
-// "daemon-synthesized" — see the finding in harness/README.md: nothing in
-// the daemon actually synthesizes it, so the loser's supervisor is the
-// only writer there is.
-func (l *lab) settle(attempts []attempt) ([]string, error) {
-	fmt.Println("== recording outcomes (superseded for race losers, done for winners)")
-	state, _, err := replayClone(l.actors[0].root, time.Now())
-	if err != nil {
-		return nil, err
-	}
-	var runs []string
-	superseded, done := 0, 0
-	for _, at := range attempts {
-		c := state.Claims[at.claim]
-		if c == nil {
-			return nil, fmt.Errorf("claim %s (%s, round %d) is missing from replayed state", at.claim, at.actor.name, at.round)
+//   - confirm-first (even attempts): confirm_claim discovers the fate;
+//     a confirmed winner records done (the gate already ran, so the
+//     finish is judged locally); a loser stands down with release_claim
+//     and never reports a run — replay closes that attempt with a
+//     branch-less synthesized superseded run.
+//   - report-only (odd attempts): finish_run(done) straight away; the
+//     gate rides the verb (D6 clause 2), so a winner's done is certified
+//     at the remote and a loser's report is coerced to superseded with
+//     its branch kept as the salvage record.
+func (l *lab) settle(attempts []attempt) error {
+	fmt.Println("== settling race attempts through the daemons (fates discovered at the verbs, never scripted)")
+	done, reported, silent := 0, 0, 0
+	for i := range attempts {
+		at := &attempts[i]
+		if i%2 == 0 {
+			// Confirm-first: ask the referee before doing anything else.
+			res, err := l.confirmClaim(at.actor, at.task, fmt.Sprintf("round %02d", at.round))
+			if err != nil {
+				return err
+			}
+			if res.Confirmed {
+				fin, err := l.finishDone(at.actor, at.task, at.branch,
+					fmt.Sprintf("won the race on round %d (confirmed first)", at.round))
+				if err != nil {
+					return err
+				}
+				if fin.Outcome != event.OutcomeDone {
+					return fmt.Errorf("round %d: %s confirmed but finish recorded %q", at.round, at.actor.name, fin.Outcome)
+				}
+				at.fate, at.runID = fateDone, fin.ID
+				done++
+			} else {
+				rel, err := at.actor.releaseClaim(at.task,
+					fmt.Sprintf("confirm_claim answered lost on round %d; standing down", at.round))
+				if err != nil {
+					return fmt.Errorf("round %d: %s stand-down: %w", at.round, at.actor.name, err)
+				}
+				if rel.Message == "" {
+					return fmt.Errorf("round %d: %s's stand-down was not acknowledged", at.round, at.actor.name)
+				}
+				at.fate = fateSilent
+				silent++
+			}
+			continue
 		}
-		body := map[string]any{"task": at.task, "branch": at.branch}
-		switch c.Status {
-		case core.ClaimVoided:
-			body["outcome"] = "superseded"
-			body["summary"] = fmt.Sprintf("lost the D6 race on round %d; work on %s is salvageable", at.round, at.branch)
-			superseded++
-		case core.ClaimActive:
-			body["outcome"] = "done"
-			body["summary"] = fmt.Sprintf("won the D6 race on round %d", at.round)
+		// Report-only: finish_run(done) and let the referee judge.
+		fin, err := l.finishDone(at.actor, at.task, at.branch,
+			fmt.Sprintf("reporting done on round %d", at.round))
+		if err != nil {
+			return err
+		}
+		switch fin.Outcome {
+		case event.OutcomeDone:
+			at.fate, at.runID = fateDone, fin.ID
 			done++
+		case event.OutcomeSuperseded:
+			if fin.Message == "" {
+				return fmt.Errorf("round %d: %s was coerced to superseded without the referee's statement", at.round, at.actor.name)
+			}
+			at.fate, at.runID = fateReported, fin.ID
+			reported++
 		default:
-			return nil, fmt.Errorf("claim %s (%s, round %d) ended %s — expected active or voided",
-				at.claim, at.actor.name, at.round, c.Status)
+			return fmt.Errorf("round %d: %s's finish recorded %q — want done or superseded", at.round, at.actor.name, fin.Outcome)
 		}
-		var out struct {
-			ID string `json:"id"`
-		}
-		if err := at.actor.post("/v0/runs", at.actor.principal, body, &out); err != nil {
-			return nil, fmt.Errorf("finish %s attempt on %s: %w", at.actor.name, event.ShortID(at.task), err)
-		}
-		runs = append(runs, out.ID)
 	}
-	fmt.Printf("   %d superseded, %d done\n", superseded, done)
-	return runs, nil
+	fmt.Printf("   %d done through the gate, %d losers coerced on report, %d losers stood down for synthesis\n",
+		done, reported, silent)
+	return nil
+}
+
+// stormStats is the confirmation-race storm's measurement record.
+type stormStats struct {
+	contests int
+	wins     map[string]int // actor name → confirmation races won
+	reported int            // losers that reported and were coerced
+	silent   int            // losers that stood down for replay synthesis
+}
+
+// confirmStorm is the confirmation-race storm (roadmap v1 DoD clause 2,
+// extended 2026-08-04): N deliberate claim collisions, each contest's
+// verdict raced through the real D6 gate from both machines at once.
+//
+// The collision is certain, not probable: claims are optimistic and
+// judged against local state only (D6 clause 4), and a peer's eager
+// claim push needs about a second to cross, so two claim_task calls
+// fired behind one barrier both succeed. The verdict is then raced —
+// both sessions call confirm_claim simultaneously — and the remote's
+// ref CAS referees: at most one claim.confirmed can land per task, by
+// construction. A contest where both actors are told "confirmed" is a
+// duplicate certification and fails the run on the spot.
+func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
+	stats := stormStats{wins: make(map[string]int, len(l.actors))}
+	if len(l.contest) == 0 {
+		return nil, stats, nil
+	}
+	fmt.Printf("== confirmation-race storm: %d deliberate collisions, confirm_claim raced from both machines\n", len(l.contest))
+	started := time.Now()
+	var all []attempt
+	for i, task := range l.contest {
+		seq := i + 1
+
+		// Deliberate collision: both machines claim the same task at once.
+		atts := make([]attempt, len(l.actors))
+		err := l.pair(func(j int, a *actor) error {
+			claimID, err := a.claimTask(task)
+			if err != nil {
+				return fmt.Errorf("contest %02d: %s claim_task: %w", seq, a.name, err)
+			}
+			atts[j] = attempt{round: seq, actor: a, task: task, claim: claimID,
+				branch: fmt.Sprintf("%s/storm-%02d-%s", event.ShortID(task), seq, a.name)}
+			return nil
+		})
+		if err != nil {
+			return nil, stats, err
+		}
+
+		// Race the gate for the one verdict.
+		res := make([]confirmOut, len(l.actors))
+		err = l.pair(func(j int, a *actor) error {
+			var e error
+			res[j], e = l.confirmClaim(a, task, fmt.Sprintf("contest %02d", seq))
+			return e
+		})
+		if err != nil {
+			return nil, stats, err
+		}
+		winner := -1
+		for j := range res {
+			if !res[j].Confirmed {
+				continue
+			}
+			if winner != -1 {
+				return nil, stats, fmt.Errorf("contest %02d: DUPLICATE CONFIRMATION — both %s and %s were told confirmed",
+					seq, l.actors[winner].name, l.actors[j].name)
+			}
+			winner = j
+		}
+		if winner == -1 {
+			return nil, stats, fmt.Errorf("contest %02d: no confirmation — both machines were told lost", seq)
+		}
+		loser := 1 - winner
+		stats.wins[atts[winner].actor.name]++
+
+		// The winner records done. Its claim is already confirmed, so the
+		// finish is judged locally and instantly (D6: idempotent).
+		fin, err := l.finishDone(atts[winner].actor, task, atts[winner].branch,
+			fmt.Sprintf("won the confirmation race in contest %02d", seq))
+		if err != nil {
+			return nil, stats, err
+		}
+		if fin.Outcome != event.OutcomeDone {
+			return nil, stats, fmt.Errorf("contest %02d: confirmed winner's finish recorded %q, want done", seq, fin.Outcome)
+		}
+		atts[winner].fate, atts[winner].runID = fateDone, fin.ID
+
+		// The loser was told "lost"; its two honest exits alternate.
+		how := ""
+		if i%2 == 0 {
+			// Reporting loser: finish_run(done) — the referee coerces the
+			// record to superseded, keeping the branch for salvage.
+			fin, err := l.finishDone(atts[loser].actor, task, atts[loser].branch,
+				fmt.Sprintf("reporting my attempt in contest %02d", seq))
+			if err != nil {
+				return nil, stats, err
+			}
+			if fin.Outcome != event.OutcomeSuperseded || fin.Message == "" {
+				return nil, stats, fmt.Errorf("contest %02d: loser's finish recorded %+v — want coerced superseded with the referee's statement", seq, fin)
+			}
+			atts[loser].fate, atts[loser].runID = fateReported, fin.ID
+			stats.reported++
+			how = "reported, coerced to superseded"
+		} else {
+			// Silent loser: stands down without ever reporting a run;
+			// replay closes the attempt with a branch-less synthesized
+			// superseded run the moment the stand-down drops its lease.
+			rel, err := atts[loser].actor.releaseClaim(task,
+				fmt.Sprintf("confirm_claim answered lost in contest %02d; standing down", seq))
+			if err != nil {
+				return nil, stats, fmt.Errorf("contest %02d: loser stand-down: %w", seq, err)
+			}
+			if rel.Message == "" {
+				return nil, stats, fmt.Errorf("contest %02d: loser's stand-down was not acknowledged", seq)
+			}
+			atts[loser].fate = fateSilent
+			stats.silent++
+			how = "stood down, closed by synthesis"
+		}
+		fmt.Printf("   contest %02d: %s confirmed, %s lost (%s)\n",
+			seq, atts[winner].actor.name, atts[loser].actor.name, how)
+		all = append(all, atts...)
+	}
+	stats.contests = len(l.contest)
+	fmt.Printf("   %d contests in %s, one confirmation each (%s %d, %s %d); losers: %d reported, %d silent\n",
+		stats.contests, round1s(time.Since(started)),
+		l.actors[0].name, stats.wins[l.actors[0].name],
+		l.actors[1].name, stats.wins[l.actors[1].name],
+		stats.reported, stats.silent)
+	return all, stats, nil
+}
+
+// pair fires fn for both actors behind one barrier, as close to
+// simultaneously as the runtime allows.
+func (l *lab) pair(fn func(i int, a *actor) error) error {
+	errs := make([]error, len(l.actors))
+	var wg sync.WaitGroup
+	gun := make(chan struct{})
+	for i, a := range l.actors {
+		wg.Add(1)
+		go func(i int, a *actor) {
+			defer wg.Done()
+			<-gun
+			errs[i] = fn(i, a)
+		}(i, a)
+	}
+	close(gun)
+	wg.Wait()
+	return errors.Join(errs...)
+}
+
+// verbRetries bounds the harness's patience with the gate's honest
+// retryable refusals. Under the storm both daemons' sync loops and both
+// gates contend for the one remote ref, so an occasional "remote kept
+// moving" 503 is expected; a protocol-following agent retries, and so
+// does the harness — counting every retry for the report.
+const verbRetries = 10
+
+// gateRetryable matches the gate's honest refusals — nothing written,
+// retry later (ops.go gateVerdict): the remote kept moving past the
+// bounded loop, could not be consulted, or the confirmation push failed.
+func gateRetryable(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "remote kept moving") ||
+		strings.Contains(s, "cannot consult the remote") ||
+		strings.Contains(s, "confirmation push failed")
+}
+
+// retryGate runs call, retrying the gate's retryable refusals.
+func (l *lab) retryGate(what string, call func() error) error {
+	var err error
+	for i := 0; i < verbRetries; i++ {
+		if err = call(); err == nil || !gateRetryable(err) {
+			return err
+		}
+		l.statMu.Lock()
+		l.gateRetries++
+		l.statMu.Unlock()
+		time.Sleep(300 * time.Millisecond)
+	}
+	return fmt.Errorf("%s: still refused after %d retries: %w", what, verbRetries, err)
+}
+
+// confirmClaim is confirm_claim with the harness's retry posture.
+func (l *lab) confirmClaim(a *actor, task, what string) (confirmOut, error) {
+	var out confirmOut
+	err := l.retryGate(fmt.Sprintf("%s: %s confirm_claim", what, a.name), func() error {
+		var e error
+		out, e = a.confirmClaim(task)
+		return e
+	})
+	return out, err
+}
+
+// finishDone is finish_run(done) with the harness's retry posture: the
+// gate rides the verb, so it shares confirm_claim's retryable refusals.
+func (l *lab) finishDone(a *actor, task, branch, summary string) (finishOut, error) {
+	var out finishOut
+	err := l.retryGate(fmt.Sprintf("%s finish_run on %s", a.name, event.ShortID(task)), func() error {
+		var e error
+		out, e = a.finishRunDone(task, branch, summary)
+		return e
+	})
+	return out, err
 }
 
 // storm hammers the sync loop's push cycle. Claim and escalation writes
@@ -714,7 +1011,7 @@ func (c *checklist) note(format string, args ...any) {
 	fmt.Printf("   [note] %s\n", fmt.Sprintf(format, args...))
 }
 
-func (l *lab) verify(attempts []attempt, races int) error {
+func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	alpha, bravo := l.actors[0], l.actors[1]
 
 	// One instant for both replays: lease expiry is evaluated against
@@ -730,6 +1027,7 @@ func (l *lab) verify(attempts []attempt, races int) error {
 	}
 
 	fmt.Println("\n== verification")
+	fmt.Println("   (every outcome checked below was written by a daemon verb; the harness wrote none)")
 	var c checklist
 
 	// --- convergence ---
@@ -774,60 +1072,178 @@ func (l *lab) verify(attempts []attempt, races int) error {
 	}
 	c.check(merges >= 1, "at least one real merge commit on the data branch (%d)", merges)
 
-	// --- the D6 winner rule ---
+	// --- the confirmation gate (D6 clause 2, 2026-08-04) ---
+	// Read-side verification straight off the stored events: at most one
+	// claim.confirmed may ever land per task, by construction — a
+	// duplicate is a bug at any probability.
+	confs := make(map[string][]string)
+	for _, e := range eventsA {
+		if e.Type == event.TypeClaimConfirmed {
+			confs[e.Task] = append(confs[e.Task], e.ID)
+		}
+	}
+	totalConfs, dup := 0, 0
+	for task, ids := range confs {
+		totalConfs += len(ids)
+		if len(ids) > 1 {
+			dup++
+			fmt.Printf("        task %s carries %d confirmations: %s\n",
+				event.ShortID(task), len(ids), strings.Join(ids, " "))
+		}
+	}
+	c.check(dup == 0, "no task carries more than one claim.confirmed (%d confirmations across %d tasks)",
+		totalConfs, len(confs))
+
+	contested, stormOK := 0, true
+	for _, task := range l.contest {
+		var doneRuns, superRuns int
+		for i := range stateA.Runs {
+			if r := &stateA.Runs[i]; r.Task == task {
+				switch r.Outcome {
+				case event.OutcomeDone:
+					doneRuns++
+				case event.OutcomeSuperseded:
+					superRuns++
+				}
+			}
+		}
+		claims := len(stateA.ClaimsByTask[task])
+		if claims == 2 {
+			contested++
+		}
+		if claims != 2 || len(confs[task]) != 1 || doneRuns != 1 || superRuns != 1 {
+			stormOK = false
+			fmt.Printf("        contest %s: %d claims, %d confirmations, %d done, %d superseded\n",
+				event.ShortID(task), claims, len(confs[task]), doneRuns, superRuns)
+		}
+	}
+	c.check(contested == len(l.contest), "both machines claimed every storm contest (%d deliberate collisions)", contested)
+	c.check(stormOK, "every storm contest landed exactly one claim.confirmed, one done run, one superseded run (%d contests)",
+		len(l.contest))
+
+	// --- the D6 winner rule, refereed ---
 	voided := voidedClaims(stateA)
-	c.check(races > 0, "claim races observed (%d rounds where both actors claimed the same task)", races)
+	c.check(races > 0, "claim races observed in the claim_next rounds (%d)", races)
 	c.check(len(voided) > 0, "claims voided by the winner rule (%d)", len(voided))
 
-	crossMachine := 0
-	winnerOK, supersededOK := true, true
-	branches := make(map[string]string, len(attempts))
-	actorOf := make(map[string]*actor, len(attempts))
-	for _, at := range attempts {
-		branches[at.claim] = at.branch
-		actorOf[at.claim] = at.actor
+	byClaim := make(map[string]*attempt, len(attempts))
+	for i := range attempts {
+		byClaim[attempts[i].claim] = &attempts[i]
 	}
+
+	crossMachine := 0
+	winnerOK := true
 	for _, loser := range voided {
-		// Exactly one claim survives on the task, and it is the earliest
-		// by ULID — D6's rule, re-derived here rather than trusted.
+		// Exactly one claim survives on the task, and it is the refereed
+		// winner: the confirmed claim when a confirmation exists (a
+		// confirmed claim wins unconditionally — it can out-rank an
+		// earlier ULID, which the storm makes happen), the earliest ULID
+		// otherwise (the provisional rule). Re-derived here, not trusted.
 		var survivors []*core.Claim
-		earliest := ""
+		earliest, confirmed := "", ""
 		for _, cid := range stateA.ClaimsByTask[loser.Task] {
 			cl := stateA.Claims[cid]
 			if cl.Status != core.ClaimVoided {
 				survivors = append(survivors, cl)
 			}
+			if cl.Confirmation != "" {
+				confirmed = cid
+			}
 			if earliest == "" || cid < earliest {
 				earliest = cid
 			}
 		}
-		if len(survivors) != 1 || survivors[0].ID != earliest || loser.ID <= earliest {
+		want := earliest
+		if confirmed != "" {
+			want = confirmed
+		}
+		if len(survivors) != 1 || survivors[0].ID != want || loser.ID == want {
 			winnerOK = false
-			fmt.Printf("        task %s: %d survivors, earliest claim %s, loser %s\n",
-				event.ShortID(loser.Task), len(survivors), event.ShortID(earliest), event.ShortID(loser.ID))
+			fmt.Printf("        task %s: %d survivors, refereed winner %s, loser %s\n",
+				event.ShortID(loser.Task), len(survivors), event.ShortID(want), event.ShortID(loser.ID))
 		} else if survivors[0].Machine != loser.Machine {
 			crossMachine++
 		}
+	}
+	c.check(winnerOK, "every voided claim leaves exactly one survivor — the confirmed claim, else earliest ULID (%d checked)",
+		len(voided))
+	c.check(crossMachine == len(voided), "every race crossed machines (%d of %d)", crossMachine, len(voided))
 
-		// D6 clause 2: the loser's half-done work is recorded as a run
-		// with outcome superseded, branch included.
-		found := false
-		for _, r := range stateA.Runs {
-			if r.Task == loser.Task && r.Actor == loser.Actor &&
-				r.Outcome == "superseded" && r.Branch == branches[loser.ID] && r.Branch != "" {
-				found = true
-				break
+	// --- loser records: real coercion and real synthesis (D6 clause 3) ---
+	runsByID := make(map[string]*core.Run, len(stateA.Runs))
+	for i := range stateA.Runs {
+		runsByID[stateA.Runs[i].ID] = &stateA.Runs[i]
+	}
+	fatesOK, winnersOK, reportedOK, silentOK := true, true, true, true
+	winners, reported, silent := 0, 0, 0
+	for _, loser := range voided {
+		at := byClaim[loser.ID]
+		if at == nil || at.fate == fateDone || at.fate == "" {
+			fatesOK = false
+			fmt.Printf("        voided claim %s (%s) closed with fate %q — the daemon told its actor something else\n",
+				event.ShortID(loser.ID), loser.Actor, fateOf(at))
+			continue
+		}
+		switch at.fate {
+		case fateReported:
+			// The loser reported; the referee coerced the record to
+			// superseded, keeping the reported branch as salvage.
+			reported++
+			r := runsByID[at.runID]
+			if r == nil || r.Synthesized || r.Outcome != event.OutcomeSuperseded ||
+				r.Task != at.task || r.Actor != loser.Actor || r.Branch != at.branch {
+				reportedOK = false
+				fmt.Printf("        reporting loser %s on task %s: run %+v, want real superseded carrying branch %q\n",
+					loser.Actor, event.ShortID(at.task), r, at.branch)
+			}
+		case fateSilent:
+			// The loser stood down without a report; replay synthesized
+			// the branch-less close for exactly this claim.
+			silent++
+			found := false
+			for i := range stateA.Runs {
+				r := &stateA.Runs[i]
+				if r.Synthesized && r.Claim == loser.ID && r.Outcome == event.OutcomeSuperseded && r.Branch == "" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				silentOK = false
+				fmt.Printf("        silent loser %s on task %s: no synthesized branch-less superseded run for claim %s\n",
+					loser.Actor, event.ShortID(at.task), event.ShortID(loser.ID))
 			}
 		}
-		if !found {
-			supersededOK = false
-			fmt.Printf("        no superseded run carrying branch %q for %s on task %s\n",
-				branches[loser.ID], loser.Actor, event.ShortID(loser.Task))
+	}
+	// And the reverse: every fate a daemon handed out matches replay.
+	for i := range attempts {
+		at := &attempts[i]
+		cl := stateA.Claims[at.claim]
+		switch {
+		case cl == nil:
+			fatesOK = false
+			fmt.Printf("        claim %s (%s) is missing from replayed state\n", at.claim, at.actor.name)
+		case at.fate == fateDone:
+			winners++
+			r := runsByID[at.runID]
+			if cl.Status == core.ClaimVoided || cl.Confirmation == "" ||
+				r == nil || r.Outcome != event.OutcomeDone {
+				winnersOK = false
+				fmt.Printf("        winner %s on task %s: claim %s %s (confirmation %q), run %+v\n",
+					at.actor.name, event.ShortID(at.task), event.ShortID(at.claim), cl.Status, cl.Confirmation, r)
+			}
+		default:
+			if cl.Status != core.ClaimVoided {
+				fatesOK = false
+				fmt.Printf("        %s was told lost on task %s but replay says claim %s is %s\n",
+					at.actor.name, event.ShortID(at.task), event.ShortID(at.claim), cl.Status)
+			}
 		}
 	}
-	c.check(winnerOK, "every voided claim leaves exactly one winner, earliest ULID (%d checked)", len(voided))
-	c.check(crossMachine == len(voided), "every race crossed machines (%d of %d)", crossMachine, len(voided))
-	c.check(supersededOK, "a superseded run carrying the loser's branch for every voided claim")
+	c.check(fatesOK, "every verb-discovered fate matches replay's verdict (%d attempts)", len(attempts))
+	c.check(winnersOK, "every done record is certified — the winner's claim carries its claim.confirmed (%d winners)", winners)
+	c.check(reportedOK, "every reporting loser was coerced to a real superseded run keeping its branch (%d)", reported)
+	c.check(silentOK, "every silent stand-down was closed by replay's branch-less synthesized run (%d)", silent)
 
 	// --- the push-retry loop ---
 	// Exhausting maxCycleRetries is not a failure of the experiment: the
@@ -843,7 +1259,7 @@ func (l *lab) verify(attempts []attempt, races int) error {
 		c.note("the push cycle exhausted maxCycleRetries %d time(s) — see FINDINGS", exhausted)
 	}
 
-	l.report(attempts, races, voided, merges, watch, exhausted)
+	l.report(attempts, races, stats, voided, merges, watch, exhausted, totalConfs, dup)
 
 	if c.failed > 0 {
 		return fmt.Errorf("%d acceptance check(s) failed", c.failed)
@@ -851,20 +1267,51 @@ func (l *lab) verify(attempts []attempt, races int) error {
 	return nil
 }
 
-func (l *lab) report(attempts []attempt, races int, voided []*core.Claim, merges int,
-	watch map[string]syncSample, exhausted int) {
+// fateOf reads an attempt's fate, tolerating the nil attempt of a claim
+// the harness never made (which would itself be a failed check).
+func fateOf(at *attempt) string {
+	if at == nil {
+		return "<no attempt>"
+	}
+	return at.fate
+}
+
+func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*core.Claim, merges int,
+	watch map[string]syncSample, exhausted, totalConfs, dup int) {
 
 	nonFF := l.total(watch, func(w syncSample) int { return w.collisions })
 	built := l.total(watch, func(w syncSample) int { return w.merges })
 	refLock := l.total(watch, func(w syncSample) int { return w.refLock })
+
+	done, coerced, stoodDown := 0, 0, 0
+	for _, at := range attempts {
+		switch at.fate {
+		case fateDone:
+			done++
+		case fateReported:
+			coerced++
+		case fateSilent:
+			stoodDown++
+		}
+	}
 
 	fmt.Println("\n== numbers")
 	fmt.Println("   (\"built\" counts merge commits the syncer constructed; a merge whose ref")
 	fmt.Println("    update or push loses a race is discarded, so fewer land on the branch)")
 	fmt.Printf("   claim rounds fired            %d\n", l.cfg.rounds)
 	fmt.Printf("   claim races observed          %d\n", races)
+	fmt.Printf("   storm contests fired          %d\n", stats.contests)
 	fmt.Printf("   claims made                   %d\n", len(attempts))
 	fmt.Printf("   claims voided (D6 losers)     %d\n", len(voided))
+	fmt.Printf("   claim.confirmed on the branch %d\n", totalConfs)
+	fmt.Printf("   duplicate confirmations       %d\n", dup)
+	fmt.Printf("   confirmation races won        (%s %d, %s %d)\n",
+		l.actors[0].name, stats.wins[l.actors[0].name],
+		l.actors[1].name, stats.wins[l.actors[1].name])
+	fmt.Printf("   winners recorded done         %d\n", done)
+	fmt.Printf("   losers coerced on report      %d\n", coerced)
+	fmt.Printf("   losers closed by synthesis    %d\n", stoodDown)
+	fmt.Printf("   gate retries at the verbs     %d\n", l.gateRetries)
 	fmt.Printf("   merge commits on data branch  %d\n", merges)
 	fmt.Printf("   non-fast-forward pushes       %d  %s\n", nonFF,
 		l.perMachine(watch, func(w syncSample) int { return w.collisions }))
@@ -1238,6 +1685,42 @@ func (a *actor) closeSession() {
 	}
 }
 
+// callTool invokes one MCP tool on this actor's session and decodes the
+// structured result into dst. A tool error (IsError) comes back as a
+// plain error carrying the daemon's message — the text a real agent
+// would read and act on.
+func (a *actor) callTool(name string, args map[string]any, dst any) error {
+	res, err := a.sess.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		return fmt.Errorf("%s on %s: %w", name, a.name, err)
+	}
+	if res.IsError {
+		return fmt.Errorf("%s on %s: %s", name, a.name, toolText(res))
+	}
+	if dst == nil {
+		return nil
+	}
+	b, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(b, dst); err != nil {
+		return fmt.Errorf("decode %s result %s: %w", name, b, err)
+	}
+	return nil
+}
+
+// toolText flattens a tool error's content into one line.
+func toolText(res *mcp.CallToolResult) string {
+	var parts []string
+	for _, c := range res.Content {
+		if t, ok := c.(*mcp.TextContent); ok {
+			parts = append(parts, t.Text)
+		}
+	}
+	return flatten(strings.Join(parts, " "))
+}
+
 // claimNextOut mirrors the fields of claim_next's result the harness
 // needs. Decoded from the tool's structured content rather than typed
 // against the daemon's unexported shapes.
@@ -1259,21 +1742,71 @@ type claimNextOut struct {
 
 func (a *actor) claimNext() (claimNextOut, error) {
 	var out claimNextOut
-	res, err := a.sess.CallTool(context.Background(), &mcp.CallToolParams{Name: "claim_next"})
-	if err != nil {
-		return out, err
+	err := a.callTool("claim_next", nil, &out)
+	return out, err
+}
+
+// claimTask claims one specific task through the session — the
+// deliberate half of a storm collision — and returns the claim ID.
+func (a *actor) claimTask(task string) (string, error) {
+	var out struct {
+		Claim *struct {
+			ID string `json:"id"`
+		} `json:"claim"`
 	}
-	if res.IsError {
-		return out, fmt.Errorf("claim_next reported an error: %v", res.Content)
+	if err := a.callTool("claim_task", map[string]any{"task": task}, &out); err != nil {
+		return "", err
 	}
-	b, err := json.Marshal(res.StructuredContent)
-	if err != nil {
-		return out, err
+	if out.Claim == nil {
+		return "", fmt.Errorf("claim_task on %s returned no claim", a.name)
 	}
-	if err := json.Unmarshal(b, &out); err != nil {
-		return out, fmt.Errorf("decode claim_next result %s: %w", b, err)
-	}
-	return out, nil
+	return out.Claim.ID, nil
+}
+
+// confirmOut is confirm_claim's answer: the referee's verdict.
+type confirmOut struct {
+	Confirmed bool   `json:"confirmed"`
+	Claim     string `json:"claim"`
+	Message   string `json:"message"`
+}
+
+func (a *actor) confirmClaim(task string) (confirmOut, error) {
+	var out confirmOut
+	err := a.callTool("confirm_claim", map[string]any{"task": task}, &out)
+	return out, err
+}
+
+// finishOut is finish_run's answer: what was actually recorded, with
+// the referee's statement when that is not what was reported.
+type finishOut struct {
+	ID      string `json:"id"`
+	Outcome string `json:"outcome"`
+	Message string `json:"message"`
+}
+
+// finishRunDone reports outcome done and returns what the referee
+// recorded — done for a certified winner, superseded for a coerced
+// loser (D6: agents report what they did; the daemon referees how the
+// attempt ended).
+func (a *actor) finishRunDone(task, branch, summary string) (finishOut, error) {
+	var out finishOut
+	err := a.callTool("finish_run", map[string]any{
+		"task": task, "outcome": "done", "branch": branch, "summary": summary,
+	}, &out)
+	return out, err
+}
+
+// releaseOut is release_claim's answer; a non-empty message is the
+// stand-down acknowledgment for a voided claimant (D6 clause 3).
+type releaseOut struct {
+	Released string `json:"released"`
+	Message  string `json:"message"`
+}
+
+func (a *actor) releaseClaim(task, reason string) (releaseOut, error) {
+	var out releaseOut
+	err := a.callTool("release_claim", map[string]any{"task": task, "reason": reason}, &out)
+	return out, err
 }
 
 // ---------------------------------------------------------------------
