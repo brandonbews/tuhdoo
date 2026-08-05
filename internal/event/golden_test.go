@@ -56,6 +56,9 @@ func goldenEvents(t *testing.T) map[string]Event {
 			Priority: num(1),
 		}},
 		TypeClaimMade: {0x03, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", ClaimMade{}},
+		TypeClaimConfirmed: {0x09, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", ClaimConfirmed{
+			Claim: "01BX5ZZKBK1HHHHHHHHHHHHHHH",
+		}},
 		TypeClaimReleased: {0x04, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", ClaimReleased{
 			Reason: "context exhausted; see latest note for where work stopped",
 		}},

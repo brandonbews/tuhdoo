@@ -76,6 +76,14 @@ type Claim struct {
 	Machine string
 	Status  ClaimStatus
 	MadeAt  time.Time
+
+	// Confirmation is the claim.confirmed event ID that made this
+	// claim's verdict final (D6, 2026-08-04), empty while the verdict is
+	// only provisional. A confirmation settles the race, not liveness: a
+	// confirmed claim can still end (finish, release, lease expiry), and
+	// the empty/non-empty distinction is what lets replay tell a
+	// revocable provisional winner from an irrevocable refereed one.
+	Confirmation string
 }
 
 // Run is one attempt record (D5). Most runs come from run.finished

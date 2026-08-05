@@ -273,6 +273,53 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			c.Status = ClaimVoided
 		}
 
+	case event.TypeClaimConfirmed:
+		var p event.ClaimConfirmed
+		if err := unmarshal(e, &p); err != nil {
+			return err
+		}
+		c, ok := s.Claims[p.Claim]
+		if !ok {
+			return malformed("confirmation of unknown claim %s", p.Claim)
+		}
+		if c.Task != e.Task {
+			return malformed("confirmation on task %s names claim %s, which is on task %s",
+				e.Task, p.Claim, c.Task)
+		}
+		// D6 (2026-08-04): a confirmed claim wins its contest
+		// unconditionally. A contest is one continuous hold on the task —
+		// it opens when a claim takes the hold and closes when the hold
+		// ends (finish, release, lease expiry) — and a confirmation binds
+		// to one claim inside it, settling the race, not liveness: a
+		// confirmed claim can still end, after which the task returns to
+		// the pool and a NEW contest may legitimately mint a new
+		// confirmation. One confirmation per contest, not one per task
+		// forever.
+		switch h := holder[e.Task]; {
+		case h == c:
+			// The provisional winner was confirmed — the usual case. A
+			// duplicate confirmation keeps the earliest event ID.
+			if c.Confirmation == "" {
+				c.Confirmation = e.ID
+			}
+		case h != nil && h.Status == ClaimActive && h.Confirmation == "" && c.Status == ClaimVoided:
+			// The referee confirmed a claim the mint-time rule had
+			// voided: the confirmation beats the earlier-ULID
+			// unconfirmed holder, which stands down as the loser.
+			h.Status = ClaimVoided
+			c.Status = ClaimActive
+			c.Confirmation = e.ID
+			holder[e.Task] = c
+		default:
+			// Fail-safe determinism, never fail-stop: a second
+			// confirmation inside one contest (a corrupt ledger — the
+			// writers' invariant refuses to carry one) loses to the
+			// earlier confirmation, whose event sorted first and already
+			// holds; a confirmation for a claim whose hold has ended
+			// settles nothing — that contest is over. Both no-op
+			// identically on every replay.
+		}
+
 	case event.TypeClaimReleased:
 		var p event.ClaimReleased
 		if err := unmarshal(e, &p); err != nil {

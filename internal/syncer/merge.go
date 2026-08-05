@@ -1,6 +1,7 @@
 package syncer
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -27,7 +28,10 @@ import (
 //     on one side but present on the other comes back; for events that
 //     is correctness (append-only), for leases it is accepted junk — a
 //     resurrected lease only matters to an ACTIVE claim, and active
-//     claims never had their lease deleted.
+//     claims never had their lease deleted. One exception to the union
+//     (D6 writers' invariant, 2026-08-04): a one-sided claim.confirmed
+//     that competes with the other head's active confirmed claim is
+//     refused — see confirmGuard below.
 //   - leases/  : same path on both sides → the later expiry wins
 //     (a renewal must never be undone by an older copy).
 //   - views + everything else: decided by the view-format stamps — see
@@ -43,6 +47,11 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 	}
 
 	resolveOther, regen, err := s.viewsPolicy(ourTree, theirTree)
+	if err != nil {
+		return "", err
+	}
+
+	refused, err := s.confirmGuard(ourTree, theirTree)
 	if err != nil {
 		return "", err
 	}
@@ -71,6 +80,10 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 		}
 	}
 
+	for path := range refused {
+		delete(merged, path)
+	}
+
 	if regen {
 		if err := s.overlayViews(merged); err != nil {
 			return "", err
@@ -96,6 +109,137 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 		return "", fmt.Errorf("syncer: merge: %w", err)
 	}
 	return commit, nil
+}
+
+// confirmGuard enforces the D6 writers' invariant (2026-08-04) at the
+// merge chokepoint: the merged tree never carries a confirmation for a
+// task whose other head already shows a different active confirmed
+// claim. It returns the event paths to leave out of the union — always
+// one-sided claim.confirmed files, never settled history, so stored
+// bytes on any published head stand untouched (T3).
+//
+// Honest gates never trip this: a confirmation reaches a head only
+// after winning the remote's ref CAS, so competing confirmations cannot
+// both be remote-accepted — this guards against buggy or rogue writers.
+// When two confirmations do compete, the earliest event ULID keeps its
+// place and the later is refused — the same rule replay applies to a
+// corrupt ledger, so the merged tree and its replay can never disagree
+// about the winner, and both merge directions refuse identically.
+//
+// Determinism notes: each side's state is replayed at that side's own
+// latest event timestamp, never at the wall clock, so two machines
+// merging the same pair of heads compute the same refusals at any hour.
+// A side that cannot be decoded or replayed (fail-safe) skips the guard
+// — identically on every machine of this binary version, the same
+// posture as overlayViews; replay's earliest-confirmation rule still
+// resolves whatever the union then carries.
+func (s *Syncer) confirmGuard(ourTree, theirTree map[string]string) (map[string]bool, error) {
+	oursOnly, oursOK, err := s.oneSidedConfirmations(ourTree, theirTree)
+	if err != nil {
+		return nil, err
+	}
+	theirsOnly, theirsOK, err := s.oneSidedConfirmations(theirTree, ourTree)
+	if err != nil {
+		return nil, err
+	}
+	if !oursOK || !theirsOK {
+		s.logf("sync: merge: a head has undecodable events; confirmation guard skipped")
+		return nil, nil
+	}
+	if len(oursOnly) == 0 && len(theirsOnly) == 0 {
+		return nil, nil
+	}
+
+	ourState, errOurs := s.replayTreeFrozen(ourTree)
+	theirState, errTheirs := s.replayTreeFrozen(theirTree)
+	if errOurs != nil || errTheirs != nil {
+		s.logf("sync: merge: cannot replay a head (%v / %v); confirmation guard skipped", errOurs, errTheirs)
+		return nil, nil
+	}
+
+	refused := make(map[string]bool)
+	judge := func(confirmations []confirmation, other *core.State) {
+		for _, cf := range confirmations {
+			incumbent := other.ActiveClaim(cf.task)
+			if incumbent == nil || incumbent.Confirmation == "" || incumbent.ID == cf.claim {
+				continue
+			}
+			// Competing confirmations: the earlier event ULID wins. A
+			// one-sided loser is refused here; a one-sided winner keeps
+			// its place and the other side's later confirmation is
+			// refused by the symmetric pass (or, if it is settled shared
+			// history, left for replay's identical earliest-wins rule).
+			if cf.id > incumbent.Confirmation {
+				refused[cf.path] = true
+			}
+		}
+	}
+	judge(oursOnly, theirState)
+	judge(theirsOnly, ourState)
+	return refused, nil
+}
+
+// confirmation is one claim.confirmed event found in a tree.
+type confirmation struct {
+	path  string
+	id    string // the confirmation event's ULID
+	task  string
+	claim string // the claim it confirms
+}
+
+// oneSidedConfirmations lists the claim.confirmed events present in own
+// but absent from other. ok is false when own carries an event this
+// binary cannot decode — the caller skips the guard rather than judging
+// a head it cannot read (fail-safe posture, deterministic per binary).
+func (s *Syncer) oneSidedConfirmations(own, other map[string]string) ([]confirmation, bool, error) {
+	var out []confirmation
+	for path, oid := range own {
+		if !strings.HasPrefix(path, "events/") {
+			continue
+		}
+		if _, shared := other[path]; shared {
+			continue
+		}
+		data, err := s.git.CatFile(oid)
+		if err != nil {
+			return nil, false, fmt.Errorf("syncer: merge: %w", err)
+		}
+		e, err := event.Decode(data)
+		if err != nil {
+			return nil, false, nil
+		}
+		if e.Type != event.TypeClaimConfirmed {
+			continue
+		}
+		var p event.ClaimConfirmed
+		if err := json.Unmarshal(e.Data, &p); err != nil {
+			return nil, false, nil
+		}
+		out = append(out, confirmation{path: path, id: e.ID, task: e.Task, claim: p.Claim})
+	}
+	return out, true, nil
+}
+
+// replayTreeFrozen replays a tree at a clock frozen to the tree's own
+// latest event timestamp, so the verdict is a function of the tree
+// alone — merges must be deterministic across machines and hours, and
+// lease expiry is the one place replay consults Now.
+func (s *Syncer) replayTreeFrozen(tree map[string]string) (*core.State, error) {
+	frozen := time.Time{}
+	for path := range tree {
+		if !strings.HasPrefix(path, "events/") {
+			continue
+		}
+		id := strings.TrimSuffix(path[strings.LastIndex(path, "/")+1:], ".json")
+		when, err := event.IDTime(id)
+		if err != nil {
+			continue // undecodable name; the replay below fails honestly if it matters
+		}
+		if when.After(frozen) {
+			frozen = when
+		}
+	}
+	return s.replayTreeAt(tree, frozen)
 }
 
 // viewsPolicy reads both sides' view-format stamps and decides two
@@ -168,9 +312,15 @@ func (s *Syncer) overlayViews(merged map[string]string) error {
 }
 
 // replayTree loads events and leases straight out of a tree map and
-// replays them. Used on merged trees that exist only in the object
-// database (no ref points at them yet).
+// replays them at the current instant. Used on merged trees that exist
+// only in the object database (no ref points at them yet).
 func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
+	return s.replayTreeAt(tree, s.now())
+}
+
+// replayTreeAt is replayTree with an explicit instant, for callers that
+// need the verdict to be a pure function of the tree (confirmGuard).
+func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.State, error) {
 	var events []event.Event
 	leases := make(map[string]time.Time)
 	for path, oid := range tree {
@@ -198,7 +348,7 @@ func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
 			leases[claimID] = expires
 		}
 	}
-	return s.replay.Replay(core.Input{Events: events, Leases: leases, Now: s.now()})
+	return s.replay.Replay(core.Input{Events: events, Leases: leases, Now: now})
 }
 
 func treeMap(g gitx.Git, rev string) (map[string]string, error) {

@@ -15,6 +15,7 @@ const (
 	TypeTaskCreated        = "task.created"
 	TypeTaskUpdated        = "task.updated"
 	TypeClaimMade          = "claim.made"
+	TypeClaimConfirmed     = "claim.confirmed"
 	TypeClaimReleased      = "claim.released"
 	TypeRunFinished        = "run.finished"
 	TypeEscalationRaised   = "escalation.raised"
@@ -33,10 +34,14 @@ const (
 // task.updated as malformed rather than as needing an upgrade; at v2
 // they instead fail safe with "upgrade tuhdoo" (T3 read-only mode). The
 // v1→v2 upcasters are the identity (internal/core/upcast.go).
+// claim.confirmed is new on 2026-08-04 (D6 confirmation gate): a new
+// type, not a version bump — additive-first (T3). Older binaries meeting
+// one enter read-only fail-safe with the "upgrade tuhdoo" message.
 var Versions = map[string]int{
 	TypeTaskCreated:        2,
 	TypeTaskUpdated:        2,
 	TypeClaimMade:          1,
+	TypeClaimConfirmed:     1,
 	TypeClaimReleased:      1,
 	TypeRunFinished:        1,
 	TypeEscalationRaised:   1,
@@ -98,6 +103,16 @@ type TaskUpdated struct {
 // ClaimMade is the payload of "claim.made". The claimed task and the
 // claiming principal live on the envelope; v1 has no extra payload.
 type ClaimMade struct {
+	Unknown map[string]json.RawMessage `json:"-"`
+}
+
+// ClaimConfirmed is the payload of "claim.confirmed" (D6, 2026-08-04):
+// the referee's irrevocable verdict, won through the remote's ref
+// compare-and-swap. Claim names the claim.made event it confirms; the
+// task, confirming actor, and machine live on the envelope as usual.
+type ClaimConfirmed struct {
+	Claim string `json:"claim"`
+
 	Unknown map[string]json.RawMessage `json:"-"`
 }
 
@@ -206,6 +221,23 @@ func (p *ClaimMade) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*p = ClaimMade(a)
+	p.Unknown = unknown
+	return nil
+}
+
+func (p ClaimConfirmed) MarshalJSON() ([]byte, error) {
+	type alias ClaimConfirmed
+	return marshalWithUnknown(alias(p), p.Unknown)
+}
+
+func (p *ClaimConfirmed) UnmarshalJSON(b []byte) error {
+	type alias ClaimConfirmed
+	var a alias
+	unknown, err := splitUnknown(b, &a)
+	if err != nil {
+		return err
+	}
+	*p = ClaimConfirmed(a)
 	p.Unknown = unknown
 	return nil
 }
