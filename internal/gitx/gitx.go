@@ -7,7 +7,10 @@
 // tree even by accident.
 package gitx
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 // TreeEntry is one file inside a tree: a slash-separated path (never
 // starting with "/") and the object ID of its blob. Used both to build
@@ -88,6 +91,14 @@ type Git interface {
 	// rewinds (no-force-push law), so a non-fast-forward fetch is
 	// corruption and must fail loudly.
 	Fetch(remote, refspec string) error
+
+	// FetchTimeout is Fetch bounded by a wall-clock deadline: the git
+	// subprocess is killed once timeout elapses. Startup paths use it so
+	// an unreachable remote cannot hang the daemon — git's own timeout
+	// knobs are transport-specific and unreliable. The sync loop keeps
+	// the unbounded Fetch: there, a slow first transfer of a large
+	// branch is legitimate work, not a hang.
+	FetchTimeout(remote, refspec string, timeout time.Duration) error
 
 	// IsAncestor reports whether commit a is an ancestor of (or equal
 	// to) commit b.
