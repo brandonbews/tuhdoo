@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T650NVYK`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `build` `npm` `ci`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -21,4 +21,9 @@ Constraints: WORKFLOW LAW — the release.yml diff executes unattended with CI c
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:47 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-nvyk/release-plumbing`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/41>
+
+Landed via PR #41 (squash-merged, checks green). smoke.sh now asserts the tool surface by named list against the twelve registrations (missing/unexpected tools fail with names; verified by deleting release_claim locally). release.yml npm job gained setup-go + a smoke step BEFORE npm publish — a tag can no longer publish a package whose smoke test fails; WORKFLOW CHANGE flagged in the PR body for Brandon eyes-on review per law, two steps only, pinned SHAs match existing usage. Makefile stamps -X main.version=$(git describe --tags --always --dirty) so make build binaries report a real version. v0.2.0 will be the first release through the gate.
