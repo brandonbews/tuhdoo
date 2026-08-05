@@ -5,7 +5,7 @@
 - **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `harness` `d6`
-- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (done)
+- **Depends on:** [`tuh-n777`](tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) (done), [`tuh-76wt`](tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) (done), [`tuh-d9bk`](tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) (open)
 - **Created:** 2026-08-04 08:01 UTC by `brandon/claude-code-1`
 
 ## Description
