@@ -790,18 +790,20 @@ func TestTopDetailScrollClamps(t *testing.T) {
 }
 
 // Edge markers: a row whose task has parents or dependencies says so
-// inline; edge-free rows stay clean. Same renderer in both modes.
+// on its dim meta line (two-line rows, 2026-08-05); edge-free rows
+// stay one line — the "no labels, no edges" signal. Same renderer in
+// both modes.
 func TestTopEdgeMarkers(t *testing.T) {
 	for name, m := range map[string]topModel{
 		"steer": newTopModel(newFakeSteering()),
 		"watch": newWatchModel(),
 	} {
 		v := m.View()
-		if !strings.Contains(v, "write the parser  · in t-epic · 1 dep") {
-			t.Errorf("%s: parser row missing edge markers; view:\n%s", name, v)
+		if !strings.Contains(v, "write the parser\n              in t-epic · 1 dep") {
+			t.Errorf("%s: parser row missing its edge meta line; view:\n%s", name, v)
 		}
-		if strings.Contains(v, "sweep the floor  ·") {
-			t.Errorf("%s: edge-free row grew a marker; view:\n%s", name, v)
+		if !strings.Contains(v, "sweep the floor\n\n") {
+			t.Errorf("%s: edge-free row grew a second line; view:\n%s", name, v)
 		}
 	}
 }
@@ -891,8 +893,9 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s)}
 	v := m.View()
 	for _, want := range []string{
-		"t-rqjm  p0  its dependency  · in t-d83w", // ready row + parent marker
-		"t-d83w      the long one",                // blocked row: blank badge cell
+		"▌ t-rqjm  p0  its dependency", // ready row, selected
+		"▌             in t-d83w",      // its parent marker on the meta line, barred too
+		"t-d83w      the long one",     // blocked row: blank badge cell
 		// The waiting: reason annotates its dep with status and title.
 		"waiting: depends on t-rqjm (open — its dependency)",
 	} {
@@ -2827,12 +2830,18 @@ func TestTopHistoryOpensFromBothPanes(t *testing.T) {
 		v := m.View()
 		for _, wantS := range []string{
 			"DONE (3)", "CANCELLED (2)",
-			// Ready-row anatomy plus the dim close stamp and closing actor.
-			"▌ t-ship      ship the tui  [tui]  · 2026-07-30 · brandon/claude-code-1",
-			"  t-mgr8      migrate the backlog  · 1 dep  · 2026-07-29 · brandon",
-			"  t-chor      old chore  · 2026-07-28 · brandon/impl-1",
-			"  t-zzzz      zombie idea  · 2026-07-31 · brandon/a2",
-			"  t-drop      drop the wiki  · 2026-07-27 · brandon",
+			// Two-line anatomy (grill 2026-08-05): title line, then the
+			// dim meta line with the close stamp · closing actor tail.
+			"▌ t-ship      ship the tui",
+			"▌             [tui] · 2026-07-30 · brandon/claude-code-1",
+			"  t-mgr8      migrate the backlog",
+			"              1 dep · 2026-07-29 · brandon",
+			"  t-chor      old chore",
+			"              2026-07-28 · brandon/impl-1",
+			"  t-zzzz      zombie idea",
+			"              2026-07-31 · brandon/a2",
+			"  t-drop      drop the wiki",
+			"              2026-07-27 · brandon",
 			"↑/↓ (j/k) move · enter open · esc back · q quit",
 		} {
 			if !strings.Contains(v, wantS) {
