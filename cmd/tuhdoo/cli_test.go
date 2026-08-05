@@ -217,6 +217,8 @@ func TestInitRemoteless(t *testing.T) {
 		t.Fatalf("init exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, "local-only", "normal state", branchName(), "branches-ignore")
+	// The universal MCP harness snippet (002 T4) rides the same output.
+	mustContain(t, out, `"mcpServers"`, `"command": "tuhdoo"`, `"args": ["mcp"]`)
 	if strings.Contains(strings.ToLower(out), "error") {
 		t.Errorf("init output should not mention errors:\n%s", out)
 	}
@@ -230,6 +232,42 @@ func TestInitRemoteless(t *testing.T) {
 	head2 := strings.TrimSpace(runGit(t, repo, "rev-parse", "--verify", "refs/heads/tuhdoo"))
 	if head1 != head2 {
 		t.Errorf("init is not idempotent: head moved %s -> %s", head1, head2)
+	}
+}
+
+// init takes no flags and no arguments: anything extra is rejected
+// loudly instead of silently ignored, and --as gets its own explanation
+// — init writes no events, so there is no principal to act as.
+func TestInitRejectsArgs(t *testing.T) {
+	repo := newRepo(t)
+
+	out, code := runCLI(t, repo, "init", "--force")
+	if code == 0 {
+		t.Fatalf("init --force exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, `unexpected argument "--force"`, "usage: tuhdoo init")
+
+	out, code = runCLI(t, repo, "init", "extra")
+	if code == 0 {
+		t.Fatalf("init extra exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, `unexpected argument "extra"`, "usage: tuhdoo init")
+
+	for _, args := range [][]string{
+		{"init", "--as", "brandon"},
+		{"init", "--as=brandon"},
+	} {
+		out, code = runCLI(t, repo, args...)
+		if code == 0 {
+			t.Fatalf("%v exited 0; output:\n%s", args, out)
+		}
+		mustContain(t, out, "init writes no events", "user.email",
+			"tuhdoo.principal", "usage: tuhdoo init")
+	}
+
+	// Rejection happens before anything touches the repo: no daemon.
+	if _, err := os.Stat(filepath.Join(repo, ".git", "tuhdoo", "daemon.json")); !os.IsNotExist(err) {
+		t.Errorf("rejected init still spawned a daemon (stat err: %v)", err)
 	}
 }
 

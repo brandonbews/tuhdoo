@@ -33,7 +33,7 @@ func run(args []string) int {
 	case "daemon":
 		return runDaemon()
 	case "init":
-		return runInit()
+		return runInit(args[1:])
 	case "status":
 		return runStatus()
 	case "backlog":
