@@ -3,8 +3,8 @@ package main
 // The interactive TUI (002 T7, revised by Cycle 4): the single live
 // human surface. Reads poll the daemon on a tick; the steering writes
 // (answer an escalation, reprioritize, cancel, capture, edit
-// title/description) go through the daemon HTTP API only, stamped with
-// the acting human principal.
+// title/description/labels) go through the daemon HTTP API only,
+// stamped with the acting human principal.
 // Watch mode is the same screen disarmed: steering keys dead, fixed at
 // launch — no keypress can re-arm a disarmed pane.
 
@@ -70,6 +70,7 @@ type steeringAPI interface {
 	captureTask(title string) error
 	setTitle(task, title string) error
 	setDescription(task, description string) error
+	setLabels(task string, labels []string) error
 }
 
 // httpSteering implements steeringAPI over the daemon's JSON HTTP API,
@@ -107,6 +108,14 @@ func (s httpSteering) setTitle(task, title string) error {
 
 func (s httpSteering) setDescription(task, description string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"description": description})
+}
+
+// setLabels writes the full replacement list — the same PATCH, and so
+// the same task.updated ledger event, as `tuhdoo update --labels`
+// (labels editable, 2026-08-05). An empty list is a legitimate clear;
+// no value is weight-bearing to the platform (D5 label agnosticism).
+func (s httpSteering) setLabels(task string, labels []string) error {
+	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"labels": labels})
 }
 
 // captureTask is TUI quick-capture (2026-07-31): a title-only inbox
@@ -236,8 +245,9 @@ const (
 	modeConfirmCancel
 	modeCapture // quick-capture: one line of title, straight to inbox
 	modeDetail
-	modeEditTitle // task-view edits (2026-08-01): the widget prefilled
-	modeEditDesc  // with the current value; unchanged submit writes nothing
+	modeEditTitle  // task-view edits (2026-08-01): the widget prefilled
+	modeEditDesc   // with the current value; unchanged submit writes nothing
+	modeEditLabels // labels as one comma-joined line (2026-08-05), same rules
 )
 
 // actionMsg is the result of one steering write.
@@ -622,12 +632,14 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// The task view's focusable stops, in render order. Bars and read-only
-// meta lines are never stops; labels editing is a separate task
-// (tuh-01KYXVSRVK2GFW439G1T0GBQKM).
+// The task view's focusable stops, in render order: title, the
+// priority and labels meta lines, each open escalation, then the
+// description body. Bars and the read-only meta lines (id, status,
+// edges, created) are never stops.
 const (
 	stopTitle       = "title"
 	stopPriority    = "priority"
+	stopLabels      = "labels"
 	stopEscalation  = "escalation"
 	stopDescription = "description"
 )
@@ -638,13 +650,13 @@ type detailStop struct {
 	esc  escalationJSON // set when kind == stopEscalation
 }
 
-// detailStops is the focus ring: title, the priority meta line, each
-// open escalation, then the description body — the same order they
-// render in, which is what lets detailLines tag lines by position.
-// Empty in watch mode: the disarmed pane stays fully read-only, so it
-// has no focus to act on. A terminal task loses the priority stop
-// (history view, 2026-08-02): its editor is the same reprioritize
-// write the dead p key refuses.
+// detailStops is the focus ring: title, the priority and labels meta
+// lines, each open escalation, then the description body — the same
+// order they render in, which is what lets detailLines tag lines by
+// position. Empty in watch mode: the disarmed pane stays fully
+// read-only, so it has no focus to act on. A terminal task loses the
+// priority and labels stops (history view, 2026-08-02; labels
+// editable, 2026-08-05): a closed record is browsed, not steered.
 func (m topModel) detailStops() []detailStop {
 	if !m.armed || m.snap == nil {
 		return nil
@@ -655,7 +667,7 @@ func (m topModel) detailStops() []detailStop {
 	}
 	stops := []detailStop{{kind: stopTitle}}
 	if !terminalStatus(h.Task.Status) {
-		stops = append(stops, detailStop{kind: stopPriority})
+		stops = append(stops, detailStop{kind: stopPriority}, detailStop{kind: stopLabels})
 	}
 	for _, e := range m.detailEscalations() {
 		stops = append(stops, detailStop{kind: stopEscalation, esc: e})
@@ -685,6 +697,13 @@ func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
 	case stopPriority:
 		m.mode, m.back = modePriority, modeDetail
 		m.target, m.input, m.status = topRow{kind: rowTask, task: t}, textInput{}, ""
+	case stopLabels:
+		// One comma-joined line ("tui, design"): the same list syntax as
+		// `tuhdoo update --labels`, edited in place. A comma inside a
+		// label is unrepresentable on every surface — accepted.
+		labels := strings.Join(m.snap.tasks[t.ID].Task.Labels, ", ")
+		m.mode, m.back = modeEditLabels, modeDetail
+		m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(labels, false), labels, ""
 	case stopDescription:
 		// Multi-line in the shared widget itself, never a separate
 		// editor or $EDITOR (Brandon, 2026-07-31).
@@ -819,6 +838,30 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			}
 			return actionMsg{desc: "updated title of " + event.ShortID(target.task.ID)}
 		}
+	case modeEditLabels:
+		// The raw editWas guard first, like every edit mode; then the
+		// semantic one: parse with splitList (split on commas, trim, drop
+		// empties — no dedup, no case-folding: store what was typed) and
+		// compare element-wise to the task's current list, so respacing
+		// is a no-op while reordering is a real edit. An empty submit
+		// clears every label — the CLI's explicit-empty --labels
+		// precedent.
+		if input == m.editWas {
+			m.mode, m.input = m.back, textInput{}
+			return m, nil
+		}
+		labels := splitList(input)
+		if equalStrings(labels, m.snap.tasks[target.task.ID].Task.Labels) {
+			m.mode, m.input = m.back, textInput{}
+			return m, nil
+		}
+		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
+		return m, func() tea.Msg {
+			if err := api.setLabels(target.task.ID, labels); err != nil {
+				return actionMsg{err: err}
+			}
+			return actionMsg{desc: "updated labels of " + event.ShortID(target.task.ID)}
+		}
 	case modeEditDesc:
 		// The description is kept byte-for-byte as typed — an editor
 		// never trims — and emptying it is a legitimate clear, exactly
@@ -837,6 +880,21 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// equalStrings is element-wise slice equality — the "unchanged" test
+// for a parsed labels list, where order matters (reordering is a real
+// edit; respacing is not).
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // ---- rendering (pure over model state) ----
@@ -946,9 +1004,18 @@ func (m topModel) detailLines() []detailLine {
 		prioStop = nextStop() // terminal tasks have no priority stop
 	}
 	field(prioStop, "priority", strconv.Itoa(t.Priority))
-	if len(t.Labels) > 0 {
-		field(-1, "labels", strings.Join(t.Labels, ", "))
+	// The labels line always renders — dim none placeholder when empty,
+	// the description-body pattern — armed, watch, and terminal alike
+	// (labels editable, 2026-08-05): one uniform rule.
+	labelsStop := -1
+	if !terminalStatus(t.Status) {
+		labelsStop = nextStop() // terminal tasks: rendered, never a stop
 	}
+	labels := sgr(col, col.dim, "none")
+	if len(t.Labels) > 0 {
+		labels = strings.Join(t.Labels, ", ")
+	}
+	field(labelsStop, "labels", labels)
 	if len(t.Parents) > 0 {
 		field(-1, "parents", joinRefs(t.Parents, m.snap.taskRef))
 	}
@@ -1728,6 +1795,9 @@ func (m topModel) inputFooter() string {
 		return m.input.view(col, "title "+event.ShortID(m.target.task.ID), "saves", m.width)
 	case modeEditDesc:
 		label := fmt.Sprintf("description %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
+		return m.input.view(col, label, "saves", m.width)
+	case modeEditLabels:
+		label := fmt.Sprintf("labels %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
 		return m.input.view(col, label, "saves", m.width)
 	}
 	return ""

@@ -167,7 +167,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 
 	// ---- edit title and description from the task view ----
 	// The focus ring (2026-08-02): a plain open focuses the title, so
-	// enter edits it (single-line, prefilled); two stops down the ring
+	// enter edits it (single-line, prefilled); three stops down the ring
 	// is the description (multi-line, ctrl+s submits). Both go through
 	// the same PATCH — and task.updated ledger event — as `tuhdoo
 	// update`, so a restart replays the edits.
@@ -184,7 +184,8 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	m, _ = press(t, m, keyOf(tea.KeyCtrlU)) // cursor at the end: clears the prefill
 	m, cmd = press(t, m, append(runes("right idea"), keyOf(tea.KeyEnter))...)
 	m = act(t, m, cmd)
-	m, _ = press(t, m, // ring: priority, then the description
+	m, _ = press(t, m, // ring: priority, labels, then the description
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		keyOf(tea.KeyEnter))

@@ -113,9 +113,10 @@ type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
 	cancelled  []string
-	captured   []string          // quick-capture titles, in order
-	titles     map[string]string // task-view title edits
-	descs      map[string]string // task-view description edits
+	captured   []string            // quick-capture titles, in order
+	titles     map[string]string   // task-view title edits
+	descs      map[string]string   // task-view description edits
+	labels     map[string][]string // task-view label edits (full replacement)
 	err        error
 }
 
@@ -125,6 +126,7 @@ func newFakeSteering() *fakeSteering {
 		priorities: map[string]int{},
 		titles:     map[string]string{},
 		descs:      map[string]string{},
+		labels:     map[string][]string{},
 	}
 }
 
@@ -173,6 +175,14 @@ func (f *fakeSteering) setDescription(task, description string) error {
 		return f.err
 	}
 	f.descs[task] = description
+	return nil
+}
+
+func (f *fakeSteering) setLabels(task string, labels []string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.labels[task] = labels
 	return nil
 }
 
@@ -361,8 +371,8 @@ func TestTopAnswerFlow(t *testing.T) {
 	if m.mode != modeDetail || m.detailID != "t-lic" || cmd != nil {
 		t.Fatalf("enter on an escalation row: mode %d detail %q, want the task view of t-lic", m.mode, m.detailID)
 	}
-	if m.detailFocus != 2 {
-		t.Fatalf("detailFocus = %d, want the escalation stop preselected at 2 (after title and priority)", m.detailFocus)
+	if m.detailFocus != 3 {
+		t.Fatalf("detailFocus = %d, want the escalation stop preselected at 3 (after title, priority, and labels)", m.detailFocus)
 	}
 	v := m.View()
 	for _, want := range []string{
@@ -1211,8 +1221,10 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
 	}
-	// Two stops down the ring — past priority — is the escalation.
+	// Three stops down the ring — past priority and labels — is the
+	// escalation.
 	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if v := m.View(); !strings.Contains(v, "▌ !   Which license?") {
@@ -1502,12 +1514,13 @@ func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
 // enter on the focused description stop edits it in the widget's
 // multi-line mode — its first real consumer: prefilled, enter inserts
 // a newline, ctrl+s submits through the update plumbing. With no open
-// escalations the description is two ring stops below the title.
+// escalations the description is three ring stops below the title.
 func TestTopDetailEditDescriptionFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // priority
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // labels
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // description
 		keyOf(tea.KeyEnter))
 	if m.mode != modeEditDesc {
@@ -1575,6 +1588,7 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	m, cmd := press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		keyOf(tea.KeyEnter),
 		keyOf(tea.KeyCtrlS))
 	if m.mode != modeDetail || cmd != nil || len(fake.descs) != 0 {
@@ -1593,6 +1607,7 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	m = openDetail(t, newTopModel(fake), "t-pars")
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if v := m.View(); !strings.Contains(v, "▌ none") {
 		t.Fatalf("empty-description placeholder not focused; view:\n%s", v)
@@ -1610,6 +1625,138 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	}
 	if got := fake.descs["t-pars"]; got != "Parse the event log." {
 		t.Errorf("first description written as %q", got)
+	}
+}
+
+// enter on the focused labels stop edits the list as one comma-joined
+// line (labels editable, 2026-08-05): prefilled "tui, design", parsed
+// with splitList on submit — split on commas, trim, drop empties, no
+// dedup, no case-folding: what was typed is what is stored.
+func TestTopDetailEditLabelsFlow(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake)
+	h := m.snap.tasks["t-flak"]
+	h.Task.Labels = []string{"tui", "design"}
+	m.snap.tasks["t-flak"] = h
+	m = openDetail(t, m, "t-flak")
+	// The meta line renders the stored list, comma-joined.
+	if v := m.View(); !strings.Contains(v, "labels      tui, design") {
+		t.Fatalf("labels line missing; view:\n%s", v)
+	}
+	// Two stops down the ring — past priority — is labels.
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
+	if m.mode != modeEditLabels {
+		t.Fatalf("enter on the focused labels: mode %d, want modeEditLabels", m.mode)
+	}
+	if got := m.input.String(); got != "tui, design" || m.input.multiline {
+		t.Fatalf("labels editor opened with %q (multiline %v), want the comma-joined list single-line",
+			got, m.input.multiline)
+	}
+	v := m.View()
+	for _, want := range []string{
+		"labels t-flak (investigate the flake)",
+		"> tui, design█",
+		"enter saves · esc cancels",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("labels editor missing %q; view:\n%s", want, v)
+		}
+	}
+	// A real edit — append one label, sloppy spacing — writes the parsed
+	// list: split on commas, trimmed, order kept.
+	m, cmd := press(t, m, append(runes(",  ops"), keyOf(tea.KeyEnter))...)
+	if m.mode != modeDetail || m.detailID != "t-flak" {
+		t.Errorf("submit did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	if cmd == nil {
+		t.Fatal("submit produced no command")
+	}
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.labels["t-flak"]; !equalStrings(got, []string{"tui", "design", "ops"}) {
+		t.Errorf("labels written as %v, want [tui design ops]", got)
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	if !strings.Contains(m.status, "updated labels of t-flak") {
+		t.Errorf("status = %q, want the labels confirmation", m.status)
+	}
+	// The refresh lands the edit: the meta line re-renders the new list.
+	fresh := topSnapshot()
+	fh := fresh.tasks["t-flak"]
+	fh.Task.Labels = []string{"tui", "design", "ops"}
+	fresh.tasks["t-flak"] = fh
+	mm, _ = m.Update(snapMsg{snap: fresh})
+	m = mm.(topModel)
+	if v := m.View(); !strings.Contains(v, "labels      tui, design, ops") {
+		t.Errorf("edited labels missing after refresh; view:\n%s", v)
+	}
+}
+
+// The labels editor's guard rails (labels editable, 2026-08-05): an
+// unchanged submit writes nothing (the raw editWas guard), a respaced
+// submit parses element-wise equal and writes nothing, esc abandons
+// without a write, an emptied submit is a real write that clears every
+// label (the CLI's explicit-empty --labels precedent), and reordering
+// is a real edit — the comparison is order-sensitive.
+func TestTopDetailEditLabelsUnchangedRespacedClearAndEsc(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake)
+	h := m.snap.tasks["t-flak"]
+	h.Task.Labels = []string{"tui", "design"}
+	m.snap.tasks["t-flak"] = h
+	m = openDetail(t, m, "t-flak")
+	// Unchanged submit: straight back to the detail, no write. (The
+	// submit keeps labels focused, so enter alone reopens the editor
+	// for the cases below.)
+	m, cmd := press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter),
+		keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || cmd != nil || len(fake.labels) != 0 {
+		t.Fatalf("unchanged submit: mode %d cmd %v labels %v, want a silent close", m.mode, cmd, fake.labels)
+	}
+	// Respaced: different bytes, the same parsed list — no write.
+	m, cmd = press(t, m, append([]tea.KeyMsg{keyOf(tea.KeyEnter), keyOf(tea.KeyCtrlU)},
+		append(runes("tui,design"), keyOf(tea.KeyEnter))...)...)
+	if m.mode != modeDetail || cmd != nil || len(fake.labels) != 0 {
+		t.Fatalf("respaced submit: mode %d cmd %v labels %v, want a silent close", m.mode, cmd, fake.labels)
+	}
+	// esc abandons a real edit without a write.
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	m, _ = press(t, m, append(runes("junk"), keyOf(tea.KeyEsc))...)
+	if m.mode != modeDetail || len(fake.labels) != 0 {
+		t.Fatalf("esc did not abandon the edit: mode %d labels %v", m.mode, fake.labels)
+	}
+	// An emptied submit clears: a real write of the empty list.
+	m, cmd = press(t, m, keyOf(tea.KeyEnter), keyOf(tea.KeyCtrlU), keyOf(tea.KeyEnter))
+	if cmd == nil {
+		t.Fatal("empty submit produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got, ok := fake.labels["t-flak"]; !ok || len(got) != 0 {
+		t.Errorf("empty submit wrote %v (present %v), want the explicit empty list", got, ok)
+	}
+	// Reordering the same two labels is a real edit. (The snapshot has
+	// not refreshed, so the editor still prefills "tui, design".)
+	m, cmd = press(t, m, append([]tea.KeyMsg{keyOf(tea.KeyEnter), keyOf(tea.KeyCtrlU)},
+		append(runes("design, tui"), keyOf(tea.KeyEnter))...)...)
+	if cmd == nil {
+		t.Fatal("reorder submit produced no command")
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	if got := fake.labels["t-flak"]; !equalStrings(got, []string{"design", "tui"}) {
+		t.Errorf("reorder written as %v, want [design tui]", got)
 	}
 }
 
@@ -1644,7 +1791,7 @@ func multiEscSnapshot() *snapshot {
 // The focus/scroll rule over the full ring: j/k move focus when a
 // further stop exists in that direction — scrolling just enough to
 // reveal it — and scroll one line otherwise. Traversal order is render
-// order: title, priority, each open escalation, description.
+// order: title, priority, labels, each open escalation, description.
 func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 	s := multiEscSnapshot()
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
@@ -1667,7 +1814,8 @@ func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 	// previous stop hands the bar off.
 	walk := []struct{ now, previous string }{
 		{"▌ priority    0", "▌ t-two — twice escalated"},
-		{"▌ !   First question?", "▌ priority    0"},
+		{"▌ labels      none", "▌ priority    0"},
+		{"▌ !   First question?", "▌ labels      none"},
 		{"▌     Second question?", "▌ !   First question?"},
 		{"▌ A line of description.", "▌     Second question?"},
 	}
@@ -1692,7 +1840,7 @@ func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 		t.Fatalf("enter on the second escalation: mode %d target %q, want modeAnswer 01E2", m.mode, m.target.esc.ID)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	if m.mode != modeDetail || m.detailFocus != 3 {
+	if m.mode != modeDetail || m.detailFocus != 4 {
 		t.Fatalf("esc lost the detail focus: mode %d focus %d", m.mode, m.detailFocus)
 	}
 	// j below the description — the last stop — line-scrolls.
@@ -1700,12 +1848,12 @@ func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // back to the description
 	before := m.detailScroll
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
-	if m.detailFocus != 4 || m.detailScroll != before+1 {
-		t.Errorf("j at the last stop: focus %d scroll %d, want 4 %d (line-scroll fallback)",
+	if m.detailFocus != 5 || m.detailScroll != before+1 {
+		t.Errorf("j at the last stop: focus %d scroll %d, want 5 %d (line-scroll fallback)",
 			m.detailFocus, m.detailScroll, before+1)
 	}
 	// k walks back to the title, revealing it at the top…
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 	}
 	if m.detailFocus != 0 || m.detailScroll != 0 {
@@ -1746,6 +1894,17 @@ func TestTopDetailEnterOpensEditorPerStop(t *testing.T) {
 	}
 	if v := m.View(); !strings.Contains(v, "priority t-two (twice escalated)") {
 		t.Errorf("priority prompt does not name the viewed task; view:\n%s", v)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Labels: single-line, prefilled with the comma-joined list — empty
+	// here, t-two has none (prefill with values: TestTopDetailEditLabelsFlow).
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modeEditLabels || m.input.String() != "" || m.input.multiline {
+		t.Fatalf("labels stop: mode %d input %q multiline %v, want the empty single-line editor",
+			m.mode, m.input, m.input.multiline)
+	}
+	if v := m.View(); !strings.Contains(v, "labels t-two (twice escalated)") {
+		t.Errorf("labels prompt does not name the viewed task; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
 	// Each escalation: answer entry on its own question.
@@ -1795,6 +1954,7 @@ func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
 	// Focus the description: every line of the block — continuations and
 	// the blank paragraph separator included — carries the gutter.
 	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	body = m.detailBody()
@@ -1855,8 +2015,8 @@ func TestTopEnterOnNeedsInputPreselectsThatEscalation(t *testing.T) {
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // the second Needs Input row
 		keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-two" || m.detailFocus != 3 {
-		t.Fatalf("enter on the second Needs Input row: mode %d detail %q focus %d, want t-two with the second escalation stop (3) focused",
+	if m.mode != modeDetail || m.detailID != "t-two" || m.detailFocus != 4 {
+		t.Fatalf("enter on the second Needs Input row: mode %d detail %q focus %d, want t-two with the second escalation stop (4) focused",
 			m.mode, m.detailID, m.detailFocus)
 	}
 	body := strings.Join(m.detailBody(), "\n")
@@ -1935,13 +2095,13 @@ func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // task view, first question selected
 	y := screenLineOf(t, m, "Second question?")
 	m, cmd := mouseTo(t, m, clickAt(0, y))
-	if m.mode != modeDetail || m.detailFocus != 3 || cmd != nil {
+	if m.mode != modeDetail || m.detailFocus != 4 || cmd != nil {
 		t.Fatalf("click on the unselected question: mode %d focus %d cmd %v, want selection moved",
 			m.mode, m.detailFocus, cmd)
 	}
 	// Chrome — the section bar — hits nothing.
 	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "NEEDS INPUT (2)")))
-	if m2.mode != modeDetail || m2.detailFocus != 3 {
+	if m2.mode != modeDetail || m2.detailFocus != 4 {
 		t.Errorf("click on the section bar: mode %d focus %d, want unchanged", m2.mode, m2.detailFocus)
 	}
 	// Click again: the selected question opens answer entry.
@@ -1963,7 +2123,7 @@ func TestTopDetailClickFieldStops(t *testing.T) {
 	// Click the description body: selection moves off the title.
 	y := screenLineOf(t, m, "The parser test flakes on CI.")
 	m, cmd := mouseTo(t, m, clickAt(0, y))
-	if m.mode != modeDetail || m.detailFocus != 2 || cmd != nil {
+	if m.mode != modeDetail || m.detailFocus != 3 || cmd != nil {
 		t.Fatalf("click on the description: mode %d focus %d cmd %v, want the description stop selected",
 			m.mode, m.detailFocus, cmd)
 	}
@@ -1979,6 +2139,13 @@ func TestTopDetailClickFieldStops(t *testing.T) {
 	m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
 	if m.mode != modePriority || m.target.task.ID != "t-flak" {
 		t.Fatalf("double-click on priority: mode %d target %q, want modePriority on t-flak", m.mode, m.target.task.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// …and on the labels meta line.
+	y = screenLineOf(t, m, "labels")
+	m, _ = mouseTo(t, m, clickAt(0, y), clickAt(0, y))
+	if m.mode != modeEditLabels || m.target.task.ID != "t-flak" {
+		t.Fatalf("double-click on labels: mode %d target %q, want modeEditLabels on t-flak", m.mode, m.target.task.ID)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
 	y = screenLineOf(t, m, "investigate the flake")
@@ -2029,6 +2196,11 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 	// selectable, and its bar carries no steering hint.
 	if !strings.Contains(v, "NEEDS INPUT (1)") || !strings.Contains(v, "Which license?") {
 		t.Errorf("open escalation missing from watch detail; view:\n%s", v)
+	}
+	// The labels line renders here too — one uniform rule (labels
+	// editable, 2026-08-05) — read-only like everything else.
+	if !strings.Contains(v, "labels      none") {
+		t.Errorf("watch detail missing the labels placeholder line; view:\n%s", v)
 	}
 	if !strings.Contains(v, "↑/↓ (j/k) scroll · esc back · q quit") {
 		t.Errorf("watch detail footer not read-only; view:\n%s", v)
@@ -2202,7 +2374,7 @@ func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	// nav on row 1 — walk back first).
 	m, _ = press(t, m, keyOf(tea.KeyUp))
 	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "Which license?")))
-	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 2 {
+	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 3 {
 		t.Fatalf("click on selected escalation row: mode %d detail %q focus %d, want the task view of t-lic with its escalation stop focused",
 			m.mode, m.detailID, m.detailFocus)
 	}
@@ -2851,11 +3023,12 @@ func TestTopDetailTerminalTaskSteeringDead(t *testing.T) {
 			t.Errorf("terminal detail advertises %q; view:\n%s", reject, v)
 		}
 	}
-	// The ring skips priority: title, then description.
+	// The ring skips priority and labels — a closed record is browsed,
+	// not steered: title, then description.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeEditDesc {
-		t.Errorf("enter one stop below the title: mode %d, want modeEditDesc (no priority stop)", m.mode)
+		t.Errorf("enter one stop below the title: mode %d, want modeEditDesc (no priority or labels stop)", m.mode)
 	}
 }
 
