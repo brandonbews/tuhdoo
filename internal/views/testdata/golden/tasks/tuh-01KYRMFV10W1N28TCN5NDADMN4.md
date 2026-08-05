@@ -4,7 +4,6 @@
 
 - **Status:** open — in progress, claimed by `sarah/impl-9`
 - **Priority:** 4
-- **Parents:** [`t-epic`](t-epic.md)
 - **Created:** 2026-07-29 12:05 UTC by `brandon`
 
 ## Description

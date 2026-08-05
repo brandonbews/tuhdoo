@@ -5,7 +5,6 @@
 - **Status:** done
 - **Priority:** 5
 - **Labels:** `core` `go`
-- **Parents:** [`t-epic`](t-epic.md)
 - **Created:** 2026-07-29 12:02 UTC by `brandon`
 
 ## Description

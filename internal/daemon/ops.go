@@ -57,14 +57,13 @@ func (d *Daemon) writeErrLocked(err error) *opError {
 // documentation (T5: the agent protocol is a first-class deliverable).
 
 type createTaskItem struct {
-	Tmp         string   `json:"tmp,omitempty" jsonschema:"optional name other items in this batch can reference as 'tmp:<name>' in parents/depends_on; resolved to the real task ID on commit"`
+	Tmp         string   `json:"tmp,omitempty" jsonschema:"optional name other items in this batch can reference as 'tmp:<name>' in depends_on; resolved to the real task ID on commit"`
 	Title       string   `json:"title" jsonschema:"short imperative summary of the work (required)"`
 	Description string   `json:"description,omitempty" jsonschema:"the task body — write it like a prompt: acceptance criteria, constraints, file pointers; output quality of whoever claims this is bounded by what you put here. For status inbox only, a fragment (or nothing) is legitimate: the prompt bar applies at promotion, not capture"`
 	Status      string   `json:"status,omitempty" jsonschema:"initial status: open (default — claimable), inbox (untriaged capture; title-only is fine), or held (triaged but deliberately paused). Only open tasks are ever served to claim_next/claim_task"`
 	Priority    int      `json:"priority,omitempty" jsonschema:"higher claims first; 0 is the default. Stored but inert while the task is inbox or held"`
 	Labels      []string `json:"labels,omitempty" jsonschema:"free-form capability/topic tags, matchable by claim_next"`
-	Parents     []string `json:"parents,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) this task is a child of; epics are just tasks"`
-	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) that must be done before this task is claimable; a dependency in inbox or held blocks like any other not-done task"`
+	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) that must be done before this task is claimable; a dependency in inbox or held blocks like any other not-done task. Epics are just container tasks that depends_on their children"`
 }
 
 type updateTaskReq struct {
@@ -73,13 +72,12 @@ type updateTaskReq struct {
 	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
-	Parents     *[]string `json:"parents,omitempty" jsonschema:"full replacement parent-edge list (task IDs); omit to leave unchanged"`
 	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }
 
 func (r updateTaskReq) empty() bool {
 	return r.Title == nil && r.Description == nil && r.Status == nil &&
-		r.Priority == nil && r.Labels == nil && r.Parents == nil && r.DependsOn == nil
+		r.Priority == nil && r.Labels == nil && r.DependsOn == nil
 }
 
 type finishRunReq struct {
@@ -144,7 +142,7 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 	// anything else must be a task that already exists.
 	adj := make([][]int, len(items)) // intra-batch edges, for the cycle check
 	for i, it := range items {
-		for _, ref := range append(append([]string(nil), it.Parents...), it.DependsOn...) {
+		for _, ref := range it.DependsOn {
 			if name, isTmp := strings.CutPrefix(ref, "tmp:"); isTmp {
 				j, ok := byTmp[name]
 				if !ok {
@@ -194,7 +192,6 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 			Status:      status,
 			Priority:    it.Priority,
 			Labels:      it.Labels,
-			Parents:     resolve(it.Parents),
 			DependsOn:   resolve(it.DependsOn),
 		})
 		if err != nil {
@@ -234,11 +231,8 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 	if _, ok := d.state.Tasks[id]; !ok {
 		return taskJSON{}, opErrf(http.StatusNotFound, "unknown task %s", id)
 	}
-	for _, refs := range []*[]string{req.Parents, req.DependsOn} {
-		if refs == nil {
-			continue
-		}
-		for _, ref := range *refs {
+	if req.DependsOn != nil {
+		for _, ref := range *req.DependsOn {
 			if _, ok := d.state.Tasks[ref]; !ok {
 				return taskJSON{}, opErrf(http.StatusBadRequest, "unknown task %q in edges", ref)
 			}
@@ -250,7 +244,6 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 		Status:      req.Status,
 		Priority:    req.Priority,
 		Labels:      req.Labels,
-		Parents:     req.Parents,
 		DependsOn:   req.DependsOn,
 	})
 	if err != nil {

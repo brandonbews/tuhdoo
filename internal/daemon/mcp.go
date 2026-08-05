@@ -405,7 +405,6 @@ type updateTaskInput struct {
 	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
-	Parents     *[]string `json:"parents,omitempty" jsonschema:"full replacement parent-edge list (task IDs); omit to leave unchanged"`
 	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }
 
@@ -611,14 +610,14 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "update_task",
 		Description: "Update a task's fields: status, priority, labels, edges, title, description. " +
-			"Only the fields you send change, but the list fields (labels, parents, depends_on) " +
+			"Only the fields you send change, but the list fields (labels, depends_on) " +
 			"are full replacements — send the complete new list, never a delta. Status cancelled " +
 			"is terminal but never deleted (get_task still reads it) — cancel only " +
 			"at a human's direction, never over your own disagreement.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateTaskInput) (*mcp.CallToolResult, taskJSON, error) {
 		t, oe := d.opUpdateTask(s.principal(), in.Task, updateTaskReq{
 			Title: in.Title, Description: in.Description, Status: in.Status,
-			Priority: in.Priority, Labels: in.Labels, Parents: in.Parents, DependsOn: in.DependsOn,
+			Priority: in.Priority, Labels: in.Labels, DependsOn: in.DependsOn,
 		})
 		if oe != nil {
 			return nil, taskJSON{}, oe

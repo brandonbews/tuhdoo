@@ -544,6 +544,42 @@ func TestV1TaskCreatedReplaysOpen(t *testing.T) {
 	}
 }
 
+// The parents edge is retired (edge grill, 2026-08-05): stored payloads
+// that still carry a "parents" array replay without error — readers
+// ignore fields they have no place for (T3), no version bump, stored
+// bytes untouched — and every remaining field lands as usual.
+func TestRetiredParentsFieldTolerated(t *testing.T) {
+	created := event.Event{ID: tick(t, 1), Type: event.TypeTaskCreated, V: 2,
+		Actor: "brandon", Machine: "m-test", Task: "t1",
+		Data: json.RawMessage(`{"title":"child of an epic","status":"open","priority":3,"depends_on":["t0"],"parents":["t9"]}`)}
+	updated := event.Event{ID: tick(t, 2), Type: event.TypeTaskUpdated, V: 2,
+		Actor: "brandon", Machine: "m-test", Task: "t1",
+		Data: json.RawMessage(`{"title":"renamed","parents":["t8","t9"]}`)}
+
+	tests := map[string]struct {
+		events    []event.Event
+		wantTitle string
+	}{
+		"task.created carries parents": {[]event.Event{created}, "child of an epic"},
+		"task.updated carries parents": {[]event.Event{created, updated}, "renamed"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			s := replay(t, tt.events, nil)
+			task := s.Tasks["t1"]
+			if task == nil {
+				t.Fatal("t1 missing after replay")
+			}
+			if task.Title != tt.wantTitle || task.Status != StatusOpen || task.Priority != 3 {
+				t.Fatalf("task = %+v, want title %q, open, priority 3", task, tt.wantTitle)
+			}
+			if !reflect.DeepEqual(task.DependsOn, []string{"t0"}) {
+				t.Fatalf("depends_on = %v, want [t0]", task.DependsOn)
+			}
+		})
+	}
+}
+
 // Promote/pause/resume round-trips: inbox→open→held→open, all through
 // ordinary task.updated events, with readiness following the status.
 func TestStatusRoundTrips(t *testing.T) {

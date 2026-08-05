@@ -533,9 +533,9 @@ func TestBatchCreateTmpRefs(t *testing.T) {
 	d, c := startDaemon(t)
 
 	batch := []map[string]any{
-		{"tmp": "epic", "title": "the epic"},
-		{"tmp": "a", "title": "a", "parents": []string{"tmp:epic"}},
-		{"tmp": "b", "title": "b", "parents": []string{"tmp:epic"}, "depends_on": []string{"tmp:a"}},
+		{"tmp": "epic", "title": "the epic", "depends_on": []string{"tmp:a", "tmp:b"}},
+		{"tmp": "a", "title": "a"},
+		{"tmp": "b", "title": "b", "depends_on": []string{"tmp:a"}},
 		{"tmp": "c", "title": "c", "depends_on": []string{"tmp:a", "tmp:b"}},
 		{"tmp": "d", "title": "d", "depends_on": []string{"tmp:c"}},
 	}

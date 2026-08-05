@@ -13,7 +13,6 @@ type taskJSON struct {
 	Description string    `json:"description"`
 	Priority    int       `json:"priority"`
 	Labels      []string  `json:"labels"`
-	Parents     []string  `json:"parents"`
 	DependsOn   []string  `json:"depends_on"`
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`

@@ -80,13 +80,11 @@ func goldenInput(t *testing.T) core.Input {
 			Description: "Pure function: event set -> state.\n\nAcceptance:\n- order-insensitive replay\n- lease expiry returns tasks to the pool",
 			Priority:    5,
 			Labels:      []string{"core", "go"},
-			Parents:     []string{"t-epic"},
 		}),
 		evt(t, 3, event.TypeTaskCreated, "brandon", "t-view", event.TaskCreated{
 			Title:     "Render markdown views",
 			Priority:  5,
 			Labels:    []string{"core"},
-			Parents:   []string{"t-epic"},
 			DependsOn: []string{"t-core"},
 		}),
 		evt(t, 4, event.TypeTaskCreated, "brandon", "t-sync", event.TaskCreated{
@@ -100,7 +98,6 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 5, event.TypeTaskCreated, "brandon", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.TaskCreated{
 			Title:    "Daemon skeleton",
 			Priority: 4,
-			Parents:  []string{"t-epic"},
 		}),
 		evt(t, 6, event.TypeTaskCreated, "brandon", "t-old", event.TaskCreated{
 			Title: "Spike: evaluate go-git",
