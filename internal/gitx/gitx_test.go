@@ -458,3 +458,40 @@ func TestParseGitVersion(t *testing.T) {
 		}
 	}
 }
+
+func TestPushRejectionClassification(t *testing.T) {
+	cases := []struct {
+		name           string
+		stdout, stderr string
+		contention     bool
+	}{
+		{
+			name:       "porcelain non-fast-forward",
+			stdout:     "To /tmp/remote.git\n!\trefs/heads/tuhdoo:refs/heads/tuhdoo\t[rejected] (non-fast-forward)\nDone\n",
+			contention: true,
+		},
+		{
+			name:       "porcelain fetch first",
+			stdout:     "To /tmp/remote.git\n!\trefs/heads/tuhdoo:refs/heads/tuhdoo\t[rejected] (fetch first)\nDone\n",
+			contention: true,
+		},
+		{
+			// The remote's internal ref-update race, lost: relayed on
+			// stderr, no rejection wording on stdout at all. The literal
+			// shape from the collision-harness storm (2026-08-03).
+			name:       "remote ref-lock race",
+			stderr:     "remote: error: cannot lock ref 'refs/heads/tuhdoo': is at 4bb2416435a37fcbdafe2ad3ea75e1c31f7f0b39 but expected d2f36340d15d29afa8c1fc4dcf1a26d21008eeaa\nTo /tmp/remote.git\n !\trefs/heads/tuhdoo:refs/heads/tuhdoo\t[remote rejected] (failed to update ref)\n",
+			contention: true,
+		},
+		{
+			name:       "genuine failure stays a failure",
+			stderr:     "fatal: '/nope/remote.git' does not appear to be a git repository\n",
+			contention: false,
+		},
+	}
+	for _, c := range cases {
+		if got := pushRejectionIsContention(c.stdout, c.stderr); got != c.contention {
+			t.Errorf("%s: pushRejectionIsContention = %v, want %v", c.name, got, c.contention)
+		}
+	}
+}
