@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 5 on hold · 2 inbox · 55 done · 11 cancelled
+1 in progress · 1 ready · 1 blocked · 5 on hold · 2 inbox · 55 done · 11 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-bqkm`](tasks/tuh-01KYXVSRVK2GFW439G1T0GBQKM.md) | Labels editable from the task view | 0 | `tui` `design` |
 | [`tuh-0xjx`](tasks/tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX.md) | Dashboard list hides most row metadata past page width — resurface labels, dep counts, priority | 0 | `tui` |
 
 ## Blocked / waiting
