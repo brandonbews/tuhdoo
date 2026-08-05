@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 5 ready · 4 blocked · 4 on hold · 2 inbox · 57 done · 12 cancelled
+1 in progress · 4 ready · 4 blocked · 4 on hold · 3 inbox · 57 done · 12 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) | Remove the parents edge: epics are depends_on containers (edge grill 2026-08-05) | 3 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-wzrg`](tasks/tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) | Remove the parents edge: epics are depends_on containers (edge grill 2026-08-05) | 3 | `go` `edges` |
 | [`tuh-r3e8`](tasks/tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) | Clone-join: adopt an existing remote tuhdoo branch instead of minting a second root | 3 | `go` `store` `syncer` |
 | [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
 | [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) | init hardening: loud unknown-flag errors and the MCP snippet in init output | 2 | `cli` |
@@ -42,6 +43,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
+- [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 
 ## Done
 
