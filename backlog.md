@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 5 on hold · 2 inbox · 56 done · 11 cancelled
+0 in progress · 0 ready · 1 blocked · 5 on hold · 2 inbox · 57 done · 11 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-0xjx`](tasks/tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX.md) | Dashboard list hides most row metadata past page width — resurface labels, dep counts, priority | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -95,6 +93,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04)
 - [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) Collision harness: drive the real D6 machinery, add a confirmation-race storm
 - [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04)
+- [`tuh-0xjx`](tasks/tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX.md) Dashboard list hides most row metadata past page width — resurface labels, dep counts, priority
 
 ## Cancelled
 

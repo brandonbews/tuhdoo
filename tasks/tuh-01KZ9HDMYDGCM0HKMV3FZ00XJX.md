@@ -2,7 +2,7 @@
 
 `tuh-01KZ9HDMYDGCM0HKMV3FZ00XJX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui`
 - **Created:** 2026-08-05 18:01 UTC by `brandon/claude-code-1`
@@ -33,4 +33,10 @@ Constraints: TUI list rendering only — the detail view, CLI one-shots (T7 seri
 
 ## History
 
-_No activity yet._
+### 2026-08-05 20:31 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-0xjx/two-line-list-rows`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/36>
+- Commits: `8839388`
+
+Landed as PR #36 (squash-merged to main, checks green). TUI list rows are two-line per the settled design: bold plain-ellipsized title on line 1, dim [labels] · edges · <mode tail> meta line rendered only when non-empty; yellow ← holder tail for in-progress, close stamp · actor tail for history, blocked keeps its separate waiting: line, escalation rows three lines with actor · stamp extending the meta line. ID column width derived per snapshot (floor 6) so mixed t-/tuh- lists share one stable title column. fitTitle and labelSuffix deleted. Goldens updated; one-shot goldens and detail view untouched.
