@@ -101,7 +101,7 @@ func TestSelectedText(t *testing.T) {
 	col := ansiColors
 	col.selBG = "\x1b[48;5;236m"
 	text := "  " + sgr(col, col.dim, "t-lic ") + "  title\n" +
-		strings.Repeat(" ", gridTitleCol) + "plain second line"
+		strings.Repeat(" ", gridTitleCol(gridIDW)) + "plain second line"
 	got := strings.Split(selectedText(col, text, 40), "\n")
 	if len(got) != 2 {
 		t.Fatalf("line count changed: %d, want 2", len(got))
@@ -126,10 +126,10 @@ func TestSelectedText(t *testing.T) {
 // selection — no bg, no padding, zero escape bytes.
 func TestSelectedTextPlain(t *testing.T) {
 	text := "  t-lic   !   choose a license\n" +
-		strings.Repeat(" ", gridTitleCol) + "question: Which license?"
+		strings.Repeat(" ", gridTitleCol(gridIDW)) + "question: Which license?"
 	got := selectedText(colors{}, text, 80)
 	want := "▌ t-lic   !   choose a license\n" +
-		"▌ " + strings.Repeat(" ", gridTitleCol-2) + "question: Which license?"
+		"▌ " + strings.Repeat(" ", gridTitleCol(gridIDW)-2) + "question: Which license?"
 	if got != want {
 		t.Errorf("plain selection:\ngot  %q\nwant %q", got, want)
 	}

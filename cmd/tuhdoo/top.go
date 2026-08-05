@@ -1337,13 +1337,34 @@ func (m topModel) listHead(width int) string {
 
 // ---- the list screen (mock-a, 2026-07-31): bars and one column grid ----
 
-// The shared column grid: mark(2) + id(6) + gap(2) + badge(2) + gap(2).
-// Titles start at gridTitleCol; second lines indent to it.
+// The shared column grid: mark(2) + id + gap(2) + badge(2) + gap(2).
+// The ID column is derived per snapshot (idColWidth) with gridIDW as
+// its floor; titles start at gridTitleCol(idW) and every second line
+// indents to it.
 const (
-	gridIDW      = 6
-	gridBadgeW   = 2
-	gridTitleCol = 2 + gridIDW + 2 + gridBadgeW + 2
+	gridIDW    = 6
+	gridBadgeW = 2
 )
+
+// gridTitleCol is the column titles start at — derived, not const
+// (two-line rows, 2026-08-05): the ID column widens with the
+// snapshot's widest short ID.
+func gridTitleCol(idW int) int { return 2 + idW + 2 + gridBadgeW + 2 }
+
+// idColWidth derives the ID column width: the widest short ID across
+// every task in the snapshot, floored at gridIDW. Snapshot-stable —
+// never per-window — so the column cannot jitter while scrolling:
+// migrated t- IDs render 6 wide, minted tuh- IDs 8, and a mixed list
+// keeps one title column (gutter alignment, 2026-08-05).
+func idColWidth(s *snapshot) int {
+	w := gridIDW
+	for _, t := range s.state.Tasks {
+		if n := len([]rune(event.ShortID(t.ID))); n > w {
+			w = n
+		}
+	}
+	return w
+}
 
 // topSection describes one dashboard section: which rows it collects,
 // its bar color, whether its rows render dim, and the steering keys the
@@ -1531,45 +1552,72 @@ func legendLine(col colors, items [][2]string, right string, width int) string {
 	return segLine(col, left, r, width)
 }
 
-// fitTitle fits a title plus an optional suffix into width runes. The
-// suffix loses first — dropped outright when the title is near-full,
-// ellipsized into the remainder otherwise; the title wins and is
-// ellipsized only once nothing else fits.
-func fitTitle(title, suffix string, width int) (string, string) {
-	t, s := []rune(title), []rune(suffix)
-	if len(t)+len(s) <= width {
-		return title, suffix
-	}
-	if len(t) >= width-10 {
-		return ellipsize(title, width), ""
-	}
-	return title, ellipsize(suffix, width-len(t))
-}
-
-// gridRow renders one line on the shared column grid. suffix renders in
-// suffixStyle (dim for labels and edges, yellow for holders) and is
-// sacrificed for the title when the line is tight. Titles are bold in
-// every section (visual hierarchy, 2026-07-31) — shelf rows keep their
-// dim id, badge, and suffix but the title reads full-strength, an
-// accepted consequence. Selection is no longer per-line styling: the
+// gridRow renders a row's first line on the shared column grid: dim
+// id, badge, bold title — plain-ellipsized to the width, no suffix
+// fight (two-line rows, 2026-08-05: metadata lives on the meta line
+// now, so titles and metadata both win). Titles are bold in every
+// section (visual hierarchy, 2026-07-31) — shelf rows keep their dim
+// id and badge but the title reads full-strength, an accepted
+// consequence. Selection is no longer per-line styling: the
 // chunk-level bar (selectedText) carries it.
-func gridRow(col colors, id, badge, badgeStyle, title, suffix, suffixStyle string, width int) string {
-	title, suffix = fitTitle(oneLine(title), suffix, width-gridTitleCol)
-	return "  " +
-		sgr(col, col.dim, padTo(id, gridIDW)) + "  " +
-		sgr(col, badgeStyle, padTo(badge, gridBadgeW)) + "  " +
-		sgr(col, col.bold, title) + sgr(col, suffixStyle, suffix)
-}
-
-// secondLine renders a row's indented second line: an optional colored
-// lead ("waiting: ", "blocking") and dim text, ellipsized to the width.
-func secondLine(col colors, lead, leadStyle, text string, width int) string {
-	budget := width - gridTitleCol - len([]rune(lead))
+func gridRow(col colors, idW int, id, badge, badgeStyle, title string, width int) string {
+	budget := width - gridTitleCol(idW)
 	if budget < 2 {
 		budget = 2
 	}
-	return strings.Repeat(" ", gridTitleCol) +
+	return "  " +
+		sgr(col, col.dim, padTo(id, idW)) + "  " +
+		sgr(col, badgeStyle, padTo(badge, gridBadgeW)) + "  " +
+		sgr(col, col.bold, ellipsize(oneLine(title), budget))
+}
+
+// secondLine renders a row's indented second line: an optional colored
+// lead ("waiting: ", "question: ") and dim text, ellipsized to the
+// width. tcol is the derived title column the line indents to.
+func secondLine(col colors, tcol int, lead, leadStyle, text string, width int) string {
+	budget := width - tcol - len([]rune(lead))
+	if budget < 2 {
+		budget = 2
+	}
+	return strings.Repeat(" ", tcol) +
 		sgr(col, leadStyle, lead) + sgr(col, col.dim, ellipsize(oneLine(text), budget))
+}
+
+// metaLine renders a row's dim metadata second line — parts joined by
+// " · ", indented to the title column, with an optional styled mode
+// tail (the in-progress "← holder" in yellow on the otherwise dim
+// line). Returns "" when there is nothing to say: skip-when-empty is
+// deliberate — a one-line row signals "no labels, no edges" at a
+// glance, and list rows are not editors, so no `none` placeholder.
+func metaLine(col colors, tcol int, parts []string, tail, tailStyle string, width int) string {
+	text := strings.Join(parts, " · ")
+	if text == "" && tail == "" {
+		return ""
+	}
+	if text != "" && tail != "" {
+		text += " · "
+	}
+	budget := width - tcol - len([]rune(tail))
+	if budget < 2 {
+		budget = 2
+	}
+	return strings.Repeat(" ", tcol) +
+		sgr(col, col.dim, ellipsize(oneLine(text), budget)) + sgr(col, tailStyle, tail)
+}
+
+// metaParts collects the parts every section's meta line shares, in
+// rule order: the [labels] block, then the edge markers. Mode tails
+// (holder, close stamp, escalation actor · stamp) are appended by the
+// caller — one meta-line rule across every section.
+func metaParts(s *snapshot, id string) []string {
+	var parts []string
+	if ls := s.tasks[id].Task.Labels; len(ls) > 0 {
+		parts = append(parts, "["+strings.Join(ls, ", ")+"]")
+	}
+	if e := edgeText(s, id); e != "" {
+		parts = append(parts, e)
+	}
+	return parts
 }
 
 // edgeText marks that a task is part of a structure — containment
@@ -1592,18 +1640,18 @@ func edgeText(s *snapshot, id string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	return "  · " + strings.Join(parts, " · ")
+	return strings.Join(parts, " · ")
 }
 
-// closeSuffix is a history row's close stamp and closing actor, dim
-// like the label suffix it follows, at day precision — the browse
-// granularity; the full instant lives on the ledger. Empty when the
-// snapshot carries no close metadata (a pre-upgrade daemon).
-func closeSuffix(t stateTask) string {
+// closeText is a history row's close stamp and closing actor — the
+// done/cancelled mode tail of the meta line — at day precision, the
+// browse granularity; the full instant lives on the ledger. Empty when
+// the snapshot carries no close metadata (a pre-upgrade daemon).
+func closeText(t stateTask) string {
 	if t.ClosedAt == nil {
 		return ""
 	}
-	s := "  · " + dayStamp(*t.ClosedAt)
+	s := dayStamp(*t.ClosedAt)
 	if t.ClosedBy != "" {
 		s += " · " + t.ClosedBy
 	}
@@ -1612,58 +1660,68 @@ func closeSuffix(t stateTask) string {
 
 // rowChunk renders one selectable row as an unsplittable chunk; the
 // selected chunk is re-rendered as the full-height bar in one place,
-// after its section shape is built.
-func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
+// after its section shape is built. Task rows are two-line (grill
+// 2026-08-05): full bold title, then a dim meta line — one rule across
+// every section, `[labels] · edges · <mode tail>` — rendered only when
+// non-empty, so a one-line row signals "no labels, no edges".
+func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) chunk {
+	tcol := gridTitleCol(idW)
 	var text string
 	if r.kind == rowEscalation {
 		// Task-shaped three-liner (grill cycle, 2026-07-31): title line
-		// like every other section, the question on its own line, dim
-		// meta. The red ! badge alone carries "blocking" — the word is
-		// gone.
+		// like every other section, the question on its own line, then
+		// the meta line with actor · stamp as its mode tail — the
+		// metadata sits on line 3 because the question outranks it. The
+		// red ! badge alone carries "blocking" — the word is gone.
 		e := r.esc
 		badge, style := "", ""
 		if e.Blocking {
 			badge, style = "!", col.red+col.bold
 		}
-		et := s.tasks[e.Task].Task
-		suffix := labelSuffix(et.Labels) + edgeText(s, e.Task)
-		meta := fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))
-		text = gridRow(col, event.ShortID(e.Task), badge, style, et.Title, suffix, col.dim, width) +
-			"\n" + secondLine(col, "question: ", col.magenta, e.Question, width) +
-			"\n" + secondLine(col, "", "", meta, width)
+		meta := append(metaParts(s, e.Task), e.Actor, stamp(e.RaisedAt))
+		text = gridRow(col, idW, event.ShortID(e.Task), badge, style, s.tasks[e.Task].Task.Title, width) +
+			"\n" + secondLine(col, tcol, "question: ", col.magenta, e.Question, width) +
+			"\n" + metaLine(col, tcol, meta, "", "", width)
 	} else {
 		t := r.task
-		suffix := labelSuffix(t.Labels) + edgeText(s, t.ID)
+		meta := metaParts(s, t.ID)
+		badge, badgeStyle, tail, tailStyle := "", "", "", ""
 		switch r.section {
 		case "ready":
-			badgeStyle := col.dim
+			badge, badgeStyle = fmt.Sprintf("p%d", t.Priority), col.dim
 			if t.Priority == 0 {
 				badgeStyle = col.yellow
 			}
-			text = gridRow(col, event.ShortID(t.ID), fmt.Sprintf("p%d", t.Priority),
-				badgeStyle, t.Title, suffix, col.dim, width)
 		case "inprogress":
-			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, "  ← "+t.Holder, col.yellow, width)
+			// The holder is the mode tail: yellow on the otherwise dim
+			// meta line.
+			tail, tailStyle = "← "+t.Holder, col.yellow
 		case "held":
 			// Priority is stored but inert while held (it bites again at
 			// resume), so the badge renders — dim, like the rest of the row.
-			text = gridRow(col, event.ShortID(t.ID), fmt.Sprintf("p%d", t.Priority),
-				col.dim, t.Title, suffix, col.dim, width)
-		case "inbox":
-			// No priority badge: an untriaged capture has no meaningful one.
-			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width)
+			badge, badgeStyle = fmt.Sprintf("p%d", t.Priority), col.dim
 		case "done", "cancelled":
-			// History rows (history view, 2026-08-02): the ready-row
-			// anatomy — title, dim labels, edge markers — plus a dim
-			// close stamp and closing actor. No priority badge: recency
-			// is the browse axis here, not priority.
-			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix+closeSuffix(t), col.dim, width)
-		default: // blocked
-			// The waiting: lead is dim red (bar recolors, 2026-08-04):
-			// full-brightness red would be louder than the section's own
-			// dim-red bar.
-			text = gridRow(col, event.ShortID(t.ID), "", "", t.Title, suffix, col.dim, width) +
-				"\n" + secondLine(col, "waiting: ", col.dimRed, blockedReasonTUI(t, s.taskRef), width)
+			// History rows (history view, 2026-08-02): the close stamp
+			// and closing actor are the mode tail, dim with the rest of
+			// the meta line. No priority badge: recency is the browse
+			// axis here, not priority.
+			if c := closeText(t); c != "" {
+				meta = append(meta, c)
+			}
+		}
+		// inbox and blocked carry no badge: an untriaged capture has no
+		// meaningful priority, and a blocked row's story is its waiting:
+		// line.
+		text = gridRow(col, idW, event.ShortID(t.ID), badge, badgeStyle, t.Title, width)
+		if ml := metaLine(col, tcol, meta, tail, tailStyle, width); ml != "" {
+			text += "\n" + ml
+		}
+		if r.section == "blocked" {
+			// The waiting: line stays its own line below the meta line —
+			// a reason, not metadata. Its lead is dim red (bar recolors,
+			// 2026-08-04): full-brightness red would be louder than the
+			// section's own dim-red bar.
+			text += "\n" + secondLine(col, tcol, "waiting: ", col.dimRed, blockedReasonTUI(t, s.taskRef), width)
 		}
 	}
 	if cursor {
@@ -1676,6 +1734,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, width int) chunk {
 // line is gone — the bars carry the counts.
 func (m topModel) listChunks(width int) []chunk {
 	col, s := m.col, m.snap
+	idW := idColWidth(s)
 	var out []chunk
 	if s.state.Degraded != "" {
 		deg := wrapTo(fmt.Sprintf("%sDEGRADED (read-only):%s %s", col.red, col.reset, s.state.Degraded), width)
@@ -1702,7 +1761,7 @@ func (m topModel) listChunks(width int) []chunk {
 			continue
 		}
 		for _, i := range idx {
-			c := rowChunk(col, s, m.rows[i], i == m.cursor, width)
+			c := rowChunk(col, s, m.rows[i], i == m.cursor, idW, width)
 			c.row = i
 			out = append(out, c)
 		}

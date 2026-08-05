@@ -120,13 +120,6 @@ func indent(body, prefix string) string {
 	return strings.Join(lines, "\n")
 }
 
-func labelSuffix(labels []string) string {
-	if len(labels) == 0 {
-		return ""
-	}
-	return "  [" + strings.Join(labels, ", ") + "]"
-}
-
 func plural(n int, word string) string {
 	if n == 1 {
 		return fmt.Sprintf("%d %s", n, word)

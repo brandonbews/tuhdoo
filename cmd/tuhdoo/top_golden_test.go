@@ -47,11 +47,16 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
 		" READY (2)                                                p priority · c cancel ",
-		"  t-pars  p5  write the parser  · in t-epic · 1 dep",
+		// Two-line rows (grill 2026-08-05): full title, dim meta line —
+		// and a bare row (t-flor) stays one line, the "no labels, no
+		// edges" signal.
+		"  t-pars  p5  write the parser",
+		"              in t-epic · 1 dep",
 		"  t-flor  p1  sweep the floor",
 		"",
 		" IN PROGRESS (1)                                                                ",
-		"  t-flak      investigate the flake  ← brandon/a1",
+		"  t-flak      investigate the flake",
+		"              ← brandon/a1",
 		"",
 		" BLOCKED (0)                                                                    ",
 		"  none",
@@ -63,8 +68,8 @@ func TestTopGoldenPlain80(t *testing.T) {
 		"  t-idea      idea: dark mode",
 	}, "\n") + "\n" +
 		// The footer pins to the bottom row (chrome hierarchy,
-		// 2026-08-03): rows 23-39 are the blank pad, row 40 the footer.
-		strings.Repeat("\n", 17) +
+		// 2026-08-03): rows 25-39 are the blank pad, row 40 the footer.
+		strings.Repeat("\n", 15) +
 		// The armed legend grew "h history" (2026-08-02); at exactly 80
 		// columns the done tally is the sacrificed right text (barLine's
 		// rule, kept by segLine) — it returns on wider terminals. The
@@ -153,29 +158,133 @@ func TestTopGoldenBars(t *testing.T) {
 	}
 }
 
-// The blocked row's waiting: lead is dim red, matching its section bar
+// The blocked row stacks title / meta / waiting (two-line rows,
+// 2026-08-05): the waiting: line keeps its own dim-red lead below the
+// dim meta line — a reason, not metadata — matching its section bar
 // (bar recolors, 2026-08-04): a full-brightness red lead would be
 // louder than the bar above it.
-func TestTopGoldenBlockedWaitingLead(t *testing.T) {
+func TestTopGoldenBlockedStack(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
 		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open",
 			Situation: "blocked", UnmetDeps: []string{"t-flor"}})
 	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
-		ID: "t-wait", Title: "build on the idea", DependsOn: []string{"t-flor"},
+		ID: "t-wait", Title: "build on the idea",
+		Labels: []string{"infra"}, DependsOn: []string{"t-flor"},
 	}}
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
 		col: ansiColors, width: 120, height: 60}
 	v := m.View()
-	if !strings.Contains(v, "\x1b[2;31mwaiting: \x1b[0m\x1b[2m") {
-		t.Errorf("blocked waiting: lead is not dim red; view:\n%q", v)
+	want := "  \x1b[2mt-wait\x1b[0m      \x1b[1mbuild on the idea\x1b[0m\n" +
+		"              \x1b[2m[infra] · 1 dep\x1b[0m\n" +
+		"              \x1b[2;31mwaiting: \x1b[0m\x1b[2mdepends on t-flor (open — sweep the floor)\x1b[0m"
+	if !strings.Contains(v, want) {
+		t.Errorf("blocked row does not stack title / meta / waiting; want:\n%q\nview:\n%q", want, v)
 	}
 	if strings.Contains(v, "\x1b[31mwaiting:") {
 		t.Errorf("blocked waiting: lead still full-brightness red; view:\n%q", v)
 	}
 }
 
-// The selection bar (2026-07-31): every line of the selected chunk
+// The in-progress mode tail (two-line rows, 2026-08-05): "← holder"
+// renders yellow at the end of the otherwise dim meta line — the " · "
+// joiner before it stays dim — and a holder with no labels or edges
+// still earns the meta line, tail alone.
+func TestTopGoldenHolderTailYellow(t *testing.T) {
+	s := topSnapshot()
+	h := s.tasks["t-flak"]
+	h.Task.Labels = []string{"ci"}
+	s.tasks["t-flak"] = h
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
+		col: ansiColors, width: 80, height: 40}
+	want := "  \x1b[2mt-flak\x1b[0m      \x1b[1minvestigate the flake\x1b[0m\n" +
+		"              \x1b[2m[ci] · \x1b[0m\x1b[33m← brandon/a1\x1b[0m"
+	if v := m.View(); !strings.Contains(v, want) {
+		t.Errorf("holder tail not yellow on the dim meta line; want:\n%q\nview:\n%q", want, v)
+	}
+	bare := topSnapshot()
+	mb := topModel{armed: true, actor: "brandon", snap: bare, rows: buildRows(bare),
+		col: ansiColors, width: 80, height: 40}
+	if v := mb.View(); !strings.Contains(v, "\n              \x1b[33m← brandon/a1\x1b[0m") {
+		t.Errorf("bare in-progress row lost its holder meta line; view:\n%q", v)
+	}
+}
+
+// An escalation row stays three lines, its meta line extended by the
+// same one meta-line rule: [labels] · edges · actor · stamp (two-line
+// rows, 2026-08-05) — the metadata sits on line 3 because the question
+// outranks it.
+func TestTopGoldenEscalationExtendedMeta(t *testing.T) {
+	s := topSnapshot()
+	h := s.tasks["t-lic"]
+	h.Task.Labels = []string{"legal"}
+	h.Task.Parents = []string{"t-epic"}
+	s.tasks["t-lic"] = h
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 40}
+	want := "▌ t-lic   !   choose a license\n" +
+		"▌             question: Which license?\n" +
+		"▌             [legal] · in t-epic · brandon/a2 · 2026-07-29 14:03 UTC"
+	if v := m.View(); !strings.Contains(v, want) {
+		t.Errorf("escalation row's extended meta line diverged; want:\n%q\nview:\n%s", want, v)
+	}
+}
+
+// Gutter alignment (amendment, 2026-08-05): a list mixing t- and tuh-
+// prefixes derives one ID column from the snapshot's widest short ID
+// (floor gridIDW), so every title, meta line, and waiting: line sits
+// on the same derived column — and the width is snapshot-stable, so
+// scrolling cannot change it.
+func TestTopGoldenMixedIDColumns(t *testing.T) {
+	newID := "tuh-01KYT63MB28Z535SMJC9B0D83W" // tuh-d83w: 8 wide, sets the column
+	oldID := "t-01KYT63MB28Z535SMJCA63RQJM"   // t-rqjm: 6 wide, padded to 8
+	blkID := "t-01KYT63MB28Z535SMJCBC7SY1P"   // t-sy1p
+	s := &snapshot{
+		state: stateResp{Tasks: []stateTask{
+			{ID: newID, Title: "the new-era task", Status: "open", Priority: 2, Situation: "ready"},
+			{ID: oldID, Title: "the old-era task", Status: "open", Priority: 1, Situation: "ready"},
+			{ID: blkID, Title: "the waiting task", Status: "open", Situation: "blocked", UnmetDeps: []string{oldID}},
+		}},
+		tasks: map[string]hydratedTask{
+			newID: {Task: taskJSON{ID: newID, Title: "the new-era task",
+				Labels: []string{"era"}, Parents: []string{oldID}}},
+			oldID: {Task: taskJSON{ID: oldID, Title: "the old-era task", Labels: []string{"infra"}}},
+			blkID: {Task: taskJSON{ID: blkID, Title: "the waiting task", DependsOn: []string{oldID}}},
+		},
+	}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 40}
+	v := m.View()
+	// Titles start at 2+8+2+2+2 = 16 on every row; second lines indent
+	// to the same column (the selected row's gutter replaces the first
+	// two cells).
+	mustContain(t, v,
+		// A ready row with labels and edges: two lines, both barred.
+		"▌ tuh-d83w  p2  the new-era task",
+		"▌               [era] · in t-rqjm",
+		"  t-rqjm    p1  the old-era task",
+		"                [infra]",
+		"  t-sy1p        the waiting task",
+		"                1 dep",
+		"                waiting: depends on t-rqjm (open — the old-era task)")
+	// The un-derived 6-wide floor column must not appear anywhere.
+	if strings.Contains(v, "t-rqjm  p1") {
+		t.Errorf("t- row fell back to the 6-wide column; view:\n%s", v)
+	}
+	// Scrolling cannot change the column: with a window too short for
+	// the list, the bottom row renders at the same derived column as it
+	// did in the full view.
+	m.height = 9 // head(2) + foot(2) + 5 body lines
+	for i := 0; i < 4; i++ {
+		m, _ = press(t, m, keyOf(tea.KeyDown))
+	}
+	sv := m.View()
+	mustContain(t, sv,
+		"▌ t-sy1p        the waiting task",
+		"▌               1 dep",
+		"▌               waiting: depends on t-rqjm (open — the old-era task)")
+	if strings.Contains(sv, "t-sy1p      the") {
+		t.Errorf("scrolling narrowed the derived column; view:\n%s", sv)
+	}
+}
 // opens with the bg code and the ▌ gutter, the bg re-applies after
 // each internal reset, and each line pads to the full width — one
 // continuous bar. Unselected rows carry neither bg nor gutter.
@@ -217,6 +326,27 @@ func TestTopGoldenSelectionBar(t *testing.T) {
 			t.Errorf("selection bg leaked onto an unselected line: %q", l)
 		}
 	}
+	// A two-line task row (t-pars: title + meta line) carries the bar on
+	// both lines — the selection covers all of a row's lines, whatever
+	// its height (two-line rows, 2026-08-05).
+	m, _ = press(t, m, keyOf(tea.KeyDown))
+	sel = nil
+	for _, l := range strings.Split(m.View(), "\n") {
+		if strings.Contains(l, "▌") {
+			sel = append(sel, l)
+		}
+	}
+	if len(sel) != 2 {
+		t.Fatalf("selected two-line task row has %d gutter lines, want 2; view:\n%q", len(sel), m.View())
+	}
+	for _, l := range sel {
+		if !strings.HasPrefix(l, "\x1b[48;5;236m▌ ") {
+			t.Errorf("selected line does not open with bg+gutter: %q", l)
+		}
+		if w := ansi.StringWidth(l); w != 80 {
+			t.Errorf("selected line is %d cells, want the full 80: %q", w, l)
+		}
+	}
 }
 
 // Watch mode: bars carry no steering hints, the header carries the
@@ -234,35 +364,32 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	}
 }
 
-// The one-line-per-row economy: titles ellipsize with …, and the dim
-// label suffix loses first — ellipsized into the remainder while the
-// title has room, dropped outright when the title is near-full.
+// Two-line ellipsis rules (grill 2026-08-05): titles plain-ellipsize
+// to the width with no suffix fight — labels live on the meta line and
+// never lose to a long title; the meta line ellipsizes independently.
 func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	long := strings.Repeat("A", 70)
-	mid := strings.Repeat("B", 40)
 	near := strings.Repeat("C", 60)
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
 			{ID: "t-lng1", Title: long, Status: "open", Priority: 1, Situation: "ready"},
-			{ID: "t-mid1", Title: mid, Status: "open", Priority: 1, Labels: []string{"quality", "testing", "golang"}, Situation: "ready"},
 			{ID: "t-nea1", Title: near, Status: "open", Priority: 1, Labels: []string{"quality"}, Situation: "ready"},
+			{ID: "t-wide", Title: "wide meta", Status: "open", Priority: 1, Situation: "ready"},
 		}},
 		tasks: map[string]hydratedTask{
 			"t-lng1": {Task: taskJSON{ID: "t-lng1"}},
-			"t-mid1": {Task: taskJSON{ID: "t-mid1"}},
-			"t-nea1": {Task: taskJSON{ID: "t-nea1"}},
+			"t-nea1": {Task: taskJSON{ID: "t-nea1", Labels: []string{"quality"}}},
+			"t-wide": {Task: taskJSON{ID: "t-wide",
+				Labels: []string{strings.Repeat("L", 40), strings.Repeat("M", 40)}}},
 		},
 	}
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 40}
 	v := m.View()
-	// 80 cols - 14 grid = 66 title cells.
+	// 80 cols - 14 grid = 66 title cells; the meta line gets the same 66.
 	mustContain(t, v,
-		strings.Repeat("A", 65)+"…",      // title alone: ellipsized at 66
-		mid+"  [quality, testing, gola…", // labels ellipsized into the remainder
-		near)                             // near-full title renders whole...
-	if strings.Contains(v, "[quality]") {
-		t.Errorf("labels survived on a near-full title; view:\n%s", v)
-	}
+		strings.Repeat("A", 65)+"…", // title alone: ellipsized at 66
+		near+"\n              [quality]", // near-full title whole, labels intact below
+		"              ["+strings.Repeat("L", 40)+", "+strings.Repeat("M", 22)+"…") // meta ellipsized at 66
 	if strings.Contains(v, strings.Repeat("A", 66)) {
 		t.Errorf("over-wide title did not ellipsize; view:\n%s", v)
 	}
@@ -437,17 +564,24 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
 		" DONE (3)                                                                       ",
-		"▌ t-ship      ship the tui  [tui]  · 2026-07-30 · brandon/claude-code-1",
-		"  t-mgr8      migrate the backlog  · 1 dep  · 2026-07-29 · brandon",
-		"  t-chor      old chore  · 2026-07-28 · brandon/impl-1",
+		// Two-line rows (grill 2026-08-05): the close stamp · closing
+		// actor is the mode tail of the dim meta line, off line 1.
+		"▌ t-ship      ship the tui",
+		"▌             [tui] · 2026-07-30 · brandon/claude-code-1",
+		"  t-mgr8      migrate the backlog",
+		"              1 dep · 2026-07-29 · brandon",
+		"  t-chor      old chore",
+		"              2026-07-28 · brandon/impl-1",
 		"",
 		" CANCELLED (2)                                                                  ",
-		"  t-zzzz      zombie idea  · 2026-07-31 · brandon/a2",
-		"  t-drop      drop the wiki  · 2026-07-27 · brandon",
+		"  t-zzzz      zombie idea",
+		"              2026-07-31 · brandon/a2",
+		"  t-drop      drop the wiki",
+		"              2026-07-27 · brandon",
 	}, "\n") + "\n" +
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 11-39 are the blank pad.
-		strings.Repeat("\n", 29) +
+		// 16-39 are the blank pad.
+		strings.Repeat("\n", 24) +
 		" ↑/↓ (j/k) move · enter open · esc back · q quit                                "
 	got := m.View()
 	if got != want {
@@ -460,8 +594,8 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 
 // History bar composition with real colors: DONE keeps the ready
 // green, CANCELLED the shelves' reverse-dim, neither carries a hint,
-// and a row's title stays bold while its close suffix rides dim with
-// the labels.
+// and a row's title stays bold while its close metadata rides the dim
+// meta line below (two-line rows, 2026-08-05).
 func TestTopGoldenHistoryBars(t *testing.T) {
 	m := newHistoryModel(newFakeSteering())
 	m.col = ansiColors
@@ -481,7 +615,10 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
 			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
 			strings.Repeat(" ", 32),
-		"\x1b[2mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\x1b[2m  · 1 dep  · 2026-07-29 · brandon\x1b[0m",
+		// The title line ends bold; the close metadata rides the dim
+		// meta line below it (two-line rows, 2026-08-05).
+		"\x1b[2mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\n" +
+			"              \x1b[2m1 dep · 2026-07-29 · brandon\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("history view missing %q; view:\n%q", want, v)
