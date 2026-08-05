@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T1A1WPYP`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `go` `edges` `tui`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done)
@@ -22,4 +22,9 @@ Constraints: deterministic core stays pure (data in, data out); never claim prev
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:30 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-wpyp/dep-loops-loudness`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/39>
+
+Landed via PR #39 (squash-merged, checks green). update_task now refuses loop-closing depends_on replacements with a named-loop error (local hygiene only — merge can still union loops in, and error text never claims prevention). New core Blockage API (built on ClaimBlockers, cannot disagree with Ready) annotates blocked tasks: Cyclic (membership in a depends_on loop among not-done tasks; tails not marked) and CancelledDeps (cancelled never counts as done). Surfaced everywhere: backlog view, TUI, one-shot backlog/task, additive cyclic/cancelled_deps fields on get_backlog blocked rows and /v0/state. View format version bumped 6->7 (T6 highest-version-wins). Dangling-dep-counts-as-met documented as deliberate defensive posture at ClaimBlockers. Doc-sweep claimant: D5 revision should record the loop posture exactly as the grill decided it (reject-at-edit + detect-and-mark, never prevention) and the cancelled-dep rule.
