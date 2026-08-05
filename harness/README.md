@@ -136,6 +136,19 @@ line — the per-round race is reliable, not lucky.
 
 ### Findings from running it (2026-08-04, driving the real D6 machinery)
 
+*(All three findings below — the two lease gaps and the session-eviction
+gap found while verifying their fix — are resolved 2026-08-04 by PR #32,
+escalations 01KZ7W28PB9GPHM0CSQQ2QFABM and 01KZ88VCEP4AZ8CXY5DW1R72C6:
+lease files are never deleted, only overwritten with a released tombstone
+`{"expires": "<the instant>", "released": true}`; the lease merge rule
+prefers tombstones; and the renewal tick keeps voided claims tracked
+without renewing them. A run against the fixed tree exits 0 with all
+16 hard checks green and the `maxCycleRetries` clause reporting as its
+sanctioned `[note]` — 40 storm contests, one `claim.confirmed` each, 27
+losers coerced on report, 23 closed by branch-less synthesis, 384 events
+and byte-identical state and views on both machines. The original texts
+are kept below as the record of what was found.)*
+
 The first run of the harness against the revised D6 machinery (PRs #28/#30)
 left the convergence checks, the winner rule, the coercion arm, and the
 zero-duplicate-confirmations storm all green — and turned up two real gaps
@@ -170,12 +183,24 @@ state self-heals after the TTL, but "the attempt is closed now" is not
 true cross-machine, and whether a stand-down closes immediately is a
 merge-timing coin flip.
 
-Until those are resolved, a default run exits red on three checks (the
+**The renewal tick evicted voided claims from session tracking** *(found
+2026-08-04 while verifying the lease fix; the settle phase died on it)*.
+`renewOnce` (`internal/daemon/mcp.go`) dropped any tracked claim whose
+status was no longer active — deliberately including "lost to a
+cross-machine race" — so once a renewal tick (every TTL/3) landed between
+a raced claim and its settle, the loser's `confirm_claim` answered "this
+session holds no claim" instead of D6 clause 3's promised "lost". The
+storm never trips it (contests confirm within seconds); the settle phase
+sits minutes after its claims, so the bar was a run-timing coin flip.
+
+Before the fixes, a default run exited red on three checks (the
 storm-contest record shape, fate-vs-replay agreement, and silent-loser
-synthesis); everything else — including byte-identical convergence and
-exactly one `claim.confirmed` per contest — passes. The harness asserts
+synthesis) — or died in the settle phase when the eviction timing bit.
+Everything else — including byte-identical convergence and exactly one
+`claim.confirmed` per contest — passed throughout. The harness asserts
 the design's promises, not the implementation's current behavior, on
-purpose.
+purpose; all three findings are now fixed and the full run is green (see
+the resolution note above).
 
 ### Findings from running it (2026-08-03)
 
