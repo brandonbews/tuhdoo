@@ -37,7 +37,28 @@ func connect() (*repo, *client, int) {
 // socket), so "spawn the daemon, then confirm the branch exists" is the
 // whole job — the simplest honest path, and it means the first command
 // a user ever runs brings everything up.
-func runInit() int {
+//
+// init takes no flags and no arguments; anything passed is rejected
+// loudly rather than silently ignored. --as in particular gets its own
+// explanation: init writes no events, so there is no principal to act
+// as.
+func runInit(args []string) int {
+	const use = "usage: tuhdoo init"
+	for _, a := range args {
+		if a == "--as" || a == "-as" ||
+			strings.HasPrefix(a, "--as=") || strings.HasPrefix(a, "-as=") {
+			fmt.Fprintln(os.Stderr, `tuhdoo init: --as does nothing here — init writes no events, so there
+is no principal to act as. Commands that do write derive the principal
+from your git identity (the user.email local part); to override that
+once per clone: git config tuhdoo.principal <name>`)
+			fmt.Fprintln(os.Stderr, use)
+			return 1
+		}
+	}
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, "tuhdoo init: unexpected argument %q\n%s\n", args[0], use)
+		return 1
+	}
 	r, c, code := connect()
 	if code != 0 {
 		return code
@@ -71,6 +92,14 @@ func runInit() int {
 
 CI guidance: exclude the %q branch from CI triggers — github-actions:
   on: { push: { branches-ignore: ["%s"] } }
+
+Agent harness: any MCP harness connects through the stdio shim — paste
+into its MCP config:
+  {
+    "mcpServers": {
+      "tuhdoo": { "command": "tuhdoo", "args": ["mcp"] }
+    }
+  }
 
 Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
 `, branchName(), head, sync, c.socket, branchName(), branchName())
