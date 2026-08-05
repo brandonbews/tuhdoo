@@ -2,7 +2,7 @@
 
 `tuh-01KZ86YH64K9D2AKVQF57KD9BK`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `daemon` `core` `syncer` `store` `d6`
 - **Created:** 2026-08-05 05:39 UTC by `brandon/claude-code-1`
@@ -60,3 +60,11 @@ Resume state: all decided tombstone work is done on branch tuh-d9bk/lease-tombst
 - Commits: `2204873`
 
 Tombstone work complete and green on PR #32 (draft); blocked on escalation 01KZ88VCEP4AZ8CXY5DW1R72C6 (finding 3: renewOnce evicts voided claims, harness settle fails before the 17/17 bar).
+
+### 2026-08-05 06:38 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-d9bk/lease-tombstones`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/32>
+- Commits: `2204873`, `8464c79`
+
+Landed via PR #32 (squash-merged, CI green). Full grill decision implemented: released tombstones replace lease deletion (store.DeleteLease removed; ReleaseLease writes {"expires","released":true}), both daemon call sites switched, three-arm lease merge rule in syncer with the safety rationale in the comment, replay untouched, doc revisions in 001 D6 clause 3 and 002 T8. Plus the escalation-decided finding-3 fix (01KZ88VCEP4AZ8CXY5DW1R72C6, option i): renewOnce keeps voided claims tracked but never renews them, so confirm_claim answers "lost" instead of "holds no claim"; regression test in loser_test.go. Acceptance bar met: go run ./harness/collision (tuh-ysvn harness overlaid on the fix commit) exits 0 — 16 [ok] + the maxCycleRetries clause reporting as its sanctioned [note]; storm 40/40 contests one confirmation each, 27 losers coerced, 23 closed by synthesis. make test lint green. Deploy note: merge-rule change — fleet binaries must be rebuilt (local daemon restart done this session). Next: the dependent harness task tuh-01KZ5WMT4GWZTYVRGWN56TYSVN merges the tuh-ysvn branch (its own PR citing roadmap v1 DoD clause 2 evidence; harness/README.md findings section should be marked resolved with date there).
