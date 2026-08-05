@@ -2,7 +2,7 @@
 
 `tuh-01KZ4TH4HT56TE4CQPKKA37A40`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `syncer` `t8`
 - **Created:** 2026-08-03 22:04 UTC by `brandon/claude-code-1`
