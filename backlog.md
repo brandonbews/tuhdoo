@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 5 ready · 2 blocked · 4 on hold · 5 inbox · 59 done · 12 cancelled
+1 in progress · 4 ready · 2 blocked · 4 on hold · 5 inbox · 59 done · 12 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) | Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05) | 2 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-wpyp`](tasks/tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) | Dependency loops and cancelled deps: reject at edit, mark loudly at replay (edge grill 2026-08-05) | 2 | `go` `edges` `tui` |
 | [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) | Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger | 2 | `docs` |
 | [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) | Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build | 2 | `build` `npm` `ci` |
 | [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) | init hardening: loud unknown-flag errors and the MCP snippet in init output | 2 | `cli` |
