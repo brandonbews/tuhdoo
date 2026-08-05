@@ -83,6 +83,14 @@ func startDaemonOpts(t *testing.T, opts Options) (*Daemon, *http.Client) {
 	setGitEnv(t)
 	root := shortTempDir(t)
 	runGit(t, root, "init", "--quiet", "-b", "main")
+	return startDaemonAt(t, root, opts)
+}
+
+// startDaemonAt starts a daemon on an existing repository — for tests
+// that wire remotes or run multiple daemons around one bare repo
+// (gate_test.go). Callers own the git setup.
+func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Client) {
+	t.Helper()
 	d, err := New(root, opts)
 	if err != nil {
 		t.Fatalf("New: %v", err)

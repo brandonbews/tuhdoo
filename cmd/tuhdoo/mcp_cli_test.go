@@ -22,11 +22,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// mcpTools is the T5 surface the shim must mirror: exactly these eleven.
+// mcpTools is the T5 surface the shim must mirror: exactly these twelve.
 var mcpTools = []string{
-	"add_note", "claim_next", "claim_task", "create_task", "escalate",
-	"finish_run", "get_backlog", "get_task", "relay_answer", "release_claim",
-	"update_task",
+	"add_note", "claim_next", "claim_task", "confirm_claim", "create_task",
+	"escalate", "finish_run", "get_backlog", "get_task", "relay_answer",
+	"release_claim", "update_task",
 }
 
 func TestMCPShimBridgesStdio(t *testing.T) {
@@ -42,7 +42,7 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 	}
 	defer cs.Close()
 
-	// The mirrored surface is exactly the eleven T5 verbs, and sessions
+	// The mirrored surface is exactly the twelve T5 verbs, and sessions
 	// carry the daemon's orientation instructions.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {

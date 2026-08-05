@@ -1,7 +1,7 @@
 package daemon
 
 // The MCP surface (002 T5): streamable HTTP on the same unix socket,
-// exactly eleven tools, projected from the same ops.go operations as
+// exactly twelve tools, projected from the same ops.go operations as
 // the HTTP API. One *mcp.Server is minted per session so tool closures can
 // capture the session's actor (bound from the X-Tuhdoo-Actor header on
 // the initialize POST) and its claim set for lease auto-renewal —
@@ -71,6 +71,15 @@ func (s *mcpSession) track(task, claim string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.claims[task] = claim
+}
+
+// heldClaim reports the claim this session made on task, if any — the
+// confirm_claim gate is for the session that holds the claim (T5).
+func (s *mcpSession) heldClaim(task string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	claim, ok := s.claims[task]
+	return claim, ok
 }
 
 func (s *mcpSession) untrack(task string) {
@@ -178,7 +187,7 @@ func sanitizeAgentName(client string) string {
 	return out
 }
 
-// newMCPServer builds the per-session server: the eleven T5 tools plus
+// newMCPServer builds the per-session server: the twelve T5 tools plus
 // the lease-renewal machinery tied to session liveness. A non-empty
 // client name means the principal is auto-derived: actor is the root
 // human and the agent half is minted at session bind.
@@ -324,6 +333,10 @@ type claimTaskInput struct {
 	Task string `json:"task" jsonschema:"the task ID to claim"`
 }
 
+type confirmClaimInput struct {
+	Task string `json:"task" jsonschema:"the task whose claim you want confirmed — you must hold the claim through this session"`
+}
+
 type releaseClaimInput struct {
 	Task   string `json:"task" jsonschema:"the task whose claim to release"`
 	Reason string `json:"reason" jsonschema:"why you are standing down; recorded on the ledger for the next claimant"`
@@ -385,7 +398,7 @@ type updateTaskInput struct {
 
 // ---- tool registration ----
 
-// addMCPTools registers exactly the eleven T5 verbs. Op failures return
+// addMCPTools registers exactly the twelve T5 verbs. Op failures return
 // as Go errors, which the SDK packs into the result with IsError set —
 // a tool error the model can read and correct, never a protocol error.
 // Additions to this list require a design-doc revision first.
@@ -451,6 +464,30 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			s.track(h.Task.ID, h.Claim.ID)
 		}
 		return nil, h, nil
+	})
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name: "confirm_claim",
+		Description: "Make your claim's verdict final before you merge (the D6 referee's gate). " +
+			"A claim is provisional — an earlier claim on another machine can void yours without " +
+			"this session hearing about it — so call this before merging, arming auto-merge, or " +
+			"pushing to a shared branch. Answers confirmed (irrevocable: merge freely) or lost " +
+			"(stand down: do not merge, close any PR you opened, and finish_run — your links are " +
+			"kept for salvage). With a remote this is a synchronous round-trip of a few seconds; " +
+			"an unreachable remote is a retryable error and nothing is written. Idempotent: an " +
+			"already-confirmed claim answers instantly.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, in confirmClaimInput) (*mcp.CallToolResult, confirmClaimResult, error) {
+		// The gate certifies this session's own claim: the claim must
+		// have been made (and be leased) through this session.
+		if _, held := s.heldClaim(in.Task); !held {
+			return nil, confirmClaimResult{}, opErrf(http.StatusConflict,
+				"this session holds no claim on task %s: claim_next or claim_task first", in.Task)
+		}
+		res, oe := d.opConfirmClaim(s.principal(), in.Task)
+		if oe != nil {
+			return nil, confirmClaimResult{}, oe
+		}
+		return nil, res, nil
 	})
 
 	mcp.AddTool(srv, &mcp.Tool{

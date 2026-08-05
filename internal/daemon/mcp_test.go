@@ -170,11 +170,11 @@ func flushedEvents(t *testing.T, d *Daemon) []event.Event {
 	return events
 }
 
-// mcpTools is the T5 surface: exactly these eleven, nothing else.
+// mcpTools is the T5 surface: exactly these twelve, nothing else.
 var mcpTools = []string{
-	"add_note", "claim_next", "claim_task", "create_task", "escalate",
-	"finish_run", "get_backlog", "get_task", "relay_answer", "release_claim",
-	"update_task",
+	"add_note", "claim_next", "claim_task", "confirm_claim", "create_task",
+	"escalate", "finish_run", "get_backlog", "get_task", "relay_answer",
+	"release_claim", "update_task",
 }
 
 // Accept 1: a scripted client runs the full loop — create, claim_next,
@@ -185,7 +185,7 @@ func TestMCPFullLoop(t *testing.T) {
 	const actor = "brandon/impl-1"
 	cs := mcpConnect(t, d, actor, nil)
 
-	// The surface is exactly the eleven T5 verbs.
+	// The surface is exactly the twelve T5 verbs.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {
 		if err != nil {

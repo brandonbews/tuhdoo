@@ -7,6 +7,7 @@ package daemon
 // each operation, serialized by the one write mutex.
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/brandonbews/tuhdoo/internal/core"
 	"github.com/brandonbews/tuhdoo/internal/event"
+	"github.com/brandonbews/tuhdoo/internal/gitx"
 )
 
 // opError is an operation failure with an HTTP-status-shaped code, so
@@ -472,6 +474,207 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (string, *opError) 
 		return "", d.writeErrLocked(err)
 	}
 	return ev.ID, nil
+}
+
+// confirmGateRetries bounds the gate's fetch → judge → push loop when
+// the remote keeps moving underneath it, mirroring the sync loop's
+// maxCycleRetries.
+const confirmGateRetries = 4
+
+// confirmClaimResult is the referee's answer, shaped for an agent to
+// act on without reading docs: confirmed means merge freely, lost means
+// stand down.
+type confirmClaimResult struct {
+	Confirmed bool   `json:"confirmed" jsonschema:"true: the verdict is final and irrevocable — merge freely; false: this attempt lost the race — stand down, do not merge"`
+	Claim     string `json:"claim,omitempty" jsonschema:"the claim the verdict is about"`
+	Message   string `json:"message" jsonschema:"the verdict in words, with what to do next"`
+}
+
+func confirmedResult(claimID, taskID string) confirmClaimResult {
+	return confirmClaimResult{Confirmed: true, Claim: claimID, Message: fmt.Sprintf(
+		"Confirmed: claim %s on task %s is yours, irrevocably. Merge freely; "+
+			"record the outcome with finish_run when the work lands.", claimID, taskID)}
+}
+
+func lostResult(claimID, why string) confirmClaimResult {
+	return confirmClaimResult{Confirmed: false, Claim: claimID, Message: fmt.Sprintf(
+		"Lost: %s. Stand down — do not merge, close any PR you opened, and call "+
+			"finish_run to record your attempt; your branch and summary are kept for salvage.", why)}
+}
+
+// judgeConfirm is the referee's rule over one replayed state: given the
+// head a confirmation would land on, is actor's claim the provisional
+// winner with no competing confirmation? A nil result with a nil error
+// means proceed — push the confirmation for claimID. The same rule
+// judges the local state (remoteless: the daemon is the sole writer, so
+// local is final) and the reconciled remote head (D6).
+func judgeConfirm(st *core.State, taskID, actor string) (res *confirmClaimResult, claimID string, oe *opError) {
+	if _, ok := st.Tasks[taskID]; !ok {
+		return nil, "", opErrf(http.StatusNotFound, "unknown task %s", taskID)
+	}
+	// The actor's own attempt is their most recent claim on the task;
+	// ClaimsByTask is replay (ULID) order, so the last match is it.
+	var mine *core.Claim
+	for _, cid := range st.ClaimsByTask[taskID] {
+		if c := st.Claims[cid]; c.Actor == actor {
+			mine = c
+		}
+	}
+	if mine == nil {
+		return nil, "", opErrf(http.StatusConflict,
+			"no claim by %s on task %s: confirm_claim certifies your own claim — claim before confirming", actor, taskID)
+	}
+	if mine.Confirmation != "" {
+		// Idempotent: an already-won verdict answers instantly (D6).
+		r := confirmedResult(mine.ID, taskID)
+		return &r, mine.ID, nil
+	}
+	switch active := st.ActiveClaim(taskID); {
+	case active != nil && active.ID == mine.ID:
+		return nil, mine.ID, nil // provisional winner, no competing confirmation: proceed
+	case active != nil && active.Confirmation != "":
+		r := lostResult(mine.ID, fmt.Sprintf(
+			"task %s was confirmed to %s (claim %s), irrevocably", taskID, active.Actor, active.ID))
+		return &r, mine.ID, nil
+	case active != nil:
+		r := lostResult(mine.ID, fmt.Sprintf(
+			"an earlier claim by %s holds task %s and yours is provisionally voided", active.Actor, taskID))
+		return &r, mine.ID, nil
+	case mine.Status == core.ClaimVoided:
+		r := lostResult(mine.ID, fmt.Sprintf(
+			"your claim on task %s lost its race; that contest is over", taskID))
+		return &r, mine.ID, nil
+	default:
+		// Released, finished, or expired without a confirmation: the
+		// attempt ended by the actor's own hand or the lease clock —
+		// there is nothing left to certify.
+		return nil, "", opErrf(http.StatusConflict,
+			"%s's claim %s on task %s ended %s — nothing to confirm; claim again to start a new attempt",
+			actor, mine.ID, taskID, mine.Status)
+	}
+}
+
+// opConfirmClaim is the D6 confirmation gate (T5 confirm_claim, added
+// 2026-08-04): make the claim's verdict final before the agent merges.
+// The final verdict is won, not computed — the daemon syncs against the
+// remote, judges the head it would push onto, and lands claim.confirmed
+// onto exactly that head through the remote's atomic ref CAS; a
+// non-fast-forward means the remote moved and the loop re-judges,
+// bounded. Remoteless (T2): the daemon is the sole writer, so the local
+// verdict is final and instant. Remote configured but unreachable: a
+// retryable refusal with nothing written — the referee never guesses.
+func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opError) {
+	if taskID == "" {
+		return confirmClaimResult{}, opErrf(http.StatusBadRequest, "%q is required", "task")
+	}
+	now := time.Now()
+
+	// Local pass first: caller mistakes, idempotent re-confirms, and
+	// already-final losses all answer without a network round-trip.
+	// Everything staged locally is flushed so the judged head carries it.
+	d.mu.Lock()
+	oe := d.degradedLocked()
+	if oe == nil {
+		if err := d.refreshLocked(now); err != nil {
+			oe = d.writeErrLocked(err)
+		}
+	}
+	var res *confirmClaimResult
+	if oe == nil {
+		res, _, oe = judgeConfirm(d.state, taskID, actor)
+	}
+	d.mu.Unlock()
+	if oe != nil {
+		return confirmClaimResult{}, oe
+	}
+	if res != nil {
+		return *res, nil
+	}
+	if err := d.batcher.Flush(); err != nil {
+		return confirmClaimResult{}, opErrf(http.StatusInternalServerError, "flush: %v", err)
+	}
+
+	for attempt := 0; attempt < confirmGateRetries; attempt++ {
+		head, hstate, err := d.sync.GateHead()
+		if errors.Is(err, gitx.ErrNoRemote) {
+			return d.confirmLocally(actor, taskID, now)
+		}
+		if err != nil {
+			return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
+				"cannot consult the remote (%v): confirmation refused, nothing written — "+
+					"the referee never guesses; retry when the remote is reachable", err)
+		}
+		res, claimID, oe := judgeConfirm(hstate, taskID, actor)
+		if oe != nil {
+			return confirmClaimResult{}, oe
+		}
+		if res != nil {
+			// The remote settled it while we weren't looking; make the
+			// local cache agree before answering.
+			d.refreshAfterGate(now)
+			return *res, nil
+		}
+		d.mu.Lock()
+		ev, evErr := d.newEventLocked(event.TypeClaimConfirmed, actor, taskID, event.ClaimConfirmed{Claim: claimID})
+		d.mu.Unlock()
+		if evErr != nil {
+			return confirmClaimResult{}, opErrf(http.StatusInternalServerError, "%v", evErr)
+		}
+		err = d.sync.GatePush(head, ev)
+		if errors.Is(err, gitx.ErrNonFastForward) {
+			continue // the remote moved: refetch and re-judge (D6 in action)
+		}
+		if err != nil {
+			return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
+				"confirmation push failed (%v): nothing certified — retry when the remote is reachable", err)
+		}
+		d.refreshAfterGate(now)
+		return confirmedResult(claimID, taskID), nil
+	}
+	return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
+		"remote kept moving for %d attempts: confirmation not settled — retry", confirmGateRetries)
+}
+
+// confirmLocally is the T2 remoteless arm of the gate: no remote, one
+// writer, so the local provisional verdict is the final verdict.
+func (d *Daemon) confirmLocally(actor, taskID string, now time.Time) (confirmClaimResult, *opError) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if oe := d.degradedLocked(); oe != nil {
+		return confirmClaimResult{}, oe
+	}
+	if err := d.refreshLocked(now); err != nil {
+		return confirmClaimResult{}, d.writeErrLocked(err)
+	}
+	res, claimID, oe := judgeConfirm(d.state, taskID, actor)
+	if oe != nil {
+		return confirmClaimResult{}, oe
+	}
+	if res != nil {
+		return *res, nil
+	}
+	ev, err := d.newEventLocked(event.TypeClaimConfirmed, actor, taskID, event.ClaimConfirmed{Claim: claimID})
+	if err != nil {
+		return confirmClaimResult{}, opErrf(http.StatusInternalServerError, "%v", err)
+	}
+	// Eager (T8): a confirmation is exactly the class of event peers
+	// race against — it must not sit in the debounce window if a remote
+	// is added later, and the agent is waiting on it now.
+	if err := d.commitLocked(true, ev); err != nil {
+		return confirmClaimResult{}, d.writeErrLocked(err)
+	}
+	return confirmedResult(claimID, taskID), nil
+}
+
+// refreshAfterGate folds a gate outcome into the cached state. Failures
+// are logged, never returned: the verdict is already settled on the
+// branch, and the next refresh converges.
+func (d *Daemon) refreshAfterGate(now time.Time) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if err := d.refreshLocked(now); err != nil {
+		d.log.Printf("daemon: refresh after confirmation gate: %v", err)
+	}
 }
 
 func (d *Daemon) opEscalate(actor string, req escalateReq) (string, *opError) {
