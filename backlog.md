@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 0 ready · 2 blocked · 6 on hold · 2 inbox · 53 done · 11 cancelled
+0 in progress · 0 ready · 3 blocked · 6 on hold · 2 inbox · 53 done · 11 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) | Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -20,6 +18,7 @@ _None._
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-ysvn`](tasks/tuh-01KZ5WMT4GWZTYVRGWN56TYSVN.md) | Collision harness: drive the real D6 machinery, add a confirmation-race storm | 1 | depends on [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) |
+| [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) | Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04) | 1 | an [open question](escalations.md) |
 
 ## On hold
 

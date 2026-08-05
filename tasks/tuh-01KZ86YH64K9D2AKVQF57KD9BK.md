@@ -2,7 +2,7 @@
 
 `tuh-01KZ86YH64K9D2AKVQF57KD9BK`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `daemon` `core` `syncer` `store` `d6`
 - **Created:** 2026-08-05 05:39 UTC by `brandon/claude-code-1`
@@ -52,3 +52,11 @@ _Unanswered._
 ### 2026-08-05 06:13 UTC — note from `brandon/claude-code-1`
 
 Resume state: all decided tombstone work is done on branch tuh-d9bk/lease-tombstones (commit 2204873, pushed; PR #32, held as draft pending escalation 01KZ88VCEP4AZ8CXY5DW1R72C6). make test lint green. To reproduce the acceptance bar: git worktree at the branch commit, then `git checkout origin/tuh-ysvn/collision-harness-real-machinery -- harness/`, then `go run ./harness/collision` (~10 min); this run passed seeding + confirmation-race storm + convergence and exited 1 at the settle phase on the finding-3 eviction (fix site if answer is option (i): internal/daemon/mcp.go renewOnce — stop untracking ClaimVoided claims; keep the renewal skip; heldClaim gate then answers correctly). After the answer lands: implement, re-run harness for 17/17, mark PR #32 ready, confirm_claim before arming auto-merge.
+
+### 2026-08-05 06:13 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-d9bk/lease-tombstones`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/32>
+- Commits: `2204873`
+
+Tombstone work complete and green on PR #32 (draft); blocked on escalation 01KZ88VCEP4AZ8CXY5DW1R72C6 (finding 3: renewOnce evicts voided claims, harness settle fails before the 17/17 bar).
