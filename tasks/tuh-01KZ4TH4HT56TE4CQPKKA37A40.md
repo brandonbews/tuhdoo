@@ -2,7 +2,7 @@
 
 `tuh-01KZ4TH4HT56TE4CQPKKA37A40`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `syncer` `t8`
 - **Created:** 2026-08-03 22:04 UTC by `brandon/claude-code-1`
@@ -23,4 +23,9 @@ Constraints: classifier change only — no retry-loop behavior changes; boring G
 
 ## History
 
-_No activity yet._
+### 2026-08-05 22:55 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-7a40/push-contention-classifier`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/43>
+
+Landed via PR #43 (squash-merged, checks green). Push now captures stderr and classification lives in pushRejectionIsContention(stdout, stderr): the ref-lock race shape (remote: cannot lock ref ... is at X but expected Y — which arrives on stderr, why the old stdout-only check missed it) now returns ErrNonFastForward, so the syncer retry loop engages and Status.Collisions counts it. Table-driven test over the literal shapes including the harness verbatim line. Classifier only; retry loop untouched.

@@ -1,23 +1,22 @@
 # Backlog
 
-1 in progress · 0 ready · 2 blocked · 5 on hold · 18 inbox · 63 done · 12 cancelled
+0 in progress · 1 ready · 1 blocked · 5 on hold · 18 inbox · 64 done · 12 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) | Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | `release` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | depends on [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) |
 
 ## On hold
 
@@ -107,6 +106,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer
 - [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision)
+- [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
 - [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged)
 - [`tuh-3595`](tasks/tuh-01KZ53K4DF7Y0TYX3H5XP43595.md) Pinned frame off-by-one: trailing newline clips the header row
 - [`tuh-n777`](tasks/tuh-01KZ5WMT4GWZTYVRGWN4PFN777.md) Confirmation gate: claim.confirmed won through the remote CAS (D6 revision 2026-08-04)
