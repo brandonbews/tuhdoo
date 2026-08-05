@@ -4,7 +4,21 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-_None — the fleet is unblocked._
+### [`tuh-d9bk`](tasks/tuh-01KZ86YH64K9D2AKVQF57KD9BK.md) · Lease tombstones: released marker, deletion retired, merge rule (grill 2026-08-04)
+
+**Blocking** · asked by `brandon/claude-code-1` · 2026-08-05 06:12 UTC
+
+> Finding 3 blocks the 17/17 harness bar: the MCP renewal loop deliberately evicts provisionally-voided claims from session tracking, so a race loser's confirm_claim answers "this session holds no claim" instead of D6's promised "lost". Which semantics should the fix implement, and does PR #32 (the decided tombstone work, complete and green) merge now or ride along with the finding-3 fix?
+
+The decided tombstone work is fully implemented on branch tuh-d9bk/lease-tombstones (PR #32, now draft, unmerged): released tombstones, DeleteLease retired, the three-arm merge rule, replay untouched, doc revisions — make test lint green, plus new store/syncer/core tests including the finding-1 shape at five replay instants. Run against the reworked harness (tuh-ysvn harness/ overlaid on the fix), seeding, the full confirmation-race storm (40 contests, exactly one confirmation each, losers coerced/synthesized correctly — the finding-1/2 machinery works), and two-machine convergence all pass. The run then exits 1 at the settle phase, first confirm-first attempt: "confirm_claim on alpha: this session holds no claim on task ...: claim_next or claim_task first".
+
+Cause (code-certain, and pre-existing — my branch does not touch mcp.go): confirm_claim gates on the session's own tracking (heldClaim, internal/daemon/mcp.go ~line 488). renewOnce (~line 253) untracks any tracked claim whose Status != ClaimActive on its 5-minute tick (leaseTTL/3), and its comment names "lost to a cross-machine race" as a deliberate eviction case — written in the #28/#29 gate build, and now contradicting the D6 clause 3 rewrite ("any verb touched by a provisionally-voided claimant says plainly that it lost"). The storm never hits it because contests confirm within seconds of claiming; the settle phase sits minutes after the raced claims, so whether a tick lands in the window is run-timing luck — this bar is a coin flip until fixed, and it will never be deterministic evidence for roadmap v1 DoD clause 2.
+
+Two candidate semantics (both keep voided claims tracked so the verbs answer honestly; they differ on lease renewal):
+(i) Tracked but never renewed: the loser hears "lost" for up to TTL after the last renewal; after the lease lapses, replay synthesis closes the attempt and the verbs answer "attempt closed, salvage via add_note" — also a D6-sanctioned answer. Minimal change, preserves the just-grilled expiry-synthesis timing, and keeps the tombstone merge rule's safety rationale trivially intact (a voided lease is never renewed at all, so no renewal can postdate a tombstone).
+(ii) Tracked and renewed while the session lives: "lease expires unclosed" then effectively means session death, so a connected loser stays confirmable/reportable indefinitely and synthesis only ever closes disconnected losers. More faithful to T5/T8 session-bound leases, but it re-opens the expiry-synthesis timing that D6 clause 3 just settled.
+
+My recommendation: (i), folded into this same task (the acceptance bar already names 17/17 as the definition of done), then re-run the harness for a real 17/17 and merge PR #32 with the renewal fix included — one PR, since the bar is only meetable with both. If you'd rather treat finding 3 as its own grilled decision first, the alternative is: merge PR #32 as-is now (it is necessary under either finding-3 outcome and independently tested) and spawn a finding-3 task; the dependent harness-merge task tuh-01KZ5WMT4GWZTYVRGWN56TYSVN stays gated either way until the bar is green.
 
 ## Answered
 
