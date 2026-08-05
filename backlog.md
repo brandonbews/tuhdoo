@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 6 on hold · 2 inbox · 51 done · 11 cancelled
+1 in progress · 1 ready · 2 blocked · 6 on hold · 2 inbox · 51 done · 11 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) | Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision) | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) | Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision) | 1 | `daemon` `d6` |
 | [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) | TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged) | 0 | `tui` |
 
 ## Blocked / waiting
