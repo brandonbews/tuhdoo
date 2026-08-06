@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 5 on hold · 19 inbox · 65 done · 12 cancelled
+0 in progress · 0 ready · 1 blocked · 5 on hold · 20 inbox · 65 done · 12 cancelled
 
 ## In progress
 
@@ -51,6 +51,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
+- [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
 
 ## Done
 
