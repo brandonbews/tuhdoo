@@ -2,7 +2,7 @@
 
 `tuh-01KZA0VT234XJYVZWT93P2EK1S`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `cli` `onboarding`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
@@ -21,4 +21,11 @@ Constraints: no new CLI or MCP surface; the doc must not assume a host (T2) — 
 
 ## History
 
-_No activity yet._
+### 2026-08-06 23:52 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-ek1s/uninstall-doc`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/48>
+- Commits: `63f0da5`
+- Merged as: `69781fa6da5b98d0534aeef5c4405e8afdc85ac4`
+
+docs/uninstall.md landed with both layers (per-machine walk-away with runnable steps + zero-trace verify; team-level retirement framed irreversible/usually-unnecessary with abandon/tag-archive recommended, peer-daemon-republish precondition, host-protection note, recovery note). TestUninstallDocStepsLeaveZeroTrace (cmd/tuhdoo/uninstall_doc_test.go) executes the doc blocks marked <!-- uninstall-test: run --> verbatim against a temp repo with a live daemon — doc is single source, no reimplementation; global-config unset sandboxed via GIT_CONFIG_GLOBAL. joining.md companion link + docs/README.md + README.md pointers updated. Squash-merged via PR #48. Docs+test only — no binary change, no deploy needed.
