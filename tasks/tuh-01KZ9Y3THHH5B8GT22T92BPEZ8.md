@@ -13,4 +13,6 @@ Capture from the 2026-08-05 edge grill. The parents field is removed; an epic is
 
 ## History
 
-_No activity yet._
+### 2026-08-06 22:41 UTC — note from `brandon/claude-code-1`
+
+Partial progress on the "sweep for leftover parent/epic traces" item, 2026-08-06 triage session: docs/agent-protocol.md's two stale parents references (the Decomposition section's "parent edges pointing at the task you hold" and update_task's list-field note) were fixed directly in PR #44 — decomposition now reads "create children in one batch, then point the held task at them with depends_on". The eventual sweep still owes the rest of the codebase/docs; internal/event/catalog.go's "stored events may still carry parents (retired)" comment is deliberate read-side legacy handling, not drift — leave it.
