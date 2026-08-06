@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 5 ready · 1 blocked · 7 on hold · 10 inbox · 65 done · 16 cancelled
+0 in progress · 5 ready · 1 blocked · 7 on hold · 9 inbox · 65 done · 17 cancelled
 
 ## In progress
 
@@ -45,7 +45,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
-- [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
@@ -134,6 +133,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-h4k6`](tasks/tuh-01KYZ9BJWWE0NZ89FJZW5KH4K6.md) status vs section in the dashoboard is a little confusing. grill and align behavior for ux. we need vocab alignment between data and surfaces this early in the project.
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
 - [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
+- [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
