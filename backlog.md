@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 1 blocked · 6 on hold · 12 inbox · 65 done · 15 cancelled
+0 in progress · 4 ready · 1 blocked · 7 on hold · 11 inbox · 65 done · 15 cancelled
 
 ## In progress
 
@@ -32,6 +32,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
 | [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) | Escalation delivery when the TUI is closed | 0 | `design` `tui` |
+| [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) | v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing | 0 | `design` |
 
 ## Inbox
@@ -46,7 +47,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
-- [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects?
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
 - [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
