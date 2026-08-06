@@ -10,7 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `design` `ledger` |
+| [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `docs` `protocol` |
 
 ## Blocked / waiting
 

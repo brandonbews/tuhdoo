@@ -4,7 +4,7 @@
 
 - **Status:** open — ready
 - **Priority:** 0
-- **Labels:** `design` `ledger`
+- **Labels:** `docs` `protocol`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
 
 ## Description
