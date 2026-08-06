@@ -78,7 +78,9 @@ See `docs/agent-protocol.md` for the agent loop.
 
 Joining a repository that already uses tuhdoo — a teammate's project, a
 second machine? `docs/joining.md` is the end-to-end walkthrough, including
-clone shapes and the branch-protection settings the host needs.
+clone shapes and the branch-protection settings the host needs. Leaving is
+just as clean: `docs/uninstall.md` walks a machine — or a whole team —
+away with zero trace.
 
 The design record lives in `docs/` — start with
 `docs/design/001-core-design.md`.

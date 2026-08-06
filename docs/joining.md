@@ -7,8 +7,8 @@ no account to create: the coordination ledger is an orphan git branch
 joining is four steps — clone, install the binary, `tuhdoo init`, verify.
 This doc is self-contained; you do not need to read anything else first.
 
-(A companion doc for the reverse move — removing tuhdoo from a machine or a
-repo — is planned to sit beside this one.)
+(The companion doc for the reverse move — removing tuhdoo from a machine
+or a repo — is [`uninstall.md`](uninstall.md), beside this one.)
 
 ## 1. Clone the repository
 
