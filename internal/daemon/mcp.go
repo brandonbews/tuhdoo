@@ -359,12 +359,13 @@ type releaseClaimResult struct {
 }
 
 type finishRunInput struct {
-	Task    string   `json:"task" jsonschema:"the task this run was for"`
-	Outcome string   `json:"outcome" jsonschema:"done (acceptance criteria met), failed (attempted and did not work), abandoned (gave up), or blocked (waiting on an escalation answer — escalate and release_claim first)"`
-	Branch  string   `json:"branch,omitempty" jsonschema:"branch the work lives on, if any"`
-	PR      string   `json:"pr,omitempty" jsonschema:"pull/merge request link, if any; stored as a string, never dereferenced"`
-	Commits []string `json:"commits,omitempty" jsonschema:"relevant commit hashes, if any"`
-	Summary string   `json:"summary,omitempty" jsonschema:"what happened and where things stand — written for whoever picks this up next"`
+	Task     string   `json:"task" jsonschema:"the task this run was for"`
+	Outcome  string   `json:"outcome" jsonschema:"done (acceptance criteria met), failed (attempted and did not work), abandoned (gave up), or blocked (waiting on an escalation answer — escalate and release_claim first)"`
+	Branch   string   `json:"branch,omitempty" jsonschema:"branch the work lives on, if any"`
+	PR       string   `json:"pr,omitempty" jsonschema:"pull/merge request link, if any; stored as a string, never dereferenced"`
+	Commits  []string `json:"commits,omitempty" jsonschema:"relevant commit hashes, if any"`
+	MergedAs []string `json:"merged_as,omitempty" jsonschema:"the commit(s) on a durable branch that carry this work, if known — report after the merge lands; stored as strings, never dereferenced"`
+	Summary  string   `json:"summary,omitempty" jsonschema:"what happened and where things stand — written for whoever picks this up next"`
 }
 
 type escalateInput struct {
@@ -540,7 +541,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		}
 		res, oe := d.opFinishRun(s.principal(), finishRunReq{
 			Task: in.Task, Outcome: in.Outcome, Branch: in.Branch,
-			PR: in.PR, Commits: in.Commits, Summary: in.Summary,
+			PR: in.PR, Commits: in.Commits, MergedAs: in.MergedAs, Summary: in.Summary,
 		})
 		if oe != nil {
 			return nil, finishRunResult{}, oe

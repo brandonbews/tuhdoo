@@ -265,6 +265,53 @@ func TestMCPFullLoop(t *testing.T) {
 	}
 }
 
+// merged_as (additive, 2026-08-06 linkage grill): finish_run accepts
+// the landed commit(s) and persists them end-to-end — the stored
+// run.finished payload carries the field, and get_task's run row
+// exposes it alongside branch and PR.
+func TestMCPFinishRunMergedAs(t *testing.T) {
+	d, _ := startDaemon(t)
+	const actor = "brandon/impl-1"
+	cs := mcpConnect(t, d, actor, nil)
+
+	var created createTasksResult
+	mustToolOK(t, cs, "create_task", map[string]any{
+		"tasks": []map[string]any{{"title": "land the linkage", "priority": 3}},
+	}, &created)
+	if len(created.IDs) != 1 {
+		t.Fatalf("create_task ids = %v, want one", created.IDs)
+	}
+	task := created.IDs[0]
+
+	mustToolOK(t, cs, "claim_task", map[string]any{"task": task}, nil)
+	mustToolOK(t, cs, "finish_run", map[string]any{
+		"task": task, "outcome": "done", "branch": "tuh-x/linkage",
+		"pr": "https://example.com/pr/9", "commits": []string{"a1b2c3d"},
+		"merged_as": []string{"9c8d7e6"}, "summary": "landed and merged",
+	}, nil)
+
+	// The read side: get_task's run row carries the field.
+	var h hydratedTask
+	mustToolOK(t, cs, "get_task", map[string]any{"task": task}, &h)
+	if len(h.Runs) != 1 || !reflect.DeepEqual(h.Runs[0].MergedAs, []string{"9c8d7e6"}) {
+		t.Fatalf("runs = %+v, want one with merged_as [9c8d7e6]", h.Runs)
+	}
+
+	// The stored event: the run.finished payload persisted the field.
+	events := flushedEvents(t, d)
+	last := events[len(events)-1]
+	if last.Type != event.TypeRunFinished {
+		t.Fatalf("last event = %s, want %s", last.Type, event.TypeRunFinished)
+	}
+	var p event.RunFinished
+	if err := json.Unmarshal(last.Data, &p); err != nil {
+		t.Fatalf("decode run.finished payload: %v", err)
+	}
+	if !reflect.DeepEqual(p.MergedAs, []string{"9c8d7e6"}) {
+		t.Fatalf("stored merged_as = %v, want [9c8d7e6]", p.MergedAs)
+	}
+}
+
 // Inbox and held over the MCP surface (2026-07-31): title-only capture
 // through create_task lands as a real inbox event; get_backlog shows
 // the shelves as their own arrays; claim_next skips them; and the full

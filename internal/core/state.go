@@ -101,6 +101,7 @@ type Run struct {
 	Branch      string
 	PR          string
 	Commits     []string
+	MergedAs    []string // commit(s) on a durable branch that carry the work, if known
 	Summary     string
 	Synthesized bool
 }

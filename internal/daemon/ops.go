@@ -81,12 +81,13 @@ func (r updateTaskReq) empty() bool {
 }
 
 type finishRunReq struct {
-	Task    string   `json:"task"`
-	Outcome string   `json:"outcome"`
-	Branch  string   `json:"branch,omitempty"`
-	PR      string   `json:"pr,omitempty"`
-	Commits []string `json:"commits,omitempty"`
-	Summary string   `json:"summary,omitempty"`
+	Task     string   `json:"task"`
+	Outcome  string   `json:"outcome"`
+	Branch   string   `json:"branch,omitempty"`
+	PR       string   `json:"pr,omitempty"`
+	Commits  []string `json:"commits,omitempty"`
+	MergedAs []string `json:"merged_as,omitempty"`
+	Summary  string   `json:"summary,omitempty"`
 }
 
 type escalateReq struct {
@@ -615,11 +616,12 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 // the reported one. Caller holds d.mu with the finish guard passed.
 func (d *Daemon) writeRunLocked(actor string, req finishRunReq, outcome string) (finishRunResult, *opError) {
 	ev, err := d.newEventLocked(event.TypeRunFinished, actor, req.Task, event.RunFinished{
-		Outcome: outcome,
-		Branch:  req.Branch,
-		PR:      req.PR,
-		Commits: req.Commits,
-		Summary: req.Summary,
+		Outcome:  outcome,
+		Branch:   req.Branch,
+		PR:       req.PR,
+		Commits:  req.Commits,
+		MergedAs: req.MergedAs,
+		Summary:  req.Summary,
 	})
 	if err != nil {
 		return finishRunResult{}, opErrf(http.StatusInternalServerError, "%v", err)

@@ -62,11 +62,12 @@ func goldenEvents(t *testing.T) map[string]Event {
 			Reason: "context exhausted; see latest note for where work stopped",
 		}},
 		TypeRunFinished: {0x05, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", RunFinished{
-			Outcome: OutcomeDone,
-			Branch:  "feat/event-model",
-			PR:      "https://example.com/pr/42",
-			Commits: []string{"a1b2c3d", "e4f5a6b"},
-			Summary: "Implemented envelope + canonical encoder; all tests green.",
+			Outcome:  OutcomeDone,
+			Branch:   "feat/event-model",
+			PR:       "https://example.com/pr/42",
+			Commits:  []string{"a1b2c3d", "e4f5a6b"},
+			MergedAs: []string{"9c8d7e6"},
+			Summary:  "Implemented envelope + canonical encoder; all tests green.",
 		}},
 		TypeEscalationRaised: {0x06, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", EscalationRaised{
 			Question: "Should task.updated support edge removal in v1?",

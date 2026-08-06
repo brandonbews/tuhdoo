@@ -42,6 +42,7 @@ type runJSON struct {
 	Branch      string   `json:"branch"`
 	PR          string   `json:"pr"`
 	Commits     []string `json:"commits"`
+	MergedAs    []string `json:"merged_as"`
 	Summary     string   `json:"summary"`
 	Synthesized bool     `json:"synthesized"`
 }
