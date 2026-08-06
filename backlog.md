@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 5 on hold · 20 inbox · 65 done · 12 cancelled
+0 in progress · 0 ready · 1 blocked · 6 on hold · 19 inbox · 65 done · 12 cancelled
 
 ## In progress
 
@@ -26,6 +26,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | `go` `platform` |
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
+| [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) | Escalation delivery when the TUI is closed | 0 | `design` `tui` |
 | [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) | v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing | 0 | `design` |
 
 ## Inbox
@@ -40,7 +41,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Salvage flow for superseded and interrupted runs
-- [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) Escalation delivery when the TUI is closed
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run-to-code linkage robustness: what exactly does a Run store so links stay meaningful years later?
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Init UX remainder: teammate joining flow and branch-protection guidance
