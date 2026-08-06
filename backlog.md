@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 1 blocked · 6 on hold · 15 inbox · 65 done · 13 cancelled
+0 in progress · 4 ready · 1 blocked · 6 on hold · 14 inbox · 65 done · 13 cancelled
 
 ## In progress
 
@@ -12,6 +12,7 @@ _None._
 |---|---|---:|---|
 | [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `docs` `protocol` |
 | [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) | Run records: additive merged_as field for the commit that actually landed | 0 | `go` `ledger` `mcp` `protocol` |
+| [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) | Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line) | 0 | `cli` `docs` `onboarding` |
 | [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) | Uninstall doc + test: prove a team can walk away clean | 0 | `docs` `cli` `onboarding` |
 
 ## Blocked / waiting
@@ -44,7 +45,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
-- [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Init UX remainder: teammate joining flow and branch-protection guidance
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects?
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
