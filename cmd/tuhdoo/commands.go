@@ -93,6 +93,10 @@ once per clone: git config tuhdoo.principal <name>`)
 CI guidance: exclude the %q branch from CI triggers — github-actions:
   on: { push: { branches-ignore: ["%s"] } }
 
+Branch protection: exempt %q from any ruleset or protected-branch rule
+  requiring pull requests or reviews — the daemon pushes this branch
+  directly, fast-forward only, never force.
+
 Agent harness: any MCP harness connects through the stdio shim — paste
 into its MCP config:
   {
@@ -102,7 +106,7 @@ into its MCP config:
   }
 
 Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
-`, branchName(), head, sync, c.socket, branchName(), branchName())
+`, branchName(), head, sync, c.socket, branchName(), branchName(), branchName())
 	return 0
 }
 

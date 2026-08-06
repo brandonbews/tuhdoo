@@ -76,5 +76,9 @@ safe to leave open in a pane). One-shot commands cover reads (`status`,
 
 See `docs/agent-protocol.md` for the agent loop.
 
+Joining a repository that already uses tuhdoo — a teammate's project, a
+second machine? `docs/joining.md` is the end-to-end walkthrough, including
+clone shapes and the branch-protection settings the host needs.
+
 The design record lives in `docs/` — start with
 `docs/design/001-core-design.md`.

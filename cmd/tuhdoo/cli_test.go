@@ -219,6 +219,9 @@ func TestInitRemoteless(t *testing.T) {
 	mustContain(t, out, "local-only", "normal state", branchName(), "branches-ignore")
 	// The universal MCP harness snippet (002 T4) rides the same output.
 	mustContain(t, out, `"mcpServers"`, `"command": "tuhdoo"`, `"args": ["mcp"]`)
+	// The branch-protection line: hosts whose rulesets require PRs on
+	// all branches would silently break the daemon's direct pushes.
+	mustContain(t, out, "Branch protection", "fast-forward only, never force")
 	if strings.Contains(strings.ToLower(out), "error") {
 		t.Errorf("init output should not mention errors:\n%s", out)
 	}
