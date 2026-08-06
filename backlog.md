@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 1 blocked · 6 on hold · 16 inbox · 65 done · 12 cancelled
+0 in progress · 3 ready · 1 blocked · 6 on hold · 15 inbox · 65 done · 13 cancelled
 
 ## In progress
 
@@ -42,7 +42,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
-- [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Init UX remainder: teammate joining flow and branch-protection guidance
@@ -136,3 +135,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qt4g`](tasks/tuh-01KYZ34E3NR1HM02P8P3G7QT4G.md) there should be a concept of codereview for workflows that work that way/require it. it's almost a normal escalation but not quite. lets explore ways to do it. my current hunch is maybe an IN CODE REVIEW section that only appears if a task actually has that status. if we go that route, i could see ON HOLD, and NEEDS INPUT only showing when relevant too. def need a grill session for this
 - [`tuh-h4k6`](tasks/tuh-01KYZ9BJWWE0NZ89FJZW5KH4K6.md) status vs section in the dashoboard is a little confusing. grill and align behavior for ux. we need vocab alignment between data and surfaces this early in the project.
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
+- [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
