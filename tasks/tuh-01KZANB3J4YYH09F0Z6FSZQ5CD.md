@@ -13,6 +13,8 @@ Capture from the 2026-08-05 release session, answering: what is still essential 
 
 Sketch: embed the doc in the binary (go:embed) and print it via a `tuhdoo protocol` command; init output and README point at it (e.g. pipe into the host repo CLAUDE.md or agent instructions). Keeps one canonical text, versioned with the binary the agents actually talk to. Worth deciding at promotion: exact command name, and whether init should offer to write it into the repo.
 
+Absorbs (2026-08-06 grill): the migrated open-question "task-descriptions-are-prompts: a template worth shipping?" (tuh-01KZA0VT234XJYVZWT8C4X2TMA, cancelled as subsumed) — the convention already ships at write-time in create_task's tool description, and the doc's five-part section (context / ask / acceptance / pointers / constraints) reaches host repos via this task's mechanism. The future grill of this task should confirm the section survives whatever shape shipping takes; no third copy of the convention (init text, subcommand) — two surfaces is already one drift risk.
+
 ## History
 
 _No activity yet._
