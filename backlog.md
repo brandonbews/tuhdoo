@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 5 on hold · 18 inbox · 64 done · 12 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 19 inbox · 64 done · 12 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
@@ -53,6 +53,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) Uninstall story: how cleanly can a team walk away?
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
+- [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
 
 ## Done
 
