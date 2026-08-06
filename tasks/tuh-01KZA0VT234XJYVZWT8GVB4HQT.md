@@ -2,7 +2,7 @@
 
 `tuh-01KZA0VT234XJYVZWT8GVB4HQT`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `protocol`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
@@ -21,4 +21,10 @@ Constraints: stay workflow-agnostic (agent-protocol step 3: ordinary git on ordi
 
 ## History
 
-_No activity yet._
+### 2026-08-06 23:18 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-4hqt/salvage-breadcrumbs`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/45>
+- Commits: `ed51b48`
+
+Added the salvage-breadcrumbs paragraph to docs/agent-protocol.md, placed after the loop (right below the "never end holding a claim silently" rule): why daemon-synthesized interrupted runs are branch-less, the successor search order (predecessor's notes first, then host-repo branches carrying the task's short id), and the breadcrumbs to leave (task id in branch name, add_note the branch once it exists) — framed as recommended practice, not protocol law, keeping step 3's workflow-agnosticism. Revision header updated citing the 2026-08-06 salvage grill. Docs-only; make test lint green; squash-merged to main via PR #45.
