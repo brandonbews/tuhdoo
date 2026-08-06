@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 5 on hold · 19 inbox · 64 done · 12 cancelled
+1 in progress · 0 ready · 1 blocked · 5 on hold · 19 inbox · 64 done · 12 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | `release` |
+_None._
 
 ## Blocked / waiting
 
