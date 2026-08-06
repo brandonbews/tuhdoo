@@ -631,6 +631,47 @@ func TestClaimLifecycle(t *testing.T) {
 	}
 }
 
+// claim_next's label filter end to end (agent protocol, loop step 1): a
+// labelled claim matches all-of, skipping higher-priority non-matching
+// work; a filter that excludes everything renders exactly like an empty
+// pool; re-calling without labels takes the best ready task.
+func TestClaimNextLabelFilter(t *testing.T) {
+	_, c := startDaemon(t)
+
+	// Higher priority but unlabelled; lower priority carrying the
+	// requested label plus an extra one.
+	high := createOne(t, c, "brandon", map[string]any{"title": "big unlabelled", "priority": 5})
+	low := createOne(t, c, "brandon", map[string]any{
+		"title": "small labelled", "priority": 1, "labels": []string{"frontend", "urgent"}})
+
+	// A labelled claim skips the higher-priority non-matching task and
+	// serves the matching one — extra labels on the task don't hurt.
+	var h hydratedTask
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a1",
+		map[string]any{"next": true, "labels": []string{"frontend"}}, http.StatusOK), &h)
+	if h.Task.ID != low {
+		t.Fatalf("labelled claim_next picked %s, want %s", h.Task.ID, low)
+	}
+
+	// Ready work exists (high is unclaimed), but nothing carries the
+	// label: same conflict as an empty pool — the response does not
+	// distinguish filter-miss from exhaustion.
+	body := string(mustDo(t, c, "POST", "/v0/claims", "brandon/a2",
+		map[string]any{"next": true, "labels": []string{"frontend"}}, http.StatusConflict))
+	if !strings.Contains(body, "no ready task matches") {
+		t.Errorf("filter-miss conflict body = %s, want the empty-pool reason", body)
+	}
+
+	// Re-calling without labels tells the two apart: the pool wasn't
+	// empty, the filter was the reason.
+	var h2 hydratedTask
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a2",
+		map[string]any{"next": true}, http.StatusOK), &h2)
+	if h2.Task.ID != high {
+		t.Fatalf("unlabelled claim_next picked %s, want %s", h2.Task.ID, high)
+	}
+}
+
 // Test 3: batch create with intra-batch tmp refs lands atomically with
 // resolved real IDs; invalid batches create nothing.
 func TestBatchCreateTmpRefs(t *testing.T) {
