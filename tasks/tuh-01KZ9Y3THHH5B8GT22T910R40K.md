@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T910R40K`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 0
 - **Labels:** `release`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done), [`tuh-wpyp`](tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) (done), [`tuh-r3e8`](tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) (done), [`tuh-2hvf`](tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) (done), [`tuh-nvyk`](tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) (done), [`tuh-y4re`](tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) (done), [`tuh-7a40`](tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) (done)
@@ -28,7 +28,7 @@ Constraints: no tag push by agents; no workflow-file edits in this task; if the 
 >
 > The release workflow will build, smoke-test, publish the GitHub release, and publish npm 0.2.0. After it goes green, the next claimant of this task verifies artifacts and closes it done. If the workflow goes red instead, the task description says fix-or-blocked, not done.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Tagged v0.2.0 and pushed (Brandon, in-session, 2026-08-06). Release workflow run 31073808516 completed success.
 
 ### 2026-08-05 22:58 UTC — note from `brandon/claude-code-1`
 

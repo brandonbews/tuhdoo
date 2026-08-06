@@ -4,15 +4,7 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-### [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) · Cut v0.2.0: final verification and tag handoff
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-05 22:57 UTC
-
-> v0.2.0 is ready to tag — the tag push is yours (agents never push tags). Everything upstream is verified: all seven release PRs (#37–#43) are squash-merged on main at 4dc96df1097b94167297d8985c6049f7006ece4c, make test lint is green, npm/smoke.sh passes locally (twelve verbs, named-list assertion), and the dogfood daemon is running the release candidate. ONE THING TO REVIEW FIRST: PR #41 changed .github/workflows/release.yml (adds setup-go + a smoke gate before npm publish — two steps, pinned SHAs; full diff called out in that PR's body). Tagging fires that workflow, so please eyeball the diff before pushing the tag. Then, from the repo root:
->
->   git fetch origin && git tag -a v0.2.0 4dc96df1097b94167297d8985c6049f7006ece4c -m 'v0.2.0: release-grill sweep — parents removed, dep-loop loudness, clone-join adoption, smoke-gated releases' && git push origin v0.2.0
->
-> The release workflow will build, smoke-test, publish the GitHub release, and publish npm 0.2.0. After it goes green, the next claimant of this task verifies artifacts and closes it done. If the workflow goes red instead, the task description says fix-or-blocked, not done.
+_None — the fleet is unblocked._
 
 ## Answered
 
@@ -95,3 +87,15 @@ Asked by `brandon/claude-code-1` · 2026-08-05 06:12 UTC
 > Finding 3 blocks the 17/17 harness bar: the MCP renewal loop deliberately evicts provisionally-voided claims from session tracking, so a race loser's confirm_claim answers "this session holds no claim" instead of D6's promised "lost". Which semantics should the fix implement, and does PR #32 (the decided tombstone work, complete and green) merge now or ride along with the finding-3 fix?
 
 **Answer** (`brandon`, relayed by `brandon/claude-code-1`): Take the agent's recommendation: option (i) — voided claims stay tracked in the MCP session but are never renewed — folded into this same task, then re-run the harness for 17/17 and merge PR #32 with the renewal fix included, as one PR. (Brandon, live in session: "i really dont understand any of this problem. i'll take your recommendation on the escalation")
+
+### [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) · Cut v0.2.0: final verification and tag handoff
+
+Asked by `brandon/claude-code-1` · 2026-08-05 22:57 UTC
+
+> v0.2.0 is ready to tag — the tag push is yours (agents never push tags). Everything upstream is verified: all seven release PRs (#37–#43) are squash-merged on main at 4dc96df1097b94167297d8985c6049f7006ece4c, make test lint is green, npm/smoke.sh passes locally (twelve verbs, named-list assertion), and the dogfood daemon is running the release candidate. ONE THING TO REVIEW FIRST: PR #41 changed .github/workflows/release.yml (adds setup-go + a smoke gate before npm publish — two steps, pinned SHAs; full diff called out in that PR's body). Tagging fires that workflow, so please eyeball the diff before pushing the tag. Then, from the repo root:
+>
+>   git fetch origin && git tag -a v0.2.0 4dc96df1097b94167297d8985c6049f7006ece4c -m 'v0.2.0: release-grill sweep — parents removed, dep-loop loudness, clone-join adoption, smoke-gated releases' && git push origin v0.2.0
+>
+> The release workflow will build, smoke-test, publish the GitHub release, and publish npm 0.2.0. After it goes green, the next claimant of this task verifies artifacts and closes it done. If the workflow goes red instead, the task description says fix-or-blocked, not done.
+
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Tagged v0.2.0 and pushed (Brandon, in-session, 2026-08-06). Release workflow run 31073808516 completed success.
