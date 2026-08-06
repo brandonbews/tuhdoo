@@ -2,7 +2,7 @@
 
 `tuh-01KZCMF7JKMXVDG0HANVVQ05FN`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 0
 - **Labels:** `docs` `mcp` `go` `protocol`
 - **Created:** 2026-08-06 22:52 UTC by `brandon/claude-code-1`

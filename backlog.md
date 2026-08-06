@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 8 on hold · 7 inbox · 69 done · 18 cancelled
+1 in progress · 0 ready · 1 blocked · 8 on hold · 7 inbox · 69 done · 18 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) | claim_next selection: document the label filter and priority order for agents; test the matching code | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) | claim_next selection: document the label filter and priority order for agents; test the matching code | 0 | `docs` `mcp` `go` `protocol` |
+_None._
 
 ## Blocked / waiting
 
