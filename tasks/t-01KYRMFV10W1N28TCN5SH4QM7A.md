@@ -5,7 +5,7 @@
 - **Status:** on hold — deliberately paused
 - **Priority:** 0
 - **Labels:** `milestone`
-- **Depends on:** [`t-gsw5`](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (done)
+- **Depends on:** [`t-gsw5`](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (done), [`tuh-pk06`](tuh-01KZA0VT234XJYVZWT8S09PK06.md) (open)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description
