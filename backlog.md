@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 5 ready · 1 blocked · 8 on hold · 7 inbox · 65 done · 18 cancelled
+1 in progress · 4 ready · 1 blocked · 8 on hold · 7 inbox · 65 done · 18 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `docs` `protocol` |
 | [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) | Run records: additive merged_as field for the commit that actually landed | 0 | `go` `ledger` `mcp` `protocol` |
 | [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) | Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line) | 0 | `cli` `docs` `onboarding` |
 | [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) | Uninstall doc + test: prove a team can walk away clean | 0 | `docs` `cli` `onboarding` |
