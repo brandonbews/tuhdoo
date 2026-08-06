@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 1 blocked · 7 on hold · 10 inbox · 65 done · 16 cancelled
+0 in progress · 5 ready · 1 blocked · 7 on hold · 10 inbox · 65 done · 16 cancelled
 
 ## In progress
 
@@ -14,6 +14,7 @@ _None._
 | [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) | Run records: additive merged_as field for the commit that actually landed | 0 | `go` `ledger` `mcp` `protocol` |
 | [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) | Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line) | 0 | `cli` `docs` `onboarding` |
 | [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) | Uninstall doc + test: prove a team can walk away clean | 0 | `docs` `cli` `onboarding` |
+| [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) | claim_next selection: document the label filter and priority order for agents; test the matching code | 0 | `docs` `mcp` `go` `protocol` |
 
 ## Blocked / waiting
 
