@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 6 on hold · 17 inbox · 65 done · 12 cancelled
+0 in progress · 3 ready · 1 blocked · 6 on hold · 16 inbox · 65 done · 12 cancelled
 
 ## In progress
 
@@ -12,6 +12,7 @@ _None._
 |---|---|---:|---|
 | [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `docs` `protocol` |
 | [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) | Run records: additive merged_as field for the commit that actually landed | 0 | `go` `ledger` `mcp` `protocol` |
+| [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) | Uninstall doc + test: prove a team can walk away clean | 0 | `docs` `cli` `onboarding` |
 
 ## Blocked / waiting
 
@@ -48,7 +49,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects?
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
-- [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) Uninstall story: how cleanly can a team walk away?
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
