@@ -2,7 +2,7 @@
 
 `tuh-01KZA0VT234XJYVZWT8KT0BSDH`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `go` `ledger` `mcp` `protocol`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
@@ -21,4 +21,10 @@ Constraints: no new MCP verb — a field on an existing tool, T5's twelve-verb s
 
 ## History
 
-_No activity yet._
+### 2026-08-06 23:29 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-bsdh/merged-as-run-field`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/46>
+- Commits: `85b0fd8`
+
+merged_as landed end-to-end: RunFinished payload (additive, no upcaster; pre-field events replay unchanged — new table-driven TestFinishRunMergedAs covers both), finish_run MCP input + shared op request (no new verb), daemon runJSON, CLI/TUI history rendering, task-view run history (goldens updated), and the agent-protocol step-6 sentence + revision header. End-to-end daemon test TestMCPFinishRunMergedAs exercises finish_run → get_task → stored payload over the socket. Squash-merged to main as b678df5d7029331da257222320a8b7d9f0ecb9c6 (PR #46) — reported here in commits since this session's daemon predates the field; the next daemon deploy serves merged_as. Deploy/restart required (binary changed).
