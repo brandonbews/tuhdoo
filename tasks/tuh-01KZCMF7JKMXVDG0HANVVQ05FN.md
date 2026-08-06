@@ -2,7 +2,7 @@
 
 `tuh-01KZCMF7JKMXVDG0HANVVQ05FN`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `mcp` `go` `protocol`
 - **Created:** 2026-08-06 22:52 UTC by `brandon/claude-code-1`
@@ -21,4 +21,11 @@ Constraints: docs and tests only — no behavior change. The claimed:false reaso
 
 ## History
 
-_No activity yet._
+### 2026-08-06 23:57 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-05fn/claim-next-selection-docs`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/49>
+- Commits: `2e5ab33`
+- Merged as: `c7582f56235a83d5fea2c583b3714946426af49a`
+
+Selection paragraph added under agent-protocol loop step 1 (priority order with ULID tie-break matching get_backlog ready order; all-of label filter semantics; claimed:false ambiguity + re-call-without-labels disambiguation), semantics verified against ReadyTasks/hasAllLabels/opClaimNext before writing; example labels are generic placeholders per the product/dogfood separation rule. New table-driven TestHasAllLabels (internal/daemon/ops_test.go, new file — package had no ops unit-test file) and end-to-end TestClaimNextLabelFilter (daemon_test.go, HTTP path mirroring TestClaimLifecycle). No behavior change; reason string untouched per the grill decision. Squash-merged via PR #49. Docs+tests only — no deploy needed.
