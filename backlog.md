@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 5 ready · 1 blocked · 7 on hold · 8 inbox · 65 done · 18 cancelled
+0 in progress · 5 ready · 1 blocked · 8 on hold · 7 inbox · 65 done · 18 cancelled
 
 ## In progress
 
@@ -34,6 +34,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
 | [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) | Escalation delivery when the TUI is closed | 0 | `design` `tui` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
+| [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 | [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) | v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing | 0 | `design` |
 
 ## Inbox
@@ -45,7 +46,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
-- [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
 - [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
 
