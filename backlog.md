@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 5 on hold · 19 inbox · 64 done · 12 cancelled
+0 in progress · 0 ready · 1 blocked · 5 on hold · 19 inbox · 65 done · 12 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) | Cut v0.2.0: final verification and tag handoff | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -120,6 +118,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-2hvf`](tasks/tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) Doc-sync sweep: align docs with code and the 2026-08-05 release grill; tombstone open-questions into the ledger
 - [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build
 - [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) init hardening: loud unknown-flag errors and the MCP snippet in init output
+- [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) Cut v0.2.0: final verification and tag handoff
 
 ## Cancelled
 

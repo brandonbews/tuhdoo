@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T910R40K`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `release`
 - **Depends on:** [`tuh-wzrg`](tuh-01KZ9Y3THHH5B8GT22SY3FWZRG.md) (done), [`tuh-wpyp`](tuh-01KZ9Y3THHH5B8GT22T1A1WPYP.md) (done), [`tuh-r3e8`](tuh-01KZ9Y3THHH5B8GT22T1TZR3E8.md) (done), [`tuh-2hvf`](tuh-01KZ9Y3THHH5B8GT22T5D72HVF.md) (done), [`tuh-nvyk`](tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) (done), [`tuh-y4re`](tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) (done), [`tuh-7a40`](tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) (done)
@@ -37,3 +37,9 @@ Resume state for the next claimant (post-answer): steps 1-3 of the ask are compl
 ### 2026-08-05 22:58 UTC — run by `brandon/claude-code-1` — blocked
 
 All pre-tag work done and verified; blocked on Brandon pushing the v0.2.0 tag — see escalation 01KZA2B5Q6BBRKGCQCB40EDPTM.
+
+### 2026-08-06 18:49 UTC — run by `brandon/claude-code-1` — done
+
+- PR: <https://github.com/brandonbews/tuhdoo/releases/tag/v0.2.0>
+
+v0.2.0 is released. Brandon reviewed the release.yml diff (PR #41), tagged 4dc96df as v0.2.0 and pushed (2026-08-06); release workflow run 31073808516 completed success including the new smoke gate. Verified: GitHub release v0.2.0 published (not draft) with all five assets (darwin/linux x amd64/arm64 tarballs + checksums.txt); npm tuhdoo@0.2.0 is dist-tag latest. Pre-tag verification was recorded in the prior blocked run and its note: all seven release PRs (#37-#43) on main, make test lint green, npm/smoke.sh green locally, dogfood daemon deployed on the candidate. This closes the 2026-08-05 release grill: v0.2.0 is the first tag safe for a second project to pin (v0.1.1 predates the confirmation gate — do not install it anywhere).
