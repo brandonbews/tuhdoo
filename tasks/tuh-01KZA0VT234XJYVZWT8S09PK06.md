@@ -2,7 +2,7 @@
 
 `tuh-01KZA0VT234XJYVZWT8S09PK06`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `cli` `docs` `onboarding`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
@@ -21,4 +21,11 @@ Constraints: init stays flag-free and loud on unknown args (#42); no new command
 
 ## History
 
-_No activity yet._
+### 2026-08-06 23:40 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-pk06/joining-doc`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/47>
+- Commits: `31c087b`
+- Merged as: `01f90190cab537d1cba43616a438b73366a1e715`
+
+Joining doc landed as docs/joining.md (clone/install/init/verify/principal-override, clone-shapes incl. fork warning, admin branch-protection + CI section), pointers added in README.md and docs/README.md, one branch-protection paragraph in init output (pinned by TestInitRemoteless), and two clone-shape adoption tests in internal/daemon/adopt_test.go (single-branch and shallow, each pre-asserting genuine clone shape; shallow clones via file:// since git ignores --depth on local paths). Both tests live in the daemon suite — the syncer suite never performs real clones. Task pointer correction for the record: init output is not goldened; cli_test.go TestInitRemoteless is the only init-output coverage. Squash-merged via PR #47. Binary changed (init output) — deploy/restart needed.

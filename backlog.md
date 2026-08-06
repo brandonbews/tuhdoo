@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 2 ready · 1 blocked · 8 on hold · 7 inbox · 67 done · 18 cancelled
+0 in progress · 2 ready · 1 blocked · 8 on hold · 7 inbox · 68 done · 18 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) | Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line) | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -117,6 +115,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) Cut v0.2.0: final verification and tag handoff
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs)
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed
+- [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line)
 
 ## Cancelled
 
