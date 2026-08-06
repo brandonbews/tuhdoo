@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 1 blocked · 6 on hold · 13 inbox · 65 done · 14 cancelled
+0 in progress · 4 ready · 1 blocked · 6 on hold · 12 inbox · 65 done · 15 cancelled
 
 ## In progress
 
@@ -47,7 +47,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects?
-- [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) Working-set retirement: bounding what surfaces show without deleting history
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
 - [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
@@ -136,3 +135,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
 - [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
+- [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
