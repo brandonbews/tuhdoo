@@ -35,5 +35,6 @@ T3 says in-memory only; either placement satisfies that.
 - Branch: `feat/replay-engine`
 - PR: <https://example.com/pr/12>
 - Commits: `a1b2c3d`, `e4f5a6b`
+- Merged as: `9c8d7e6`
 
 Replay engine with winner rule and lease expiry; 24-permutation order-insensitivity test green.

@@ -367,7 +367,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		}
 		run := Run{ID: e.ID, Task: e.Task, Actor: e.Actor, Machine: e.Machine,
 			Outcome: p.Outcome, Branch: p.Branch, PR: p.PR,
-			Commits: p.Commits, Summary: p.Summary}
+			Commits: p.Commits, MergedAs: p.MergedAs, Summary: p.Summary}
 		if h := holder[e.Task]; h != nil && h.Status == ClaimActive && h.Actor == e.Actor {
 			run.Claim = h.ID
 			h.Status = ClaimFinished

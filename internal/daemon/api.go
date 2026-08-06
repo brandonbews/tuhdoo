@@ -110,6 +110,7 @@ type runJSON struct {
 	Branch      string   `json:"branch"`
 	PR          string   `json:"pr"`
 	Commits     []string `json:"commits"`
+	MergedAs    []string `json:"merged_as"`
 	Summary     string   `json:"summary"`
 	Synthesized bool     `json:"synthesized"`
 }
@@ -495,7 +496,7 @@ func runJSONOf(r *core.Run) runJSON {
 	return runJSON{
 		ID: r.ID, Task: r.Task, Claim: r.Claim, Actor: r.Actor, Machine: r.Machine,
 		Outcome: r.Outcome, Branch: r.Branch, PR: r.PR, Commits: r.Commits,
-		Summary: r.Summary, Synthesized: r.Synthesized,
+		MergedAs: r.MergedAs, Summary: r.Summary, Synthesized: r.Synthesized,
 	}
 }
 

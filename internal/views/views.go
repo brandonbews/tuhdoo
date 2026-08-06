@@ -459,6 +459,10 @@ func runEntry(r *core.Run) string {
 		fmt.Fprintf(&w, "- Commits: `%s`\n", strings.Join(r.Commits, "`, `"))
 		links = true
 	}
+	if len(r.MergedAs) > 0 {
+		fmt.Fprintf(&w, "- Merged as: `%s`\n", strings.Join(r.MergedAs, "`, `"))
+		links = true
+	}
 	if links {
 		w.WriteString("\n")
 	}

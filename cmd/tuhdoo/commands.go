@@ -412,6 +412,9 @@ func historyOf(col colors, h hydratedTask) []histEntry {
 		if len(r.Commits) > 0 {
 			links = append(links, "commits "+strings.Join(r.Commits, ", "))
 		}
+		if len(r.MergedAs) > 0 {
+			links = append(links, "merged as "+strings.Join(r.MergedAs, ", "))
+		}
 		if len(links) > 0 {
 			fmt.Fprintf(&b, "    %s\n", strings.Join(links, " · "))
 		}

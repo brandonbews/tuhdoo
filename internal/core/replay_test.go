@@ -239,6 +239,45 @@ func TestFinishRunDone(t *testing.T) {
 	}
 }
 
+// merged_as (additive, 2026-08-06 linkage grill): a run.finished may
+// carry the commit(s) that actually landed on a durable branch; events
+// written before the field existed replay unchanged with none — T3
+// additive-first, no upcaster.
+func TestFinishRunMergedAs(t *testing.T) {
+	tests := []struct {
+		name string
+		run  event.Event
+		want []string
+	}{
+		{"event with merged_as", evt(t, 3, event.TypeRunFinished, "brandon/impl-1", "t1",
+			event.RunFinished{Outcome: event.OutcomeDone, Branch: "feat/login",
+				Commits: []string{"a1b2c3d"}, MergedAs: []string{"9c8d7e6"}}),
+			[]string{"9c8d7e6"}},
+		// A pre-field event: its stored payload has no merged_as key at
+		// all, exactly as older binaries wrote it.
+		{"pre-field event replays unchanged", evt(t, 3, event.TypeRunFinished, "brandon/impl-1", "t1",
+			map[string]any{"outcome": event.OutcomeDone, "branch": "feat/login",
+				"pr": "", "commits": []string{"a1b2c3d"}, "summary": ""}),
+			nil},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			events := []event.Event{
+				taskCreated(t, 1, "t1", "fix login"),
+				evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "t1", event.ClaimMade{}),
+				tc.run,
+			}
+			s := replay(t, events, nil)
+			if got := s.Tasks["t1"].Status; got != StatusDone {
+				t.Fatalf("task status = %s, want done", got)
+			}
+			if len(s.Runs) != 1 || !reflect.DeepEqual(s.Runs[0].MergedAs, tc.want) {
+				t.Fatalf("runs = %+v, want one run with MergedAs %v", s.Runs, tc.want)
+			}
+		})
+	}
+}
+
 func TestReadyRespectsDependenciesAndPriority(t *testing.T) {
 	events := []event.Event{
 		taskCreated(t, 1, "t1", "build daemon"),

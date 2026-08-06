@@ -125,14 +125,20 @@ type ClaimReleased struct {
 }
 
 // RunFinished is the payload of "run.finished". Outcome is one of the
-// Outcome* constants. Branch, PR, and Commits are stored strings, never
-// dereferenced (T2: host-agnostic).
+// Outcome* constants. Branch, PR, Commits, and MergedAs are stored
+// strings, never dereferenced (T2: host-agnostic). MergedAs (additive,
+// 2026-08-06 linkage grill) is the commit(s) on a durable branch that
+// carry this work, if known — the one pointer that outlives squash and
+// rebase merges, where the branch and its reported commits die at
+// merge. Events written before the field existed carry none and replay
+// unchanged.
 type RunFinished struct {
-	Outcome string   `json:"outcome"`
-	Branch  string   `json:"branch"`
-	PR      string   `json:"pr"`
-	Commits []string `json:"commits"`
-	Summary string   `json:"summary"`
+	Outcome  string   `json:"outcome"`
+	Branch   string   `json:"branch"`
+	PR       string   `json:"pr"`
+	Commits  []string `json:"commits"`
+	MergedAs []string `json:"merged_as"`
+	Summary  string   `json:"summary"`
 
 	Unknown map[string]json.RawMessage `json:"-"`
 }

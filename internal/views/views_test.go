@@ -117,11 +117,12 @@ func goldenInput(t *testing.T) core.Input {
 			Blocking: false,
 		}),
 		evt(t, 11, event.TypeRunFinished, "brandon/impl-1", "t-core", event.RunFinished{
-			Outcome: event.OutcomeDone,
-			Branch:  "feat/replay-engine",
-			PR:      "https://example.com/pr/12",
-			Commits: []string{"a1b2c3d", "e4f5a6b"},
-			Summary: "Replay engine with winner rule and lease expiry; 24-permutation order-insensitivity test green.",
+			Outcome:  event.OutcomeDone,
+			Branch:   "feat/replay-engine",
+			PR:       "https://example.com/pr/12",
+			Commits:  []string{"a1b2c3d", "e4f5a6b"},
+			MergedAs: []string{"9c8d7e6"},
+			Summary:  "Replay engine with winner rule and lease expiry; 24-permutation order-insensitivity test green.",
 		}),
 		evt(t, 12, event.TypeEscalationAnswered, "brandon", "t-core", event.EscalationAnswered{
 			Answer:     "Keep them in core; they are part of honest replay.",
