@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 18 inbox · 65 done · 12 cancelled
+0 in progress · 2 ready · 1 blocked · 6 on hold · 17 inbox · 65 done · 12 cancelled
 
 ## In progress
 
@@ -11,6 +11,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) | Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs) | 0 | `docs` `protocol` |
+| [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) | Run records: additive merged_as field for the commit that actually landed | 0 | `go` `ledger` `mcp` `protocol` |
 
 ## Blocked / waiting
 
@@ -42,7 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
-- [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run-to-code linkage robustness: what exactly does a Run store so links stay meaningful years later?
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Init UX remainder: teammate joining flow and branch-protection guidance
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
