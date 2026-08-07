@@ -2,7 +2,7 @@
 
 `tuh-01KZANB3J4YYH09F0Z6FSZQ5CD`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `cli` `protocol` `onboarding`
 - **Created:** 2026-08-06 04:29 UTC by `brandon/claude-code-1`
@@ -44,3 +44,7 @@ _Unanswered._
 ### 2026-08-07 21:56 UTC — note from `brandon/claude-code-1`
 
 Resume state: no code written, no branch — work stopped at the task's mandated pre-build gate. Escalation 01KZF3KJ9CF9BKM9XNA4YK3VSD carries both open decisions (command name; init write-vs-pointer) with recommendations; its answer unblocks the whole build. Groundwork for the claimant: existing subcommand dispatch is the switch in cmd/tuhdoo/main.go (~line 27); all current verbs are bare single words; docs/agent-protocol.md path is post-docs-swap-correct (PR #52) and is the canonical source to go:embed.
+
+### 2026-08-07 21:56 UTC — run by `brandon/claude-code-1` — blocked
+
+Blocked on escalation 01KZF3KJ9CF9BKM9XNA4YK3VSD (command name; init write-vs-pointer) — the task's own pre-build gate. No build attempted; recommendations are in the escalation.
