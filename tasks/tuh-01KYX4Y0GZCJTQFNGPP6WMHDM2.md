@@ -2,7 +2,7 @@
 
 `tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 0
 - **Labels:** `docs` `product` `web`
 - **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (done), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (done)
