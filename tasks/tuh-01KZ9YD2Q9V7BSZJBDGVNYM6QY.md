@@ -18,15 +18,17 @@ REPRESENTATION — settled at the strategy grill, agenda item 5, 2026-08-07 (wri
 - Location: root docs/ is the published content root; the directory is the publish boundary (post-swap; working docs live in internal-docs/).
 - Links: relative paths to real .md files and real asset paths; GitHub is the semantic baseline — if a link works clicking through GitHub it must work everywhere; the site rewrites .md links to routes at build time (standard remark/rehype); the site adapts to the content, never the reverse.
 
+WRITING BAR (Brandon, 2026-08-07): tight, straight-to-the-point, comprehensive. Follow docs best practices and carry the informative tone and vibe of great library/framework docs (TanStack, Next.js). No weird lingo or vocabulary that doesn't make sense outside this repo — define product terms on first use (escalation, lease, data branch, claim); internal session jargon (e.g. "grill", "B12", cycle numbers) never appears. Written so Brandon can maintain and iterate on it easily.
+
 Context: this task owns the human-facing narrative of using tuhdoo — the prose that explains, for a person (not an agent), the intention→DAG flow the mechanism already supports: capture (inbox, title-only is fine) → triage/grill → promote (prompt-quality description: context / ask / acceptance / pointers / constraints) → decompose (atomic batch create_task with tmp: refs; a container depends_on its children) → steer (priority, edges, held, escalation answers). The mechanism all exists; the prose for humans exists nowhere. The 2026-08-06/07 triage-and-structuring sessions are the living example of the flow — the launch epic itself was built exactly this way and can be the worked example.
 
-The ask: write the user-facing docs in the representation above — the steering flow, plus what adopting tuhdoo looks like for a team (init, the TUI, escalation answering, onboarding a teammate). Post-swap, docs/joining.md and docs/uninstall.md are siblings in the same content root and direct source material.
+The ask: write the user-facing docs in the representation above and to the writing bar — the steering flow, plus what adopting tuhdoo looks like for a team (init, the TUI, escalation answering, onboarding a teammate). Post-swap, docs/joining.md and docs/uninstall.md are siblings in the same content root and direct source material.
 
-Acceptance: the capture→triage→promote→decompose→steer flow documented for humans with a worked example; files live under docs/ in the settled representation, renderable on the site and readable standalone on GitHub and in a terminal; make test lint untouched/green.
+Acceptance: the capture→triage→promote→decompose→steer flow documented for humans with a worked example; files live under docs/ in the settled representation, renderable on the site and readable standalone on GitHub and in a terminal; prose meets the writing bar (plain vocabulary, terms defined, no repo-internal jargon); make test lint untouched/green.
 
 Constraints — two audiences, two documents, no forking: the agent-facing conventions ship in agent-protocol.md (post-swap a public sibling in docs/, delivered to foreign repos by tuh-01KZANB3J4YYH09F0Z6FSZQ5CD). These docs are for humans; link the protocol doc, never copy its content into a divergent version.
 
-History: captured by Brandon 2026-08-05; absorbed the plan-materialization open-question at the 2026-08-06 triage grill (tuh-01KZA0VT234XJYVZWT8Q19P9QM, cancelled as subsumed); promoted into the launch epic 2026-08-07; representation decision recorded from the strategy grill 2026-08-07.
+History: captured by Brandon 2026-08-05; absorbed the plan-materialization open-question at the 2026-08-06 triage grill (tuh-01KZA0VT234XJYVZWT8Q19P9QM, cancelled as subsumed); promoted into the launch epic 2026-08-07; representation decision recorded from the strategy grill 2026-08-07; writing bar added same day.
 
 ## History
 
