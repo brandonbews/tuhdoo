@@ -2,7 +2,7 @@
 
 `tuh-01KZF1DNJ3T77A01NJXF1VKK4J`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `docs` `onboarding`
 - **Created:** 2026-08-07 21:17 UTC by `brandon/claude-code-1`
@@ -26,4 +26,10 @@ Constraints: moves, not copies — no doc content forked anywhere; .github/workf
 
 ## History
 
-_No activity yet._
+### 2026-08-07 21:55 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-kk4j/docs-swap`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/52>
+- Merged as: `4b18038a398bcb7b764d071bc66f23bbd3cd1529`
+
+Landed on main as 4b18038 (PR #52, squash). docs/ → internal-docs/ via git mv; joining.md, uninstall.md, agent-protocol.md moved back into a new root docs/ (net: their paths unchanged in git, so the uninstall test's const needed no edit), each with title+description frontmatter — the first conforming files of the representation contract — plus a minimal docs/README.md index (the user-docs task tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY expands it later). CLAUDE.md, root README, and internal-docs/README updated; both live ledger descriptions (tuh-01KZANB3J4YYH09F0Z6FSZQ5CD, t-01KYRMFV10W1N28TCN5SH4QM7A) updated via update_task. Deliberately-left old-path hits (tombstone git-log commands, roadmap historical annotation, golden event bytes per T3, views.go:141 out-of-scope sentence) are listed with reasons in the PR body. make test lint green; CI green; no binary change, no daemon restart needed.
