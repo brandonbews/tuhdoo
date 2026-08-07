@@ -40,3 +40,15 @@ Carry-forward for item 1 (framework): the contract narrows it — the framework 
 ### 2026-08-07 21:33 UTC — note from `brandon/claude-code-1`
 
 Checkpoint 2026-08-07 (same Brandon-led session, continued): items 1, 2, and 4 SETTLED, recorded into the site task (tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2). Item 4: one site at launch (marketing + docs), split-ready by construction via the content contract; Mintlify-later stays an option, not a plan. Item 1: Next.js — Brandon's call with the Astro challenge heard; docs rendered by a thin unified/remark pipeline (established plugins + small link-rewrite visitor), hard constraint GFM-never-MDX; Fumadocs/Nextra explicitly ruled out. Item 2: Vercel GitHub App, root=site/, PR previews, zero .github/workflows files; all pages statically generated, output:'export' deferred. Remaining agenda: item 3 (domain — tuhdoo.com assumed, who buys/when) and item 6 (workflow recipes' home).
+
+### 2026-08-07 21:43 UTC — note from `brandon/claude-code-1`
+
+Final checkpoint, 2026-08-07 (Brandon-led session): items 3 and 6 settled; agenda complete; task closed done.
+
+Item 3 (domain): tuhdoo.com is already Brandon's — Namecheap, registered 2026-03-26, parked, expires 2027-03-26 (verified via whois this session). No purchase needed; Vercel project + DNS wiring is the new human-led epic child tuh-01KZF2D3MA0P24WKAWK89J0Q0X, blocked on the site task. Item 6 (recipes' home): recipes are literally docs — a section of the published docs/ root under the same content contract; no recipe content in the binary (archived flavor-picker decision stands); init's post-success text gains one line pointing at the least-specific stable tuhdoo.com URL (permanent redirect promise). Recorded on tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.
+
+Late additions from Brandon at close: (a) site component discipline — docs renderer assembled from a discrete, explicitly-listed inventory of small components with the GFM→component mapping legible in one file (recorded on the site task); (b) writing bar for all published docs — tight, TanStack/Next-calibre tone, no repo-internal jargon, terms defined on first use, maintainable by Brandon (recorded on the user-docs task, referenced from recipes).
+
+Where every decision landed: site task tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 (items 1, 2, 3, 4, 5-site-side + component discipline); user-docs task tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY (item 5 full contract + writing bar); recipes task tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ (item 6). Execution surfaced: docs-swap tuh-01KZF1DNJ3T77A01NJXF1VKK4J (epic child, claimable), DNS wiring tuh-01KZF2D3MA0P24WKAWK89J0Q0X (epic child, human-led), views.go:141 wording capture tuh-01KZF1DNJ3T77A01NJXHW4QGAW (inbox). No announcement/launch-checklist child created — deliberate; capture when launch nears.
+
+Closed by status update at Brandon's direction — human-led task, no agent claim/run by design.
