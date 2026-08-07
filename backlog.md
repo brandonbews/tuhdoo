@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 5 blocked · 4 on hold · 5 inbox · 71 done · 20 cancelled
+0 in progress · 3 ready · 6 blocked · 4 on hold · 5 inbox · 71 done · 20 cancelled
 
 ## In progress
 
@@ -23,6 +23,7 @@ _None._
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md); depends on [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) |
 | [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md); depends on [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md); depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md); depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md); depends on [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) |
+| [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) |
 
 ## On hold
 
