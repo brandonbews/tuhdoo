@@ -222,6 +222,10 @@ func TestInitRemoteless(t *testing.T) {
 	// The branch-protection line: hosts whose rulesets require PRs on
 	// all branches would silently break the daemon's direct pushes.
 	mustContain(t, out, "Branch protection", "fast-forward only, never force")
+	// The docs pointer: the least-specific stable URL is a permanent
+	// promise baked into every shipped binary — recipes and guides live
+	// there, not in the binary, so they can be fixed without a release.
+	mustContain(t, out, "Docs & workflow recipes: https://tuhdoo.com/docs")
 	if strings.Contains(strings.ToLower(out), "error") {
 		t.Errorf("init output should not mention errors:\n%s", out)
 	}

@@ -106,6 +106,7 @@ into its MCP config:
   }
 
 Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
+Docs & workflow recipes: https://tuhdoo.com/docs
 `, branchName(), head, sync, c.socket, branchName(), branchName(), branchName())
 	return 0
 }
