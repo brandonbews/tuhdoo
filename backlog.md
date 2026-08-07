@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 77 done · 20 cancelled
+0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 78 done · 20 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-vq1p`](tasks/tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P.md) | Root .gitignore: ignore OS junk (.DS_Store and friends) | 2 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -121,6 +119,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) claim_next selection: document the label filter and priority order for agents; test the matching code
 - [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) Grill: site stack & content strategy (human-led)
 - [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/
+- [`tuh-vq1p`](tasks/tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P.md) Root .gitignore: ignore OS junk (.DS_Store and friends)
 
 ## Cancelled
 
