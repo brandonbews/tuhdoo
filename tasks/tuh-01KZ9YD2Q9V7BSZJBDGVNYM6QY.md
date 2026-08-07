@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `docs` `product`
-- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (open)
+- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (done), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (open)
 - **Created:** 2026-08-05 21:48 UTC by `brandon`
 
 ## Description

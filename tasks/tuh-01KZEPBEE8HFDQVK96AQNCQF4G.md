@@ -2,7 +2,7 @@
 
 `tuh-01KZEPBEE8HFDQVK96AQNCQF4G`
 
-- **Status:** open — ready
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `design` `product` `web`
 - **Created:** 2026-08-07 18:04 UTC by `brandon/claude-code-1`
