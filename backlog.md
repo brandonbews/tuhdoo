@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 7 inbox · 78 done · 20 cancelled
+0 in progress · 1 ready · 2 blocked · 4 on hold · 8 inbox · 78 done · 20 cancelled
 
 ## In progress
 
@@ -41,6 +41,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) improve design of docs site (especially logo)
 - [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) improve tone, brevity and audience of docs content
+- [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) make sure doc site is using all of the best latest next dependencies and recommendations (an up to date create next app, and not just some cobbled stuff to get a working next app)
 
 ## Done
 
