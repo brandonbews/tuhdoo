@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 5 blocked · 5 on hold · 5 inbox · 70 done · 19 cancelled
+0 in progress · 2 ready · 5 blocked · 5 on hold · 4 inbox · 71 done · 19 cancelled
 
 ## In progress
 
@@ -43,7 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
-- [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
 
 ## Done
 
@@ -116,6 +115,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line)
 - [`tuh-ek1s`](tasks/tuh-01KZA0VT234XJYVZWT93P2EK1S.md) Uninstall doc + test: prove a team can walk away clean
+- [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
 - [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) claim_next selection: document the label filter and priority order for agents; test the matching code
 
 ## Cancelled
