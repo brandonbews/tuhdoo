@@ -2,7 +2,7 @@
 
 `tuh-01KZANB3J4YYH09F0Z6FSZQ5CD`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `cli` `protocol` `onboarding`
 - **Created:** 2026-08-06 04:29 UTC by `brandon/claude-code-1`

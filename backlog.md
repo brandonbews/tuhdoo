@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 76 done · 20 cancelled
+1 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 76 done · 20 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) | Ship the agent protocol with the binary: tuhdoo protocol command | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) | Ship the agent protocol with the binary: tuhdoo protocol command | 1 | `cli` `protocol` `onboarding` |
 | [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | `web` `launch` |
 
 ## Blocked / waiting
