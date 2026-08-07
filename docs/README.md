@@ -10,7 +10,7 @@ Working documents for the design and development of tuhdoo.
 - [`agent-protocol.md`](agent-protocol.md) — the instruction text a harness loads for agents working a tuhdoo project (field-tested since 2026-07-30, heavily revised since — every dogfood session runs it).
 - [`joining.md`](joining.md) — onboarding a new machine to a repo that already uses tuhdoo: clone shapes, install, `tuhdoo init`, verification, principal override, and the host branch-protection/CI settings. Self-contained by design; [`uninstall.md`](uninstall.md) is its companion.
 - [`uninstall.md`](uninstall.md) — the reverse move: removing tuhdoo from a machine (a handful of ordinary git commands, zero trace) and retiring a team's ledger (irreversible, framed accordingly, and usually unnecessary — abandoning beats deleting). The per-machine steps are executed verbatim by a test (`cmd/tuhdoo/uninstall_doc_test.go`), so the doc cannot silently drift from reality.
-- [`plan/roadmap.md`](plan/roadmap.md) — v0/v1/v2+ phases, each with a definition of done.
+- [`plan/roadmap.md`](plan/roadmap.md) — the live phase and done-phase declarations, each with a definition of done.
 - [`plan/backlog.md`](plan/backlog.md) — a tombstone: the B1–B12 build-out was migrated into tuhdoo itself at B12 (2026-07-30); the live queue is `tuhdoo backlog`.
 
 New agents: start at the repo-root `CLAUDE.md`, which gives the reading order and project laws.
