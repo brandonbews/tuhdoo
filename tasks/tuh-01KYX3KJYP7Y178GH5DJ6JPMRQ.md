@@ -2,7 +2,7 @@
 
 `tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `product`
 - **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (done), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (done)
@@ -43,3 +43,11 @@ Position statement for the future grill (2026-07-31 session with Brandon) — in
 ### 2026-08-01 00:03 UTC — note from `brandon/claude-code-1`
 
 Update (2026-07-31, same session): the init flavor picker (tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ, point 5 of the previous note) was archived same-day on Brandon's call, accepting two arguments against building it: (1) staleness — scaffolding files baked into the shipped binary encode fast-moving harness conventions (skill formats, AGENTS.md idioms) that a docs page can fix in minutes but a binary teaches wrong indefinitely, with tuhdoo's authority behind it; (2) menu-of-one — only one flavor (Brandon's) exists or is proven, and a picker with one real option plus filler is worse than a link to one excellent doc. Surviving scope for this task is the floor: init emits links to recipe docs after success; recipes are docs pages with copy-pasteable, vendorable per-host blocks. If distinct proven flavors ever accumulate and formats settle, a picker could be re-raised as a fresh capture — nothing here forecloses it.
+
+### 2026-08-07 22:02 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-pmrq/workflow-recipes`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/53>
+- Merged as: `7ac7e349d1d87b9da794fc14183e38c068d57a10`
+
+Landed on main as 7ac7e34 (PR #53, squash). New docs/recipes/ section: README.md index (states the protocol-vs-workflow boundary; recipes framed as suggestions, never protocol) and trunk-based-pr-flow.md — the trunk-based PR flow written host-agnostically from this repo's dogfood evidence, with a copy-pasteable CLAUDE.md/AGENTS.md block and an Adapting-it section; protocol steps link into agent-protocol.md, nothing copied. Both pages meet the representation contract (title+description frontmatter, relative links) and the writing bar (no repo-internal jargon). docs/README.md index updated. init post-success output gained one line — "Docs & workflow recipes: https://tuhdoo.com/docs" (least-specific stable URL, a permanent promise) — asserted in TestInitRemoteless. Binary changed (cmd/tuhdoo/commands.go): deploy restart happening right after this finish per CLAUDE.md.
