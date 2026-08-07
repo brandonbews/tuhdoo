@@ -15,6 +15,8 @@ export type NavEntry = {
 
 export const docsNav: NavEntry[] = [
   { slug: [], file: "README.md", title: "Overview" },
+  { slug: ["steering"], file: "steering.md", title: "Steering a backlog" },
+  { slug: ["adopting"], file: "adopting.md", title: "Adopting tuhdoo" },
   { slug: ["joining"], file: "joining.md", title: "Joining a repo" },
   { slug: ["agent-protocol"], file: "agent-protocol.md", title: "Agent protocol" },
   { slug: ["recipes"], file: "recipes/README.md", title: "Workflow recipes" },
