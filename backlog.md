@@ -1,20 +1,19 @@
 # Backlog
 
-1 in progress · 1 ready · 4 blocked · 4 on hold · 5 inbox · 74 done · 20 cancelled
+0 in progress · 2 ready · 3 blocked · 4 on hold · 5 inbox · 75 done · 20 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | `docs` `product` |
+| [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | `web` `launch` |
 
 ## Blocked / waiting
 
@@ -22,8 +21,7 @@
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) | Ship the agent protocol with the binary: tuhdoo protocol command | 1 | an [open question](escalations.md) |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md); depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md); depends on [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) |
-| [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md); depends on [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) |
 
 ## On hold
 
@@ -82,6 +80,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-t14p`](tasks/tuh-01KYWWH4DZH4TR7ASVGTDBT14P.md) One-shot steering surface: two-rule contract in design docs, serialized backlog/escalations output
 - [`tuh-t906`](tasks/tuh-01KYX1D49M9M0EB69HNVBZT906.md) Trunk-based PR flow: squash-only merges, enforced by rulesets, loop rewired in CLAUDE.md
 - [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions)
+- [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) Marketing / docs site for tuhdoo (monorepo: site/ in this repo)
 - [`tuh-5c5p`](tasks/tuh-01KYX6CMQV1G6XDZGNAF2M5C5P.md) Slash command /drain-backlog: the reusable drain-the-backlog prompt
 - [`tuh-zb01`](tasks/tuh-01KYX7303WN3RSBXXB9CAGZB01.md) History view: h opens the done/cancelled shelf in the TUI
 - [`tuh-7wbw`](tasks/tuh-01KYXAS20FAP956KBHVZ057WBW.md) Design pass on the generated markdown views: scannable, glanceable data branch

@@ -2,10 +2,10 @@
 
 `tuh-01KZF2D3MA0P24WKAWK89J0Q0X`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 0
 - **Labels:** `web` `launch`
-- **Depends on:** [`tuh-hdm2`](tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) (open)
+- **Depends on:** [`tuh-hdm2`](tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) (done)
 - **Created:** 2026-08-07 21:34 UTC by `brandon/claude-code-1`
 
 ## Description

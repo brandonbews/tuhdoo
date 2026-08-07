@@ -2,7 +2,7 @@
 
 `tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `product` `web`
 - **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (done), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (done)
@@ -32,4 +32,10 @@ History: captured 2026-07-31 intake; held behind v1-confidence gate; gate declar
 
 ## History
 
-_No activity yet._
+### 2026-08-07 22:15 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-hdm2/marketing-docs-site`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/54>
+- Merged as: `38998e2c63a538cf5319165a41c9aca68b9acb73`
+
+Landed on main as 38998e2 (PR 54, squash). Self-contained site/ per the settled decisions: Next.js App Router + TS; thin unified/remark pipeline (remark-parse, remark-frontmatter, remark-gfm, one custom .md-link-rewrite visitor, remark-rehype, rehype-slug, rehype-react) fs-reading root docs/ at build; GFM only, never MDX; GitHub-rule heading slugs so cross-doc anchors click through identically. Component discipline held: full GFM-element-to-component mapping in one file (site/src/components/markdown-map.tsx); nav config site-owned (site/src/lib/nav.ts). Routes all statically generated: landing, /docs, joining, agent-protocol, uninstall, recipes, recipes/trunk-based-pr-flow; link/anchor walk over the built HTML found zero broken links. Marketing landing has real copy from README/docs including the slowdown-is-the-feature angle. npm run build green from site/; make test lint green from repo root; zero workflow files; no Go reference to site/. Vercel project creation + DNS is the human-led child tuh-01KZF2D3MA0P24WKAWK89J0Q0X, now unblocked — Vercel setup: root directory site/, production from main, previews per PR, no vercel.json needed. No Go binary change, no daemon restart needed.
