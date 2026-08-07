@@ -40,7 +40,7 @@ questions belong to the ledger.
 | Uninstall story | `tuh-01KZA0VT234XJYVZWT93P2EK1S` |
 | Compaction triggers in practice | `tuh-01KZA0VT234XJYVZWT95JM25KW` |
 | Working-set retirement | `tuh-01KZA0VT234XJYVZWT980V7K2Y` |
-| v2+ parked set (one held pointer task) | `tuh-01KZA0VT234XJYVZWT98B7NXEH` |
+| v2+ parked set (pointer task; cancelled 2026-08-07 — deferrals live beside their decisions in `001`/`002`) | `tuh-01KZA0VT234XJYVZWT98B7NXEH` |
 
 An epic-UX exploration capture also exists:
 `tuh-01KZ9Y3THHH5B8GT22T92BPEZ8`.

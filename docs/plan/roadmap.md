@@ -1,12 +1,8 @@
 # Roadmap
 
-Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each phase has a definition of done; a phase isn't done because its code exists — it's done when its *proof* holds.
+Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each phase has a definition of done; a phase isn't done because its code exists — it's done when its *proof* holds. The file carries the live phase and the done-declarations of finished ones — it does not pre-schedule phases beyond the live one; consciously deferred features live beside the decisions that deferred them in `001`/`002`. *(Trimmed 2026-08-07, roadmap grill: done-phase history compressed to its proof record, the v2+ section removed as duplication of `001` D4/D7/D8 and `002` T2/T4/T7 — full text in git history.)*
 
-## v0 — The loop, dogfoodable
-
-*(2026-07-30, Cycle 4: `watch` was folded into the verb-less TUI — its pane is now `tuhdoo --watch`. The scope and DoD below describe v0 as shipped; read `tuhdoo watch` as `tuhdoo --watch` throughout. The "dogfood week" this note once deferred to was superseded by the 2026-08-03 DoD rewrite below.)*
-
-**Scope:** daemon + MCP + CLI portal. No interactivity beyond read-only `watch`.
+## v0 — The loop, dogfoodable *(declared done 2026-08-03)*
 
 **Definition of done:** tuhdoo has managed its own development, proven by all five:
 
@@ -16,13 +12,9 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 4. agents have driven the full loop — `claim_next` → work → `finish_run` / `escalate` — with no direct git writes to the data branch;
 5. the daemon has been restarted mid-session repeatedly with no lost or corrupted events.
 
-*(Rewritten 2026-08-03 by the milestone grill — supersedes "a full week of real use produces no manual repair of the data branch." The week was a proxy for "enough varied use to expose bugs," and it did not survive contact with the dogfood: the binary changed every few minutes, so a strict reading reset the clock on every deploy and the criterion was unsatisfiable for as long as development continued. The clause that was actually load-bearing — no manual repair — survives as (2), and is mechanically checkable. Points (3) and (5) record what the rapid iteration bought that a quiet week would not have: a live schema bump and dozens of mid-claim restarts are harsher than the week ever intended. Every point is checkable by any actor, which is the standard the milestone's blocking escalation failed — see the fence rule in `docs/agent-protocol.md`.)*
+## v1 — Steering, and a second machine *(live)*
 
-**Ships:** the Go binary (`tuhdoo`) containing: daemon (serialized writer, sync loop, replay engine, view builder), MCP over streamable HTTP + `tuhdoo mcp` stdio shim, JSON HTTP API, CLI (`init`, `status`, `backlog`, `task`, `escalations`, `create`, `update`, `answer`, `mcp`, `daemon`, `version`; bare `tuhdoo` is the TUI, `--watch` its read-only mode — `watch` and `top` died as verbs, Cycle 4), the four markdown views, the agent protocol doc.
-
-## v1 — Steering, and a second machine
-
-**Scope:** the TUI (grown from `watch` by adding input handling: answer escalations, reprioritize, cancel) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery. *(2026-07-30, Cycle 4: the TUI shipped verb-less — bare `tuhdoo`, `--watch` for the disarmed mode; `top` was a transient name. Details in `002` T7.)*
+**Scope:** the TUI (grown from `watch` by adding input handling: answer escalations, reprioritize, cancel) plus the first real multi-machine usage — two machines, one remote, real claim races resolved by the D6 machinery.
 
 **Definition of done:**
 
@@ -31,15 +23,3 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 3. Brandon's 5-person work team could be onboarded with `tuhdoo init` + docs alone (whether or not they are).
 
 *(Clause 2 rewritten 2026-08-03 by the milestone grill — supersedes "two machines run fleets against the same remote for a week with collision counts logged and zero divergent state." Same disease as v0's week, plus a measurement problem: `syncer.Status.Collisions` counts non-fast-forward pushes, not claims voided by the D6 winner rule, so "collision counts logged" would have recorded the wrong quantity. The rewritten clause names the three facts that actually prove convergence, and is satisfiable by a deliberate collision harness in an afternoon rather than by waiting for incidental races across a week — which matters, because as of the rewrite date the data branch carried 369 commits and **zero merge commits** (it has since passed 500, still merge-free): single-machine dogfooding structurally cannot exercise the D3 set-union merge path. *(Update 2026-08-05: the two-root union merge now runs against real daemons in harness tests — the clone-join work, PR #38, proved the simultaneous-init race convergent — but the live branch itself has still never carried a merge commit.)* Clause 3 stays a judgment call on purpose; mechanizing it would swap in a proxy, which is the failure this rewrite exists to undo.)*
-
-## v2+ — Earned, not scheduled
-
-Gated features, each with its unpark condition (parked on the ledger since 2026-08-05 as one held pointer task — `docs/design/open-questions.md` is the tombstone with the ID):
-
-- **Kanban/browser UI** — unparks only after the steering loop is proven in real team use (D8).
-- **Public intake bridge** (host issues → events) — unparks on real OSS-maintainer demand; must remain an optional add-on (T2).
-- **Event signing** — unparks if trust boundaries beyond repo-write appear (D7).
-- **Per-machine supervisor / cross-project dashboard** — unparks when per-repo daemons demonstrably annoy (T4).
-- **Custom view templates, webhook-driven fetch** — quality-of-life; unpark on demand.
-
-Epoch compaction (D9) sits between v1 and v2: designed, but built only when a real data branch is big enough to need it — building it against synthetic data would be guessing.
