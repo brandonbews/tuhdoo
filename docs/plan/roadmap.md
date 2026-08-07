@@ -1,6 +1,6 @@
 # Roadmap
 
-Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each phase has a definition of done; a phase isn't done because its code exists — it's done when its *proof* holds. The file carries the live phase and the done-declarations of finished ones — it does not pre-schedule phases beyond the live one; consciously deferred features live beside the decisions that deferred them in `001`/`002`. *(Trimmed 2026-08-07, roadmap grill: done-phase history compressed to its proof record, the v2+ section removed as duplication of `001` D4/D7/D8 and `002` T2/T4/T7 — full text in git history.)*
+Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each phase has a definition of done; a phase isn't done because its code exists — it's done when its *proof* holds. The file carries the live phase and the done-declarations of finished ones — it does not pre-schedule phases beyond the live one; consciously deferred features live beside the decisions that deferred them in `001`/`002`. The Ideas icebox at the bottom is the one non-phase section: might-be-cool notions kept off the ledger on purpose. *(Trimmed 2026-08-07, roadmap grill: done-phase history compressed to its proof record, the v2+ section removed as duplication of `001` D4/D7/D8 and `002` T2/T4/T7 — full text in git history.)*
 
 ## v0 — The loop, dogfoodable *(declared done 2026-08-03)*
 
@@ -23,3 +23,9 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 3. Brandon's 5-person work team could be onboarded with `tuhdoo init` + docs alone (whether or not they are).
 
 *(Clause 2 rewritten 2026-08-03 by the milestone grill — supersedes "two machines run fleets against the same remote for a week with collision counts logged and zero divergent state." Same disease as v0's week, plus a measurement problem: `syncer.Status.Collisions` counts non-fast-forward pushes, not claims voided by the D6 winner rule, so "collision counts logged" would have recorded the wrong quantity. The rewritten clause names the three facts that actually prove convergence, and is satisfiable by a deliberate collision harness in an afternoon rather than by waiting for incidental races across a week — which matters, because as of the rewrite date the data branch carried 369 commits and **zero merge commits** (it has since passed 500, still merge-free): single-machine dogfooding structurally cannot exercise the D3 set-union merge path. *(Update 2026-08-05: the two-root union merge now runs against real daemons in harness tests — the clone-join work, PR #38, proved the simultaneous-init race convergent — but the live branch itself has still never carried a merge commit.)* Clause 3 stays a judgment call on purpose; mechanizing it would swap in a proxy, which is the failure this rewrite exists to undo.)*
+
+## Ideas
+
+An icebox (added 2026-08-07, Brandon): things that might be cool someday, deliberately kept off the ledger so they cost zero attention — no gates, no owners, no commitments, and agents never work from this list. Picking one up later means a fresh capture with real evidence, not a revival of its line here.
+
+- **Escalation delivery when the TUI is closed** (notifications). If ever wanted, the shape is already settled — a 2026-08-06 grill decided on a generic on-escalation exec hook, rejected baked-in OS notifications outright, and left one named open question; the full record lives on cancelled task `tuh-01KZA0VT234XJYVZWT8K2D75W9`.
