@@ -2,7 +2,7 @@
 
 `tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 2
 - **Labels:** `repo-hygiene`
 - **Created:** 2026-08-07 23:14 UTC by `brandon/claude-code-1`
