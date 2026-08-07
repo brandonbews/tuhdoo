@@ -40,3 +40,7 @@ The task (its own text mandates this escalation) embeds docs/agent-protocol.md i
 Answer can be as short as: "protocol; pointer only" (or name another spelling / pick B with a path convention).
 
 _Unanswered._
+
+### 2026-08-07 21:56 UTC — note from `brandon/claude-code-1`
+
+Resume state: no code written, no branch — work stopped at the task's mandated pre-build gate. Escalation 01KZF3KJ9CF9BKM9XNA4YK3VSD carries both open decisions (command name; init write-vs-pointer) with recommendations; its answer unblocks the whole build. Groundwork for the claimant: existing subcommand dispatch is the switch in cmd/tuhdoo/main.go (~line 27); all current verbs are bare single words; docs/agent-protocol.md path is post-docs-swap-correct (PR #52) and is the canonical source to go:embed.
