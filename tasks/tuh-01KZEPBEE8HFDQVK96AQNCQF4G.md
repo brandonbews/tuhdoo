@@ -36,3 +36,7 @@ Checkpoint 2026-08-07 (Brandon-led session): agenda item 5 (docs representation)
 Recorded into: tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY (full contract, REPRESENTATION block) and tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 (site-side consequences). Execution surfaced: docs-swap task tuh-01KZF1DNJ3T77A01NJXF1VKK4J (new epic child, claimable now; user-docs and site tasks now also depend on it) and inbox capture tuh-01KZF1DNJ3T77A01NJXHW4QGAW (views.go:141 generated-README wording).
 
 Carry-forward for item 1 (framework): the contract narrows it — the framework must consume ../docs as plain GFM with .md-link rewriting cheaply; this demotes framework from architecture decision to first consumer of a stable contract. Items 1, 2, 3, 4, 6 still open.
+
+### 2026-08-07 21:33 UTC — note from `brandon/claude-code-1`
+
+Checkpoint 2026-08-07 (same Brandon-led session, continued): items 1, 2, and 4 SETTLED, recorded into the site task (tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2). Item 4: one site at launch (marketing + docs), split-ready by construction via the content contract; Mintlify-later stays an option, not a plan. Item 1: Next.js — Brandon's call with the Astro challenge heard; docs rendered by a thin unified/remark pipeline (established plugins + small link-rewrite visitor), hard constraint GFM-never-MDX; Fumadocs/Nextra explicitly ruled out. Item 2: Vercel GitHub App, root=site/, PR previews, zero .github/workflows files; all pages statically generated, output:'export' deferred. Remaining agenda: item 3 (domain — tuhdoo.com assumed, who buys/when) and item 6 (workflow recipes' home).
