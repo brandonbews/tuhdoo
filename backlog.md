@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 6 inbox · 78 done · 20 cancelled
+0 in progress · 1 ready · 2 blocked · 4 on hold · 7 inbox · 78 done · 20 cancelled
 
 ## In progress
 
@@ -40,6 +40,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) improve design of docs site (especially logo)
+- [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) improve tone, brevity and audience of docs content
 
 ## Done
 
