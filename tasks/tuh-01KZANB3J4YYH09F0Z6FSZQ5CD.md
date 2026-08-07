@@ -2,7 +2,7 @@
 
 `tuh-01KZANB3J4YYH09F0Z6FSZQ5CD`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `cli` `protocol` `onboarding`
 - **Created:** 2026-08-06 04:29 UTC by `brandon/claude-code-1`
@@ -39,7 +39,7 @@ The task (its own text mandates this escalation) embeds docs/agent-protocol.md i
 
 Answer can be as short as: "protocol; pointer only" (or name another spelling / pick B with a path convention).
 
-_Unanswered._
+**Answer** (`brandon`): your recs both work for me
 
 ### 2026-08-07 21:56 UTC — note from `brandon/claude-code-1`
 
