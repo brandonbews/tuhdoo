@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 77 done · 20 cancelled
+0 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 77 done · 20 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-vq1p`](tasks/tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P.md) | Root .gitignore: ignore OS junk (.DS_Store and friends) | 2 | `repo-hygiene` |
 | [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | `web` `launch` |
 
 ## Blocked / waiting
