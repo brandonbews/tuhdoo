@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 5 blocked · 5 on hold · 4 inbox · 71 done · 19 cancelled
+0 in progress · 2 ready · 5 blocked · 4 on hold · 4 inbox · 71 done · 20 cancelled
 
 ## In progress
 
@@ -31,7 +31,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 |---|---|---:|---|
 | [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | `milestone` |
 | [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | `go` `platform` |
-| [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) | Escalation delivery when the TUI is closed | 0 | `design` `tui` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 
@@ -134,6 +133,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7qxj`](tasks/tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ.md) D6's machine-id tiebreak is vacuous — ULIDs never tie, so the tiebreak branch does not exist
 - [`tuh-2tma`](tasks/tuh-01KZA0VT234XJYVZWT8C4X2TMA.md) Task-descriptions-are-prompts: a template or convention worth shipping?
 - [`tuh-78j5`](tasks/tuh-01KZA0VT234XJYVZWT8EXV78J5.md) claim_next discovery: capability/label filters, affinity hints, priority semantics
+- [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) Escalation delivery when the TUI is closed
 - [`tuh-p9qm`](tasks/tuh-01KZA0VT234XJYVZWT8Q19P9QM.md) Plan-materialization flow end-to-end; decomposition-quality prompting conventions
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?

@@ -2,12 +2,14 @@
 
 `tuh-01KZA0VT234XJYVZWT8K2D75W9`
 
-- **Status:** on hold — deliberately paused
+- **Status:** cancelled
 - **Priority:** 0
 - **Labels:** `design` `tui`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
 
 ## Description
+
+2026-08-07: moved to the Ideas icebox in docs/plan/roadmap.md at Brandon's direction — he wants this off the ledger entirely for now (might be cool someday, zero attention today). Cancelled, not deleted; the settled 2026-08-06 grill record below stays authoritative if the idea is ever picked up, and any future capture should start from it rather than re-grilling from scratch.
 
 Gated: unpark when notifications comes up as a topic on its own — e.g. an escalation sat unanswered long enough to actually hurt, or an external adopter asks how they'd hear about escalations. Decided held at the 2026-08-06 grill (Brandon): a blocking escalation parks one task, not the fleet — the agent releases its claim and claim_next moves on — so with frequent check-ins the pull surfaces (TUI, `tuhdoo escalations`, get_backlog scope) carry v1. The v1 milestone's clause 1 only needs the TUI-open path.
 
