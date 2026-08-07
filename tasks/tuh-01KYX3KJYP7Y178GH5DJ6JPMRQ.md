@@ -5,20 +5,24 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `docs` `product`
-- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open)
+- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (open)
 - **Created:** 2026-07-31 22:09 UTC by `brandon/claude-code-1`
 
 ## Description
 
-Child of the launch epic (tuh-01KZEPBEE8HFDQVK96AV6RN0ER). Blocked on the strategy grill (tuh-01KZEPBEE8HFDQVK96AQNCQF4G), whose agenda item 6 decides this content's home: on the site, in `tuhdoo init` text, or both. The original prose gate (same v1-confidence gate as the site task) was satisfied and replaced by that dependency edge at the 2026-08-07 launch-epic structuring.
+Child of the launch epic (tuh-01KZEPBEE8HFDQVK96AV6RN0ER). Depends on the strategy grill (tuh-01KZEPBEE8HFDQVK96AQNCQF4G) and on the docs-swap task (tuh-01KZF1DNJ3T77A01NJXF1VKK4J), which creates the content root these pages live in.
 
-Context (from the 2026-07-31 grill cycle): tuhdoo's init/docs could offer a small collection of recommended outer-workflow recipes (e.g. trunk-based ticket→PR→squash) for host repos adopting tuhdoo. tuhdoo itself stays workflow-agnostic (agent-protocol step 3: ordinary git on ordinary branches); recipes are suggestions, never baked into the protocol. This repo's own PR flow is the first recipe candidate — a week-plus of dogfood results (PRs #1–#49+) is the evidence base.
+HOME — settled at the strategy grill, agenda item 6, 2026-08-07 (Brandon's framing: "they are literally docs, just a specific section of the docs"): recipes live as ordinary pages in the root docs/ content root — a recipes section/subdirectory, writer's call — under the representation contract recorded on tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY: GFM, title+description frontmatter only, relative .md links, GitHub-renderable standalone. Copy-pasteable per-host artifacts (CLAUDE.md/AGENTS.md blocks, vendorable skill files) are ordinary code fences within those pages. No recipe content ships in the binary — the archived flavor-picker decision stands. init's existing post-success guidance gains one line pointing at the docs on tuhdoo.com; bake the least-specific stable URL (domain root or /docs) — that URL is a permanent promise: site restructures must redirect it, never 404.
 
-The ask (to be sharpened when the grill records its home decision here): write the recipe collection, starting with the trunk-based PR flow this repo dogfoods, and ship it in the home the grill picks.
+Context (from the 2026-07-31 grill cycle): tuhdoo's docs offer a small collection of recommended outer-workflow recipes (e.g. trunk-based ticket→PR→squash) for host repos adopting tuhdoo — common workflow examples describing ways to work with or set up tuhdoo, helping the mental model and getting people up and running. tuhdoo itself stays workflow-agnostic (agent-protocol step 3: ordinary git on ordinary branches); recipes are suggestions, never baked into the protocol. The boundary rationale lives in this task's 2026-07-31 position notes: protocol in the tool, workflow in the docs. This repo's own PR flow is the first recipe candidate — a week-plus of dogfood evidence (PRs #1–#49+).
 
-Acceptance (provisional until the grill closes): at least the trunk-based recipe written from real dogfood evidence, not speculation; recipes clearly framed as suggestions, never protocol; published in the decided home.
+The ask: write the recipe collection as docs pages, starting with the trunk-based PR flow this repo dogfoods; add the one-line init pointer.
+
+Acceptance: at least the trunk-based recipe written from real dogfood evidence, not speculation; recipes clearly framed as suggestions, never protocol; pages live under docs/ per the contract and render on GitHub and the site; init's post-success text includes the docs pointer (small Go change, tested, per repo conventions); make test lint green.
 
 Constraints: workflow-agnosticism holds — nothing here changes the agent protocol or claim mechanics.
+
+History: captured 2026-07-31; flavor-picker ceiling archived same day (see this task's notes); promoted into the launch epic 2026-08-07; home decided at the strategy grill 2026-08-07.
 
 ## History
 
