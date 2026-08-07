@@ -2,16 +2,23 @@
 
 `tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ`
 
-- **Status:** on hold — deliberately paused
+- **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `docs` `product`
+- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open)
 - **Created:** 2026-07-31 22:09 UTC by `brandon/claude-code-1`
 
 ## Description
 
-Gated: unpark for a grill cycle once v1 confidence exists — the v0 dogfood week has held (t-01KYRMFV10W1N28TCN5NWAGSW5) AND this repo's trunk-based PR flow (tuh-01KYX1D49M9M0EB69HNVBZT906) has been exercised on real tasks. Do NOT scope or write docs before that grill; this note is the triage decision (2026-07-31), not a plan.
+Child of the launch epic (tuh-01KZEPBEE8HFDQVK96AV6RN0ER). Blocked on the strategy grill (tuh-01KZEPBEE8HFDQVK96AQNCQF4G), whose agenda item 6 decides this content's home: on the site, in `tuhdoo init` text, or both. The original prose gate (same v1-confidence gate as the site task) was satisfied and replaced by that dependency edge at the 2026-08-07 launch-epic structuring.
 
-Captured from the 2026-07-31 grill cycle: tuhdoo's init/docs could offer a small collection of recommended outer-workflow recipes (e.g. trunk-based ticket→PR→squash) for host repos adopting tuhdoo. tuhdoo itself stays workflow-agnostic (agent-protocol step 3: ordinary git on ordinary branches); recipes are suggestions, never baked into the protocol. This repo's own PR flow is the first recipe candidate — its dogfood results are evidence for the grill. Likely eventual home: the marketing/docs site task (tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2), which shares this gate — the two unpark together, or the recipes ship in CLI init text; the grill decides.
+Context (from the 2026-07-31 grill cycle): tuhdoo's init/docs could offer a small collection of recommended outer-workflow recipes (e.g. trunk-based ticket→PR→squash) for host repos adopting tuhdoo. tuhdoo itself stays workflow-agnostic (agent-protocol step 3: ordinary git on ordinary branches); recipes are suggestions, never baked into the protocol. This repo's own PR flow is the first recipe candidate — a week-plus of dogfood results (PRs #1–#49+) is the evidence base.
+
+The ask (to be sharpened when the grill records its home decision here): write the recipe collection, starting with the trunk-based PR flow this repo dogfoods, and ship it in the home the grill picks.
+
+Acceptance (provisional until the grill closes): at least the trunk-based recipe written from real dogfood evidence, not speculation; recipes clearly framed as suggestions, never protocol; published in the decided home.
+
+Constraints: workflow-agnosticism holds — nothing here changes the agent protocol or claim mechanics.
 
 ## History
 

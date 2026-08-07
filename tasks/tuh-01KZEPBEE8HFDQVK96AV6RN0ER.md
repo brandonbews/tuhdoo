@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `launch` `product`
-- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open), [`tuh-hdm2`](tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) (open), [`tuh-m6qy`](tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) (inbox), [`tuh-pmrq`](tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) (on hold), [`tuh-q5cd`](tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) (inbox)
+- **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (open), [`tuh-hdm2`](tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) (open), [`tuh-m6qy`](tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) (inbox), [`tuh-pmrq`](tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) (open), [`tuh-q5cd`](tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) (inbox)
 - **Created:** 2026-08-07 18:04 UTC by `brandon/claude-code-1`
 
 ## Description
