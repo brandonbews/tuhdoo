@@ -11,7 +11,7 @@
 
 Child of the launch epic (tuh-01KZEPBEE8HFDQVK96AV6RN0ER). Promoted from inbox at the 2026-08-07 launch-epic structuring. NO dependency on the strategy grill — this is the epic's one immediately claimable task.
 
-Context: docs/agent-protocol.md is the prose half of the agent contract (claim discipline, blocking-escalation sequence, confirm-before-merge, descriptions-are-prompts) but it lives only in the tuhdoo repo — a foreign repo has no way to hand it to its agents without manually copying a file that then forks silently from canon. The design docs never decided a distribution mechanism (T5 only calls the doc a first-class deliverable).
+Context: docs/agent-protocol.md (path unchanged by the 2026-08-07 docs swap — root docs/ is now the published content root, and agent-protocol.md is one of its three public docs) is the prose half of the agent contract (claim discipline, blocking-escalation sequence, confirm-before-merge, descriptions-are-prompts) but it lives only in the tuhdoo repo — a foreign repo has no way to hand it to its agents without manually copying a file that then forks silently from canon. The design docs never decided a distribution mechanism (T5 only calls the doc a first-class deliverable).
 
 The ask: embed the doc in the binary (go:embed) and print it via a protocol subcommand; init output and README point at it (e.g. pipe into the host repo's CLAUDE.md or agent instructions). One canonical text, versioned with the binary the agents actually talk to.
 

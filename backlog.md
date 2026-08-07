@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 6 blocked · 4 on hold · 5 inbox · 72 done · 20 cancelled
+1 in progress · 1 ready · 6 blocked · 4 on hold · 5 inbox · 72 done · 20 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) | Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/ | 2 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) | Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/ | 2 | `docs` `onboarding` |
 | [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) | Ship the agent protocol with the binary: tuhdoo protocol command | 1 | `cli` `protocol` `onboarding` |
 
 ## Blocked / waiting
