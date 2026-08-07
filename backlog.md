@@ -1,18 +1,19 @@
 # Backlog
 
-0 in progress · 3 ready · 4 blocked · 4 on hold · 5 inbox · 73 done · 20 cancelled
+1 in progress · 2 ready · 4 blocked · 4 on hold · 5 inbox · 73 done · 20 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | `docs` `product` |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | `docs` `product` `web` |
 | [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | `docs` `product` |
 
