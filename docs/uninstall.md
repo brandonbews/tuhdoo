@@ -1,3 +1,8 @@
+---
+title: Uninstalling tuhdoo
+description: How a machine walks away from tuhdoo with zero trace using ordinary git commands, and how a team retires its shared ledger — the reverse of joining.
+---
+
 # Uninstalling tuhdoo
 
 How a machine — or a whole team — walks away from tuhdoo. The companion to
