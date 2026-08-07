@@ -1,18 +1,19 @@
 # Backlog
 
-0 in progress · 2 ready · 3 blocked · 4 on hold · 5 inbox · 75 done · 20 cancelled
+1 in progress · 1 ready · 3 blocked · 4 on hold · 5 inbox · 75 done · 20 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | `docs` `product` |
 | [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | `web` `launch` |
 
 ## Blocked / waiting
