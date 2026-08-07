@@ -1,3 +1,8 @@
+---
+title: Joining an existing tuhdoo repo
+description: How a new machine joins a repository that already uses tuhdoo — clone, install, tuhdoo init, verify — plus the branch-protection and CI settings the repo admin sets once.
+---
+
 # Joining an existing tuhdoo repo
 
 How a new machine — a teammate's laptop, your second workstation — joins a
@@ -95,7 +100,7 @@ tuhdoo backlog
 should list the team's existing tasks — the ledger you just joined, not an
 empty table. From here, bare `tuhdoo` opens the interactive TUI, and the
 init output includes the MCP snippet that connects an agent harness (agents
-then follow `docs/agent-protocol.md`).
+then follow [`agent-protocol.md`](agent-protocol.md), beside this doc).
 
 ## 5. Set your work identity (if needed)
 

@@ -17,7 +17,7 @@ data branch of this repository, managed by the system it built.
 ## The v0 clock *(retired 2026-08-05)*
 
 A week-clock definition of done once ticked here. It was superseded
-2026-08-03 by five checkable facts (`docs/plan/roadmap.md`), and the gate
+2026-08-03 by five checkable facts (`internal-docs/plan/roadmap.md`), and the gate
 escalation was answered the same day. The escalation-as-fence pattern the
 gate used is now the documented wrong fence — "no attempt, no escalation"
 (`docs/agent-protocol.md`); parked work is `held`.

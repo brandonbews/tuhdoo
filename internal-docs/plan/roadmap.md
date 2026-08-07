@@ -6,7 +6,7 @@ Phases map to the surface/build-order decisions in `001` D8 and `002` T7. Each p
 
 **Definition of done:** tuhdoo has managed its own development, proven by all five:
 
-1. the backlog lives on the data branch and `docs/plan/backlog.md` is a tombstone;
+1. the backlog lives on the data branch and `internal-docs/plan/backlog.md` (at the time, `docs/plan/backlog.md`) is a tombstone;
 2. every commit on `refs/heads/tuhdoo` is daemon-authored — the branch has never been repaired by hand;
 3. at least one event-schema version bump has landed on the live branch and replayed correctly;
 4. agents have driven the full loop — `claim_next` → work → `finish_run` / `escalate` — with no direct git writes to the data branch;

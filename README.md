@@ -82,5 +82,5 @@ clone shapes and the branch-protection settings the host needs. Leaving is
 just as clean: `docs/uninstall.md` walks a machine — or a whole team —
 away with zero trace.
 
-The design record lives in `docs/` — start with
-`docs/design/001-core-design.md`.
+The design record lives in `internal-docs/` — start with
+`internal-docs/design/001-core-design.md`.

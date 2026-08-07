@@ -4,15 +4,15 @@ A coordination fabric for agent fleets, steered by humans: a shared backlog, wor
 
 ## State of the project
 
-v0 is built and dogfooding itself; its definition of done — the five checkable facts in `docs/plan/roadmap.md` — was declared done on 2026-08-03, and **v1 (steering, and a second machine) is the live phase**. The binary (`make build` → `bin/tuhdoo`) carries the daemon, MCP surface, and CLI portal; on 2026-07-30 the markdown backlog was migrated into tuhdoo (B12 cutover) and now lives on the `tuhdoo` data branch of this repo. `docs/plan/backlog.md` is a tombstone; the live queue is `tuhdoo backlog`. Everything decided so far lives in `docs/` — do not re-litigate settled decisions from scratch; revise them explicitly (see conventions below).
+v0 is built and dogfooding itself; its definition of done — the five checkable facts in `internal-docs/plan/roadmap.md` — was declared done on 2026-08-03, and **v1 (steering, and a second machine) is the live phase**. The binary (`make build` → `bin/tuhdoo`) carries the daemon, MCP surface, and CLI portal; on 2026-07-30 the markdown backlog was migrated into tuhdoo (B12 cutover) and now lives on the `tuhdoo` data branch of this repo. `internal-docs/plan/backlog.md` is a tombstone; the live queue is `tuhdoo backlog`. Everything decided so far lives in `internal-docs/` — do not re-litigate settled decisions from scratch; revise them explicitly (see conventions below). Root `docs/` is different: it is the published doc content root — everything in it is public content (GFM, frontmatter restricted to title + description, relative links, GitHub rendering as the semantic baseline).
 
 ## Read in this order
 
-1. `docs/design/001-core-design.md` — vision, principles, the eleven founding decisions (D1–D11)
-2. `docs/design/002-technology.md` — stack and technical contracts (T1–T8)
-3. `docs/plan/roadmap.md` — phases and definitions of done
-4. the live work queue: `tuhdoo backlog` / `tuhdoo escalations` (agents: `docs/agent-protocol.md`, then `claim_next` through the shim) — `docs/plan/backlog.md` is a tombstone pointing there
-5. `docs/design/open-questions.md` — a tombstone; open questions live on the ledger now (`tuhdoo backlog`, inbox/held)
+1. `internal-docs/design/001-core-design.md` — vision, principles, the eleven founding decisions (D1–D11)
+2. `internal-docs/design/002-technology.md` — stack and technical contracts (T1–T8)
+3. `internal-docs/plan/roadmap.md` — phases and definitions of done
+4. the live work queue: `tuhdoo backlog` / `tuhdoo escalations` (agents: `docs/agent-protocol.md`, then `claim_next` through the shim) — `internal-docs/plan/backlog.md` is a tombstone pointing there
+5. `internal-docs/design/open-questions.md` — a tombstone; open questions live on the ledger now (`tuhdoo backlog`, inbox/held)
 
 ## Project laws (non-negotiable unless a design doc is revised first)
 
