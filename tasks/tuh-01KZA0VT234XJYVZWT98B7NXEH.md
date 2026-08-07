@@ -2,7 +2,7 @@
 
 `tuh-01KZA0VT234XJYVZWT98B7NXEH`
 
-- **Status:** on hold — deliberately paused
+- **Status:** cancelled
 - **Priority:** 0
 - **Labels:** `design`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`

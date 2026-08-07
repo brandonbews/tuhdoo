@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 5 blocked · 6 on hold · 5 inbox · 70 done · 18 cancelled
+0 in progress · 2 ready · 5 blocked · 5 on hold · 5 inbox · 70 done · 19 cancelled
 
 ## In progress
 
@@ -34,7 +34,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-75w9`](tasks/tuh-01KZA0VT234XJYVZWT8K2D75W9.md) | Escalation delivery when the TUI is closed | 0 | `design` `tui` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
-| [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) | v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing | 0 | `design` |
 
 ## Inbox
 
@@ -139,3 +138,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-g3nx`](tasks/tuh-01KZA0VT234XJYVZWT8VGFG3NX.md) Repo-hosting edge cases: shallow clones, --single-branch, forks, mirrors
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
+- [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing
