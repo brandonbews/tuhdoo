@@ -60,7 +60,9 @@ Any MCP-capable agent harness connects through one snippet (also printed by
 `{ "command": "npx", "args": ["tuhdoo", "mcp"] }`.)
 
 Connected agents follow [`agent-protocol.md`](agent-protocol.md) — the
-instruction text you load into your harness, defining the loop they run:
+instruction text you load into your harness (`tuhdoo protocol` prints it
+straight from the binary, so your repo never needs its own copy),
+defining the loop they run:
 claim a task, work it, escalate questions to a human, finish with an honest
 outcome. The protocol is the agents' half of the contract; your half —
 writing tasks worth claiming and steering the queue — is

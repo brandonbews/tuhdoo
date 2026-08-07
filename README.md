@@ -74,7 +74,9 @@ safe to leave open in a pane). One-shot commands cover reads (`status`,
 { "mcpServers": { "tuhdoo": { "command": "tuhdoo", "args": ["mcp"] } } }
 ```
 
-See `docs/agent-protocol.md` for the agent loop.
+See `docs/agent-protocol.md` for the agent loop; `tuhdoo protocol` prints
+that same text straight from the binary, ready to wire into a host repo's
+agent instructions.
 
 Joining a repository that already uses tuhdoo — a teammate's project, a
 second machine? `docs/joining.md` is the end-to-end walkthrough, including

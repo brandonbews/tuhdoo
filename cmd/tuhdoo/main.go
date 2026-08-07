@@ -10,6 +10,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	tuhdoo "github.com/brandonbews/tuhdoo"
 )
 
 // version is stamped at build time via -ldflags "-X main.version=...".
@@ -29,6 +31,15 @@ func run(args []string) int {
 		return 0
 	case "version":
 		fmt.Println("tuhdoo " + version)
+		return 0
+	case "protocol":
+		// A pure print of the embedded doc: no flags, no daemon, no
+		// repo — it must work anywhere an agent harness might run.
+		if len(args) != 1 {
+			fmt.Fprintln(os.Stderr, "usage: tuhdoo protocol")
+			return 1
+		}
+		os.Stdout.WriteString(tuhdoo.AgentProtocol)
 		return 0
 	case "daemon":
 		return runDaemon()
@@ -103,6 +114,9 @@ the life of the pane — the dashboard that sits beside a working agent.
                 auto-derived: git user.email local part + a session
                 name minted by the daemon; --as <p> overrides in full
                 (e.g. --as brandon/impl-1)
+  protocol      print the agent protocol — the instruction text a
+                harness loads for agents, embedded in this binary.
+                A pure print: works without a repo or a daemon
   daemon        run the per-repo daemon in the foreground
   help          print this help
   version       print the version

@@ -105,6 +105,9 @@ into its MCP config:
     }
   }
 
+Agent protocol: tuhdoo protocol (pipe into your agent instructions, or
+  reference it from CLAUDE.md)
+
 Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
 Docs & workflow recipes: https://tuhdoo.com/docs
 `, branchName(), head, sync, c.socket, branchName(), branchName(), branchName())
