@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 1 blocked · 8 on hold · 7 inbox · 70 done · 18 cancelled
+0 in progress · 1 ready · 2 blocked · 8 on hold · 7 inbox · 70 done · 18 cancelled
 
 ## In progress
 
@@ -8,13 +8,16 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) | Grill: site stack & content strategy (human-led) | 2 | `design` `product` `web` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md); depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md); depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) |
 
 ## On hold
 
