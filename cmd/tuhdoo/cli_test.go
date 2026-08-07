@@ -226,6 +226,10 @@ func TestInitRemoteless(t *testing.T) {
 	// promise baked into every shipped binary — recipes and guides live
 	// there, not in the binary, so they can be fixed without a release.
 	mustContain(t, out, "Docs & workflow recipes: https://tuhdoo.com/docs")
+	// The protocol pointer: init tells the operator how to hand agents
+	// the protocol text, but never writes a file into the host repo —
+	// the doc stays in the binary, printed on demand.
+	mustContain(t, out, "Agent protocol: tuhdoo protocol")
 	if strings.Contains(strings.ToLower(out), "error") {
 		t.Errorf("init output should not mention errors:\n%s", out)
 	}
