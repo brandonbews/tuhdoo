@@ -3,7 +3,7 @@
 `tuh-01KZF1DNJ3T77A01NJXF1VKK4J`
 
 - **Status:** open — ready
-- **Priority:** 1
+- **Priority:** 2
 - **Labels:** `docs` `onboarding`
 - **Created:** 2026-08-07 21:17 UTC by `brandon/claude-code-1`
 
