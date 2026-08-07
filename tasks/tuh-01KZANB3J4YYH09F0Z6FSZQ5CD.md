@@ -2,7 +2,7 @@
 
 `tuh-01KZANB3J4YYH09F0Z6FSZQ5CD`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `cli` `protocol` `onboarding`
 - **Created:** 2026-08-06 04:29 UTC by `brandon/claude-code-1`
@@ -48,3 +48,11 @@ Resume state: no code written, no branch — work stopped at the task's mandated
 ### 2026-08-07 21:56 UTC — run by `brandon/claude-code-1` — blocked
 
 Blocked on escalation 01KZF3KJ9CF9BKM9XNA4YK3VSD (command name; init write-vs-pointer) — the task's own pre-build gate. No build attempted; recommendations are in the escalation.
+
+### 2026-08-07 23:11 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-q5cd/protocol-command`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/56>
+- Merged as: `e5abb6315fb0964896b369385e2adc9adb6f0164`
+
+Landed on main as e5abb63 (PR 56, squash), per the answered escalation: command name tuhdoo protocol, init pointer-only. docs/agent-protocol.md ships in the binary via a tiny root package (embed.go, package tuhdoo) since go:embed cannot climb out of a package dir; tuhdoo protocol prints it byte-for-byte to stdout — pure print, no repo, no daemon, extra args rejected. Tests pin both guarantees: TestProtocolEmbedMatchesDoc (embed cannot drift from the file) and TestProtocolCommandPrintsDocAnywhere (real binary in a non-repo temp dir: byte-equal output, exit 0, no files created, descriptions-are-prompts heading and its five parts present, help lists it). init success output gained the pointer line (asserted in TestInitRemoteless); README and docs/adopting.md each gained a sentence; the convention is never restated anywhere. No MCP changes. make test lint green. Binary changed — deploy restart happening right after this finish.
