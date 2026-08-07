@@ -2,7 +2,7 @@
 
 `tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `product`
 - **Depends on:** [`tuh-qf4g`](tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) (done), [`tuh-kk4j`](tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) (done)
@@ -32,4 +32,10 @@ History: captured by Brandon 2026-08-05; absorbed the plan-materialization open-
 
 ## History
 
-_No activity yet._
+### 2026-08-07 22:23 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-m6qy/user-docs`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/55>
+- Merged as: `997fd770baec05f10c1b52d70dd4daa4a01ec42c`
+
+Landed on main as 997fd77 (PR 55, squash). Two pages under docs/: steering.md (terms defined up front; five-status model with derived ready/in-progress/blocked; the capture-triage-promote-decompose-steer lifecycle; worked example telling the tuhdoo.com launch exactly as this ledger records it, in plain product vocabulary) and adopting.md (one init, teammates join, agents connect over MCP, pick a workflow recipe, steer from TUI/CLI; ends with Leaving pointing at uninstall.md). Frontmatter title+description only; relative links; agent conventions linked never copied. docs/README.md index and site/src/lib/nav.ts updated in matching order; /docs/steering and /docs/adopting verified rendering statically with all links and anchors resolving in the built HTML. Drive-by catch: tuhdoo top and tuhdoo watch are retired stubs, so the CLI table documents the real surface verified against cmd/tuhdoo source (including --desc - stdin and --depends-on full-replacement). make test lint and site build green. No Go change, no daemon restart needed.

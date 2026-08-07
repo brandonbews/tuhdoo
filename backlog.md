@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 1 ready · 3 blocked · 4 on hold · 5 inbox · 75 done · 20 cancelled
+0 in progress · 1 ready · 3 blocked · 4 on hold · 5 inbox · 76 done · 20 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -22,7 +20,7 @@
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) | Ship the agent protocol with the binary: tuhdoo protocol command | 1 | an [open question](escalations.md) |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md); depends on [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md); depends on [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) |
 
 ## On hold
 
@@ -114,6 +112,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build
 - [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) init hardening: loud unknown-flag errors and the MCP snippet in init output
 - [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) Cut v0.2.0: final verification and tag handoff
+- [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) User-facing docs: the human story of steering tuhdoo, platform-agnostic
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs)
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line)
