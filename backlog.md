@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 4 blocked · 6 on hold · 7 inbox · 70 done · 18 cancelled
+0 in progress · 1 ready · 5 blocked · 6 on hold · 6 inbox · 70 done · 18 cancelled
 
 ## In progress
 
@@ -19,6 +19,7 @@ _None._
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md) | Workflow recipes: recommended dev-flow patterns in init/docs (product feature, not this repo's conventions) | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) |
 | [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md) | Marketing / docs site for tuhdoo (monorepo: site/ in this repo) | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) |
+| [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) | User-facing docs: the human story of steering tuhdoo, platform-agnostic | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md); depends on [`tuh-hdm2`](tasks/tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2.md); depends on [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md); depends on [`tuh-pmrq`](tasks/tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ.md); depends on [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) |
 
 ## On hold
@@ -41,7 +42,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task-view history omits task.updated — field edits leave no visible trace
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Epics after parents removal: is any epic UX worth having?
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
-- [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) design user-facing docs. these would live at tuhdoo.com, but don't necessarily need to be baked into site there. would be nice to have a platform agnostic representation of them that can be rendered on the site or elsewhere.
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-q5cd`](tasks/tuh-01KZANB3J4YYH09F0Z6FSZQ5CD.md) Ship the agent protocol with the binary: tuhdoo protocol command
 - [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
