@@ -2,7 +2,7 @@
 
 `tuh-01KZANB3J4YYH09F0Z6FSZQ5CD`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `cli` `protocol` `onboarding`
 - **Created:** 2026-08-06 04:29 UTC by `brandon/claude-code-1`
@@ -27,4 +27,16 @@ History: captured at the 2026-08-05 release session as the remaining essential f
 
 ## History
 
-_No activity yet._
+### 2026-08-07 21:55 UTC — escalation from `brandon/claude-code-1` (blocking)
+
+> Two decisions before building the ship-the-protocol command: (1) What is the subcommand's exact name? (2) Should `tuhdoo init` offer to WRITE the protocol doc into the host repo, or only PRINT a pointer telling the operator how to get it?
+
+The task (its own text mandates this escalation) embeds docs/agent-protocol.md in the binary via go:embed and prints it via a subcommand, so foreign repos get one canonical text versioned with the binary instead of a hand-copied file that forks from canon.
+
+(1) Command name. The existing CLI surface is all bare single words: help, version, daemon, init, status, backlog, task, escalations, create, update, answer, watch, top, mcp. `tuhdoo protocol` (the task's sketch) fits that style exactly. Alternatives considered: `tuhdoo agent-protocol` (more precise, but the only hyphenated verb on the surface) or `tuhdoo docs protocol` (implies a doc-family subtree that doesn't exist yet). Recommendation: `tuhdoo protocol`, printing the embedded doc to stdout, nothing else.
+
+(2) Init behavior. Option A — pointer only: init output shows the exact command (e.g. "agents: pipe `tuhdoo protocol` into your agent instructions, or reference it from CLAUDE.md"); no file is written. Option B — init offers to write the doc into the host repo (a flag or prompt, e.g. --write-protocol <path>). Recommendation: Option A. The task's own context names the failure mode this feature exists to kill — a copied file that forks silently from canon — and Option B re-creates that fork one step later: the written file goes stale the moment the binary upgrades. With a pointer, a host that truly wants a file can pipe stdout itself and owns the refresh. Option A is also less init-surface to maintain and keeps init non-interactive.
+
+Answer can be as short as: "protocol; pointer only" (or name another spelling / pick B with a path convention).
+
+_Unanswered._
