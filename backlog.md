@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 4 on hold · 8 inbox · 79 done · 20 cancelled
+0 in progress · 1 ready · 1 blocked · 4 on hold · 9 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -41,6 +41,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) improve design of docs site (especially logo)
 - [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) improve tone, brevity and audience of docs content
 - [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) make sure doc site is using all of the best latest next dependencies and recommendations (an up to date create next app, and not just some cobbled stuff to get a working next app)
+- [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) production ready sweep for accessibility, meta tags, etc on marketing site
 
 ## Done
 
