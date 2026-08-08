@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 8 inbox · 78 done · 20 cancelled
+0 in progress · 1 ready · 1 blocked · 4 on hold · 8 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -10,14 +10,13 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) | Vercel project + tuhdoo.com DNS wiring (human-led) | 0 | `web` `launch` |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | `launch` `product` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) |
 
 ## On hold
 
@@ -122,6 +121,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) claim_next selection: document the label filter and priority order for agents; test the matching code
 - [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) Grill: site stack & content strategy (human-led)
 - [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/
+- [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) Vercel project + tuhdoo.com DNS wiring (human-led)
 - [`tuh-vq1p`](tasks/tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P.md) Root .gitignore: ignore OS junk (.DS_Store and friends)
 
 ## Cancelled
