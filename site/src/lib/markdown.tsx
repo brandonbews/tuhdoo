@@ -10,6 +10,7 @@
 // protection and CI" → #for-the-repo-admin-branch-protection-and-ci).
 
 import path from "node:path";
+import type { Root } from "mdast";
 import type { ReactNode } from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import rehypeReact from "rehype-react";
@@ -20,7 +21,6 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import type { Root } from "mdast";
 
 import { markdownComponents } from "@/components/markdown-map";
 
@@ -45,7 +45,8 @@ function remarkRewriteMdLinks(options: { docDir: string }) {
 
 export function rewriteMdLink(url: string, docDir: string): string {
   if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url; // absolute (https:, mailto:, …)
-  if (url.startsWith("//") || url.startsWith("/") || url.startsWith("#")) return url;
+  if (url.startsWith("//") || url.startsWith("/") || url.startsWith("#"))
+    return url;
 
   const hashIndex = url.indexOf("#");
   const filePart = hashIndex === -1 ? url : url.slice(0, hashIndex);
@@ -72,7 +73,10 @@ const runtime = {
 // Render a doc source file (frontmatter included) to React elements.
 // The frontmatter yaml node is tokenized by remark-frontmatter and dropped
 // by remark-rehype, so it never appears in the rendered body.
-export async function renderMarkdown(source: string, docFile: string): Promise<ReactNode> {
+export async function renderMarkdown(
+  source: string,
+  docFile: string,
+): Promise<ReactNode> {
   const processor = unified()
     .use(remarkParse)
     .use(remarkFrontmatter, ["yaml"])

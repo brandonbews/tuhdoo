@@ -14,7 +14,10 @@ export function Sidebar() {
           const nested = entry.slug.length > 1;
           return (
             <li key={href} className={nested ? "nested" : undefined}>
-              <Link href={href} aria-current={pathname === href ? "page" : undefined}>
+              <Link
+                href={href}
+                aria-current={pathname === href ? "page" : undefined}
+              >
                 {entry.title}
               </Link>
             </li>

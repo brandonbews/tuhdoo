@@ -9,7 +9,9 @@ import { docsNav, findBySlug } from "@/lib/nav";
 export const dynamicParams = false;
 
 export function generateStaticParams(): { slug: string[] }[] {
-  return docsNav.filter((e) => e.slug.length > 0).map((e) => ({ slug: e.slug }));
+  return docsNav
+    .filter((e) => e.slug.length > 0)
+    .map((e) => ({ slug: e.slug }));
 }
 
 type Props = { params: Promise<{ slug: string[] }> };

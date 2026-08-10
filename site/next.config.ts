@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
 import { loadEnvConfig } from "@next/env";
+import type { NextConfig } from "next";
 
 // `.env` files are not loaded yet when this config is evaluated, so read them
 // explicitly. `.env.local` is picked up in both dev and production modes.
