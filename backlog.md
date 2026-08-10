@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 4 on hold · 10 inbox · 79 done · 20 cancelled
+0 in progress · 2 ready · 1 blocked · 4 on hold · 10 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) | Logo finals: export and deliver the brand assets (human-led) | 1 | `web` `design` `launch` |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | `launch` `product` |
 
 ## Blocked / waiting
