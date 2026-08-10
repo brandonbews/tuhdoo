@@ -2,7 +2,7 @@
 
 `tuh-01KZF97PATRZ1TFWA7CQQCJHQX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `docs` `launch`
 - **Created:** 2026-08-07 23:34 UTC by `brandon`
@@ -41,3 +41,11 @@ _Unanswered._
 ### 2026-08-10 22:09 UTC — note from `brandon/claude-code-1`
 
 Resume state: branch tuh-jhqx/docs-landing-copy, PR #62 open, no auto-merge (Brandon's review is the gate — escalation 01KZPVJHTJ31GSH2XRM6TAJY43). Next claimant after the answer lands: if approved/merged, record the squash commit in merged_as and finish done (confirm_claim before merging if the merge is yours to do); if change requests, address PR comments on the same branch. Soft ordering from the task: the identity/design task tuh-01KZF973FY9JKJV5F38SM7BAN7 designs to this PR's section structure (hero / organism / agent loop / human loop / ownership / maker block / get started).
+
+### 2026-08-10 22:09 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-jhqx/docs-landing-copy`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/62>
+- Commits: `7803083`
+
+Rewrite done and green on PR #62; blocked on Brandon's review per the task's acceptance — see escalation 01KZPVJHTJ31GSH2XRM6TAJY43.
