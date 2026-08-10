@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 5 on hold · 10 inbox · 79 done · 20 cancelled
+0 in progress · 3 ready · 1 blocked · 5 on hold · 9 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `web` `tooling` `launch` |
 | [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) | Logo finals: export and deliver the brand assets (human-led) | 1 | `web` `design` `launch` |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | `launch` `product` |
 
@@ -42,7 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) improve design of docs site (especially logo)
 - [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) improve tone, brevity and audience of docs content
-- [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) make sure doc site is using all of the best latest next dependencies and recommendations (an up to date create next app, and not just some cobbled stuff to get a working next app)
 - [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) production ready sweep for accessibility, meta tags, etc on marketing site
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 
