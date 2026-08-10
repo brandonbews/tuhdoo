@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 0 ready · 5 blocked · 5 on hold · 7 inbox · 80 done · 21 cancelled
+0 in progress · 0 ready · 6 blocked · 5 on hold · 7 inbox · 80 done · 21 cancelled
 
 **[2 open questions](escalations.md) are waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -22,6 +20,7 @@ _None._
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md); depends on [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md); depends on [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md); depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md); depends on [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) |
 | [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) | Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og) | 1 | depends on [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) |
 | [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | an [open question](escalations.md) |
+| [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | an [open question](escalations.md) |
 | [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) | Production-readiness sweep: the last full check before launch | 1 | depends on [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md); depends on [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md); depends on [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) |
 
 ## On hold

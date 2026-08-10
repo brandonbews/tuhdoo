@@ -2,7 +2,7 @@
 
 `tuh-01KZF992N0AM2TZGHMH2T5WYQN`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `web` `tooling` `launch`
 - **Created:** 2026-08-07 23:35 UTC by `brandon`
@@ -36,3 +36,11 @@ _Unanswered._
 ### 2026-08-10 22:28 UTC — note from `brandon/claude-code-1`
 
 Resume state: branch tuh-wyqn/site-toolchain, PR #63 open and green (test + site jobs + Vercel preview), no auto-merge — blocked on escalation 01KZPWNK94JP4J1FAE48A5MV7J (workflow-file review is Brandon's). Next claimant after the answer: (1) confirm_claim, merge #63, record squash commit in merged_as; (2) if approved, add "site" to required_status_checks on ruleset 20155938 (only after merge lands); (3) refresh PR #62 branch tuh-jhqx/docs-landing-copy: merge main, run `npx biome format --write` in site/, push — prevents the page.tsx format/copy conflict. No Go changes — no daemon restart needed for this task.
+
+### 2026-08-10 22:29 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-wyqn/site-toolchain`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/63>
+- Commits: `7d7bb3a`
+
+Toolchain complete and green on PR #63; blocked on Brandon's workflow-diff review — see escalation 01KZPWNK94JP4J1FAE48A5MV7J.
