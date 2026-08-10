@@ -1,18 +1,18 @@
 # Backlog
 
-0 in progress · 1 ready · 5 blocked · 5 on hold · 5 inbox · 80 done · 21 cancelled
+1 in progress · 0 ready · 5 blocked · 5 on hold · 7 inbox · 80 done · 21 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `web` `tooling` `launch` |
+_None._
 
 ## Blocked / waiting
 
@@ -45,6 +45,8 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
+- [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages)
+- [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
 
 ## Done
 
