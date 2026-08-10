@@ -14,7 +14,9 @@ export default function Home() {
           <Link className="button" href="/docs">
             Read the docs
           </Link>
-          <code className="install-snippet">npm i -D tuhdoo &amp;&amp; npx tuhdoo init</code>
+          <code className="install-snippet">
+            npm i -D tuhdoo &amp;&amp; npx tuhdoo init
+          </code>
         </div>
       </section>
 
@@ -24,14 +26,17 @@ export default function Home() {
           Point an agent fleet at a backlog and the hard part isn&apos;t the
           work — it&apos;s seeing the work. tuhdoo keeps every task, claim,
           question, and outcome on one shared ledger. Agents connect through a
-          twelve-verb <a href="https://modelcontextprotocol.io" rel="noopener">MCP</a>{" "}
+          twelve-verb{" "}
+          <a href="https://modelcontextprotocol.io" rel="noopener">
+            MCP
+          </a>{" "}
           surface: they <strong>claim</strong> a task (an exclusive, time-boxed
           lease that stops two agents from building the same thing), work it on
           ordinary git branches, <strong>escalate</strong> questions to a human
           when they hit a wall, and finish by reporting an honest outcome.
           Humans steer from a terminal UI and CLI: capture ideas, triage them,
-          set priorities and dependencies, and answer escalations — on their
-          own schedule, not the fleet&apos;s.
+          set priorities and dependencies, and answer escalations — on their own
+          schedule, not the fleet&apos;s.
         </p>
         <blockquote className="pull">
           <p>
@@ -60,8 +65,8 @@ export default function Home() {
               An agent calls <code>claim_next</code> and gets the
               highest-priority ready task, fully hydrated — description,
               acceptance criteria, prior runs and notes. The lease renews
-              automatically while the session lives; if the agent dies, the
-              task returns to the pool.
+              automatically while the session lives; if the agent dies, the task
+              returns to the pool.
             </p>
           </div>
           <div className="card">
@@ -69,9 +74,9 @@ export default function Home() {
               <span className="step">2</span>Work
             </h3>
             <p>
-              Ordinary git on ordinary branches — tuhdoo never touches your
-              code workflow. Optional notes checkpoint anything a successor
-              would need if the session ends mid-flight.
+              Ordinary git on ordinary branches — tuhdoo never touches your code
+              workflow. Optional notes checkpoint anything a successor would
+              need if the session ends mid-flight.
             </p>
           </div>
           <div className="card">
@@ -80,9 +85,9 @@ export default function Home() {
             </h3>
             <p>
               Hit a wall? The agent raises an escalation — a question routed to
-              a human — and hands off instead of guessing. A blocking
-              escalation keeps the task out of the pool until someone answers;
-              then any agent picks up question and answer together.
+              a human — and hands off instead of guessing. A blocking escalation
+              keeps the task out of the pool until someone answers; then any
+              agent picks up question and answer together.
             </p>
           </div>
           <div className="card">
@@ -113,8 +118,8 @@ export default function Home() {
             <h3>Nothing to run</h3>
             <p>
               No service to deploy, no accounts to create, no vendor to trust.
-              If you can clone the repo, you have the entire coordination
-              state — history included.
+              If you can clone the repo, you have the entire coordination state
+              — history included.
             </p>
           </div>
           <div className="card">
@@ -128,9 +133,9 @@ export default function Home() {
           <div className="card">
             <h3>Leaves no trace</h3>
             <p>
-              Joining is a clone and one <code>init</code>; leaving is a
-              handful of ordinary git commands. No hooks, no writes to your
-              worktree, no commits on your code branches.
+              Joining is a clone and one <code>init</code>; leaving is a handful
+              of ordinary git commands. No hooks, no writes to your worktree, no
+              commits on your code branches.
             </p>
           </div>
         </div>

@@ -31,7 +31,9 @@ export function readFrontmatter(file: string): DocFrontmatter {
   const data = parseYaml(match[1]) as Record<string, unknown>;
   const { title, description } = data;
   if (typeof title !== "string" || typeof description !== "string") {
-    throw new Error(`frontmatter in docs/${file} must have string title and description`);
+    throw new Error(
+      `frontmatter in docs/${file} must have string title and description`,
+    );
   }
   return { title, description };
 }

@@ -25,7 +25,11 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
 function heading(Tag: HeadingTag) {
-  return function Heading({ id, children, ...rest }: ComponentPropsWithoutRef<HeadingTag>) {
+  return function Heading({
+    id,
+    children,
+    ...rest
+  }: ComponentPropsWithoutRef<HeadingTag>) {
     if (!id) return <Tag {...rest}>{children}</Tag>;
     return (
       <Tag id={id} {...rest}>
@@ -37,7 +41,11 @@ function heading(Tag: HeadingTag) {
   };
 }
 
-function DocLink({ href = "", children, ...rest }: ComponentPropsWithoutRef<"a">) {
+function DocLink({
+  href = "",
+  children,
+  ...rest
+}: ComponentPropsWithoutRef<"a">) {
   if (href.startsWith("/") || href.startsWith("#")) {
     return (
       <Link href={href} {...rest}>
@@ -70,7 +78,9 @@ function extractLanguage(children: ReactNode): string | null {
     "props" in children &&
     typeof (children.props as { className?: unknown }).className === "string"
   ) {
-    const match = /language-([\w-]+)/.exec((children.props as { className: string }).className);
+    const match = /language-([\w-]+)/.exec(
+      (children.props as { className: string }).className,
+    );
     if (match) return match[1];
   }
   return null;
@@ -86,7 +96,7 @@ function Table(props: ComponentPropsWithoutRef<"table">) {
 
 function Img({ alt = "", ...rest }: ComponentPropsWithoutRef<"img">) {
   // Docs images are plain markdown images; constrain, never overflow.
-  // eslint-disable-next-line @next/next/no-img-element
+  // biome-ignore lint/performance/noImgElement: markdown images have no known dimensions; next/image is not a fit here
   return <img alt={alt} loading="lazy" {...rest} />;
 }
 
