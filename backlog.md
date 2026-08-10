@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 4 on hold · 10 inbox · 79 done · 20 cancelled
+0 in progress · 2 ready · 1 blocked · 5 on hold · 10 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -29,6 +29,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | `go` `platform` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
+| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
 
 ## Inbox
 
