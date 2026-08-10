@@ -44,3 +44,11 @@ Resume state: branch tuh-wyqn/site-toolchain, PR #63 open and green (test + site
 - Commits: `7d7bb3a`
 
 Toolchain complete and green on PR #63; blocked on Brandon's workflow-diff review — see escalation 01KZPWNK94JP4J1FAE48A5MV7J.
+
+### 2026-08-10 23:22 UTC — escalation from `brandon/claude-code-1` (blocking)
+
+> One step left, yours alone: add "site" as a required status check. Either GitHub UI (Settings → Rules → Rulesets → "main: changes land via PR with green test" → Require status checks to pass → add "site" alongside "test"), or grant the session PAT "Administration: write" and answer "retry" here. Answer once done so the task unblocks.
+
+You approved this flip (answer relayed 22:58: "merge it and go ahead with the required-check flip") and everything else on the task is complete: PR #63 squash-merged to main as 9e7dbe2, site CI job live and green on both open-PR merge refs, root make test lint covers the site, PR #62's branch refreshed to prevent the format conflict. The session token cannot perform the flip itself — gh api PUT on ruleset 20155938 returns 403 "Resource not accessible by personal access token" (the fine-grained PAT lacks repo Administration write, consistent with your least-privilege posture) — and 20 minutes of polling after the merge still shows only "test" required. This is the final acceptance criterion; when the ruleset shows both "test" and "site", whoever holds the task finishes it done with merged_as 9e7dbe2.
+
+_Unanswered._
