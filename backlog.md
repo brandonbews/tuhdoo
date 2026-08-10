@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 0 ready · 5 blocked · 5 on hold · 7 inbox · 80 done · 21 cancelled
+1 in progress · 0 ready · 5 blocked · 5 on hold · 8 inbox · 80 done · 21 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
@@ -47,6 +47,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages)
 - [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
+- [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) escalations are kind of hard to read and navigate in the current ux. make them cleaerer in the task view UX wise and also ask teh agent to make escalations as short and actionable as possible but still full required context
 
 ## Done
 
