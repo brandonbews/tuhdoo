@@ -9,11 +9,11 @@ views are derived from the log — never edit them by hand. The design lives in
 
 ## At a glance
 
-**[2 open questions](escalations.md) are waiting on a human.**
+**[1 open question](escalations.md) is waiting on a human.**
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 0 | 6 | 5 | 7 | 80 | 21 |
+| 0 | 1 | 5 | 5 | 7 | 80 | 21 |
 
 - [backlog.md](backlog.md) — the work: in progress, ready, and blocked, plus the on-hold and inbox shelves
 - [escalations.md](escalations.md) — questions from the fleet, awaiting a human

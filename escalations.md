@@ -12,14 +12,6 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 The rewrite is complete and green (make test lint + site build): all 7 human-facing docs tightened for the skeptical evaluator (6,464 → 6,133 words, agent-protocol.md untouched, links/anchors/frontmatter contract verified, uninstall's tested blocks byte-identical), and the landing page implements the full messaging brief — pain-led hero, organism second beat, new human-loop section ("capture, sculpt, drain"), ownership section, and the one first-person maker block. The task's acceptance requires your eyes on the diff before merge because the docs and especially the maker block are written in your voice — please check that block's wording closely (it grew from the old pull-quote and now signs "— Brandon, tuhdoo's maintainer"). Auto-merge is deliberately NOT set. Options: (a) wording is right → approve and squash-merge PR #62 yourself, or answer "merge it" and the next claimant merges and finishes; (b) wording needs work → leave line comments on the PR and answer here with "address comments"; the task returns to the pool and the next claimant picks them up. My recommendation: option (a) after any direct edits you want to push to the branch yourself — copy nits are faster edited than round-tripped.
 
-### [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) · Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-10 22:28 UTC
-
-> Review the .github/workflows/test.yml diff in PR #63 (https://github.com/brandonbews/tuhdoo/pull/63) and squash-merge it — or answer "merge it" here and the next claimant merges. Also confirm you want "site" added as a required status check afterward.
-
-The toolchain work is complete and fully green on the PR: Tailwind v4 substrate (appearance-identical — rule-by-rule CSS diff and byte-identical prerendered routes; Vercel preview on the PR for a visual spot-check), Biome 2.5.7 + tsc with real scripts, site CI job, and root make test/lint now covering the site. It sits unmerged for one reason: the PR changes .github/workflows/test.yml (adds the site job; the existing test job's one line becomes "make test-go lint-go" to keep jobs disjoint), and workflow changes are the repo-law exception needing your eyes-on diff review — the harness's permission layer independently declined my autonomous merge of it, which I honored rather than worked around. Two follow-ups after merge, for me-or-successor unless you'd rather do them: (1) make the site check required — exact flip: ruleset 20155938 ("main: changes land via PR with green test") → required_status_checks → add context "site" alongside "test" (doable via: gh api -X PUT repos/brandonbews/tuhdoo/rulesets/20155938 with the rules array re-sent, or the GitHub UI ruleset editor); do this only AFTER #63 is on main, or every open PR blocks. (2) Refresh PR #62's branch (merge main, run npx biome format --write in site/) — the Biome format pass reformatted page.tsx, which #62's copy rewrite also touches, so an un-refreshed #62 will conflict. Recommendation: review the test.yml diff (it's 19 lines), squash-merge #63, and answer here whether the required-check flip is approved.
-
 ## Answered
 
 ### [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) · v0 definition of done: the dogfood week holds
@@ -121,3 +113,11 @@ Asked by `brandon/claude-code-1` · 2026-08-07 21:55 UTC
 > Two decisions before building the ship-the-protocol command: (1) What is the subcommand's exact name? (2) Should `tuhdoo init` offer to WRITE the protocol doc into the host repo, or only PRINT a pointer telling the operator how to get it?
 
 **Answer** (`brandon`): your recs both work for me
+
+### [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) · Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
+
+Asked by `brandon/claude-code-1` · 2026-08-10 22:28 UTC
+
+> Review the .github/workflows/test.yml diff in PR #63 (https://github.com/brandonbews/tuhdoo/pull/63) and squash-merge it — or answer "merge it" here and the next claimant merges. Also confirm you want "site" added as a required status check afterward.
+
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): merge it and go ahead with the required-check flip
