@@ -1,16 +1,19 @@
 # Backlog
 
-0 in progress · 2 ready · 4 blocked · 5 on hold · 5 inbox · 80 done · 21 cancelled
+1 in progress · 1 ready · 4 blocked · 5 on hold · 5 inbox · 80 done · 21 cancelled
+
+**[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `docs` `launch` |
 | [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `web` `tooling` `launch` |
 
 ## Blocked / waiting

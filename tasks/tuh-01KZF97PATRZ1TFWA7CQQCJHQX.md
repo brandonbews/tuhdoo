@@ -2,7 +2,7 @@
 
 `tuh-01KZF97PATRZ1TFWA7CQQCJHQX`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `docs` `launch`
 - **Created:** 2026-08-07 23:34 UTC by `brandon`
@@ -30,4 +30,10 @@ Constraints: agent-protocol.md is exempt and out of bounds — its wording is a 
 
 ## History
 
-_No activity yet._
+### 2026-08-10 22:09 UTC — escalation from `brandon/claude-code-1` (blocking)
+
+> Review PR #62 (https://github.com/brandonbews/tuhdoo/pull/62) — the docs + landing copy pass. Approve and merge (squash), or leave change requests on the PR and answer here so the next claimant addresses them.
+
+The rewrite is complete and green (make test lint + site build): all 7 human-facing docs tightened for the skeptical evaluator (6,464 → 6,133 words, agent-protocol.md untouched, links/anchors/frontmatter contract verified, uninstall's tested blocks byte-identical), and the landing page implements the full messaging brief — pain-led hero, organism second beat, new human-loop section ("capture, sculpt, drain"), ownership section, and the one first-person maker block. The task's acceptance requires your eyes on the diff before merge because the docs and especially the maker block are written in your voice — please check that block's wording closely (it grew from the old pull-quote and now signs "— Brandon, tuhdoo's maintainer"). Auto-merge is deliberately NOT set. Options: (a) wording is right → approve and squash-merge PR #62 yourself, or answer "merge it" and the next claimant merges and finishes; (b) wording needs work → leave line comments on the PR and answer here with "address comments"; the task returns to the pool and the next claimant picks them up. My recommendation: option (a) after any direct edits you want to push to the branch yourself — copy nits are faster edited than round-tripped.
+
+_Unanswered._
