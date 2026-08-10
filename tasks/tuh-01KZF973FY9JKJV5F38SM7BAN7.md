@@ -18,7 +18,7 @@ The ask: (1) integrate the delivered assets — wordmark+mark in the nav, favico
 
 Acceptance: logo renders in nav at both themes; favicon and og-image present and correct (verify og with a real unfurl check); both themes pass WCAG AA contrast for text; docs pages remain comfortably readable (measure: line length, contrast, heading hierarchy); Brandon approves the result visually — escalate with the Vercel PR-preview URL and hold for his eyes before merging; site builds green through the toolchain gate.
 
-Pointers: assets land via tuh-01KZPPRW1EKBTVKNR76H6Z7SQC (blocking); Tailwind arrives via tuh-01KZF992N0AM2TZGHMH2T5WYQN (blocking — restyle in Tailwind, not twice); component-discipline decision on tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 (small explicit component inventory, GFM→component map legible in one file).
+Pointers: assets land via tuh-01KZPPRW1EKBTVKNR76H6Z7SQC (blocking); Tailwind arrives via tuh-01KZF992N0AM2TZGHMH2T5WYQN (blocking — restyle in Tailwind, not twice); component-discipline decision on tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 (small explicit component inventory, GFM→component map legible in one file); the landing page's SECTION STRUCTURE comes from the messaging brief on the copy task tuh-01KZF97PATRZ1TFWA7CQQCJHQX (pain-led hero, organism beat, maker block, human-loop section) — design to that structure, don't invent one.
 
 Constraints: no glassy panels, gradient washes, or 3D effects anywhere except the mark itself — restrained+accent was the settled answer over glassy-dark-first; ideally the docs copy pass (tuh-01KZF97PATRZ1TFWA7CQQCJHQX) lands first so design works against final copy, but that is soft ordering, not a dependency.
 

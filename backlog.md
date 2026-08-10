@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 4 blocked · 5 on hold · 6 inbox · 79 done · 20 cancelled
+0 in progress · 3 ready · 4 blocked · 5 on hold · 5 inbox · 79 done · 21 cancelled
 
 ## In progress
 
@@ -44,7 +44,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
-- [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 
 ## Done
 
@@ -150,3 +149,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-jgjr`](tasks/tuh-01KZA0VT234XJYVZWT91KSJGJR.md) Multi-repo story: does a plan ever span repos, or is that explicitly out of scope?
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing
+- [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
