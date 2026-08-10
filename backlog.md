@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 2 blocked · 5 on hold · 8 inbox · 79 done · 20 cancelled
+0 in progress · 4 ready · 2 blocked · 5 on hold · 7 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `docs` `launch` |
 | [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `web` `tooling` `launch` |
 | [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) | Logo finals: export and deliver the brand assets (human-led) | 1 | `web` `design` `launch` |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | `launch` `product` |
@@ -42,7 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
-- [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) improve tone, brevity and audience of docs content
 - [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) production ready sweep for accessibility, meta tags, etc on marketing site
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 
