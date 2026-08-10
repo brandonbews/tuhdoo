@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prevNext, routeFor, type NavEntry } from "@/lib/nav";
+import { type NavEntry, prevNext, routeFor } from "@/lib/nav";
 
 export function PrevNext({ entry }: { entry: NavEntry }) {
   const { prev, next } = prevNext(entry);
