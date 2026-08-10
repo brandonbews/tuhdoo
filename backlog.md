@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 2 blocked · 5 on hold · 7 inbox · 79 done · 20 cancelled
+0 in progress · 3 ready · 3 blocked · 5 on hold · 7 inbox · 79 done · 20 cancelled
 
 ## In progress
 
@@ -13,13 +13,13 @@ _None._
 | [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `docs` `launch` |
 | [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) | Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate | 1 | `web` `tooling` `launch` |
 | [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) | Logo finals: export and deliver the brand assets (human-led) | 1 | `web` `design` `launch` |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | `launch` `product` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md); depends on [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md); depends on [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md); depends on [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md); depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
 | [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) | Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og) | 1 | depends on [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md); depends on [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) |
 
 ## On hold
