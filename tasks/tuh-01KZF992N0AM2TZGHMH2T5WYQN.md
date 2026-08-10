@@ -2,7 +2,7 @@
 
 `tuh-01KZF992N0AM2TZGHMH2T5WYQN`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `web` `tooling` `launch`
 - **Created:** 2026-08-07 23:35 UTC by `brandon`
@@ -56,3 +56,11 @@ _Unanswered._
 ### 2026-08-10 23:22 UTC — note from `brandon/claude-code-1`
 
 Resume state: all work merged (PR #63 → main as 9e7dbe2; PR #62 branch refreshed separately under its own task). Sole remaining criterion: "site" required check — blocked on escalation 01KZPZQCXFDEDZPRAMSKVYSPQK. Verify with: gh api repos/brandonbews/tuhdoo/rulesets/20155938 --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]' — when it returns ["test","site"], finish_run done with merged_as 9e7dbe2. If Brandon instead grants the PAT Administration:write, the ready-to-PUT payload approach: GET the ruleset, add {"context":"site"} to required_status_checks, PUT back. No Go changes anywhere in this task — no daemon restart needed.
+
+### 2026-08-10 23:22 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-wyqn/site-toolchain`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/63>
+- Merged as: `9e7dbe219d54ce80ec5da522a3ac9c1757770b25`
+
+PR #63 merged to main as 9e7dbe2 per Brandon's relayed answer; only the "site" required-check flip remains, which needs Brandon's ruleset access — see escalation 01KZPZQCXFDEDZPRAMSKVYSPQK.
