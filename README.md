@@ -9,7 +9,7 @@ views are derived from the log — never edit them by hand. The design lives in
 
 ## At a glance
 
-**[1 open question](escalations.md) is waiting on a human.**
+**[2 open questions](escalations.md) are waiting on a human.**
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|

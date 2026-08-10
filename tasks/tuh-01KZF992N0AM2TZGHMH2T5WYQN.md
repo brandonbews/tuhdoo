@@ -25,4 +25,10 @@ Constraints: no new .github/workflows files (extend test.yml only); GFM-never-MD
 
 ## History
 
-_No activity yet._
+### 2026-08-10 22:28 UTC — escalation from `brandon/claude-code-1` (blocking)
+
+> Review the .github/workflows/test.yml diff in PR #63 (https://github.com/brandonbews/tuhdoo/pull/63) and squash-merge it — or answer "merge it" here and the next claimant merges. Also confirm you want "site" added as a required status check afterward.
+
+The toolchain work is complete and fully green on the PR: Tailwind v4 substrate (appearance-identical — rule-by-rule CSS diff and byte-identical prerendered routes; Vercel preview on the PR for a visual spot-check), Biome 2.5.7 + tsc with real scripts, site CI job, and root make test/lint now covering the site. It sits unmerged for one reason: the PR changes .github/workflows/test.yml (adds the site job; the existing test job's one line becomes "make test-go lint-go" to keep jobs disjoint), and workflow changes are the repo-law exception needing your eyes-on diff review — the harness's permission layer independently declined my autonomous merge of it, which I honored rather than worked around. Two follow-ups after merge, for me-or-successor unless you'd rather do them: (1) make the site check required — exact flip: ruleset 20155938 ("main: changes land via PR with green test") → required_status_checks → add context "site" alongside "test" (doable via: gh api -X PUT repos/brandonbews/tuhdoo/rulesets/20155938 with the rules array re-sent, or the GitHub UI ruleset editor); do this only AFTER #63 is on main, or every open PR blocks. (2) Refresh PR #62's branch (merge main, run npx biome format --write in site/) — the Biome format pass reformatted page.tsx, which #62's copy rewrite also touches, so an un-refreshed #62 will conflict. Recommendation: review the test.yml diff (it's 19 lines), squash-merge #63, and answer here whether the required-check flip is approved.
+
+_Unanswered._
