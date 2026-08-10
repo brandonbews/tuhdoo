@@ -5,15 +5,14 @@ description: What bringing tuhdoo to a team looks like — one init, teammates j
 
 # Adopting tuhdoo
 
-What it looks like for a team to start running its backlog on tuhdoo.
-The short version: one person initializes it inside the repo, everyone
-else's setup is a clone and one command, agents connect through a
-one-snippet MCP config, and from then on the team steers from a terminal.
-There is no server to stand up, no vendor to sign up with, and no accounts
-to provision — the entire shared state is the **data branch**, a git orphan
-branch (named `tuhdoo`) inside the repository itself, synced through the
-git remote you already have. Whoever can write to the repo can plan in it;
-clone the repo and the plan comes with it.
+Bringing tuhdoo to a team is small: one person initializes it inside the
+repo, everyone else joins with a clone and one command, agents connect
+through a one-snippet MCP config, and the team steers from a terminal.
+There is no server to stand up, no vendor, no accounts — the entire shared
+state is the **data branch**, a git orphan branch (named `tuhdoo`) inside
+the repository itself, synced through the remote you already have. Whoever
+can write to the repo can plan in it; clone the repo and the plan comes
+with it.
 
 ## 1. One person runs `tuhdoo init`
 
@@ -28,9 +27,9 @@ local process that owns all writes to the branch and syncs it with the
 remote), and prints the MCP snippet for connecting agents. It is idempotent
 — safe to run again anytime.
 
-Two one-time settings on the git host come with adoption, both printed by
-`init`: exempt the data branch from any pull-request/review rules, and
-exclude it from CI triggers. The details live in
+Adoption comes with two one-time settings on the git host, both printed by
+`init`: exempt the data branch from pull-request/review rules, and exclude
+it from CI triggers. Details in
 [the repo-admin section of `joining.md`](joining.md#for-the-repo-admin-branch-protection-and-ci).
 
 ## 2. Teammates join
@@ -38,14 +37,14 @@ exclude it from CI triggers. The details live in
 Every other machine — a teammate's laptop, your second workstation — joins
 with a clone, a binary install, and the same `tuhdoo init`, which detects
 the existing data branch on the remote and adopts it rather than minting a
-new one. The end-to-end walkthrough, including clone shapes and identity
-setup, is [`joining.md`](joining.md).
+new one. The walkthrough, including clone shapes and identity setup, is
+[`joining.md`](joining.md).
 
-Everyone who joins sees the same backlog, and everything anyone writes is
-attributed: humans act as a principal derived from their git identity
+Everyone sees the same backlog, and everything anyone writes is attributed:
+humans act as a principal derived from their git identity
 (`sarah@example.com` acts as `sarah`), and every agent acts as a
-sub-principal under the human who runs it (`sarah/claude-code-1`) — so
-every action on the ledger traces to a responsible person.
+sub-principal under the human who runs it (`sarah/claude-code-1`). Every
+action on the ledger traces to a responsible person.
 
 ## 3. Agents connect
 
@@ -61,33 +60,29 @@ Any MCP-capable agent harness connects through one snippet (also printed by
 
 Connected agents follow [`agent-protocol.md`](agent-protocol.md) — the
 instruction text you load into your harness (`tuhdoo protocol` prints it
-straight from the binary, so your repo never needs its own copy),
-defining the loop they run:
-claim a task, work it, escalate questions to a human, finish with an honest
-outcome. The protocol is the agents' half of the contract; your half —
-writing tasks worth claiming and steering the queue — is
-[`steering.md`](steering.md).
+straight from the binary), defining the loop they run: claim a task, work
+it, escalate questions to a human, finish with an honest outcome. That is
+the agents' half of the contract; your half — writing tasks worth claiming
+and steering the queue — is [`steering.md`](steering.md).
 
 ## 4. Pick a code workflow
 
-tuhdoo coordinates *who works what*; it deliberately never touches how code
-gets written and merged — that stays ordinary git, whatever your team
-already does. But an agent fleet is better with a deliberately chosen outer
-workflow, and the [workflow recipes](recipes/README.md) are recommended
-patterns to adopt or adapt: start with the
-[trunk-based PR flow](recipes/trunk-based-pr-flow.md) — one task, one
-branch, one squash-merged PR — which is the flow tuhdoo's own repository is
-built with. Recipes end with a copy-pasteable block for your repo's
-agent-instructions file.
+tuhdoo coordinates *who works what*; how code gets written and merged stays
+ordinary git, whatever your team already does. But an agent fleet is better
+with a deliberately chosen workflow, and the
+[workflow recipes](recipes/README.md) are recommended patterns to adopt or
+adapt. Start with the [trunk-based PR flow](recipes/trunk-based-pr-flow.md)
+— one task, one branch, one squash-merged PR. Each recipe ends with a
+copy-pasteable block for your repo's agent-instructions file.
 
 ## 5. Steer
 
-Day to day, the human surfaces are a terminal:
+Day to day, the human surfaces are a terminal.
 
 **The TUI.** Bare `tuhdoo` opens the interactive steering screen: answer
 escalations in place, reprioritize, pause and cancel tasks, drill into any
 task's history. It acts as you. `tuhdoo --watch` is the same screen
-read-only — safe to leave open in a pane beside a working agent.
+read-only — safe to leave open beside a working agent.
 
 **The CLI.** One-shot commands for reads and quick writes, all scriptable:
 
@@ -110,16 +105,14 @@ through `tuhdoo mcp`; humans steer.
 backlog and per-task pages — so anyone can read the plan from GitHub or
 GitLab without installing anything.
 
-A working rhythm follows from the surfaces: capture ideas the moment they
-occur (`tuhdoo create … --status inbox`), triage the inbox periodically,
-keep escalations answered — they are the questions your fleet is blocked on
-— and read the ledger instead of asking around. That whole loop is
-[`steering.md`](steering.md).
+The rhythm that follows: capture ideas the moment they occur
+(`tuhdoo create … --status inbox`), triage the inbox periodically, and keep
+escalations answered — they are the questions your fleet is blocked on.
+That loop is [`steering.md`](steering.md).
 
 ## Leaving
 
-Adoption is reversible, and cleanly: a machine walks away with a handful of
-ordinary git commands and zero trace, and a team can retire the ledger
-entirely if it ever wants to. [`uninstall.md`](uninstall.md) is the
-walkthrough — worth knowing before you adopt, because it is the proof that
-adopting costs nothing to undo.
+Adoption is reversible: a machine walks away with a handful of ordinary git
+commands and zero trace, and a team can retire the ledger entirely if it
+ever wants to. [`uninstall.md`](uninstall.md) is the walkthrough — worth
+knowing before you adopt, because it proves adopting costs nothing to undo.
