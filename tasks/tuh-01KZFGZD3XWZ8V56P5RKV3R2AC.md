@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 1
 - **Labels:** `web` `launch`
-- **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-ban7`](tuh-01KZF973FY9JKJV5F38SM7BAN7.md) (open), [`tuh-jhqx`](tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) (open)
+- **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-ban7`](tuh-01KZF973FY9JKJV5F38SM7BAN7.md) (open), [`tuh-jhqx`](tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) (done)
 - **Created:** 2026-08-08 01:49 UTC by `brandon`
 
 ## Description

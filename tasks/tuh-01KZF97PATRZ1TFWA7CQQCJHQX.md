@@ -2,7 +2,7 @@
 
 `tuh-01KZF97PATRZ1TFWA7CQQCJHQX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `docs` `launch`
 - **Created:** 2026-08-07 23:34 UTC by `brandon`
@@ -49,3 +49,11 @@ Resume state: branch tuh-jhqx/docs-landing-copy, PR #62 open, no auto-merge (Bra
 - Commits: `7803083`
 
 Rewrite done and green on PR #62; blocked on Brandon's review per the task's acceptance — see escalation 01KZPVJHTJ31GSH2XRM6TAJY43.
+
+### 2026-08-11 02:39 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-jhqx/docs-landing-copy`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/62>
+- Merged as: `10afcb614d7df4120d0518523f6a4bae3a1c1bf3`
+
+PR #62 squash-merged to main as 10afcb6 after Brandon's approval ("the copy changes are good to merge"). All 7 human-facing docs rewritten for the skeptical evaluator (word count 6,464 → 6,133, agent-protocol.md untouched, docs contract verified); landing page implements the full messaging brief (pain-led hero, organism second beat, human-loop section, ownership section, maker block). Landing section structure for the identity task: hero / organism / agent loop / human loop / ownership / maker block / get started. No Go changes — no daemon restart needed.
