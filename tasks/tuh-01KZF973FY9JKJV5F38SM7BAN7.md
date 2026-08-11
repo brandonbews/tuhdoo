@@ -2,7 +2,7 @@
 
 `tuh-01KZF973FY9JKJV5F38SM7BAN7`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `web` `design` `launch`
 - **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-7sqc`](tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) (done)
@@ -55,3 +55,12 @@ Identity pass done and green on PR #64; blocked on Brandon's visual review per a
 ### 2026-08-11 03:17 UTC — note from `brandon/claude-code-1`
 
 Correction to run 01KZQD5KZTAWTETKJKE1TG459Z: the commit hash recorded there (a63e1b6) is wrong — the branch head carrying the work is d932dd6 (tuh-ban7/site-visual-identity, PR #64). Branch and PR links in the run are correct.
+
+### 2026-08-11 05:15 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-ban7/site-visual-identity`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/64>
+- Commits: `d932dd6`, `0693e3f`
+- Merged as: `c5be7fb25cdda188bf6af6346dba904b98b48960`
+
+Identity pass merged to main as c5be7fb (PR #64, squash) after Brandon's review: light-tuned mark approved, flat favicon unobjected, maker block cut from the landing at his request (relayed on escalation 01KZQD4W8HMB3J5KSFYZJ1QTTM — the landing now runs hero / organism / agent loop / human loop / ownership / get started). Shipped: theme-switching inline lockup in the nav, mark-derived tokens (dark seeded from #060806, AA verified both themes, ratios in globals.css header), Sora headings via next/font, flat-derivation favicon + glassy 180px apple-icon, 1200x630 og-image with full og/twitter metadata on every route. Follow-up for whoever deploys tuhdoo.com: og verified against local prod build only (preview was SSO-walled) — run a public unfurl check against tuhdoo.com once this deploys. No Go changes; no daemon restart needed.
