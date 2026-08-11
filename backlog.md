@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 5 on hold · 9 inbox · 84 done · 22 cancelled
+0 in progress · 2 ready · 2 blocked · 5 on hold · 8 inbox · 84 done · 22 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) | Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate) | 1 | `docs` `protocol` `launch` |
 | [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |
 
 ## Blocked / waiting
@@ -42,7 +43,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) escalations are kind of hard to read and navigate in the current ux. make them cleaerer in the task view UX wise and also ask teh agent to make escalations as short and actionable as possible but still full required context
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
-- [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) address the agent protocol. it seems very bloated and over specified and all of the supplementary information around it (especially in the docs) seems like confusing and over the top.
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) docs and marketing copy all need to be significantly tighter, less fluffly, and more utilitarian in message without losing a concise compelling pitch. they see written by an impatient AI right now wieth em dashes and fragments and vague language all over (like the 12 verb thing and others like it)
 
 ## Done
