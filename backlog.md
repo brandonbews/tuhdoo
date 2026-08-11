@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 5 on hold · 11 inbox · 84 done · 21 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 10 inbox · 84 done · 22 cancelled
 
 ## In progress
 
@@ -39,7 +39,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages)
-- [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
 - [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) escalations are kind of hard to read and navigate in the current ux. make them cleaerer in the task view UX wise and also ask teh agent to make escalations as short and actionable as possible but still full required context
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) address the agent protocol. it seems very bloated and over specified and all of the supplementary information around it (especially in the docs) seems like confusing and over the top.
@@ -155,3 +154,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-25kw`](tasks/tuh-01KZA0VT234XJYVZWT95JM25KW.md) Epoch compaction triggers and mechanics in practice
 - [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
+- [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
