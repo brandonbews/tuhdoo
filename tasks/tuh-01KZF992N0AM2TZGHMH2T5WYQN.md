@@ -2,7 +2,7 @@
 
 `tuh-01KZF992N0AM2TZGHMH2T5WYQN`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `web` `tooling` `launch`
 - **Created:** 2026-08-07 23:35 UTC by `brandon`
@@ -64,3 +64,11 @@ Resume state: all work merged (PR #63 → main as 9e7dbe2; PR #62 branch refresh
 - Merged as: `9e7dbe219d54ce80ec5da522a3ac9c1757770b25`
 
 PR #63 merged to main as 9e7dbe2 per Brandon's relayed answer; only the "site" required-check flip remains, which needs Brandon's ruleset access — see escalation 01KZPZQCXFDEDZPRAMSKVYSPQK.
+
+### 2026-08-11 02:38 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-wyqn/site-toolchain`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/63>
+- Merged as: `9e7dbe219d54ce80ec5da522a3ac9c1757770b25`
+
+All acceptance criteria hold: PR #63 merged to main as 9e7dbe2 (Tailwind v4 substrate appearance-identical, Biome 2.5.7 + tsc with real scripts, site CI job, root make test/lint covering the site); Brandon added "site" as a required status check (verified: ruleset 20155938 now requires both "test" and "site"). No Go changes — no daemon restart needed.
