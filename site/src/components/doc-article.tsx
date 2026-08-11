@@ -6,7 +6,7 @@ import type { NavEntry } from "@/lib/nav";
 export async function DocArticle({ entry }: { entry: NavEntry }) {
   const content = await renderMarkdown(readDocSource(entry.file), entry.file);
   return (
-    <main className="doc">
+    <main id="main" className="doc">
       <article>{content}</article>
       <PrevNext entry={entry} />
     </main>

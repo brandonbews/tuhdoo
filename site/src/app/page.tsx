@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="landing">
+    <main id="main" className="landing">
       <section className="hero">
         <h1>TODO.md was never built for a fleet.</h1>
         <p className="lede">

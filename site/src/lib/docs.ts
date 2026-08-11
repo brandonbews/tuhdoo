@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Metadata } from "next";
 import { parse as parseYaml } from "yaml";
+import { type NavEntry, routeFor } from "@/lib/nav";
 
 export const DOCS_ROOT = path.join(process.cwd(), "..", "docs");
 
@@ -45,14 +46,22 @@ export function readFrontmatter(file: string): DocFrontmatter {
 // here would otherwise drop the image the app/opengraph-image.png file
 // convention gives the root route. (Verified against the running site: an
 // openGraph object without `images` loses og:image entirely.)
-export function docPageMetadata(file: string): Metadata {
-  const { title, description } = readFrontmatter(file);
+//
+// Takes the nav entry (not just the file) because canonical and og:url need
+// the route; relative URLs resolve against metadataBase (www.tuhdoo.com).
+export function docPageMetadata(entry: NavEntry): Metadata {
+  const { title, description } = readFrontmatter(entry.file);
+  const route = routeFor(entry);
   return {
     title,
     description,
+    alternates: {
+      canonical: route,
+    },
     openGraph: {
       siteName: "tuhdoo",
       type: "article",
+      url: route,
       title,
       description,
       images: "/opengraph-image.png",

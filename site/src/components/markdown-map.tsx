@@ -31,9 +31,12 @@ function heading(Tag: HeadingTag) {
     ...rest
   }: ComponentPropsWithoutRef<HeadingTag>) {
     if (!id) return <Tag {...rest}>{children}</Tag>;
+    // No aria-label on the anchor: the wrapped heading text is the accessible
+    // name. An override like "Link to this section" fails WCAG 2.5.3 (label
+    // in name) — flagged by axe/Lighthouse on every heading.
     return (
       <Tag id={id} {...rest}>
-        <a className="anchor" href={`#${id}`} aria-label="Link to this section">
+        <a className="anchor" href={`#${id}`}>
           {children}
         </a>
       </Tag>

@@ -24,6 +24,31 @@ const devOrigins =
 // because nothing uses a dynamic API or server action.
 const nextConfig: NextConfig = {
   ...(devOrigins.length > 0 ? { allowedDevOrigins: devOrigins } : {}),
+
+  // Security headers. Vercel supplies Strict-Transport-Security on its own;
+  // the rest are ours. A full Content-Security-Policy is deliberately not set:
+  // Next's inline bootstrap scripts would need nonces or 'unsafe-inline', and
+  // on a fully static site with no user content or third-party scripts the
+  // added risk surface is minimal — revisit if the site ever embeds anything.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
