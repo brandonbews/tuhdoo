@@ -370,8 +370,8 @@ type finishRunInput struct {
 
 type escalateInput struct {
 	Task     string `json:"task" jsonschema:"the task the question is about"`
-	Question string `json:"question" jsonschema:"the decision you need a human to make"`
-	Context  string `json:"context,omitempty" jsonschema:"what you tried, what you found, and why you cannot decide alone — the human answers long after you are gone"`
+	Question string `json:"question" jsonschema:"the whole decision package, kept short: the question, the options you see, and your recommendation if you have one"`
+	Context  string `json:"context,omitempty" jsonschema:"background only — the minimum a human needs to answer, never the lead; the human answers long after you are gone"`
 	Blocking bool   `json:"blocking,omitempty" jsonschema:"true if the task cannot proceed until answered; a blocking escalation keeps the task out of the ready pool until a human answers"`
 }
 
@@ -552,9 +552,12 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "escalate",
-		Description: "Raise a question a human must answer. Answers usually land after your session " +
-			"ends: for a blocking question, escalate, note where you stopped, release_claim, then " +
-			"finish_run with outcome blocked — the next claimant inherits question and answer.",
+		Description: "Raise a question a human must answer. The question field carries the whole " +
+			"decision package — the question, the options you see, and your recommendation — kept " +
+			"short; context is background only, the minimum a human needs to answer. Answers " +
+			"usually land after your session ends: for a blocking question, escalate, note where " +
+			"you stopped, release_claim, then finish_run with outcome blocked — the next claimant " +
+			"inherits question and answer.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in escalateInput) (*mcp.CallToolResult, eventIDResult, error) {
 		id, warning, oe := d.opEscalate(s.principal(), escalateReq{
 			Task: in.Task, Question: in.Question, Context: in.Context, Blocking: in.Blocking,

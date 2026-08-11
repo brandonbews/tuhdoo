@@ -38,10 +38,7 @@ Trunk-based flow and agent fleets fit unusually well:
 Steps 1 and 6–7 are tuhdoo protocol (linked); steps 2–5 are this recipe.
 
 1. **Claim the task.** Agents take work through tuhdoo's `claim_next` (or
-   `claim_task` for a specific task), never by just starting. A claim is a
-   time-boxed lease the daemon renews automatically while the agent's
-   session is connected — it is what stops two agents from building the
-   same thing. Protocol: see
+   `claim_task` for a specific task), never by just starting. Protocol:
    [the loop](../agent-protocol.md#the-loop) in the agent protocol.
 
 2. **Branch off fresh `main`.** Name the branch after the task:
@@ -78,19 +75,17 @@ Steps 1 and 6–7 are tuhdoo protocol (linked); steps 2–5 are this recipe.
    protection instead of skipping auto-merge: keep the mechanics automatic
    and put the human gate in the host's rules.
 
-6. **Confirm before the merge lands.** A claim is provisional — on a
-   multi-machine team, an earlier claim elsewhere can void it. tuhdoo's
-   `confirm_claim` settles ownership irrevocably; agents call it before
-   merging and merge only on a confirmed verdict. Protocol:
+6. **Confirm before the merge lands.** Agents call tuhdoo's
+   `confirm_claim` before merging and merge only on a confirmed verdict.
+   The rule and its reasons are protocol:
    [confirm before you merge](../agent-protocol.md#the-loop).
 
 7. **Finish only after the merge lands.** `finish_run(done)` means the
    acceptance criteria hold *on the default branch* — so agents wait for
-   the merge, then report the squash commit in `merged_as` (under squash
-   merges the branch commits never reach `main`; the squash commit carries
-   the work). If CI goes red: fix it, or finish honestly as
-   `blocked`/`failed`. Work sitting unmerged on a branch is not done.
-   Protocol: [finish honestly](../agent-protocol.md#the-loop).
+   the merge, then report the squash commit in `merged_as`. If CI goes
+   red: fix it, or finish honestly as `blocked`/`failed`. Work sitting
+   unmerged on a branch is not done. Protocol:
+   [finish honestly](../agent-protocol.md#the-loop).
 
 ## Repo settings that enforce it
 
