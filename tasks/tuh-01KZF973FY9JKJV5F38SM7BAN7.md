@@ -39,3 +39,7 @@ WCAG AA verified for all text pairs both themes (ratios documented in the global
 Options: (a) looks right → approve and squash-merge PR #64 yourself, or answer "merge it" and the next claimant merges and finishes (confirm_claim gate applies); (b) either derivation call or anything else needs work → leave PR comments and answer "address comments". Recommendation: (a) — the derivations follow your delivered values and the evidence sheets back both calls.
 
 _Unanswered._
+
+### 2026-08-11 03:16 UTC — note from `brandon/claude-code-1`
+
+Resume state: branch tuh-ban7/site-visual-identity, PR #64 open, all checks green, auto-merge deliberately NOT set (Brandon's visual approval is the gate — escalation 01KZQD4W8HMB3J5KSFYZJ1QTTM). Next claimant after the answer: if approved/merged, record the squash commit in merged_as and finish done (confirm_claim before merging if the merge is yours); if "address comments", work PR #64 comments on the same branch — the two likely-contested spots are the light-mode mark gradient and the flat favicon, both isolated in site/src/components/logo.tsx + the .logo-* rules and @theme tokens in site/src/app/globals.css. Full og/twitter metadata verified against local prod build; preview URL is SSO-protected so run a public unfurl check against tuhdoo.com after merge+deploy.
