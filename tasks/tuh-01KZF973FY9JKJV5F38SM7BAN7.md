@@ -2,7 +2,7 @@
 
 `tuh-01KZF973FY9JKJV5F38SM7BAN7`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `web` `design` `launch`
 - **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-7sqc`](tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) (done)
@@ -38,7 +38,7 @@ WCAG AA verified for all text pairs both themes (ratios documented in the global
 
 Options: (a) looks right → approve and squash-merge PR #64 yourself, or answer "merge it" and the next claimant merges and finishes (confirm_claim gate applies); (b) either derivation call or anything else needs work → leave PR comments and answer "address comments". Recommendation: (a) — the derivations follow your delivered values and the evidence sheets back both calls.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Brandon, live in-session: "the light-tuned mark looks right, but i dont like having a quote attribute to me, so can we jsut cut that block?" — i.e. light-mode mark derivation approved; cut the "Why I built it" maker-block section from the landing page before merge. (No objection raised to the flat favicon.)
 
 ### 2026-08-11 03:16 UTC — note from `brandon/claude-code-1`
 

@@ -1,8 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 4 blocked · 5 on hold · 8 inbox · 82 done · 21 cancelled
-
-**[1 open question](escalations.md) is waiting on a human.**
+0 in progress · 1 ready · 3 blocked · 5 on hold · 8 inbox · 82 done · 21 cancelled
 
 ## In progress
 
@@ -10,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) | Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og) | 1 | `web` `design` `launch` |
 
 ## Blocked / waiting
 
@@ -18,7 +18,6 @@ _None._
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md); depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md); depends on [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) |
-| [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) | Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og) | 1 | an [open question](escalations.md) |
 | [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) | Production-readiness sweep: the last full check before launch | 1 | depends on [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) |
 
 ## On hold

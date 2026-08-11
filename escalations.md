@@ -4,21 +4,7 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-### [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) · Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og)
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-11 03:16 UTC
-
-> Review PR #64 (https://github.com/brandonbews/tuhdoo/pull/64) — the site visual-identity pass. Vercel preview: https://tuhdoo-k0l3w44ey-bews-prod.vercel.app (behind your Vercel SSO; the PR page also links it). Approve visually and merge (squash), or leave change requests and answer here. Two derivation judgment calls specifically need your sign-off: (1) the light-mode mark and (2) the flat favicon.
-
-The pass is complete and green (make test lint, incl. site build/Biome/tsc; all PR checks pass). What shipped: your lockup inlined in the nav (wordmark rides currentColor, mark gradients theme-switch via CSS); tokens derived from the mark's delivered values — dark theme seeded from #060806, light accent #0a7a44; Sora (next/font, self-hosted) for headings, system stack for body; docs retuned to 17px/42rem (~65ch); og-image 1200x630 (dark composition, lockup + tagline "A coordination fabric for agent fleets — on a git branch inside the repo it plans." — new copy in an image, eyeball it); apple-touch-icon 180px glassy-on-#060806; full og/twitter metadata on every route, verified against the production build (preview SSO blocks external unfurl checkers; re-verify public unfurl after tuhdoo.com deploys).
-
-The two judgment calls, both easily swappable in site/src/components/logo.tsx + globals.css:
-(1) LIGHT-MODE MARK — no light variant was delivered, and the delivered art washes out on white (halo/rim/speculars vanish). Shipped: a light-tuned gradient — same geometry/filters/noise, stops deepened to #d9ffe9/#5df29e/#17b465/#0a7a44 — reads as the same object under daylight. Rejected alternative: dark chip behind the mark (preserves the art verbatim but drops a heavy dark badge into a quiet light header). Check the preview header in light mode.
-(2) FAVICON — the glassy mark is an unreadable smudge at 16px, so per the asset task's fallback clause the favicon (icon.svg + favicon.ico) is a FLAT derivation: identical dividing-cells silhouette, no filters, simple vertical gradient from the delivered stops. Check the browser tab on the preview. The 180px apple-icon keeps the full glassy art.
-
-WCAG AA verified for all text pairs both themes (ratios documented in the globals.css header). One token deviates from a delivered value: light link green is #0a7a44 rather than fleck #0c8a4d, which lands at 4.41:1 on white — just under AA.
-
-Options: (a) looks right → approve and squash-merge PR #64 yourself, or answer "merge it" and the next claimant merges and finishes (confirm_claim gate applies); (b) either derivation call or anything else needs work → leave PR comments and answer "address comments". Recommendation: (a) — the derivations follow your delivered values and the evidence sheets back both calls.
+_None — the fleet is unblocked._
 
 ## Answered
 
@@ -145,3 +131,11 @@ Asked by `brandon/claude-code-1` · 2026-08-10 23:22 UTC
 > One step left, yours alone: add "site" as a required status check. Either GitHub UI (Settings → Rules → Rulesets → "main: changes land via PR with green test" → Require status checks to pass → add "site" alongside "test"), or grant the session PAT "Administration: write" and answer "retry" here. Answer once done so the task unblocks.
 
 **Answer** (`brandon`, relayed by `brandon/claude-code-1`): i added the site check in github
+
+### [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) · Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og)
+
+Asked by `brandon/claude-code-1` · 2026-08-11 03:16 UTC
+
+> Review PR #64 (https://github.com/brandonbews/tuhdoo/pull/64) — the site visual-identity pass. Vercel preview: https://tuhdoo-k0l3w44ey-bews-prod.vercel.app (behind your Vercel SSO; the PR page also links it). Approve visually and merge (squash), or leave change requests and answer here. Two derivation judgment calls specifically need your sign-off: (1) the light-mode mark and (2) the flat favicon.
+
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): Brandon, live in-session: "the light-tuned mark looks right, but i dont like having a quote attribute to me, so can we jsut cut that block?" — i.e. light-mode mark derivation approved; cut the "Why I built it" maker-block section from the landing page before merge. (No objection raised to the flat favicon.)
