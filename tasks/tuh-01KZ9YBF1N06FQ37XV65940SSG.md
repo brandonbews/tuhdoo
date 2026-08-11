@@ -1,4 +1,4 @@
-# sweep for duplicate code
+# sweep for duplicate code, superfluous comments, and overall filler and fluff
 
 `tuh-01KZ9YBF1N06FQ37XV65940SSG`
 
