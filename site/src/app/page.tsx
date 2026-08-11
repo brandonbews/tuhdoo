@@ -6,11 +6,13 @@ export default function Home() {
       <section className="hero">
         <h1>TODO.md was never built for a fleet.</h1>
         <p className="lede">
-          Steering coding agents today is markdown files and vibes: parallel
-          agents trample each other, sessions die with their context, nothing
-          records what happened. tuhdoo is the fix — a shared backlog, work
-          queue, and activity ledger on a git branch inside the repo it plans.
-          No server, no vendor, no accounts.
+          Steering coding agents with TODO files breaks at fleet scale: parallel
+          agents trample each other&apos;s work, sessions die and take their
+          context with them, and nothing records what actually happened. tuhdoo
+          replaces the TODO file with a shared backlog, work queue, and activity
+          ledger, stored on a git branch inside the repo it plans. It syncs over
+          the remote you already have and needs no server, no vendor, and no
+          accounts.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/docs">
@@ -25,25 +27,27 @@ export default function Home() {
       <section className="section">
         <h2>One repo. One clone. One history.</h2>
         <p>
-          The backlog, the roadmap, and every agent&apos;s activity are the same
-          organism as the application. They live on the{" "}
-          <strong>data branch</strong> — an orphan git branch, its own history,
-          coordination data instead of code — inside the repo it plans. Clone
-          the repo and the plan comes with it; sync is push and pull over the
-          remote you already have. Serverless, yet still distributed,
-          version-tracked, and owned by whoever owns the repo.
+          The backlog, the roadmap, and every agent&apos;s activity live on the{" "}
+          <strong>data branch</strong>: an orphan git branch inside the repo,
+          with its own history, carrying coordination data instead of code.
+          Clone the repo and the whole plan comes with it; sync is a push and a
+          pull over the remote you already have. There is no server to run, yet
+          the plan is still distributed, version-tracked, and owned by whoever
+          owns the repo.
         </p>
       </section>
 
       <section className="section">
         <h2>The agent loop</h2>
         <p>
-          Agents connect over a twelve-verb{" "}
+          Agents connect over{" "}
           <a href="https://modelcontextprotocol.io" rel="noopener">
             MCP
           </a>{" "}
-          surface and run one loop, recorded on the ledger — the only continuity
-          between today&apos;s agent and tomorrow&apos;s.
+          and work one recorded loop. The entire surface is twelve tools, few
+          enough that the whole protocol fits in the single instruction file a
+          harness loads. Every step lands on the ledger, which is the only
+          continuity between one session and the next.
         </p>
         <div className="card-grid">
           <div className="card">
@@ -51,9 +55,10 @@ export default function Home() {
               <span className="step">1</span>Claim
             </h3>
             <p>
-              <code>claim_next</code> serves the highest-priority ready task,
-              fully hydrated. A claim is an exclusive, time-boxed lease — it
-              lapses back to the pool if the agent dies.
+              <code>claim_next</code> hands the agent the highest-priority ready
+              task with its description, acceptance criteria, prior notes, and
+              run history. A claim is an exclusive, time-boxed lease; if the
+              agent dies, the task returns to the pool.
             </p>
           </div>
           <div className="card">
@@ -61,8 +66,9 @@ export default function Home() {
               <span className="step">2</span>Work
             </h3>
             <p>
-              Ordinary git on ordinary branches — tuhdoo never touches how code
-              gets written and merged. Notes checkpoint context for a successor.
+              Work happens with ordinary git on ordinary branches; tuhdoo never
+              touches how code is written or merged. Notes on the ledger
+              checkpoint context for whoever picks the task up next.
             </p>
           </div>
           <div className="card">
@@ -70,9 +76,10 @@ export default function Home() {
               <span className="step">3</span>Escalate
             </h3>
             <p>
-              An escalation is a question routed to a human — ask and hand off
-              instead of guessing. A blocking escalation fences the task until
-              answered; the next claimant inherits question and answer.
+              When a question needs a human, the agent asks and hands off
+              instead of guessing. A blocking escalation holds the task until
+              the question is answered, and the next claimant receives the
+              question and the answer together.
             </p>
           </div>
           <div className="card">
@@ -80,52 +87,54 @@ export default function Home() {
               <span className="step">4</span>Finish
             </h3>
             <p>
-              Every run ends with a refereed outcome — <code>done</code> means
-              the acceptance criteria actually hold, settled by a confirmation
-              gate before anything merges.
+              Every run ends with a recorded outcome. Reporting{" "}
+              <code>done</code> means the acceptance criteria actually hold, and
+              a confirmation gate settles competing claims before anything
+              merges.
             </p>
           </div>
         </div>
       </section>
 
       <section className="section">
-        <h2>Your loop: capture, sculpt, drain</h2>
+        <h2>Your loop: capture, shape, drain</h2>
         <p>
-          Ideas hit the inbox the moment they occur — title-only is fine;
-          capture never costs a planning session. Later, sit down with an agent
-          and sculpt the pile into workable tasks: prompt-quality descriptions,
-          acceptance criteria, dependency edges. Then watch the drain from the
-          TUI as agents work the ready frontier. You shape the graph and answer
-          escalations on your schedule — never the fleet&apos;s.
+          Capture ideas into the inbox the moment they occur; a title alone is
+          enough, and capture never costs a planning session. Later, work
+          through the pile with an agent and shape captures into real tasks with
+          full descriptions, acceptance criteria, and dependency edges. Then
+          agents drain the ready queue while you watch from the terminal and
+          answer escalations on your schedule, not the fleet&apos;s.
         </p>
       </section>
 
       <section className="section">
-        <h2>Yours. No service attached.</h2>
+        <h2>No service attached</h2>
         <div className="card-grid">
           <div className="card">
             <h3>Nothing to run</h3>
             <p>
-              No service, no subscription, no signup, no vendor to trust. If you
-              can clone the repo, you hold the entire coordination state.
-              Offline just works.
+              tuhdoo ships as a binary and a git branch; there is no backend
+              service, no subscription, no signup, and no vendor to trust. If
+              you can clone the repo, you hold the entire coordination state,
+              and everything works offline.
             </p>
           </div>
           <div className="card">
-            <h3>One brain for the team</h3>
+            <h3>One backlog for the team</h3>
             <p>
-              Everyone who clones sees the same backlog, whatever branch anyone
-              has checked out — no asking who has what where — and every action
-              is attributed to the human behind it. The plan renders as
-              browsable markdown on your git host.
+              Everyone who clones the repo sees the same backlog, whatever code
+              branch they have checked out, and every action is attributed to
+              the human behind it. The plan also renders as browsable markdown
+              on your git host.
             </p>
           </div>
           <div className="card">
             <h3>Leaves no trace</h3>
             <p>
               Joining is a clone and one <code>init</code>; leaving is a handful
-              of git commands — no hooks, no writes to your worktree, no commits
-              on your code branches.
+              of git commands. tuhdoo installs no hooks, writes nothing into
+              your worktree, and puts no commits on your code branches.
             </p>
           </div>
         </div>
@@ -134,9 +143,9 @@ export default function Home() {
       <section className="section">
         <h2>Get started</h2>
         <p>
-          Install the single static binary — npm, release archive, or{" "}
-          <code>go install</code> — run <code>tuhdoo init</code>, and connect
-          your harness with one MCP snippet.
+          Install the single static binary from npm, a release archive, or{" "}
+          <code>go install</code>. Run <code>tuhdoo init</code>, then connect
+          your agent harness with one MCP config snippet.
         </p>
         <p>
           <Link className="button" href="/docs">
