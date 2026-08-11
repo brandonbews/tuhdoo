@@ -6,6 +6,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { Metadata } from "next";
 import { parse as parseYaml } from "yaml";
 
 export const DOCS_ROOT = path.join(process.cwd(), "..", "docs");
@@ -36,4 +37,25 @@ export function readFrontmatter(file: string): DocFrontmatter {
     );
   }
   return { title, description };
+}
+
+// Page metadata for a doc route. Next replaces nested `openGraph` objects
+// wholesale (no per-field merge with the root layout), so each doc page must
+// carry the full og object — siteName and images included; setting openGraph
+// here would otherwise drop the image the app/opengraph-image.png file
+// convention gives the root route. (Verified against the running site: an
+// openGraph object without `images` loses og:image entirely.)
+export function docPageMetadata(file: string): Metadata {
+  const { title, description } = readFrontmatter(file);
+  return {
+    title,
+    description,
+    openGraph: {
+      siteName: "tuhdoo",
+      type: "article",
+      title,
+      description,
+      images: "/opengraph-image.png",
+    },
+  };
 }

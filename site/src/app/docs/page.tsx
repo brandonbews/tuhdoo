@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { DocArticle } from "@/components/doc-article";
-import { readFrontmatter } from "@/lib/docs";
+import { docPageMetadata } from "@/lib/docs";
 import { docsNav } from "@/lib/nav";
 
 const entry = docsNav[0]; // docs index ← docs/README.md
 
 export function generateMetadata(): Metadata {
-  const { title, description } = readFrontmatter(entry.file);
-  return { title, description };
+  return docPageMetadata(entry.file);
 }
 
 export default function DocsIndexPage() {
