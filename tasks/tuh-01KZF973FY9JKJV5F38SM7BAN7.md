@@ -2,7 +2,7 @@
 
 `tuh-01KZF973FY9JKJV5F38SM7BAN7`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `web` `design` `launch`
 - **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-7sqc`](tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) (done)
@@ -43,3 +43,11 @@ _Unanswered._
 ### 2026-08-11 03:16 UTC — note from `brandon/claude-code-1`
 
 Resume state: branch tuh-ban7/site-visual-identity, PR #64 open, all checks green, auto-merge deliberately NOT set (Brandon's visual approval is the gate — escalation 01KZQD4W8HMB3J5KSFYZJ1QTTM). Next claimant after the answer: if approved/merged, record the squash commit in merged_as and finish done (confirm_claim before merging if the merge is yours); if "address comments", work PR #64 comments on the same branch — the two likely-contested spots are the light-mode mark gradient and the flat favicon, both isolated in site/src/components/logo.tsx + the .logo-* rules and @theme tokens in site/src/app/globals.css. Full og/twitter metadata verified against local prod build; preview URL is SSO-protected so run a public unfurl check against tuhdoo.com after merge+deploy.
+
+### 2026-08-11 03:17 UTC — run by `brandon/claude-code-1` — blocked
+
+- Branch: `tuh-ban7/site-visual-identity`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/64>
+- Commits: `a63e1b6`
+
+Identity pass done and green on PR #64; blocked on Brandon's visual review per acceptance — see escalation 01KZQD4W8HMB3J5KSFYZJ1QTTM.
