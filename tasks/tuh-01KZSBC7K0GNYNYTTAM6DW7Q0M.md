@@ -19,8 +19,10 @@ The decisions (2026-08-11 grill):
 - **History:** git-only. The changelog and revision notes are deleted, not relocated — no appendix, no internal-docs migration; design docs keep their own revision notes where the decisions were made.
 - **Dedupe:** protocol restatements in other docs (`steering.md` and `recipes/trunk-based-pr-flow.md` are the main offenders) become pointers at the protocol doc; each rule lives in exactly one place.
 
+Folded in from the 2026-08-11 escalations grill (tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86, Brandon's decision): the escalation section's rewrite must sharpen the writing doctrine — an escalation's **question field carries the whole decision package**: the question, the options the agent sees, and a recommendation, all kept short; the **context field is background only**, the minimum a human needs to answer, never the lead. Give the `escalate` tool description in `internal/daemon/mcp.go` the same emphasis (this is within the keep-aligned constraint below, not a redesign). Rationale: the TUI will render the question block always-visible and collapse context by default — the sibling TUI task holds that half; no dependency edge either way.
+
 Acceptance:
-- `docs/agent-protocol.md` rewritten per the four decisions; no semantic rule lost or weakened — if unsure mid-rewrite whether a passage is semantics or lore, escalate rather than cut.
+- `docs/agent-protocol.md` rewritten per the decisions above; no semantic rule lost or weakened — if unsure mid-rewrite whether a passage is semantics or lore, escalate rather than cut.
 - The doc is embedded in the binary (`tuhdoo protocol` prints it verbatim), so editing the file is the whole change there; update any tests asserting on its output.
 - Other docs' protocol restatements deduped to pointers; their own concerns (steering, PR flow) untouched.
 - Brandon's PR review is the final bar. `make test lint` green; one PR.
