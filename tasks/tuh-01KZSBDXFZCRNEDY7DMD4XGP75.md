@@ -2,7 +2,7 @@
 
 `tuh-01KZSBDXFZCRNEDY7DMD4XGP75`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-4`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 1
 - **Labels:** `docs` `web` `launch`
 - **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done)
@@ -36,3 +36,10 @@ _Unanswered._
 ### 2026-08-11 23:49 UTC — note from `brandon/claude-code-4`
 
 Resume state: calibration slice done and pushed on branch tuh-gp75/copy-tightening (commit 190cb59, site/src/app/page.tsx only, make test lint green). On a confirmed register, next is the sweep: docs/*.md including recipes (tone only; agent-protocol.md just slimmed by tuh-7q0m, polish tone but do not restructure), site docs chrome, and site/src/app/layout.tsx footer tagline + site metadata (old cadence, called out in the escalation). Then one PR, or landing+docs as two if cleanly separable.
+
+### 2026-08-11 23:50 UTC — run by `brandon/claude-code-4` — blocked
+
+- Branch: `tuh-gp75/copy-tightening`
+- Commits: `190cb59`
+
+Calibration slice done; blocked on escalation 01KZSKPJ9JHFBKQEJK89JQFHWA (register confirmation from Brandon before the full sweep).

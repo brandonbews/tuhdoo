@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 5 ready · 3 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
+0 in progress · 5 ready · 4 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | `brandon/claude-code-4` |
+_None._
 
 ## Ready
 
@@ -27,6 +25,7 @@
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | depends on [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) |
+| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | an [open question](escalations.md) |
 
 ## On hold
 
