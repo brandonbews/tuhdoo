@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 5 on hold · 10 inbox · 84 done · 21 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 11 inbox · 84 done · 21 cancelled
 
 ## In progress
 
@@ -43,6 +43,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) escalations are kind of hard to read and navigate in the current ux. make them cleaerer in the task view UX wise and also ask teh agent to make escalations as short and actionable as possible but still full required context
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) address the agent protocol. it seems very bloated and over specified and all of the supplementary information around it (especially in the docs) seems like confusing and over the top.
+- [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) docs and marketing copy all need to be significantly tighter, less fluffly, and more utilitarian in message without losing a concise compelling pitch. they see written by an impatient AI right now wieth em dashes and fragments and vague language all over (like the 12 verb thing and others like it)
 
 ## Done
 
