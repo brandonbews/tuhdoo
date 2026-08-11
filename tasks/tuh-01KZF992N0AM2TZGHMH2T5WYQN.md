@@ -2,7 +2,7 @@
 
 `tuh-01KZF992N0AM2TZGHMH2T5WYQN`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `web` `tooling` `launch`
 - **Created:** 2026-08-07 23:35 UTC by `brandon`
@@ -51,7 +51,7 @@ Toolchain complete and green on PR #63; blocked on Brandon's workflow-diff revie
 
 You approved this flip (answer relayed 22:58: "merge it and go ahead with the required-check flip") and everything else on the task is complete: PR #63 squash-merged to main as 9e7dbe2, site CI job live and green on both open-PR merge refs, root make test lint covers the site, PR #62's branch refreshed to prevent the format conflict. The session token cannot perform the flip itself — gh api PUT on ruleset 20155938 returns 403 "Resource not accessible by personal access token" (the fine-grained PAT lacks repo Administration write, consistent with your least-privilege posture) — and 20 minutes of polling after the merge still shows only "test" required. This is the final acceptance criterion; when the ruleset shows both "test" and "site", whoever holds the task finishes it done with merged_as 9e7dbe2.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): i added the site check in github
 
 ### 2026-08-10 23:22 UTC — note from `brandon/claude-code-1`
 
