@@ -9,8 +9,7 @@ How a machine — or a whole team — walks away from tuhdoo. The companion to
 [`joining.md`](joining.md): joining is four steps, and leaving is a handful
 of ordinary git commands, because nothing tuhdoo does touches your code
 history — the ledger is an orphan branch, there are no git hooks, and your
-worktree is never written to. This doc is self-contained; you do not need
-to read anything else first.
+worktree is never written to. This page is self-contained.
 
 Two layers, deliberately separate:
 
@@ -21,8 +20,8 @@ Two layers, deliberately separate:
   shared ledger itself.
 
 There is intentionally no `tuhdoo uninstall` command. Leaving via ordinary
-git commands is the point — you can read exactly what each step removes —
-and the one destructive team-level step must never be automated.
+git commands means you can read exactly what each step removes — and the
+one destructive team-level step must never be automated.
 
 ## What tuhdoo leaves on a machine
 
@@ -30,9 +29,8 @@ The complete footprint, verified against the code:
 
 - **Three refs.** `refs/heads/tuhdoo` — the local copy of the data branch;
   `refs/remotes/origin/tuhdoo` — an ordinary remote-tracking ref (full
-  clones only; `--single-branch` clones never have one); and
-  `refs/tuhdoo/remote` — the daemon's own tracking ref, where its fetches
-  of the remote data branch land.
+  clones only); and `refs/tuhdoo/remote` — the daemon's own tracking ref,
+  where its fetches of the remote data branch land.
 - **The runtime directory** `.git/tuhdoo/` — `daemon.json`, `daemon.lock`,
   `daemon.log`, `daemon.sock`, `machine-id`.
 - **One git config key**, `tuhdoo.principal` — repo-local, or `--global`
@@ -66,8 +64,7 @@ if [ -f .git/tuhdoo/daemon.json ]; then
 fi
 ```
 
-No `daemon.json` means no daemon is running — the block above skips itself
-and you move on.
+No `daemon.json` means no daemon is running — the block skips itself.
 
 ### 2. Remove the runtime directory
 
@@ -93,7 +90,7 @@ git for-each-ref --format='delete %(refname)' \
   | git update-ref --stdin
 ```
 
-This only touches your machine's refs — the team's ledger on the remote is
+This touches only your machine's refs — the team's ledger on the remote is
 unaffected, and other machines never notice.
 
 ### 4. Unset your principal
@@ -104,15 +101,14 @@ git config --unset tuhdoo.principal || true
 git config --global --unset tuhdoo.principal || true
 ```
 
-(`|| true` because most machines never set the key at all — `git config
---unset` exits non-zero when there is nothing to unset.)
+(`|| true` because most machines never set the key — `git config --unset`
+exits non-zero when there is nothing to unset.)
 
 ### 5. Remove the harness MCP entry and the binary
 
-Both are environment-specific, so no single command fits. Delete the
-`"tuhdoo"` entry from your agent harness's MCP config — it is the snippet
-`tuhdoo init` printed, under `"mcpServers"`. Then remove the binary
-however it arrived:
+Both are environment-specific. Delete the `"tuhdoo"` entry from your agent
+harness's MCP config (the snippet `tuhdoo init` printed, under
+`"mcpServers"`), then remove the binary however it arrived:
 
 ```sh
 npm uninstall -D tuhdoo      # if installed via npm
@@ -143,9 +139,9 @@ truth — edit a step here and the test re-proves the walk-away claim.*
 
 ## For the team: retiring the ledger
 
-First: you probably don't need to. A dormant `tuhdoo` branch costs
-nothing — a small stretch of orphan history that never touches your code
-branches, never appears in `--single-branch` clones, and (configured per
+You probably don't need to. A dormant `tuhdoo` branch costs nothing — a
+small stretch of orphan history that never touches your code branches,
+never appears in `--single-branch` clones, and (configured per
 `joining.md`) never triggers CI. It is also the team's decision record:
 every task, note, escalation, and answer. The recommended way to stop
 using tuhdoo is simply to stop: each machine runs the per-machine steps
@@ -163,18 +159,16 @@ tag.
 
 ### Deleting the remote branch
 
-This is the one irreversible step in this document. It destroys the whole
-ledger for every peer at once, and there is no undo beyond a surviving
-local copy on some machine. Two things must happen first:
+The one irreversible step in this document. It destroys the whole ledger
+for every peer at once, with no undo beyond a surviving local copy on some
+machine. Two things must happen first:
 
 1. **Every machine stops (or fully uninstalls) its daemon.** A live
    daemon on any peer will faithfully republish the branch on its next
    sync — from its point of view the remote merely lost history that it
    still has. Coordinate: per-machine steps everywhere, then delete.
 2. **Lift any host protection on the data branch.** If your host restricts
-   branch deletion (rulesets, protected branches, or whatever your host
-   calls them), the `tuhdoo` branch must be released from that rule before
-   it can be deleted.
+   branch deletion, release the `tuhdoo` branch from that rule first.
 
 Then, typed by a human, on purpose:
 
