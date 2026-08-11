@@ -4,13 +4,7 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-### [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) · Docs and landing copy pass: the skeptical evaluator, against the settled writing bar
-
-**Blocking** · asked by `brandon/claude-code-1` · 2026-08-10 22:09 UTC
-
-> Review PR #62 (https://github.com/brandonbews/tuhdoo/pull/62) — the docs + landing copy pass. Approve and merge (squash), or leave change requests on the PR and answer here so the next claimant addresses them.
-
-The rewrite is complete and green (make test lint + site build): all 7 human-facing docs tightened for the skeptical evaluator (6,464 → 6,133 words, agent-protocol.md untouched, links/anchors/frontmatter contract verified, uninstall's tested blocks byte-identical), and the landing page implements the full messaging brief — pain-led hero, organism second beat, new human-loop section ("capture, sculpt, drain"), ownership section, and the one first-person maker block. The task's acceptance requires your eyes on the diff before merge because the docs and especially the maker block are written in your voice — please check that block's wording closely (it grew from the old pull-quote and now signs "— Brandon, tuhdoo's maintainer"). Auto-merge is deliberately NOT set. Options: (a) wording is right → approve and squash-merge PR #62 yourself, or answer "merge it" and the next claimant merges and finishes; (b) wording needs work → leave line comments on the PR and answer here with "address comments"; the task returns to the pool and the next claimant picks them up. My recommendation: option (a) after any direct edits you want to push to the branch yourself — copy nits are faster edited than round-tripped.
+_None — the fleet is unblocked._
 
 ## Answered
 
@@ -113,6 +107,14 @@ Asked by `brandon/claude-code-1` · 2026-08-07 21:55 UTC
 > Two decisions before building the ship-the-protocol command: (1) What is the subcommand's exact name? (2) Should `tuhdoo init` offer to WRITE the protocol doc into the host repo, or only PRINT a pointer telling the operator how to get it?
 
 **Answer** (`brandon`): your recs both work for me
+
+### [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) · Docs and landing copy pass: the skeptical evaluator, against the settled writing bar
+
+Asked by `brandon/claude-code-1` · 2026-08-10 22:09 UTC
+
+> Review PR #62 (https://github.com/brandonbews/tuhdoo/pull/62) — the docs + landing copy pass. Approve and merge (squash), or leave change requests on the PR and answer here so the next claimant addresses them.
+
+**Answer** (`brandon`, relayed by `brandon/claude-code-1`): the copy changes are good to merge
 
 ### [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) · Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
 
