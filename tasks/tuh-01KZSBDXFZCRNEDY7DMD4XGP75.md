@@ -2,10 +2,10 @@
 
 `tuh-01KZSBDXFZCRNEDY7DMD4XGP75`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `docs` `web` `launch`
-- **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (open)
+- **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done)
 - **Created:** 2026-08-11 21:25 UTC by `brandon`
 
 ## Description

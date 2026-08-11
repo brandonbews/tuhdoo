@@ -2,7 +2,7 @@
 
 `tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-4`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `docs` `protocol` `launch`
 - **Created:** 2026-08-11 21:24 UTC by `brandon`
@@ -33,4 +33,10 @@ Sequencing: lands BEFORE the copy-tightening pass (tuh-01KZSBDXFZCRNEDY7DMD4XGP7
 
 ## History
 
-_No activity yet._
+### 2026-08-11 23:42 UTC — run by `brandon/claude-code-4` — done
+
+- Branch: `tuh-7q0m/agent-protocol-slim-down`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/67>
+- Merged as: `d2905f47a6f208734ce70b47407bee8880bdd613`
+
+docs/agent-protocol.md rewritten per the 2026-08-11 grill decisions: layer 1 (Status changelog, revision parentheticals, B11 field-test record, internal references) deleted; layer 2 lore compressed to imperative rules; all semantic rules kept with identical meaning (verified via a 54-item rule inventory). Escalation section leads with the question-carries-the-decision-package / context-is-background doctrine; the escalate tool description and its question/context field schema strings in internal/daemon/mcp.go carry the same emphasis (no other tool description touched). steering.md and recipes/trunk-based-pr-flow.md protocol restatements deduped to pointers; the recipe's paste-able agent-instructions template deliberately untouched. No test changes needed (embed tests assert on stable headings/anchors, all kept; loop numbering unchanged so ops.go/api.go "step 5" comments stay accurate). Two judgment calls flagged in the PR body for Brandon: shim stdin-death lore cut (fifo example, replays-cleanly detail — one clause restores it if wanted), and the cut is ~35% by words rather than a strict halving because layers 1-2 are fully gone and further cuts would remove rule content. make test lint green; merged via PR #67, squash commit d2905f4. Unblocks the copy-tightening pass tuh-01KZSBDXFZCRNEDY7DMD4XGP75.

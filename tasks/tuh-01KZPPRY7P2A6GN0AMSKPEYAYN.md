@@ -5,7 +5,7 @@
 - **Status:** open — blocked on dependencies
 - **Priority:** 0
 - **Labels:** `launch` `product`
-- **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (open), [`tuh-gp75`](tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) (open)
+- **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done), [`tuh-gp75`](tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) (open)
 - **Created:** 2026-08-10 20:45 UTC by `brandon`
 
 ## Description

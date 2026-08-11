@@ -1,17 +1,16 @@
 # Backlog
 
-1 in progress · 5 ready · 4 blocked · 4 on hold · 4 inbox · 84 done · 22 cancelled
+0 in progress · 6 ready · 3 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) | Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate) | 1 | `brandon/claude-code-4` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | `docs` `web` `launch` |
 | [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) | Task history: render task.updated field edits — every edit, compact old→new lines | 0 | `go` `tui` `ledger` |
 | [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) | Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack | 0 | `tui` `ux` |
 | [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `go` `ledger` `views` |
@@ -24,8 +23,7 @@
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
-| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | depends on [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md); depends on [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) |
-| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | depends on [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) |
+| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | depends on [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) |
 
 ## On hold
 
@@ -133,6 +131,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
 - [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) Production-readiness sweep: the last full check before launch
 - [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) Logo finals: export and deliver the brand assets (human-led)
+- [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 
 ## Cancelled
 
