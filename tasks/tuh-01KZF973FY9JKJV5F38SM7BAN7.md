@@ -51,3 +51,7 @@ Resume state: branch tuh-ban7/site-visual-identity, PR #64 open, all checks gree
 - Commits: `a63e1b6`
 
 Identity pass done and green on PR #64; blocked on Brandon's visual review per acceptance — see escalation 01KZQD4W8HMB3J5KSFYZJ1QTTM.
+
+### 2026-08-11 03:17 UTC — note from `brandon/claude-code-1`
+
+Correction to run 01KZQD5KZTAWTETKJKE1TG459Z: the commit hash recorded there (a63e1b6) is wrong — the branch head carrying the work is d932dd6 (tuh-ban7/site-visual-identity, PR #64). Branch and PR links in the run are correct.
