@@ -9,19 +9,25 @@
 
 ## Description
 
-Context: Brandon's verdict 2026-08-11: the agent protocol "seems very bloated and over specified and all of the supplementary information around it (especially in the docs) seems confusing and over the top." The 2026-08-11 announcement grill made this a launch gate — it is published content on the adopter's evaluation path, and the Show HN moment fires only after this and the copy pass land.
+Context: Brandon's verdict 2026-08-11: the agent protocol "seems very bloated and over specified and all of the supplementary information around it (especially in the docs) seems confusing and over the top." A launch gate per the 2026-08-11 announcement grill; the what/why/how was then grilled properly with Brandon later the same day — the decisions below are his, do not re-litigate.
 
-The ask: compress `docs/agent-protocol.md` and the protocol-explaining material around it (supplementary sections in other docs, and the `tuhdoo protocol` command output, which ships the protocol with the binary — see tuh-01KZANB3J4YYH09F0Z6FSZQ5CD) to the minimum an agent actually needs to run the loop correctly. This is compression, not redesign: cut repetition, over-specification, and hedging; keep every load-bearing semantic (claim → work → finish honestly, escalation flow, salvage breadcrumbs, notes doctrine).
+Diagnosis (from reading the doc at the grill): `docs/agent-protocol.md` (141 lines) is three layers. (1) Provenance scaffolding: the ~350-word "Status" changelog paragraph at the top chronicling nine revision rounds; ~20 inline revision parentheticals ("*(revised 2026-07-30…)*", "*(added 2026-08-04, `001` D6)*"); the 12-line B11 field-test record; internal references (001/002, B-numbers, Cycle-4, PR numbers, task IDs) meaningless to adopters. (2) War-story-length failure lore: the shim-death paragraphs, the B12 anecdote inside the no-attempt-no-escalation rule, the Cycle-4 cautionary tale. (3) The actual protocol rules — field-tested, every rule earned.
+
+The decisions (2026-08-11 grill):
+- **Cut depth:** strip layer 1 outright; compress layer 2 into imperative rules (e.g. shim deaths become "if you see X on stderr: reconnect before doing anything else"); keep every layer-3 semantic rule identical in meaning. Roughly a halving.
+- **Register:** one artifact written as a tight agent prompt — imperative, second-person, zero throat-clearing. Humans read the same file; no human/agent split.
+- **History:** git-only. The changelog and revision notes are deleted, not relocated — no appendix, no internal-docs migration; design docs keep their own revision notes where the decisions were made.
+- **Dedupe:** protocol restatements in other docs (`steering.md` and `recipes/trunk-based-pr-flow.md` are the main offenders) become pointers at the protocol doc; each rule lives in exactly one place.
 
 Acceptance:
-- `docs/agent-protocol.md` substantially shorter with no semantic loss; supplementary protocol mentions in other docs deduplicated to pointers rather than restatements.
-- `tuhdoo protocol` output matches the slimmed doc (its tests updated if output is asserted).
-- Before the big rewrite lands: escalate with the proposed structure and a before/after sample so Brandon can calibrate the bar — the prior copy pass (#62) was judged insufficient the same day it landed; do not repeat that by guessing.
+- `docs/agent-protocol.md` rewritten per the four decisions; no semantic rule lost or weakened — if unsure mid-rewrite whether a passage is semantics or lore, escalate rather than cut.
+- The doc is embedded in the binary (`tuhdoo protocol` prints it verbatim), so editing the file is the whole change there; update any tests asserting on its output.
+- Other docs' protocol restatements deduped to pointers; their own concerns (steering, PR flow) untouched.
 - Brandon's PR review is the final bar. `make test lint` green; one PR.
 
-Constraints: T5's twelve verbs are untouched — this task changes prose, never surface. MCP tool descriptions in code were deliberately aligned with the notes doctrine (t-01KYVD31CNTR1EVCDHPJGSQAGH); if the slim-down changes doctrine wording, keep them aligned, but do not redesign them. `docs/` publishing rules apply (GFM, frontmatter title + description, relative links).
+Constraints: T5's twelve verbs untouched — prose only, never surface. MCP tool descriptions in `internal/daemon/mcp.go` were deliberately aligned with the notes doctrine (t-01KYVD31CNTR1EVCDHPJGSQAGH); keep them consistent with the slimmed wording but do not redesign them. `docs/` publishing rules apply (GFM, frontmatter title + description, relative links).
 
-Sequencing: this lands BEFORE the copy-tightening pass (tuh-01KZSBDXFZCRNEDY7DMD4XGP75 depends on this task) — structural cuts first, tone polish second, so the copy pass never polishes text about to be deleted.
+Sequencing: lands BEFORE the copy-tightening pass (tuh-01KZSBDXFZCRNEDY7DMD4XGP75 depends on this task) — structural cuts first so the copy pass never polishes text about to be deleted.
 
 ## History
 
