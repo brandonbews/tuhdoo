@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 6 ready · 4 blocked · 4 on hold · 4 inbox · 84 done · 22 cancelled
+1 in progress · 5 ready · 4 blocked · 4 on hold · 4 inbox · 84 done · 22 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) | Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate) | 1 | `brandon/claude-code-4` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) | Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate) | 1 | `docs` `protocol` `launch` |
 | [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) | Task history: render task.updated field edits — every edit, compact old→new lines | 0 | `go` `tui` `ledger` |
 | [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) | Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack | 0 | `tui` `ux` |
 | [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `go` `ledger` `views` |
