@@ -87,15 +87,11 @@ cursor-and-keystroke on the inbox section.
 ## 3. Promote: the description is the prompt
 
 Promotion (`inbox` → `open`) is the moment an idea becomes a commission,
-and it has a quality bar: **a prompt-quality description, written in five
-parts**:
-
-- **Context** — why this exists; links to docs, prior tasks, decisions.
-- **The ask** — what to build or change, concretely.
-- **Acceptance criteria** — how the claimant knows it is done;
-  test-shaped where possible.
-- **Pointers** — relevant files, modules, prior art in the repo.
-- **Constraints** — what must not change; the rules that bite here.
+and it has a quality bar: **a prompt-quality description, written in the
+five parts the protocol's
+[descriptions-are-prompts section](agent-protocol.md#writing-tasks-descriptions-are-prompts)
+defines** — context, the ask, acceptance criteria, pointers, constraints.
+One convention, both audiences: you write it, an agent works from it.
 
 Task quality bounds output quality: an agent builds exactly what the
 description asks — it was not in the meeting, and its session starts cold
@@ -108,10 +104,6 @@ parked on it. Write it at promotion time instead.
 ```sh
 tuhdoo update tuh-d83w --status open --desc -   # reads the description from stdin
 ```
-
-The same five-part convention, written for agents, is in the protocol's
-[descriptions-are-prompts section](agent-protocol.md#writing-tasks-descriptions-are-prompts)
-— one convention, both audiences.
 
 ## 4. Decompose: the DAG is the plan
 
@@ -145,8 +137,9 @@ deliberately small — a handful of levers, all available from bare `tuhdoo`
   Readiness recomputes immediately.
 - **Pause and resume.** `held` and back, per task, any time.
 - **Answer escalations.** Escalations are your inbox — each one is written
-  to be answerable on its own: the situation, the options the agent saw,
-  its recommendation. Answer from the TUI (select, type), or:
+  to be answerable on its own: the question carries the options the agent
+  saw and its recommendation, with background in the context field. Answer
+  from the TUI (select, type), or:
 
   ```sh
   tuhdoo escalations                 # every escalation, open before answered
