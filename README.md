@@ -13,7 +13,7 @@ No open questions — the fleet is unblocked.
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 1 | 3 | 5 | 8 | 82 | 21 |
+| 1 | 0 | 3 | 5 | 8 | 82 | 21 |
 
 - [backlog.md](backlog.md) — the work: in progress, ready, and blocked, plus the on-hold and inbox shelves
 - [escalations.md](escalations.md) — questions from the fleet, awaiting a human
