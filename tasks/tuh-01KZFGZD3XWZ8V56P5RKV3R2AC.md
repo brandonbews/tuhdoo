@@ -2,7 +2,7 @@
 
 `tuh-01KZFGZD3XWZ8V56P5RKV3R2AC`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `web` `launch`
 - **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-ban7`](tuh-01KZF973FY9JKJV5F38SM7BAN7.md) (done), [`tuh-jhqx`](tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) (done)

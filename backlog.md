@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 5 on hold · 8 inbox · 83 done · 21 cancelled
+1 in progress · 0 ready · 2 blocked · 5 on hold · 8 inbox · 83 done · 21 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) | Production-readiness sweep: the last full check before launch | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) | Production-readiness sweep: the last full check before launch | 1 | `web` `launch` |
+_None._
 
 ## Blocked / waiting
 
