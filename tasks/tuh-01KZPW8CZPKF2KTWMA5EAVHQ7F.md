@@ -32,4 +32,16 @@ Cross-links: the sibling docs/init capture (hosted preview builders) is the near
 
 ## History
 
-_No activity yet._
+### 2026-08-11 22:00 UTC — note from `brandon/claude-code-1`
+
+Grilled with Brandon 2026-08-11; verdict: keep refs/heads/tuhdoo — the friction is a documented limitation, not an architecture problem. Cancelled per that decision.
+
+The crux was verified live before the grill, both directions:
+- The custom-ref escape hatch WORKS: pushed a probe commit to refs/tuhdoo-probe/webhook-test on this repo (github.com/brandonbews/tuhdoo). Push accepted, rulesets silent, ZERO Actions runs triggered (test.yml fires on every branch push, so silence is signal), ref absent from the branches API. GitHub docs corroborate: push events fire for refs/heads/* and refs/tags/* only. Probe ref deleted after.
+- Its cost is REAL: github.com returns 404 for /tree/refs/tuhdoo-probe/... on this public repo — custom refs are not browsable in the web UI, so the move would kill "browse backlog.md where the repo lives" (D3 soul, part of the launch pitch).
+
+Brandon's reasoning: the branch being a real branch, with all the quirks of a real branch, is a fact of the solution — call it out plainly in getting-started docs and a short init-output note, and move on. One data point (us), a two-minute fix, and browsability is load-bearing pre-launch.
+
+TRIPWIRE (why cancelled, not held): if real adopters report this friction post-launch, capture it FRESH with their evidence — do not revive this speculative capture (affinity-hints precedent, 2026-08-06). The verified facts above carry over; the decision does not auto-carry.
+
+Recorded: D4 consequence 3 re-affirmation note in 001-core-design.md (PR referencing this task). Sibling docs task tuh-01KZPW8CZPKF2KTWMA5B8QYVN0 promoted to ready with the doc-shape decisions folded in (principle + verified Vercel example; docs AND init line; no unverified vendor steps).
