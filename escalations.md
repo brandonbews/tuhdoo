@@ -4,7 +4,13 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-_None — the fleet is unblocked._
+### [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) · Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
+
+**Blocking** · asked by `brandon/claude-code-4` · 2026-08-11 23:49 UTC
+
+> The landing page is rewritten to a stricter register (branch tuh-gp75/copy-tightening, commit 190cb59) as the calibration slice your task mandated. Does it hit the bar, so the full docs+site sweep proceeds against it? Options: (a) register confirmed as-is, sweep everything; (b) mostly right, sweep after applying your corrections; (c) still off, re-calibrate the landing page again from your notes. Recommendation: (a). Three small calls folded in: 1) 'the roadmap' kept on the landing page but may be an overclaim (the ledger holds tasks, priorities, and dependency edges; there is no roadmap object) — keep or cut? 2) landing page says 'twelve tools' where docs say 'twelve verbs' — which is the term? 3) name the TUI concretely ('watch progress from the tuhdoo TUI') or keep the plain 'watch from the terminal'?
+
+Register rules applied, for you to confirm or correct (the rules matter more than the instances): zero em dashes in body copy (parentheticals became colons, semicolons, or second sentences); complete sentences in prose, fragments only in headings where the fragment is the claim; counts and jargon only with what they buy the reader in the same breath ('twelve tools, few enough that the whole protocol fits in the single instruction file a harness loads'; 'fully hydrated' became the actual list); metaphors and filler cut ('same organism', 'one brain', 'markdown files and vibes'); tuhdoo as grammatical subject where it acts. Example, hero lede — before: 'Steering coding agents today is markdown files and vibes: parallel agents trample each other, sessions die with their context, nothing records what happened. tuhdoo is the fix — a shared backlog, work queue, and activity ledger on a git branch inside the repo it plans. No server, no vendor, no accounts.' After: 'Steering coding agents with TODO files breaks at fleet scale: parallel agents trample each other's work, sessions die and take their context with them, and nothing records what actually happened. tuhdoo replaces the TODO file with a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the remote you already have and needs no server, no vendor, and no accounts.' Full before/after is the commit diff (one file, site/src/app/page.tsx). Not yet touched, in sweep scope: docs/*.md, docs chrome, and layout.tsx's footer tagline and site metadata, which still carry the old cadence.
 
 ## Answered
 
