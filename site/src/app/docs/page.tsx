@@ -6,7 +6,7 @@ import { docsNav } from "@/lib/nav";
 const entry = docsNav[0]; // docs index ← docs/README.md
 
 export function generateMetadata(): Metadata {
-  return docPageMetadata(entry.file);
+  return docPageMetadata(entry);
 }
 
 export default function DocsIndexPage() {

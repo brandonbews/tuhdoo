@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const entry = findBySlug(slug);
   if (!entry) return {};
-  return docPageMetadata(entry.file);
+  return docPageMetadata(entry);
 }
 
 export default async function DocPage({ params }: Props) {

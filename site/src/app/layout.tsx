@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sora } from "next/font/google";
 import Link from "next/link";
 import { TuhdooLogo } from "@/components/logo";
@@ -17,12 +17,21 @@ const SITE_DESCRIPTION =
   "A shared backlog, work queue, and activity ledger for agent fleets, living in a git branch inside the repo it plans. No server, no vendor, no accounts.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tuhdoo.com"),
+  // www is the canonical host: the apex 308-redirects to it (Vercel domain
+  // config), so every absolute URL we emit (canonical, og:url, og:image,
+  // sitemap) must live on www or crawlers see a redirect hop.
+  metadataBase: new URL("https://www.tuhdoo.com"),
   title: {
     default: SITE_TITLE,
     template: "%s · tuhdoo",
   },
   description: SITE_DESCRIPTION,
+  // Canonical for the landing page. Docs pages set their own canonical (and
+  // og) in docPageMetadata — nested metadata objects replace wholesale, so
+  // this only ever applies to routes that don't override it.
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     siteName: "tuhdoo",
     type: "website",
@@ -35,6 +44,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  // Browser chrome color, matched to --color-bg in each theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#060806" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -43,6 +60,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={sora.variable}>
       <body>
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
         <header className="site-header">
           <div className="site-header-inner">
             <Link href="/" className="lockup" aria-label="tuhdoo — home">
