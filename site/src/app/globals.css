@@ -361,20 +361,6 @@
     color: var(--color-fg-muted);
   }
 
-  blockquote.pull {
-    margin: 1.5rem 0 0;
-    padding: 0.25rem 0 0.25rem 1.25rem;
-    border-left: 3px solid var(--color-accent);
-    max-width: var(--container-prose-col);
-    font-size: 1.05rem;
-  }
-
-  blockquote.pull footer {
-    margin-top: 0.5rem;
-    color: var(--color-fg-muted);
-    font-size: 0.9rem;
-  }
-
   /* ---------- docs shell ---------- */
 
   .docs-shell {
