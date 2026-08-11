@@ -2,7 +2,7 @@
 
 `tuh-01KZF97PATRZ1TFWA7CQQCJHQX`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `docs` `launch`
 - **Created:** 2026-08-07 23:34 UTC by `brandon`

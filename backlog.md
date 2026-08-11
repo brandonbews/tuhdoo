@@ -1,17 +1,18 @@
 # Backlog
 
-0 in progress · 2 ready · 3 blocked · 5 on hold · 8 inbox · 81 done · 21 cancelled
+1 in progress · 1 ready · 3 blocked · 5 on hold · 8 inbox · 81 done · 21 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) | Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og) | 1 | `web` `design` `launch` |
-| [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) | Docs and landing copy pass: the skeptical evaluator, against the settled writing bar | 1 | `docs` `launch` |
 
 ## Blocked / waiting
 
