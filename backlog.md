@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 2 blocked · 5 on hold · 8 inbox · 83 done · 21 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 8 inbox · 84 done · 21 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) | Production-readiness sweep: the last full check before launch | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -17,7 +15,7 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md); depends on [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) |
+| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
 
 ## On hold
 
@@ -128,6 +126,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og)
 - [`tuh-jhqx`](tasks/tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) Docs and landing copy pass: the skeptical evaluator, against the settled writing bar
 - [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
+- [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) Production-readiness sweep: the last full check before launch
 - [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) Logo finals: export and deliver the brand assets (human-led)
 
 ## Cancelled

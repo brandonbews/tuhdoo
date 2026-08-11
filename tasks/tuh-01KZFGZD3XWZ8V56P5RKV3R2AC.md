@@ -2,7 +2,7 @@
 
 `tuh-01KZFGZD3XWZ8V56P5RKV3R2AC`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `web` `launch`
 - **Depends on:** [`tuh-wyqn`](tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) (done), [`tuh-ban7`](tuh-01KZF973FY9JKJV5F38SM7BAN7.md) (done), [`tuh-jhqx`](tuh-01KZF97PATRZ1TFWA7CQQCJHQX.md) (done)
@@ -28,4 +28,11 @@ Constraints: no new .github/workflows files; fixes follow the toolchain gate (Bi
 
 ## History
 
-_No activity yet._
+### 2026-08-11 21:15 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-r2ac/prod-readiness`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/65>
+- Commits: `93839cd`
+- Merged as: `b6f12fd56a878114aaaff377075b24476fa3c1d0`
+
+Merged to main as b6f12fd (PR #65, squash) after Brandon's live approval of the three judgment items (llms.txt prose, manifest naming, canonical host = www per the existing Vercel 308). The full item→verdict checklist is the PR body — the durable record. Fixed in the sweep: web manifest + 192/512 icons, sitemap.xml + robots.txt, canonicals/og:url moved to the www host, skip link, styled 404, llms.txt + llms-full.txt (build-generated from nav/frontmatter), security headers (nosniff/XFO/referrer/permissions; CSP deliberately skipped — needs nonces, static site), heading-anchor aria-label removed (WCAG 2.5.3, was flagged on every heading). Verified pass: og unfurl on live site (identity-task follow-up closed), dead-link crawl, console-clean, Lighthouse 99-100/100/100/100, AA both themes, no-JS degradation. Honest gaps: Search Console/Bing sitemap submission is dashboard-side (Brandon); real-device install surface untested; print pass-by-inspection only. No Go changes; no daemon restart needed.
