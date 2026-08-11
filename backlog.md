@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 5 on hold · 8 inbox · 84 done · 22 cancelled
+0 in progress · 2 ready · 3 blocked · 5 on hold · 7 inbox · 84 done · 22 cancelled
 
 ## In progress
 
@@ -19,6 +19,7 @@ _None._
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
+| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | depends on [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) |
 
 ## On hold
 
@@ -43,7 +44,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README says "the design lives in docs/" — wrong for adopters, and now wrong here
 - [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) escalations are kind of hard to read and navigate in the current ux. make them cleaerer in the task view UX wise and also ask teh agent to make escalations as short and actionable as possible but still full required context
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
-- [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) docs and marketing copy all need to be significantly tighter, less fluffly, and more utilitarian in message without losing a concise compelling pitch. they see written by an impatient AI right now wieth em dashes and fragments and vague language all over (like the 12 verb thing and others like it)
 
 ## Done
 
