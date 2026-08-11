@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="231.6 70.4 140 140">
+  <title>tuhdoo</title>
+  <!-- Flat favicon derivation of the tuhdoo mark: same two-dividing-cells
+       silhouette as brand/tuhdoo-lockup-dark.svg, filters and noise dropped
+       (they turn to mush at 16-32px), simple gradient from the delivered
+       stops (#8bffbb / #2fe884 / #0c9152). Pending Brandon's sign-off. -->
+  <defs>
+    <linearGradient id="flat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8bffbb" />
+      <stop offset="0.45" stop-color="#2fe884" />
+      <stop offset="1" stop-color="#0c9152" />
+    </linearGradient>
+  </defs>
+  <path
+    d="M 288.8 122.2 A 29.6 29.6 0 1 0 288.8 158.6 Q 301.6 143.7 314.4 158.6 A 29.6 29.6 0 1 0 314.4 122.2 Q 301.6 137.1 288.8 122.2 Z"
+    fill="url(#flat)"
+  />
+</svg>

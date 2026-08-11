@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DocArticle } from "@/components/doc-article";
-import { readFrontmatter } from "@/lib/docs";
+import { docPageMetadata } from "@/lib/docs";
 import { docsNav, findBySlug } from "@/lib/nav";
 
 // Every docs route is known from the nav config; anything else is a 404 at
@@ -20,8 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const entry = findBySlug(slug);
   if (!entry) return {};
-  const { title, description } = readFrontmatter(entry.file);
-  return { title, description };
+  return docPageMetadata(entry.file);
 }
 
 export default async function DocPage({ params }: Props) {

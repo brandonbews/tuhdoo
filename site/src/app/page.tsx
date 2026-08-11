@@ -132,23 +132,6 @@ export default function Home() {
       </section>
 
       <section className="section">
-        <h2>Why I built it</h2>
-        <blockquote className="pull">
-          <p>
-            All tuhdoo really does is let me see and organize the work while
-            slightly slowing my agents down — and the slowdown is the feature:
-            everything moves through typed, visible transitions I can steer. The
-            plan and the code are one organism. My loop is capture an idea,
-            sculpt it into a real task with an agent, watch the queue drain. My
-            team pulls the same plan I do — nobody asks who has what on which
-            branch. No service underneath — nothing to subscribe to, sign up
-            for, or lose.
-          </p>
-          <footer>— Brandon, tuhdoo&apos;s maintainer</footer>
-        </blockquote>
-      </section>
-
-      <section className="section">
         <h2>Get started</h2>
         <p>
           Install the single static binary — npm, release archive, or{" "}

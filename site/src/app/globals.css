@@ -4,8 +4,16 @@
  * the documented way to disable it): the semantic component classes and the
  * rendered markdown under `.doc` rely on UA default styles (list markers,
  * paragraph/heading margins). Importing `tailwindcss` wholesale would reset
- * those and change rendering. Revisit when the site is restyled with
- * utilities (the identity task).
+ * those and change rendering. Revisited during the identity pass and kept:
+ * the identity is carried by tokens + these component classes, so Preflight
+ * still buys nothing and would still break `.doc` rendering.
+ *
+ * Identity: every color below derives from the brand mark
+ * (public/brand/tuhdoo-lockup-dark.svg) — gradient stops #f2fff7 / #8bffbb /
+ * #2fe884 / #0c9152, accents #35e87c / #b8ffd4 / #0c8a4d, wordmark #f4f7f2,
+ * designed against surface #060806. The logo carries the richness; the site
+ * stays quiet around it: flat surfaces, one accent family, no gradients or
+ * glass outside the mark itself.
  */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
@@ -14,38 +22,62 @@
 /* Design tokens. Light values live in @theme (emitted on :root and usable as
  * Tailwind utilities: bg-bg, text-fg-muted, border-border, font-mono, …);
  * dark mode overrides the same custom properties below, so both the component
- * classes here and any future utility classes flip automatically. */
+ * classes here and any future utility classes flip automatically.
+ *
+ * Contrast (WCAG AA, computed): every fg/bg and accent/bg pair used for text
+ * here clears 4.5:1 in both themes — see the identity task report.
+ * Light: fg 18.1:1, fg-muted 6.2:1 (5.8:1 on raised), accent 5.4:1 (5.0:1 on
+ * raised), white-on-accent-fill 5.4:1. Dark: fg 18.6:1, fg-muted 9.3:1,
+ * accent 12.4:1, fill-contrast-on-accent-fill 11.5:1. */
 @theme {
+  /* Neutrals: green-cast, from the wordmark fill #f4f7f2 (which doubles as
+   * the light raised surface) and near-black anchored to the fg hue. */
   --color-bg: #ffffff;
-  --color-bg-raised: #f6f6f4;
-  --color-bg-code: #f4f4f2;
-  --color-fg: #1a1a18;
-  --color-fg-muted: #5c5c56;
-  --color-border: #e4e4e0;
-  --color-accent: #0d7a5f;
-  --color-accent-strong: #0a5f4a;
+  --color-bg-raised: #f4f7f2;
+  --color-bg-code: #f1f5f0;
+  --color-fg: #131712;
+  --color-fg-muted: #5a635a;
+  --color-border: #e1e6e0;
+
+  /* Accent family: the mark's emerald, deepened one step in light mode so
+   * link text clears AA on white (#0c8a4d, the delivered fleck green, lands
+   * at 4.41:1 — just short). */
+  --color-accent: #0a7a44;
+  --color-accent-strong: #075c33;
+  --color-accent-fill: #0a7a44; /* button surface */
+  --color-accent-fill-contrast: #ffffff; /* text on button */
+  --color-selection: #c6f2d8;
 
   --font-mono:
     ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
+  /* Sora (the wordmark face, loaded via next/font in layout.tsx) for
+   * headings only; body copy stays on the system stack for long-form
+   * readability. */
+  --font-heading: var(--font-sora), var(--font-sans);
 
-  /* Layout widths (max-w-site / max-w-prose-col as utilities). */
+  /* Layout widths (max-w-site / max-w-prose-col as utilities).
+   * prose-col: 42rem ≈ 70–75 characters per line at doc body size. */
   --container-site: 72rem;
-  --container-prose-col: 46rem;
+  --container-prose-col: 42rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #141412;
-    --color-bg-raised: #1c1c1a;
-    --color-bg-code: #1e1e1c;
-    --color-fg: #e8e8e4;
-    --color-fg-muted: #a2a29a;
-    --color-border: #2c2c28;
-    --color-accent: #3dbf9b;
-    --color-accent-strong: #5ed3b3;
+    /* Seeded from #060806, the surface the mark was designed against. */
+    --color-bg: #060806;
+    --color-bg-raised: #101510;
+    --color-bg-code: #0c110c;
+    --color-fg: #f4f7f2; /* the wordmark fill */
+    --color-fg-muted: #a9b3a7;
+    --color-border: #222a22;
+    --color-accent: #35e87c; /* the mark's halo green */
+    --color-accent-strong: #8bffbb; /* the mark's upper gradient stop */
+    --color-accent-fill: #2fe884;
+    --color-accent-fill-contrast: #04170c;
+    --color-selection: #14532d;
   }
 }
 
@@ -68,6 +100,15 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+
   a {
     color: var(--color-accent);
     text-decoration: none;
@@ -76,6 +117,15 @@
   a:hover {
     color: var(--color-accent-strong);
     text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-selection);
   }
 
   code {
@@ -102,22 +152,66 @@
   .site-header-inner {
     max-width: var(--container-site);
     margin: 0 auto;
-    padding: 0.75rem 1.25rem;
+    padding: 0.65rem 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
 
-  .wordmark {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 1.1rem;
+  /* The lockup link. The wordmark rides currentColor; the mark's fills are
+   * theme-switched below (light-tuned gradient by default, the delivered
+   * dark-surface art under prefers-color-scheme: dark). */
+  .lockup {
+    display: flex;
+    align-items: center;
     color: var(--color-fg);
   }
 
-  .wordmark:hover {
+  .lockup:hover {
     color: var(--color-fg);
     text-decoration: none;
+  }
+
+  .logo {
+    display: block;
+    height: 2.1rem;
+    width: auto;
+  }
+
+  .logo .logo-body {
+    fill: url(#tl-glass-light);
+  }
+
+  .logo .logo-shade {
+    fill: url(#tl-shade-light);
+  }
+
+  .logo .logo-rim {
+    stroke: #0c8a4d;
+    opacity: 0.6;
+  }
+
+  .logo .logo-halo {
+    fill: #0c9152;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .logo .logo-body {
+      fill: url(#tl-glass-dark);
+    }
+
+    .logo .logo-shade {
+      fill: url(#tl-shade-dark);
+    }
+
+    .logo .logo-rim {
+      stroke: #b8ffd4;
+      opacity: 0.55;
+    }
+
+    .logo .logo-halo {
+      fill: #35e87c;
+    }
   }
 
   .site-header nav {
@@ -162,20 +256,22 @@
 
   .hero {
     padding: 5rem 0 3.5rem;
-    max-width: var(--container-prose-col);
+    max-width: 52rem;
   }
 
   .hero h1 {
     font-size: clamp(2rem, 5vw, 3rem);
-    line-height: 1.15;
-    margin: 0 0 1rem;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    line-height: 1.12;
+    margin: 0 0 1.25rem;
+    letter-spacing: -0.025em;
   }
 
   .hero .lede {
     font-size: 1.2rem;
     color: var(--color-fg-muted);
     margin: 0 0 2rem;
+    max-width: var(--container-prose-col);
   }
 
   .hero-actions {
@@ -187,8 +283,8 @@
 
   .button {
     display: inline-block;
-    background: var(--color-accent);
-    color: var(--color-bg);
+    background: var(--color-accent-fill);
+    color: var(--color-accent-fill-contrast);
     font-weight: 600;
     padding: 0.6rem 1.2rem;
     border-radius: 6px;
@@ -196,7 +292,7 @@
 
   .button:hover {
     background: var(--color-accent-strong);
-    color: var(--color-bg);
+    color: var(--color-accent-fill-contrast);
     text-decoration: none;
   }
 
@@ -213,13 +309,14 @@
   }
 
   .section {
-    padding: 2.5rem 0;
+    padding: 2.75rem 0;
     border-top: 1px solid var(--color-border);
   }
 
   .section h2 {
-    font-size: 1.6rem;
-    letter-spacing: -0.01em;
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
     margin: 0 0 1rem;
   }
 
@@ -247,7 +344,9 @@
 
   .card h3 {
     margin: 0 0 0.5rem;
-    font-size: 1.05rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   .card h3 .step {
@@ -260,20 +359,6 @@
     margin: 0;
     font-size: 0.95rem;
     color: var(--color-fg-muted);
-  }
-
-  blockquote.pull {
-    margin: 1.5rem 0 0;
-    padding: 0.25rem 0 0.25rem 1.25rem;
-    border-left: 3px solid var(--color-accent);
-    max-width: var(--container-prose-col);
-    font-size: 1.05rem;
-  }
-
-  blockquote.pull footer {
-    margin-top: 0.5rem;
-    color: var(--color-fg-muted);
-    font-size: 0.9rem;
   }
 
   /* ---------- docs shell ---------- */
@@ -357,24 +442,32 @@
   .doc {
     padding: 2rem 0 1rem;
     min-width: 0;
+    /* Long-form reading size: 17px body with a slightly looser leading; the
+     * 42rem prose column keeps measured lines in the ~70ch band. */
+    font-size: 1.0625rem;
+    line-height: 1.7;
   }
 
   .doc h1 {
-    font-size: 2rem;
+    font-size: 1.9rem;
+    font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.2;
     margin: 0 0 1rem;
   }
 
   .doc h2 {
-    font-size: 1.45rem;
-    letter-spacing: -0.01em;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
     margin: 2.5rem 0 0.75rem;
     padding-top: 0.5rem;
   }
 
   .doc h3 {
-    font-size: 1.15rem;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
     margin: 2rem 0 0.5rem;
   }
 
@@ -382,6 +475,7 @@
   .doc h5,
   .doc h6 {
     font-size: 1rem;
+    font-weight: 600;
     margin: 1.5rem 0 0.5rem;
   }
 
@@ -506,7 +600,9 @@
   }
 
   .prev-next .direction {
-    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
     color: var(--color-fg-muted);
   }
 

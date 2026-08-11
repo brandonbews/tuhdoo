@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="228 102 148 76" width="148" height="76">
+<!-- The tuhdoo mark, extracted from brand/tuhdoo-lockup-dark.svg (two dividing
+     cells, glassy). Designed against surface #060806. -->
+<defs>
+<radialGradient id="glass-rich" cx="0.32" cy="0.25" r="1.1"><stop offset="0" stop-color="#f2fff7" stop-opacity="0.95"/><stop offset="0.28" stop-color="#8bffbb" stop-opacity="0.72"/><stop offset="0.62" stop-color="#2fe884" stop-opacity="0.55"/><stop offset="1" stop-color="#0c9152" stop-opacity="0.75"/></radialGradient>
+<linearGradient id="inner-shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.6" stop-color="#02160b" stop-opacity="0"/><stop offset="1" stop-color="#02160b" stop-opacity="0.25"/></linearGradient>
+<linearGradient id="glass-sheen" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/><stop offset="0.4" stop-color="#ffffff" stop-opacity="0.05"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+<filter id="frost" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="1.2"/></filter>
+<filter id="frost-heavy" x="-40%" y="-40%" width="180%" height="180%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" result="d"/><feGaussianBlur in="d" stdDeviation="1.6"/></filter>
+<filter id="rich" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="1.1" result="s"/><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="8" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="m"/><feComponentTransfer in="m" result="gn"><feFuncA type="linear" slope="1" intercept="-0.15"/></feComponentTransfer><feComposite in="gn" in2="s" operator="in" result="gc"/><feBlend in="s" in2="gc" mode="soft-light"/></filter>
+</defs>
+<path d="M 288.8 122.2 A 29.599998474121094 29.599998474121094 0 1 0 288.8 158.6 Q 301.6 143.7 314.4 158.6 A 29.599998474121094 29.599998474121094 0 1 0 314.4 122.2 Q 301.6 137.1 288.8 122.2 Z" fill="#35e87c" opacity="0.16" filter="url(#frost-heavy)"/>
+<path d="M 288.8 122.2 A 29.599998474121094 29.599998474121094 0 1 0 288.8 158.6 Q 301.6 143.7 314.4 158.6 A 29.599998474121094 29.599998474121094 0 1 0 314.4 122.2 Q 301.6 137.1 288.8 122.2 Z" fill="url(#glass-rich)" filter="url(#rich)"/>
+<path d="M 288.8 122.2 A 29.599998474121094 29.599998474121094 0 1 0 288.8 158.6 Q 301.6 143.7 314.4 158.6 A 29.599998474121094 29.599998474121094 0 1 0 314.4 122.2 Q 301.6 137.1 288.8 122.2 Z" fill="url(#inner-shade)"/>
+<path d="M 288.8 122.2 A 29.599998474121094 29.599998474121094 0 1 0 288.8 158.6 Q 301.6 143.7 314.4 158.6 A 29.599998474121094 29.599998474121094 0 1 0 314.4 122.2 Q 301.6 137.1 288.8 122.2 Z" fill="none" stroke="#b8ffd4" stroke-width="1.2" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="258.4" cy="136.3" rx="5.6" ry="2.7" transform="rotate(-32 258.4 136.3)" fill="#0c8a4d" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="264.3" cy="145.1" rx="3.3" ry="2.1" transform="rotate(15 264.3 145.1)" fill="#0c8a4d" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="254.3" cy="144" rx="2.4" ry="1.5" transform="rotate(70 254.3 144)" fill="#0c8a4d" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="342.4" cy="142.2" rx="4.7" ry="2.4" transform="rotate(48 342.4 142.2)" fill="#0c8a4d" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="347.8" cy="135.1" rx="2.7" ry="1.8" transform="rotate(-12 347.8 135.1)" fill="#0c8a4d" opacity="0.55" filter="url(#frost)"/>
+<ellipse cx="256.6" cy="127.1" rx="12.4" ry="6.5" fill="url(#glass-sheen)" filter="url(#frost)"/>
+<ellipse cx="328.8" cy="127.1" rx="12.4" ry="6.5" fill="url(#glass-sheen)" filter="url(#frost)"/>
+<circle cx="256.6" cy="127.1" r="2.5" fill="#ffffff" opacity="0.9" filter="url(#frost)"/>
+<circle cx="328.8" cy="127.1" r="2.5" fill="#ffffff" opacity="0.9" filter="url(#frost)"/>
+</svg>
