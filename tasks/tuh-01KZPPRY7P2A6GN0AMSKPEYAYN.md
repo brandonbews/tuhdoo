@@ -35,3 +35,7 @@ description edited · status held→open · depends_on +tuh-7q0m +tuh-gp75
 ### 2026-08-12 05:47 UTC — edit by `brandon`
 
 status open→held
+
+### 2026-08-12 20:37 UTC — note from `brandon/claude-code-1`
+
+2026-08-12, Brandon (live session): both launch gates have landed (protocol slim-down PR #67, copy-tightening PR #71), so the depends_on edges are satisfied and this task is effectively standalone. Brandon is currently unsure what he wants to do for the announcement — it stays held by his choice; unparking is his call. Do not nag or unpark on his behalf.
