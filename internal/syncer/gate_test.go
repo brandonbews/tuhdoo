@@ -160,42 +160,7 @@ func TestMergeRefusalKeepsEarliestConfirmation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Publish B's head so A's object database holds both sides,
-			// then merge the two heads directly, in both orders.
-			cycle(t, b)
-			remoteHead, err := a.sync.fetch()
-			if err != nil {
-				t.Fatal(err)
-			}
-			localHead, err := a.git.ReadRef(store.DefaultRef)
-			if err != nil {
-				t.Fatal(err)
-			}
-			m1, err := a.sync.merge(localHead, remoteHead)
-			if err != nil {
-				t.Fatal(err)
-			}
-			m2, err := a.sync.merge(remoteHead, localHead)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			t1, err := treeMap(a.git, m1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t2, err := treeMap(a.git, m2)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(t1) != len(t2) {
-				t.Fatalf("merge directions disagree: %d vs %d entries", len(t1), len(t2))
-			}
-			for p, oid := range t1 {
-				if t2[p] != oid {
-					t.Fatalf("merge directions disagree at %s: %s vs %s", p, oid, t2[p])
-				}
-			}
+			t1 := mergeBothWays(t, a, b)
 			if _, ok := t1[eventPath(t, tc.dropTick)]; ok {
 				t.Fatal("merged tree carries the later, competing confirmation")
 			}

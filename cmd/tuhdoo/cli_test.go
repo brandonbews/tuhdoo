@@ -1,19 +1,14 @@
 package main
 
 // CLI integration tests: the real binary, real repos, a real
-// auto-spawned daemon. Repos use os.MkdirTemp, not t.TempDir — the
-// daemon binds a unix socket under the repo's .git and macOS caps
-// sun_path at 104 bytes, which t.TempDir paths routinely blow past.
+// auto-spawned daemon.
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,6 +17,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
 // binPath is the CLI binary under test, built once in TestMain.
@@ -71,18 +68,12 @@ func runGit(t *testing.T, dir string, args ...string) string {
 	return string(out)
 }
 
-// newRepo builds a fresh remoteless repo in a short-pathed temp dir and
-// arranges for any daemon spawned inside it to be stopped at cleanup.
+// newRepo builds a fresh remoteless repo and arranges for any daemon
+// spawned inside it to be stopped at cleanup.
 func newRepo(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "tuhdoo")
-	if err != nil {
-		t.Fatalf("MkdirTemp: %v", err)
-	}
-	t.Cleanup(func() {
-		stopDaemon(dir)
-		os.RemoveAll(dir)
-	})
+	dir := t.TempDir()
+	t.Cleanup(func() { stopDaemon(dir) })
 	runGit(t, dir, "init", "--quiet", "-b", "main")
 	return dir
 }
@@ -156,12 +147,7 @@ func apiClient(t *testing.T, repo string) *http.Client {
 	if err != nil {
 		t.Fatalf("read daemon.json: %v", err)
 	}
-	return &http.Client{Transport: &http.Transport{
-		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			var d net.Dialer
-			return d.DialContext(ctx, "unix", socket)
-		},
-	}}
+	return &http.Client{Transport: unixTransport(socket)}
 }
 
 // api performs one seeding request and fails the test on a non-2xx.
@@ -207,7 +193,7 @@ func createTask(t *testing.T, hc *http.Client, item map[string]any) string {
 
 // ---- tests ----
 
-// Test 1: init on a fresh remoteless repo creates the branch, prints
+// init on a fresh remoteless repo creates the branch, prints
 // local-only as a normal state, exits 0; re-running is idempotent.
 func TestInitRemoteless(t *testing.T) {
 	repo := newRepo(t)
@@ -286,8 +272,8 @@ func TestInitRejectsArgs(t *testing.T) {
 	}
 }
 
-// Test 2: from cold, `tuhdoo status` auto-spawns the daemon and
-// reports; a subsequent command reuses the same daemon (single pid).
+// From cold, `tuhdoo status` auto-spawns the daemon and reports; a
+// subsequent command reuses the same daemon (single pid).
 func TestAutoSpawnSingleDaemon(t *testing.T) {
 	repo := newRepo(t)
 	discPath := filepath.Join(repo, ".git", "tuhdoo", "daemon.json")
@@ -340,7 +326,7 @@ func TestStatusWithRemote(t *testing.T) {
 	}
 }
 
-// Test 3: backlog / task / escalations render a seeded state.
+// backlog / task / escalations render a seeded state.
 func TestReadCommandsRenderSeededState(t *testing.T) {
 	repo := newRepo(t)
 	if out, code := runCLI(t, repo, "init"); code != 0 {
@@ -543,7 +529,6 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	mustContain(t, out, "local-only",
 		"2 ready", "1 in progress", "2 blocked", "1 on hold", "1 inbox",
 		"1 done", "1 cancelled", "1 question open", "brandon/a1")
-	_ = docs
 }
 
 // The watch and top verbs died in Cycle 4 (002 T7): the TUI is bare

@@ -91,21 +91,13 @@ func sandboxGit(t *testing.T, dir string, env []string, args ...string) (string,
 }
 
 func TestUninstallDocStepsLeaveZeroTrace(t *testing.T) {
-	// Deliberately terse names throughout ("s", "l"): each repo's daemon
-	// binds a unix socket at <repo>/.git/tuhdoo/daemon.sock and macOS
-	// caps the resolved sun_path at 104 bytes — a temp base plus a
-	// wordier subdirectory already blows the limit.
-	base, err := os.MkdirTemp("", "tu")
-	if err != nil {
-		t.Fatalf("MkdirTemp: %v", err)
-	}
-	t.Cleanup(func() { os.RemoveAll(base) })
+	base := t.TempDir()
 
 	// A bare origin, seeded through a first machine so it carries a real
 	// daemon-minted data branch (never a fabricated one).
 	bare := filepath.Join(base, "origin.git")
 	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
-	seed := filepath.Join(base, "s")
+	seed := filepath.Join(base, "seed")
 	if err := os.MkdirAll(seed, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +115,7 @@ func TestUninstallDocStepsLeaveZeroTrace(t *testing.T) {
 
 	// The machine that will walk away: a full clone (so the ordinary
 	// remote-tracking ref exists) with a live, auto-spawned daemon.
-	leaver := filepath.Join(base, "l")
+	leaver := filepath.Join(base, "leaver")
 	runGit(t, base, "clone", "--quiet", bare, leaver)
 	t.Cleanup(func() { stopDaemon(leaver) })
 	if out, code := runCLI(t, leaver, "init"); code != 0 {

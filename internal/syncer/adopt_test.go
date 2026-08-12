@@ -8,7 +8,6 @@ package syncer
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -19,32 +18,19 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/store"
 )
 
-// gitOut runs a raw git command and returns its output — runGit above
-// discards it, and root-counting needs the rev-list text.
-func gitOut(t *testing.T, dir string, args ...string) string {
-	t.Helper()
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v\n%s", args, err, out)
-	}
-	return string(out)
-}
-
 // roots lists the parentless commits reachable from the data branch —
 // one entry per orphan root in its history.
 func roots(t *testing.T, dir string) []string {
 	t.Helper()
-	out := strings.TrimSpace(gitOut(t, dir, "rev-list", "--max-parents=0", store.DefaultRef))
+	out := strings.TrimSpace(runGit(t, dir, "rev-list", "--max-parents=0", store.DefaultRef))
 	if out == "" {
 		return nil
 	}
 	return strings.Split(out, "\n")
 }
 
-// gitEnv pins identity and isolates the user's config, matching
-// newPair's setup for tests that build their own repos.
+// gitEnv pins identity and isolates the user's config — shared by
+// newPair and by tests that build their own repos.
 func gitEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -108,7 +94,7 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	syb := New(gb, Options{Ident: ident("joiner")})
 	syb.AdoptRemoteBranch()
 
-	remoteHead := strings.TrimSpace(gitOut(t, bare, "rev-parse", store.DefaultRef))
+	remoteHead := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef))
 	localHead, err := gb.ReadRef(store.DefaultRef)
 	if err != nil {
 		t.Fatalf("adoption left no local data branch: %v", err)

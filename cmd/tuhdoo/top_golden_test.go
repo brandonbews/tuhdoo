@@ -33,6 +33,12 @@ func legendKey(key, label string) string {
 
 const legendSep = "\x1b[2m · \x1b[0m"
 
+// padBar pads left..right with spaces to the given rune width — the
+// full-width bar shape the golden assertions rebuild.
+func padBar(width int, left, right string) string {
+	return left + strings.Repeat(" ", width-len([]rune(left))-len([]rune(right))) + right
+}
+
 // The seeded fake at 80 columns, plain colors (the NO_COLOR / non-TTY
 // degradation): byte-exact geometry, no escapes, no fill.
 func TestTopGoldenPlain80(t *testing.T) {
@@ -95,9 +101,6 @@ func TestTopGoldenBars(t *testing.T) {
 		m.col = ansiColors
 		m.width, m.height = width, 60
 		v := m.View()
-		pad := func(left, right string) string {
-			return left + strings.Repeat(" ", width-len([]rune(left))-len([]rune(right))) + right
-		}
 		// The unfilled footer (chrome hierarchy, 2026-08-03): bold keys,
 		// dim labels and separators, an unstyled space fill. The done
 		// tally survives only where the widened legend leaves room
@@ -117,18 +120,18 @@ func TestTopGoldenBars(t *testing.T) {
 			// fill, so the frame stops competing with content.
 			"\x1b[1m tuhdoo\x1b[0m\x1b[2m · local-only\x1b[0m" +
 				strings.Repeat(" ", width-38) + "acting as brandon ",
-			"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
-			"\x1b[30;42m" + pad(" READY (2)", "p priority · c cancel ") + "\x1b[0m",
-			"\x1b[30;43m" + pad(" IN PROGRESS (1)", "") + "\x1b[0m",
+			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
+			"\x1b[30;42m" + padBar(width, " READY (2)", "p priority · c cancel ") + "\x1b[0m",
+			"\x1b[30;43m" + padBar(width, " IN PROGRESS (1)", "") + "\x1b[0m",
 			// BLOCKED is dim red (bar recolors, 2026-08-04): unmet deps
 			// are sequencing, not a fire.
-			"\x1b[2;41m" + pad(" BLOCKED (0)", "") + "\x1b[0m",
+			"\x1b[2;41m" + padBar(width, " BLOCKED (0)", "") + "\x1b[0m",
 			// The shelves split (chrome hierarchy, 2026-08-03): ON HOLD is
 			// shelved and takes the dark-gray bar (dim on bright black);
 			// INBOX awaits attention and takes black on bright-white (bar
 			// recolors, 2026-08-04 — was reverse-dim).
-			"\x1b[2;100m" + pad(" ON HOLD (1)", "c cancel ") + "\x1b[0m",
-			"\x1b[30;107m" + pad(" INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
+			"\x1b[2;100m" + padBar(width, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
+			"\x1b[30;107m" + padBar(width, " INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
 			foot,
 		} {
 			if !strings.Contains(v, bar) {
@@ -286,9 +289,11 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	}
 }
 
-// opens with the bg code and the ▌ gutter, the bg re-applies after
-// each internal reset, and each line pads to the full width — one
-// continuous bar. Unselected rows carry neither bg nor gutter.
+// Every line of the selected chunk — all three of an escalation's, both
+// of a two-line task row's — opens with the bg code and the ▌ gutter,
+// the bg re-applies after each internal reset, and each line pads to
+// the full width — one continuous bar. Unselected rows carry neither
+// bg nor gutter.
 func TestTopGoldenSelectionBar(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = ansiColors
@@ -492,9 +497,6 @@ func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-epic")
-	pad := func(left, right string) string {
-		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
-	}
 	want := strings.Join([]string{
 		" tuhdoo · local-only                                          acting as brandon ",
 		"",
@@ -506,16 +508,16 @@ func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 		"  labels      none",
 		"  created     2026-08-10 12:00 UTC by brandon",
 		"",
-		pad(" DEPENDS ON (4)", "enter open "),
+		padBar(80, " DEPENDS ON (4)", "enter open "),
 		"  t-aaaa  done       first child",
 		"  t-bbbb  open       second child",
 		"  t-cccc  on hold    third child",
 		"  t-dddd  cancelled  dropped child",
 		"",
-		pad(" DESCRIPTION", ""),
+		padBar(80, " DESCRIPTION", ""),
 		"  none",
 		"",
-		pad(" HISTORY", ""),
+		padBar(80, " HISTORY", ""),
 		"  no activity yet",
 	}, "\n") + "\n" +
 		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
@@ -546,15 +548,12 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	m.width, m.height = 80, 40
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	v := m.View()
-	pad := func(left, right string) string {
-		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
-	}
 	for _, want := range []string{
-		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer · e context ") + "\x1b[0m",
+		"\x1b[30;45m" + padBar(80, " NEEDS INPUT (1)", "enter answer · e context ") + "\x1b[0m",
 		// DESCRIPTION and HISTORY keep reverse-dim: neutral structural
 		// chrome, not shelf (chrome hierarchy, 2026-08-03).
-		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + pad(" HISTORY", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[7m\x1b[2m" + padBar(80, " HISTORY", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill. The
 		// legend's visible width is 72 cells, so 8 cells of plain pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "edit") +
@@ -599,7 +598,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	w.width, w.height = 80, 40
 	w, _ = press(t, w, keyOf(tea.KeyEnter))
 	wv := w.View()
-	if !strings.Contains(wv, "\x1b[30;45m"+pad(" NEEDS INPUT (1)", "e context ")+"\x1b[0m") {
+	if !strings.Contains(wv, "\x1b[30;45m"+padBar(80, " NEEDS INPUT (1)", "e context ")+"\x1b[0m") {
 		t.Errorf("watch task view missing the answer-hint-free NEEDS INPUT bar; view:\n%q", wv)
 	}
 	if strings.Contains(wv, "enter answer") {
@@ -660,14 +659,11 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 	m.width, m.height = 80, 40
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	v := m.View()
-	pad := func(left, right string) string {
-		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
-	}
 	for _, want := range []string{
-		"\x1b[30;42m" + pad(" DONE (3)", "") + "\x1b[0m",
+		"\x1b[30;42m" + padBar(80, " DONE (3)", "") + "\x1b[0m",
 		// CANCELLED is shelved: the dark-gray bar (chrome hierarchy,
 		// 2026-08-03), same as ON HOLD on the dashboard.
-		"\x1b[2;100m" + pad(" CANCELLED (2)", "") + "\x1b[0m",
+		"\x1b[2;100m" + padBar(80, " CANCELLED (2)", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill. The
 		// legend's visible width is 48 cells, so 32 cells of plain pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +

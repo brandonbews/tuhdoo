@@ -29,6 +29,59 @@ var mcpTools = []string{
 	"release_claim", "update_task",
 }
 
+// mustMirrorTools asserts the session's tool surface is exactly the
+// twelve T5 tools, in order.
+func mustMirrorTools(t *testing.T, cs *mcp.ClientSession) {
+	t.Helper()
+	var names []string
+	for tool, err := range cs.Tools(context.Background(), nil) {
+		if err != nil {
+			t.Fatalf("list tools: %v", err)
+		}
+		names = append(names, tool.Name)
+	}
+	if fmt.Sprint(names) != fmt.Sprint(mcpTools) {
+		t.Fatalf("tool surface = %v, want %v", names, mcpTools)
+	}
+}
+
+// createReadBack creates one task with the given title through the
+// session and returns its read-back hydration — the create-then-get
+// dance every shim identity assertion rides.
+func createReadBack(t *testing.T, cs *mcp.ClientSession, title string) hydratedTask {
+	t.Helper()
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "create_task",
+		Arguments: map[string]any{"tasks": []map[string]any{{"title": title}}},
+	})
+	if err != nil {
+		t.Fatalf("create_task: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("create_task returned a tool error: %+v", res.Content)
+	}
+	var created struct {
+		IDs []string `json:"ids"`
+	}
+	decodeStructured(t, res, &created)
+	if len(created.IDs) != 1 {
+		t.Fatalf("create_task ids = %v, want one", created.IDs)
+	}
+	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "get_task",
+		Arguments: map[string]any{"task": created.IDs[0]},
+	})
+	if err != nil {
+		t.Fatalf("get_task: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("get_task returned a tool error: %+v", res.Content)
+	}
+	var h hydratedTask
+	decodeStructured(t, res, &h)
+	return h
+}
+
 func TestMCPShimBridgesStdio(t *testing.T) {
 	repo := newRepo(t)
 
@@ -44,51 +97,13 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 
 	// The mirrored surface is exactly the twelve T5 tools, and sessions
 	// carry the daemon's orientation instructions.
-	var names []string
-	for tool, err := range cs.Tools(context.Background(), nil) {
-		if err != nil {
-			t.Fatalf("list tools: %v", err)
-		}
-		names = append(names, tool.Name)
-	}
-	if fmt.Sprint(names) != fmt.Sprint(mcpTools) {
-		t.Fatalf("tool surface = %v, want %v", names, mcpTools)
-	}
+	mustMirrorTools(t, cs)
 	if instr := cs.InitializeResult().Instructions; !strings.Contains(instr, "claim_next") {
 		t.Errorf("instructions should describe the loop, got %q", instr)
 	}
 
 	// Round-trip a write and a read through the bridge.
-	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "create_task",
-		Arguments: map[string]any{"tasks": []map[string]any{{"title": "born through the shim"}}},
-	})
-	if err != nil {
-		t.Fatalf("create_task: %v", err)
-	}
-	if res.IsError {
-		t.Fatalf("create_task returned a tool error: %+v", res.Content)
-	}
-	var created struct {
-		IDs []string `json:"ids"`
-	}
-	decodeStructured(t, res, &created)
-	if len(created.IDs) != 1 {
-		t.Fatalf("create_task ids = %v, want one", created.IDs)
-	}
-
-	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "get_task",
-		Arguments: map[string]any{"task": created.IDs[0]},
-	})
-	if err != nil {
-		t.Fatalf("get_task: %v", err)
-	}
-	if res.IsError {
-		t.Fatalf("get_task returned a tool error: %+v", res.Content)
-	}
-	var h hydratedTask
-	decodeStructured(t, res, &h)
+	h := createReadBack(t, cs, "born through the shim")
 	if h.Task.Title != "born through the shim" {
 		t.Fatalf("get_task title = %q", h.Task.Title)
 	}
@@ -98,7 +113,7 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 	}
 
 	// Tool errors cross the bridge as tool errors, not protocol errors.
-	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
 		Name:      "get_task",
 		Arguments: map[string]any{"task": "t-nope"},
 	})
@@ -308,42 +323,10 @@ func TestMCPShimAutoDerivesPrincipal(t *testing.T) {
 	if instr := cs.InitializeResult().Instructions; !strings.Contains(instr, "claim_next") {
 		t.Errorf("instructions should describe the loop, got %q", instr)
 	}
-	var names []string
-	for tool, err := range cs.Tools(context.Background(), nil) {
-		if err != nil {
-			t.Fatalf("list tools: %v", err)
-		}
-		names = append(names, tool.Name)
-	}
-	if fmt.Sprint(names) != fmt.Sprint(mcpTools) {
-		t.Fatalf("tool surface = %v, want %v", names, mcpTools)
-	}
+	mustMirrorTools(t, cs)
 
-	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "create_task",
-		Arguments: map[string]any{"tasks": []map[string]any{{"title": "born without --as"}}},
-	})
-	if err != nil {
-		t.Fatalf("create_task: %v", err)
-	}
-	if res.IsError {
-		t.Fatalf("create_task returned a tool error: %+v", res.Content)
-	}
-	var created struct {
-		IDs []string `json:"ids"`
-	}
-	decodeStructured(t, res, &created)
-	res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "get_task",
-		Arguments: map[string]any{"task": created.IDs[0]},
-	})
-	if err != nil {
-		t.Fatalf("get_task: %v", err)
-	}
-	var h hydratedTask
-	decodeStructured(t, res, &h)
-	if h.Task.CreatedBy != "brandon/claude-code-1" {
-		t.Fatalf("created_by = %q, want the auto-derived brandon/claude-code-1", h.Task.CreatedBy)
+	if by := createReadBack(t, cs, "born without --as").Task.CreatedBy; by != "brandon/claude-code-1" {
+		t.Fatalf("created_by = %q, want the auto-derived brandon/claude-code-1", by)
 	}
 }
 

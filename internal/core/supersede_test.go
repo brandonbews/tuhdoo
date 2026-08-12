@@ -16,8 +16,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// supersededRuns returns the synthesized superseded runs in s, keyed by
-// nothing — callers assert on count and fields.
+// supersededRuns returns the synthesized superseded runs in s.
 func supersededRuns(s *State) []Run {
 	var out []Run
 	for _, r := range s.Runs {
@@ -44,13 +43,9 @@ func TestVoidedClaimExpirySynthesizesSupersededRun(t *testing.T) {
 		cLose: base.Add(20 * time.Minute), // lapsed long before testNow
 	}
 
-	var first *State
+	same := sameAsFirst(t)
 	for _, p := range permutations(len(events)) {
-		shuffled := make([]event.Event, len(events))
-		for i, idx := range p {
-			shuffled[i] = events[idx]
-		}
-		s := replay(t, shuffled, leases)
+		s := replay(t, permute(events, p), leases)
 		if got := s.Claims[cLose].Status; got != ClaimVoided {
 			t.Fatalf("perm %v: loser status = %s, want voided (synthesis never re-buckets the claim)", p, got)
 		}
@@ -71,11 +66,7 @@ func TestVoidedClaimExpirySynthesizesSupersededRun(t *testing.T) {
 		if len(s.Runs) != 1 {
 			t.Fatalf("perm %v: %d runs total, want exactly the one synthesized close", p, len(s.Runs))
 		}
-		if first == nil {
-			first = s
-		} else if !reflect.DeepEqual(first, s) {
-			t.Fatalf("perm %v: state differs from first permutation", p)
-		}
+		same(p, s)
 	}
 }
 

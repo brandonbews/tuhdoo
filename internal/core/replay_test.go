@@ -64,6 +64,11 @@ func taskCreated(t *testing.T, n int, taskID, title string, deps ...string) even
 		event.TaskCreated{Title: title, DependsOn: deps})
 }
 
+// Pointer literals for task.updated's optional fields.
+func st(s string) *string         { return &s }
+func num(n int) *int              { return &n }
+func list(vs ...string) *[]string { return &vs }
+
 func TestClaimRaceIsOrderInsensitive(t *testing.T) {
 	// Two agents on two machines claim the same task. Whatever order the
 	// events arrive in (union merges guarantee nothing), the earliest
@@ -80,28 +85,44 @@ func TestClaimRaceIsOrderInsensitive(t *testing.T) {
 		c2: testNow.Add(time.Hour),
 	}
 
-	var first *State
+	same := sameAsFirst(t)
 	perms := permutations(len(events))
 	for _, p := range perms {
-		shuffled := make([]event.Event, len(events))
-		for i, idx := range p {
-			shuffled[i] = events[idx]
-		}
-		s := replay(t, shuffled, leases)
+		s := replay(t, permute(events, p), leases)
 		if got := s.Claims[c1].Status; got != ClaimActive {
 			t.Fatalf("perm %v: first claim status = %s, want active", p, got)
 		}
 		if got := s.Claims[c2].Status; got != ClaimVoided {
 			t.Fatalf("perm %v: second claim status = %s, want voided", p, got)
 		}
+		same(p, s)
+	}
+	if len(perms) != 24 {
+		t.Fatalf("expected 24 permutations, got %d", len(perms))
+	}
+}
+
+// permute returns events reordered by the permutation p.
+func permute(events []event.Event, p []int) []event.Event {
+	shuffled := make([]event.Event, len(events))
+	for i, idx := range p {
+		shuffled[i] = events[idx]
+	}
+	return shuffled
+}
+
+// sameAsFirst returns a check that every state seen across a
+// permutation loop is deeply equal to the first one — the convergence
+// half of every order-insensitivity test.
+func sameAsFirst(t *testing.T) func(p []int, s *State) {
+	var first *State
+	return func(p []int, s *State) {
+		t.Helper()
 		if first == nil {
 			first = s
 		} else if !reflect.DeepEqual(first, s) {
 			t.Fatalf("perm %v: state differs from first permutation", p)
 		}
-	}
-	if len(perms) != 24 {
-		t.Fatalf("expected 24 permutations, got %d", len(perms))
 	}
 }
 
@@ -311,7 +332,6 @@ func TestReadyRespectsDependenciesAndPriority(t *testing.T) {
 // task's status or claim state — those cases carry their own words at
 // the call site.
 func TestClaimBlockers(t *testing.T) {
-	st := func(s string) *string { return &s }
 	esc1, esc2 := tick(t, 10), tick(t, 11)
 	claim := tick(t, 12)
 	events := []event.Event{
@@ -368,7 +388,6 @@ func TestClaimBlockers(t *testing.T) {
 // individually-acyclic writes, so the fixtures build them from raw
 // creation events — exactly the shape replay meets after such a merge.
 func TestBlockage(t *testing.T) {
-	st := func(s string) *string { return &s }
 	events := []event.Event{
 		// A two-task loop.
 		taskCreated(t, 1, "t-2a", "two-loop a", "t-2b"),
@@ -431,7 +450,6 @@ func TestBlockage(t *testing.T) {
 // for everything else, "" for unknown IDs. Tested table-driven next to
 // Ready so the words and the predicates can never drift apart.
 func TestSituation(t *testing.T) {
-	st := func(s string) *string { return &s }
 	claim := tick(t, 9)
 	events := []event.Event{
 		taskCreated(t, 1, "t-ready", "no blockers"),
@@ -687,7 +705,6 @@ func TestRetiredParentsFieldTolerated(t *testing.T) {
 // Promote/pause/resume round-trips: inbox→open→held→open, all through
 // ordinary task.updated events, with readiness following the status.
 func TestStatusRoundTrips(t *testing.T) {
-	st := func(s string) *string { return &s }
 	events := []event.Event{
 		evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
 			event.TaskCreated{Title: "an idea", Status: StatusInbox}),
@@ -719,7 +736,6 @@ func TestStatusRoundTrips(t *testing.T) {
 // A dependency sitting in inbox or held blocks its dependents exactly
 // like any other not-done task — captures participate in the DAG.
 func TestInboxHeldDependenciesBlock(t *testing.T) {
-	st := func(s string) *string { return &s }
 	events := []event.Event{
 		evt(t, 1, event.TypeTaskCreated, "brandon", "t-idea",
 			event.TaskCreated{Title: "the idea", Status: StatusInbox}),
@@ -854,7 +870,6 @@ func TestUpcasterLiftsOldEvents(t *testing.T) {
 // terminal clears the stamp; a task created directly terminal (the B12
 // migration shape) closes at its creation event.
 func TestClosedMetadata(t *testing.T) {
-	st := func(s string) *string { return &s }
 	create := func(n int, status string) event.Event {
 		return evt(t, n, event.TypeTaskCreated, "brandon", "t1",
 			event.TaskCreated{Title: "one task", Status: status})
@@ -931,18 +946,13 @@ func TestFinishRunDoneStampsClose(t *testing.T) {
 // Close metadata is a fold over ULID order, so input order is
 // irrelevant — every permutation lands the same stamps.
 func TestClosedMetadataOrderInsensitive(t *testing.T) {
-	st := func(s string) *string { return &s }
 	events := []event.Event{
 		taskCreated(t, 1, "t1", "one task"),
 		evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Status: st(StatusDone)}),
 		evt(t, 3, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Status: st(StatusCancelled)}),
 	}
 	for _, p := range permutations(len(events)) {
-		shuffled := make([]event.Event, len(events))
-		for i, idx := range p {
-			shuffled[i] = events[idx]
-		}
-		task := replay(t, shuffled, nil).Tasks["t1"]
+		task := replay(t, permute(events, p), nil).Tasks["t1"]
 		if want := base.Add(3 * time.Minute); !task.ClosedAt.Equal(want) || task.ClosedBy != "brandon" {
 			t.Fatalf("perm %v: close = %v by %q, want %v by brandon", p, task.ClosedAt, task.ClosedBy, want)
 		}
@@ -958,9 +968,6 @@ func TestClosedMetadataOrderInsensitive(t *testing.T) {
 // records are replay-derived, so past edits on an existing ledger get
 // entries with no event changes.
 func TestUpdateHistoryEntries(t *testing.T) {
-	st := func(s string) *string { return &s }
-	num := func(n int) *int { return &n }
-	list := func(vs ...string) *[]string { return &vs }
 	longDep := "tuh-01KYRMFV10W1N28TCN5NDADMN4"
 
 	tests := []struct {
@@ -1008,7 +1015,6 @@ func TestUpdateHistoryEntries(t *testing.T) {
 // Successive edits chain: each entry's old values are the state the
 // previous edit left, and entries keep replay (ULID) order.
 func TestUpdateHistoryEntriesChain(t *testing.T) {
-	num := func(n int) *int { return &n }
 	events := []event.Event{
 		taskCreated(t, 1, "t1", "fix login"),
 		evt(t, 2, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Priority: num(2)}),

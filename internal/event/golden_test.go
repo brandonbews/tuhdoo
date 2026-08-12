@@ -27,13 +27,14 @@ func fixedID(t *testing.T, when time.Time, fill byte) string {
 
 var goldenTime = time.Date(2026, 7, 29, 12, 0, 0, 0, time.UTC)
 
+// Pointer literals for task.updated's optional fields.
+func str(s string) *string { return &s }
+func num(n int) *int       { return &n }
+
 // goldenEvents is one fixed event per catalog type. Changing any fixture
 // (or the encoder) must be a deliberate act that also updates testdata/.
 func goldenEvents(t *testing.T) map[string]Event {
 	t.Helper()
-
-	str := func(s string) *string { return &s }
-	num := func(n int) *int { return &n }
 
 	fixtures := map[string]struct {
 		fill    byte

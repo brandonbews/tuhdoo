@@ -876,8 +876,14 @@ func TestSanitizeAgentName(t *testing.T) {
 		{"ünïcode", "n-code"},
 	}
 	for _, tt := range tests {
-		if got := sanitizeAgentName(tt.in); got != tt.want {
+		got := sanitizeAgentName(tt.in)
+		if got != tt.want {
 			t.Errorf("sanitizeAgentName(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+		// The whole point of sanitizing: the minted session principal
+		// built from the result must always validate.
+		if principal := "brandon/" + got + "-1"; ValidateActor(principal) != nil {
+			t.Errorf("sanitizeAgentName(%q) = %q, which mints invalid principal %q", tt.in, got, principal)
 		}
 	}
 }

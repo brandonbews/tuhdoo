@@ -14,6 +14,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -918,7 +919,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		labels := splitList(input)
-		if equalStrings(labels, m.snap.tasks[target.task.ID].Task.Labels) {
+		if slices.Equal(labels, m.snap.tasks[target.task.ID].Task.Labels) {
 			m.mode, m.input = m.back, textInput{}
 			return m, nil
 		}
@@ -947,21 +948,6 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-// equalStrings is element-wise slice equality — the "unchanged" test
-// for a parsed labels list, where order matters (reordering is a real
-// edit; respacing is not).
-func equalStrings(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // ---- rendering (pure over model state) ----

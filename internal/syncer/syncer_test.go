@@ -38,7 +38,7 @@ func evt(t *testing.T, n int, typ, actor, machine, task string, payload any) eve
 	return e
 }
 
-func runGit(t *testing.T, dir string, args ...string) {
+func runGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
@@ -46,6 +46,7 @@ func runGit(t *testing.T, dir string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+	return string(out)
 }
 
 type peer struct {
@@ -59,12 +60,7 @@ type peer struct {
 // initialized data branch.
 func newPair(t *testing.T) (peer, peer) {
 	t.Helper()
-	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
-	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
-	t.Setenv("GIT_AUTHOR_NAME", "test")
-	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "test")
-	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.invalid")
+	gitEnv(t)
 
 	bare := filepath.Join(t.TempDir(), "remote.git")
 	runGit(t, t.TempDir(), "init", "--bare", "-b", "main", bare)
@@ -126,6 +122,48 @@ func sameTrees(t *testing.T, a, b peer) {
 			t.Fatalf("trees differ at %s: %s vs %s", path, oid, tb[path])
 		}
 	}
+}
+
+// mergeBothWays publishes B's head so A's object database holds both
+// sides, merges the two heads directly in both orders, asserts the two
+// directions produce the identical tree, and returns that tree — the
+// order-independence half of every same-path merge-rule test.
+func mergeBothWays(t *testing.T, a, b peer) map[string]string {
+	t.Helper()
+	cycle(t, b)
+	remoteHead, err := a.sync.fetch()
+	if err != nil {
+		t.Fatal(err)
+	}
+	localHead, err := a.git.ReadRef(store.DefaultRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m1, err := a.sync.merge(localHead, remoteHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m2, err := a.sync.merge(remoteHead, localHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t1, err := treeMap(a.git, m1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t2, err := treeMap(a.git, m2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(t1) != len(t2) {
+		t.Fatalf("merge directions disagree: %d vs %d entries", len(t1), len(t2))
+	}
+	for p, oid := range t1 {
+		if t2[p] != oid {
+			t.Fatalf("merge directions disagree at %s: %s vs %s", p, oid, t2[p])
+		}
+	}
+	return t1
 }
 
 func TestDivergentWritesConvergeAndClaimRaceResolves(t *testing.T) {
@@ -365,42 +403,7 @@ func TestLeaseMergeTombstoneRules(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Publish B's head so A's object database holds both sides,
-			// then merge the two heads directly, in both orders.
-			cycle(t, b)
-			remoteHead, err := a.sync.fetch()
-			if err != nil {
-				t.Fatal(err)
-			}
-			localHead, err := a.git.ReadRef(store.DefaultRef)
-			if err != nil {
-				t.Fatal(err)
-			}
-			m1, err := a.sync.merge(localHead, remoteHead)
-			if err != nil {
-				t.Fatal(err)
-			}
-			m2, err := a.sync.merge(remoteHead, localHead)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			t1, err := treeMap(a.git, m1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			t2, err := treeMap(a.git, m2)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(t1) != len(t2) {
-				t.Fatalf("merge directions disagree: %d vs %d entries", len(t1), len(t2))
-			}
-			for p, oid := range t1 {
-				if t2[p] != oid {
-					t.Fatalf("merge directions disagree at %s: %s vs %s", p, oid, t2[p])
-				}
-			}
+			t1 := mergeBothWays(t, a, b)
 
 			leasePath := "leases/" + claim + ".json"
 			oid, ok := t1[leasePath]

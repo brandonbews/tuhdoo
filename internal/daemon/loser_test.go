@@ -9,8 +9,6 @@ package daemon
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -383,25 +381,7 @@ func TestCallTimeStandDownNotices(t *testing.T) {
 // at the remote and records done. Exactly one confirmation, one done,
 // one superseded, on the shared branch itself.
 func TestTwoDaemonLoserStory(t *testing.T) {
-	setGitEnv(t)
-	base := shortTempDir(t)
-	bare := filepath.Join(base, "origin.git")
-	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
-	clone := func(name string) string {
-		root := filepath.Join(base, name)
-		if err := os.MkdirAll(root, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		runGit(t, root, "init", "--quiet", "-b", "main")
-		runGit(t, root, "remote", "add", "origin", bare)
-		return root
-	}
-	rootA, rootB := clone("alpha"), clone("bravo")
-
-	dA, _ := startDaemonAt(t, rootA, gateOpts())
-	mustCycle(t, dA)
-	runGit(t, rootB, "fetch", "--quiet", "origin", "refs/heads/tuhdoo:refs/heads/tuhdoo")
-	dB, _ := startDaemonAt(t, rootB, gateOpts())
+	dA, dB, rootA, rootB := twoDaemonRemote(t)
 
 	const actorA, actorB = "harness/alpha", "harness/bravo"
 	ids, _, oe := dA.opCreateTasks("seeder", []createTaskItem{{
