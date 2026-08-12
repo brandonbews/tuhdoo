@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 2 blocked · 4 on hold · 5 inbox · 91 done · 22 cancelled
+0 in progress · 0 ready · 2 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Socket-path length limit: stable TMPDIR fallback for deep repo paths | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -46,6 +44,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`t-c7km`](tasks/t-01KYRMFV10W1N28TCN5TDQC7KM.md) Grow watch into the interactive steering TUI (tuhdoo top)
 - [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) Two-machine convergence: a deliberate claim-collision harness
 - [`t-z2c1`](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) Retire full-replay-per-write and the grow-forever event overlay
+- [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) Socket-path length limit: stable TMPDIR fallback for deep repo paths
 - [`t-hhzm`](tasks/t-01KYRMVT1YC2929WSQ3W6YHHZM.md) Render markdown views on local daemon writes
 - [`t-8x4g`](tasks/t-01KYRR78YKX9YHZE6W6B798X4G.md) Auto-derive session principals: git identity + daemon-minted agent names
 - [`t-tam8`](tasks/t-01KYRVCBE83KT62BAE11W3TAM8.md) Release pipeline: tagged, cross-compiled binaries

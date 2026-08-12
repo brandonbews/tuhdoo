@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN62RR3A4D`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `go` `platform`
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
@@ -28,3 +28,11 @@ description edited · status open→held · labels −parked
 ### 2026-08-12 19:15 UTC — edit by `brandon`
 
 retitled · description edited · status held→open
+
+### 2026-08-12 19:21 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `t-3a4d/socket-path-fallback`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/74>
+- Merged as: `601fbc41d6e859ed30ba8b8b1466d3578dd82e6c`
+
+Deep-path fallback landed: when .git/tuhdoo/daemon.sock would exceed the sun_path limit, the daemon binds a stable per-repo hashed path under the OS temp dir (pure socketPath function, table-driven + integration tests); daemon.json remains the sole discovery channel, so no client changes. The task's former Windows half was dropped by Brandon's 2026-08-12 decision (macOS/Linux only, WSL for Windows users) — stance recorded in README.md, docs/joining.md, and a T4 revision note in 002-technology.md. Do not reopen Windows support on demand.
