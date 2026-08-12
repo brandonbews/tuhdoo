@@ -4,7 +4,13 @@ The steering inbox: questions raised by agents, awaiting a human answer.
 
 ## Open
 
-_None — the fleet is unblocked._
+### [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) · Test the escalation flow as a human
+
+**Blocking** · asked by `brandon/claude-code-1` · 2026-08-12 19:46 UTC
+
+> Fixture question 1 (short, decision-shaped): structured escalation options are still an inbox task (tuh-8x0g — escalate would gain pickable options + a recommendation field, rendered as selectable answers in the TUI). Now that you are answering this through the redesigned task view: (a) keep that task — picking beats typing, especially for yes/no steers; (b) cancel it — free-text answering feels sufficient now that the question is always visible. My recommendation: (a), weakly — most real escalations I have raised were choices between two or three named options.
+
+This escalation is a test fixture: Brandon asked for a throwaway task with real UX questions so he can walk the answering flow end to end. The referenced decision is genuine though — answering it here saves a future triage pass.
 
 ## Answered
 

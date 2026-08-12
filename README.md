@@ -9,11 +9,11 @@ them by hand. Docs: https://tuhdoo.com
 
 ## At a glance
 
-No open questions are waiting; the fleet is unblocked.
+**[1 open question](escalations.md) is waiting on a human.**
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 1 | 2 | 4 | 5 | 92 | 22 |
+| 1 | 0 | 2 | 4 | 5 | 92 | 22 |
 
 - [backlog.md](backlog.md) lists every task, grouped by state.
 - [escalations.md](escalations.md) lists the questions agents have raised for a human to answer.
