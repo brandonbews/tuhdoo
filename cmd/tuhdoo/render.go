@@ -126,8 +126,3 @@ func plural(n int, word string) string {
 	}
 	return fmt.Sprintf("%d %ss", n, word)
 }
-
-// The digest section renderers (Ready/In progress/Blocked/On hold/
-// Inbox/Needs Input) lived here until 2026-07-31, when the one-shot
-// commands moved to serialized column output (T7: serialization, not
-// design) — see printBacklog / printEscalations in commands.go.

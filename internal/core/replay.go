@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -518,7 +519,7 @@ func closedByRun(runs []Run, c *Claim) bool {
 }
 
 func unmarshal(e event.Event, dst any) error {
-	if err := jsonUnmarshal(e.Data, dst); err != nil {
+	if err := json.Unmarshal(e.Data, dst); err != nil {
 		return &ReplayError{EventID: e.ID, Type: e.Type, V: e.V,
 			Sentinel: ErrMalformedEvent, Reason: err.Error()}
 	}

@@ -14,8 +14,8 @@
 //
 //  1. builds ./cmd/tuhdoo into a temp dir (never trusts bin/tuhdoo);
 //  2. creates a scratch bare origin plus two clones under a short /tmp
-//     path — the daemon's unix socket lives at <repo>/.git/tuhdoo and
-//     macOS caps socket paths at 103 bytes, so the default TMPDIR
+//     path — the daemon's unix socket lives at <repo>/.git/tuhdoo/daemon.sock
+//     and macOS caps socket paths at 103 bytes, so the default TMPDIR
 //     (/var/folders/...) would blow the limit (see npm/smoke.sh);
 //  3. seeds tasks that need no work at all, so a "run" is one claim;
 //  4. opens one MCP session per clone (`tuhdoo mcp --as <principal>`) —
@@ -480,40 +480,24 @@ func (l *lab) race() ([]attempt, int, error) {
 
 	for round := 1; round <= l.cfg.rounds; round++ {
 		results := make([]attempt, len(l.actors))
-		errs := make([]error, len(l.actors))
-
-		// A closed channel is the starting gun: every actor blocks on the
-		// same receive, so the calls leave together.
-		var wg sync.WaitGroup
-		gun := make(chan struct{})
-		for i, a := range l.actors {
-			wg.Add(1)
-			go func(i int, a *actor) {
-				defer wg.Done()
-				<-gun
-				out, err := a.claimNext()
-				if err != nil {
-					errs[i] = err
-					return
-				}
-				if !out.Claimed || out.Task == nil || out.Task.Claim == nil {
-					return
-				}
-				results[i] = attempt{
-					round: round, actor: a,
-					task:   out.Task.Task.ID,
-					claim:  out.Task.Claim.ID,
-					branch: fmt.Sprintf("%s/round-%02d-%s", event.ShortID(out.Task.Task.ID), round, a.name),
-				}
-			}(i, a)
-		}
-		close(gun)
-		wg.Wait()
-
-		for i, err := range errs {
+		err := l.pair(func(i int, a *actor) error {
+			out, err := a.claimNext()
 			if err != nil {
-				return nil, 0, fmt.Errorf("round %d: %s claim_next: %w", round, l.actors[i].name, err)
+				return fmt.Errorf("round %d: %s claim_next: %w", round, a.name, err)
 			}
+			if !out.Claimed || out.Task == nil || out.Task.Claim == nil {
+				return nil
+			}
+			results[i] = attempt{
+				round: round, actor: a,
+				task:   out.Task.Task.ID,
+				claim:  out.Task.Claim.ID,
+				branch: fmt.Sprintf("%s/round-%02d-%s", event.ShortID(out.Task.Task.ID), round, a.name),
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, 0, err
 		}
 
 		claimed := make([]attempt, 0, len(results))
@@ -645,7 +629,6 @@ func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 	for i, task := range l.contest {
 		seq := i + 1
 
-		// Deliberate collision: both machines claim the same task at once.
 		atts := make([]attempt, len(l.actors))
 		err := l.pair(func(j int, a *actor) error {
 			claimID, err := a.claimTask(task)
@@ -660,7 +643,6 @@ func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 			return nil, stats, err
 		}
 
-		// Race the gate for the one verdict.
 		res := make([]confirmOut, len(l.actors))
 		err = l.pair(func(j int, a *actor) error {
 			var e error
@@ -830,7 +812,7 @@ func (l *lab) storm() error {
 	fmt.Printf("== sync storm: %d simultaneous eager writes per machine\n", l.cfg.storm)
 	started := time.Now()
 	for i := 1; i <= l.cfg.storm; i++ {
-		if _, err := l.burst(i); err != nil {
+		if err := l.burst(i); err != nil {
 			return err
 		}
 		if l.cfg.gap > 0 {
@@ -850,40 +832,19 @@ func (l *lab) storm() error {
 // barrier the claim rounds use. It doubles as the harness's only lever on
 // the T8 cadence: an eager write pokes the sync loop, and a poked cycle
 // fetches before it pushes, so a burst pulls the peer's work in too.
-func (l *lab) burst(seq int) ([]string, error) {
-	ids := make([]string, len(l.actors))
-	errs := make([]error, len(l.actors))
-	var wg sync.WaitGroup
-	gun := make(chan struct{})
-	for i, a := range l.actors {
-		wg.Add(1)
-		go func(i int, a *actor) {
-			defer wg.Done()
-			<-gun
-			var out struct {
-				ID string `json:"id"`
-			}
-			err := a.post("/v0/escalations", a.principal, map[string]any{
-				"task":     l.carrier,
-				"question": fmt.Sprintf("sync-storm burst %d from %s: no answer wanted", seq, a.name),
-				"context":  "Written by harness/collision to force simultaneous eager pushes.",
-				"blocking": false,
-			}, &out)
-			if err != nil {
-				errs[i] = err
-				return
-			}
-			ids[i] = out.ID
-		}(i, a)
-	}
-	close(gun)
-	wg.Wait()
-	for i, err := range errs {
+func (l *lab) burst(seq int) error {
+	return l.pair(func(i int, a *actor) error {
+		err := a.post("/v0/escalations", a.principal, map[string]any{
+			"task":     l.carrier,
+			"question": fmt.Sprintf("sync-storm burst %d from %s: no answer wanted", seq, a.name),
+			"context":  "Written by harness/collision to force simultaneous eager pushes.",
+			"blocking": false,
+		}, nil)
 		if err != nil {
-			return nil, fmt.Errorf("burst %d on %s: %w", seq, l.actors[i].name, err)
+			return fmt.Errorf("burst %d on %s: %w", seq, a.name, err)
 		}
-	}
-	return ids, nil
+		return nil
+	})
 }
 
 // diagnose prints each daemon's live sync health. Called whenever a wait
@@ -1186,8 +1147,6 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 		}
 		switch at.fate {
 		case fateReported:
-			// The loser reported; the referee coerced the record to
-			// superseded, keeping the reported branch as salvage.
 			reported++
 			r := runsByID[at.runID]
 			if r == nil || r.Synthesized || r.Outcome != event.OutcomeSuperseded ||
@@ -1197,8 +1156,6 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 					loser.Actor, event.ShortID(at.task), r, at.branch)
 			}
 		case fateSilent:
-			// The loser stood down without a report; replay synthesized
-			// the branch-less close for exactly this claim.
 			silent++
 			found := false
 			for i := range stateA.Runs {
@@ -1725,17 +1682,13 @@ func toolText(res *mcp.CallToolResult) string {
 // needs. Decoded from the tool's structured content rather than typed
 // against the daemon's unexported shapes.
 type claimNextOut struct {
-	Claimed bool   `json:"claimed"`
-	Reason  string `json:"reason"`
+	Claimed bool `json:"claimed"`
 	Task    *struct {
 		Task struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
+			ID string `json:"id"`
 		} `json:"task"`
 		Claim *struct {
-			ID      string `json:"id"`
-			Actor   string `json:"actor"`
-			Machine string `json:"machine"`
+			ID string `json:"id"`
 		} `json:"claim"`
 	} `json:"task"`
 }
@@ -1765,9 +1718,7 @@ func (a *actor) claimTask(task string) (string, error) {
 
 // confirmOut is confirm_claim's answer: the referee's verdict.
 type confirmOut struct {
-	Confirmed bool   `json:"confirmed"`
-	Claim     string `json:"claim"`
-	Message   string `json:"message"`
+	Confirmed bool `json:"confirmed"`
 }
 
 func (a *actor) confirmClaim(task string) (confirmOut, error) {
@@ -1799,8 +1750,7 @@ func (a *actor) finishRunDone(task, branch, summary string) (finishOut, error) {
 // releaseOut is release_claim's answer; a non-empty message is the
 // stand-down acknowledgment for a voided claimant (D6 clause 3).
 type releaseOut struct {
-	Released string `json:"released"`
-	Message  string `json:"message"`
+	Message string `json:"message"`
 }
 
 func (a *actor) releaseClaim(task, reason string) (releaseOut, error) {

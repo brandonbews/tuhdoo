@@ -7,7 +7,6 @@ package store
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -69,16 +68,14 @@ func New(g gitx.Git, ref string, ident gitx.Identity) *Store {
 
 // Batch is one commit's worth of changes. Events are stored at their
 // event.Path() locations; Files carries arbitrary paths (views, lease
-// files); Delete removes paths. Deletes are applied after writes, so a
-// path both written and deleted in one batch ends up absent.
+// files).
 type Batch struct {
 	Events []event.Event
 	Files  map[string][]byte
-	Delete []string
 }
 
 func (b Batch) empty() bool {
-	return len(b.Events) == 0 && len(b.Files) == 0 && len(b.Delete) == 0
+	return len(b.Events) == 0 && len(b.Files) == 0
 }
 
 // Init creates the orphan data branch if it does not exist: a parentless
@@ -166,22 +163,13 @@ func (s *Store) AppendBatch(b Batch) error {
 		for path, oid := range changed {
 			tree[path] = oid
 		}
-		for _, path := range b.Delete {
-			delete(tree, path)
-		}
 
-		next := make([]gitx.TreeEntry, 0, len(tree))
-		for path, oid := range tree {
-			next = append(next, gitx.TreeEntry{Path: path, OID: oid})
-		}
-		sort.Slice(next, func(i, j int) bool { return next[i].Path < next[j].Path })
-
-		treeOID, err := s.git.MkTree(next)
+		treeOID, err := gitx.MkTreeFromMap(s.git, tree)
 		if err != nil {
 			return fmt.Errorf("store: append: %w", err)
 		}
-		msg := fmt.Sprintf("tuhdoo: %d events, %d files, %d deletions\n",
-			len(b.Events), len(b.Files), len(b.Delete))
+		msg := fmt.Sprintf("tuhdoo: %d events, %d files\n",
+			len(b.Events), len(b.Files))
 		commit, err := s.git.CommitTree(treeOID, []string{head}, s.ident, msg)
 		if err != nil {
 			return fmt.Errorf("store: append: %w", err)

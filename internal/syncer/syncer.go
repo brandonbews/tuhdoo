@@ -5,6 +5,7 @@
 package syncer
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -174,7 +175,7 @@ func (s *Syncer) cycleAndRecord() {
 // a future `tuhdoo sync` command.
 func (s *Syncer) Cycle() error {
 	if _, err := s.git.RemoteURL(s.remote); err != nil {
-		if errIsAny(err, gitx.ErrNoRemote) {
+		if errors.Is(err, gitx.ErrNoRemote) {
 			s.setMode("local-only")
 			return nil
 		}
@@ -215,7 +216,7 @@ func (s *Syncer) Cycle() error {
 			s.setMode("syncing")
 			return nil
 		}
-		if errIsAny(err, gitx.ErrNonFastForward) {
+		if errors.Is(err, gitx.ErrNonFastForward) {
 			// Someone pushed between our fetch and push: go around
 			// again — fetch their work, merge, retry (D6 in action).
 			s.bumpCollisions()
@@ -231,7 +232,7 @@ func (s *Syncer) Cycle() error {
 func (s *Syncer) fetch() (string, error) {
 	err := s.git.Fetch(s.remote, s.ref+":"+TrackingRef)
 	if err != nil {
-		if errIsAny(err, gitx.ErrRemoteRefMissing) {
+		if errors.Is(err, gitx.ErrRemoteRefMissing) {
 			s.recordFetch()
 			return "", nil
 		}
@@ -274,7 +275,7 @@ func (s *Syncer) reconcile(local, remote string) (bool, error) {
 
 	err = s.git.UpdateRef(s.ref, target, local)
 	if err != nil {
-		if errIsAny(err, gitx.ErrRefCASFailed) {
+		if errors.Is(err, gitx.ErrRefCASFailed) {
 			s.logf("sync: local ref moved during reconcile; retrying next pass")
 			return false, nil
 		}

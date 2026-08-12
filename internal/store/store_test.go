@@ -380,8 +380,8 @@ func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
 		wantExpiry   time.Time
 		wantReleased bool
 	}{
-		{"plain lease", EncodeLease(instant), truncated, false},
-		{"released tombstone", EncodeLeaseTombstone(instant), truncated, true},
+		{"plain lease", encodeLease(instant), truncated, false},
+		{"released tombstone", encodeLeaseTombstone(instant), truncated, true},
 		{"old format without released field", []byte(`{"expires":"2026-08-04T09:30:00Z"}`), truncated, false},
 	}
 	for _, tc := range cases {
@@ -408,11 +408,11 @@ func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
 
 	// Plain leases keep their pre-tombstone bytes: the released field is
 	// omitted, not written false, so old binaries see nothing new.
-	if plain := EncodeLease(instant); bytes.Contains(plain, []byte("released")) {
-		t.Errorf("EncodeLease bytes carry a released field: %s", plain)
+	if plain := encodeLease(instant); bytes.Contains(plain, []byte("released")) {
+		t.Errorf("encodeLease bytes carry a released field: %s", plain)
 	}
-	if tomb := EncodeLeaseTombstone(instant); !bytes.Contains(tomb, []byte(`"released":true`)) {
-		t.Errorf("EncodeLeaseTombstone bytes lack the released marker: %s", tomb)
+	if tomb := encodeLeaseTombstone(instant); !bytes.Contains(tomb, []byte(`"released":true`)) {
+		t.Errorf("encodeLeaseTombstone bytes lack the released marker: %s", tomb)
 	}
 }
 

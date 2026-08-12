@@ -409,8 +409,9 @@ func (d *Daemon) opRenewClaim(actor, taskID string) (claimID string, expires tim
 // down, which is exactly what the protocol asks of a race loser and so
 // is acknowledged, never errored. The stand-down writes the release
 // event for the reason's sake (replay no-ops a release from a
-// non-holder) and deletes the loser's lease, which lets replay close
-// the attempt as a synthesized superseded run immediately. The non-""
+// non-holder) and tombstones the loser's lease — overwritten, never
+// deleted — which lets replay close the attempt as a synthesized
+// superseded run immediately. The non-""
 // message is the acknowledgment text for the stand-down arm.
 func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message string, oe *opError) {
 	if taskID == "" {
@@ -443,23 +444,33 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 		}
 		return "", "", opErrf(http.StatusForbidden, "claim on task %s is held by %s, not %s", taskID, c.Actor, actor)
 	}
-	ev, err := d.newEventLocked(event.TypeClaimReleased, actor, taskID, event.ClaimReleased{Reason: reason})
-	if err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "%v", err)
-	}
-	// Eager: a release returns the task to the pool, and peers racing
-	// to claim should see that as fast as a claim itself (T8).
-	d.stageLocked(ev)
-	if err := d.batcher.Flush(); err != nil {
-		return "", "", d.writeErrLocked(err)
-	}
-	if err := d.store.ReleaseLease(c.ID, now); err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "release lease: %v", err)
-	}
-	if err := d.refreshLocked(now); err != nil {
-		return "", "", d.writeErrLocked(err)
+	if oe := d.releaseLocked(actor, taskID, reason, c.ID, now); oe != nil {
+		return "", "", oe
 	}
 	return c.ID, "", nil
+}
+
+// releaseLocked is the shared write sequence of both opReleaseClaim
+// arms: claim.released event, stage, eager flush, lease tombstone,
+// refresh. Eager because a release returns the task to the pool, and
+// peers racing to claim should see that as fast as a claim itself
+// (T8). Caller holds d.mu.
+func (d *Daemon) releaseLocked(actor, taskID, reason, claimID string, now time.Time) *opError {
+	ev, err := d.newEventLocked(event.TypeClaimReleased, actor, taskID, event.ClaimReleased{Reason: reason})
+	if err != nil {
+		return opErrf(http.StatusInternalServerError, "%v", err)
+	}
+	d.stageLocked(ev)
+	if err := d.batcher.Flush(); err != nil {
+		return d.writeErrLocked(err)
+	}
+	if err := d.store.ReleaseLease(claimID, now); err != nil {
+		return opErrf(http.StatusInternalServerError, "release lease: %v", err)
+	}
+	if err := d.refreshLocked(now); err != nil {
+		return d.writeErrLocked(err)
+	}
+	return nil
 }
 
 // releaseVoidedLocked is the stand-down arm of opReleaseClaim: the
@@ -477,19 +488,8 @@ func (d *Daemon) releaseVoidedLocked(actor, taskID, reason string, mine *core.Cl
 			"%s's attempt on task %s is already closed — nothing to release; "+
 				"if the branch is worth salvaging, record it with add_note", actor, taskID)
 	}
-	ev, err := d.newEventLocked(event.TypeClaimReleased, actor, taskID, event.ClaimReleased{Reason: reason})
-	if err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "%v", err)
-	}
-	d.stageLocked(ev)
-	if err := d.batcher.Flush(); err != nil {
-		return "", "", d.writeErrLocked(err)
-	}
-	if err := d.store.ReleaseLease(mine.ID, now); err != nil {
-		return "", "", opErrf(http.StatusInternalServerError, "release lease: %v", err)
-	}
-	if err := d.refreshLocked(now); err != nil {
-		return "", "", d.writeErrLocked(err)
+	if oe := d.releaseLocked(actor, taskID, reason, mine.ID, now); oe != nil {
+		return "", "", oe
 	}
 	return mine.ID, fmt.Sprintf(
 		"Stand-down acknowledged: your claim on task %s lost its race — a peer won this task. "+

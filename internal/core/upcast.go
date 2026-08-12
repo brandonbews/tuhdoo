@@ -6,10 +6,6 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// jsonUnmarshal is the one JSON entry point for payload decoding, named
-// so replay.go reads without an import alias.
-func jsonUnmarshal(data []byte, dst any) error { return json.Unmarshal(data, dst) }
-
 // Upcaster lifts a payload one schema version: v → v+1, in memory only.
 // Stored bytes are never rewritten (T3).
 type Upcaster func(data json.RawMessage) (json.RawMessage, error)

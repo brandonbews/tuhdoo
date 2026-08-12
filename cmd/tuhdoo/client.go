@@ -57,20 +57,31 @@ func (c *client) get(path string, dst any) error {
 		return err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	body, err := readAPIResponse(resp, "GET", path)
 	if err != nil {
 		return err
+	}
+	return json.Unmarshal(body, dst)
+}
+
+// readAPIResponse reads a capped response body. Non-200 responses
+// surface the daemon's decoded {"error": ...} message when present,
+// else "METHOD path: status N".
+func readAPIResponse(resp *http.Response, method, path string) ([]byte, error) {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	if err != nil {
+		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
 		var e struct {
 			Error string `json:"error"`
 		}
 		if json.Unmarshal(body, &e) == nil && e.Error != "" {
-			return errors.New(e.Error)
+			return nil, errors.New(e.Error)
 		}
-		return fmt.Errorf("GET %s: status %d", path, resp.StatusCode)
+		return nil, fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
 	}
-	return json.Unmarshal(body, dst)
+	return body, nil
 }
 
 // write performs one write request stamped with the acting principal
@@ -98,18 +109,9 @@ func (c *client) writeResp(method, path, actor string, body, dst any) error {
 		return err
 	}
 	defer resp.Body.Close()
-	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<24))
+	respBody, err := readAPIResponse(resp, method, path)
 	if err != nil {
 		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		var e struct {
-			Error string `json:"error"`
-		}
-		if json.Unmarshal(respBody, &e) == nil && e.Error != "" {
-			return errors.New(e.Error)
-		}
-		return fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
 	}
 	if dst == nil {
 		return nil

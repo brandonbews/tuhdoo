@@ -9,6 +9,7 @@ package gitx
 
 import (
 	"errors"
+	"sort"
 	"time"
 )
 
@@ -18,6 +19,17 @@ import (
 type TreeEntry struct {
 	Path string
 	OID  string
+}
+
+// MkTreeFromMap builds a tree from a path → blob-OID map via g.MkTree,
+// with entries sorted by path.
+func MkTreeFromMap(g Git, files map[string]string) (string, error) {
+	entries := make([]TreeEntry, 0, len(files))
+	for path, oid := range files {
+		entries = append(entries, TreeEntry{Path: path, OID: oid})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
+	return g.MkTree(entries)
 }
 
 // Identity names the author and committer of a commit. gitx never reads

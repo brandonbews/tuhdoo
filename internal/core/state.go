@@ -6,7 +6,10 @@
 // histories merge by set-union and still converge (D2).
 package core
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // Task statuses stored in state. "Claimed" is deliberately not a status:
 // whether a task is being worked on is derived from claims (D6), so a
@@ -331,13 +334,8 @@ func (s *State) ReadyTasks() []*Task {
 			ready = append(ready, s.Tasks[id])
 		}
 	}
-	// Stable by construction: TaskOrder is ULID order, and we only ever
-	// move higher priorities forward.
-	for i := 1; i < len(ready); i++ {
-		for j := i; j > 0 && ready[j].Priority > ready[j-1].Priority; j-- {
-			ready[j], ready[j-1] = ready[j-1], ready[j]
-		}
-	}
+	// Stable sort keeps TaskOrder's ULID order within a priority.
+	sort.SliceStable(ready, func(i, j int) bool { return ready[i].Priority > ready[j].Priority })
 	return ready
 }
 

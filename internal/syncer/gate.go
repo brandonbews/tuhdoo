@@ -10,8 +10,8 @@ package syncer
 // the same bounded shape as Cycle's.
 
 import (
+	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/brandonbews/tuhdoo/internal/core"
 	"github.com/brandonbews/tuhdoo/internal/event"
@@ -108,12 +108,7 @@ func (s *Syncer) GatePush(head string, e event.Event) error {
 		}
 	}
 
-	entries := make([]gitx.TreeEntry, 0, len(tree))
-	for p, o := range tree {
-		entries = append(entries, gitx.TreeEntry{Path: p, OID: o})
-	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
-	treeOID, err := s.git.MkTree(entries)
+	treeOID, err := gitx.MkTreeFromMap(s.git, tree)
 	if err != nil {
 		return fmt.Errorf("syncer: gate: %w", err)
 	}
@@ -123,7 +118,7 @@ func (s *Syncer) GatePush(head string, e event.Event) error {
 	}
 
 	if err := s.git.Push(s.remote, commit+":"+s.ref); err != nil {
-		if errIsAny(err, gitx.ErrNonFastForward) {
+		if errors.Is(err, gitx.ErrNonFastForward) {
 			s.bumpCollisions() // gate contention is push contention (T8 telemetry)
 		}
 		return err

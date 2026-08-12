@@ -2,7 +2,6 @@ package syncer
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -99,12 +98,7 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 		}
 	}
 
-	entries := make([]gitx.TreeEntry, 0, len(merged))
-	for path, oid := range merged {
-		entries = append(entries, gitx.TreeEntry{Path: path, OID: oid})
-	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
-	treeOID, err := s.git.MkTree(entries)
+	treeOID, err := gitx.MkTreeFromMap(s.git, merged)
 	if err != nil {
 		return "", fmt.Errorf("syncer: merge: %w", err)
 	}
@@ -420,14 +414,4 @@ func maxOID(a, b string) string {
 		return a
 	}
 	return b
-}
-
-// errIsAny reports whether err matches any of the given sentinels.
-func errIsAny(err error, sentinels ...error) bool {
-	for _, s := range sentinels {
-		if errors.Is(err, s) {
-			return true
-		}
-	}
-	return false
 }
