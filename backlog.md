@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 6 on hold · 0 inbox · 94 done · 23 cancelled
+1 in progress · 1 ready · 1 blocked · 6 on hold · 0 inbox · 94 done · 23 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) | One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior) | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) | One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior) | 1 | `docs` `polish` `go` |
 | [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `polish` `go` |
 
 ## Blocked / waiting

@@ -2,7 +2,7 @@
 
 `tuh-01KZT571HQ3JEDEA5FFXSHBAJP`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `docs` `polish` `go`
 - **Created:** 2026-08-12 04:55 UTC by `brandon/claude-code-1`
