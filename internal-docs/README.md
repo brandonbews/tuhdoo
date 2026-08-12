@@ -9,7 +9,7 @@ here is not.
 ## Layout
 
 - [`design/001-core-design.md`](design/001-core-design.md) — the founding design record: vision, principles, and the eleven decisions from the first design grilling (2026-07-28), with rationale and accepted consequences.
-- [`design/002-technology.md`](design/002-technology.md) — the technology decisions from Cycle 2 (2026-07-29): Go daemon, subprocess git plumbing, canonical-JSON event format and the three version contracts, per-repo daemon topology, the twelve-verb MCP surface (originally ten; relay_answer added 2026-07-30, confirm_claim 2026-08-04) and agent protocol, views, CLI-portal/TUI surfaces, cadence defaults.
+- [`design/002-technology.md`](design/002-technology.md) — the technology decisions from Cycle 2 (2026-07-29): Go daemon, subprocess git plumbing, canonical-JSON event format and the three version contracts, per-repo daemon topology, the twelve-tool MCP surface (originally ten; relay_answer added 2026-07-30, confirm_claim 2026-08-04) and agent protocol, views, CLI-portal/TUI surfaces, cadence defaults.
 - [`design/open-questions.md`](design/open-questions.md) — a tombstone (2026-08-05): what got settled went into the design docs, what stayed open migrated to the tuhdoo ledger. Open questions live on `tuhdoo backlog` (inbox/held) now.
 - [`plan/roadmap.md`](plan/roadmap.md) — the live phase and done-phase declarations, each with a definition of done; plus the Ideas icebox (notions kept off the ledger on purpose).
 - [`plan/backlog.md`](plan/backlog.md) — a tombstone: the B1–B12 build-out was migrated into tuhdoo itself at B12 (2026-07-30); the live queue is `tuhdoo backlog`.

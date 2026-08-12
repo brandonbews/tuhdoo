@@ -1,6 +1,6 @@
 package daemon
 
-// The operations layer: every verb both surfaces expose, as methods on
+// The operations layer: every tool both surfaces expose, as methods on
 // *Daemon. The HTTP API (api.go) and the MCP endpoint (mcp.go) are thin
 // wrappers around these — T4's "all surfaces are projections of the same
 // daemon state" holds because there is exactly one implementation of
@@ -340,9 +340,9 @@ func (d *Daemon) opClaimNext(actor string, labels []string) (*hydratedTask, *opE
 }
 
 // claimWarning rides every claim response (agent protocol step 5,
-// 2026-08-04): a claim is provisional until confirmed, and verb results
+// 2026-08-04): a claim is provisional until confirmed, and tool results
 // are the only channel the daemon has to a working agent (D6 — losers
-// learn at verb-time), so the confirm-before-merge rule is stated at
+// learn at call-time), so the confirm-before-merge rule is stated at
 // the moment the claim is handed over.
 const claimWarning = "Before merging anything from this work, call confirm_claim and merge only on a " +
 	"confirmed verdict — a claim is provisional, and merging on an unconfirmed claim is a protocol " +
@@ -434,7 +434,7 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 	c := d.state.ActiveClaim(taskID)
 	if c == nil || c.Actor != actor {
 		// Not the live holder: a voided claimant standing down is the
-		// loser doing what every verb told it to do — acknowledge it.
+		// loser doing what every tool told it to do — acknowledge it.
 		if mine := latestClaim(d.state, taskID, actor); mine != nil && mine.Status == core.ClaimVoided {
 			return d.releaseVoidedLocked(actor, taskID, reason, mine, now)
 		}
@@ -765,7 +765,7 @@ func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opEr
 
 // gateVerdict is the D6 gate's fetch → judge → push loop, shared by
 // confirm_claim and every done-recording path (T5: the gate rides the
-// verbs). Each pass judges the head a confirmation would land on and
+// tools). Each pass judges the head a confirmation would land on and
 // pushes claim.confirmed onto exactly that head through the remote's
 // ref CAS; a non-fast-forward means the remote moved and the loop
 // re-judges, bounded. Remoteless falls to the T2 local arm. The caller
@@ -855,7 +855,7 @@ func (d *Daemon) refreshAfterGate(now time.Time) {
 }
 
 // opEscalate raises a question for a human. The warning return is the
-// verb-time stand-down notice when the caller's claim on the task has
+// call-time stand-down notice when the caller's claim on the task has
 // lost its race (D6), "" otherwise.
 func (d *Daemon) opEscalate(actor string, req escalateReq) (id, warning string, oe *opError) {
 	if req.Task == "" {
@@ -952,7 +952,7 @@ func rootPrincipal(actor string) string {
 }
 
 // opAddNote records a checkpoint note. The warning return is the
-// verb-time stand-down notice when the caller's claim on the task has
+// call-time stand-down notice when the caller's claim on the task has
 // lost its race (D6), "" otherwise.
 func (d *Daemon) opAddNote(actor, task, text string) (id, warning string, oe *opError) {
 	if task == "" {
@@ -1192,12 +1192,12 @@ func (d *Daemon) attemptCloseLocked(c *core.Claim) (closed, synthesized bool) {
 	return closed, synthesized
 }
 
-// lostNoticeLocked words the verb-time stand-down (D6 clause 3,
-// 2026-08-04: losers learn at verb-time — there is no push channel to a
-// working agent, so every verb a provisionally-voided claimant touches
+// lostNoticeLocked words the call-time stand-down (D6 clause 3,
+// 2026-08-04: losers learn at call-time — there is no push channel to a
+// working agent, so every tool a provisionally-voided claimant touches
 // on its task states the loss plainly). Empty unless actor's latest
 // claim on taskID is a voided, still-unclosed attempt: once the
-// superseded run exists, the loss is on the record and further verbs
+// superseded run exists, the loss is on the record and further tools
 // are salvage, not stand-down. Caller holds d.mu.
 func (d *Daemon) lostNoticeLocked(taskID, actor string) string {
 	c := latestClaim(d.state, taskID, actor)

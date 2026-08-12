@@ -14,7 +14,7 @@ tuhdoo MCP tools until it is drained:
    sub-agent pointed at CLAUDE.md, the relevant design-doc sections, and
    the task description as its prompt, with explicit file boundaries and
    "do not commit; report back." You review the report and diff, and you
-   own the branch, commits, PR, and every ledger verb — leases are
+   own the branch, commits, PR, and every ledger tool — leases are
    session-bound, so a sub-agent never claims or finishes. Inline work is
    the exception, for trivially small tasks. Prior runs and notes are
    your memory of earlier attempts; pass what matters into the

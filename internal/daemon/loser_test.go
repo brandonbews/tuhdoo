@@ -1,7 +1,7 @@
 package daemon
 
 // The loser's whole story (D6 clause 3, 2026-08-04): losers learn at
-// verb-time, a finish on a lost attempt is coerced to superseded with
+// call-time, a finish on a lost attempt is coerced to superseded with
 // the reported links kept for salvage, a loser that never reports is
 // closed by replay's synthesized superseded run at lease expiry (after
 // which a late finish is turned away toward add_note), and a voided
@@ -294,7 +294,7 @@ func TestReleaseByVoidedClaimantIsAcknowledgedStandDown(t *testing.T) {
 	}
 }
 
-// TestClaimResponsesCarryConfirmBeforeMergeWarning: verb-time stand-down
+// TestClaimResponsesCarryConfirmBeforeMergeWarning: call-time stand-down
 // starts at the claim — every claim response carries the standing
 // confirm-before-merge rule (agent protocol step 5), and plain
 // hydration does not.
@@ -328,12 +328,12 @@ func TestClaimResponsesCarryConfirmBeforeMergeWarning(t *testing.T) {
 	}
 }
 
-// TestVerbTimeStandDownNotices: any verb a provisionally-voided
+// TestCallTimeStandDownNotices: any tool a provisionally-voided
 // claimant touches on its task states the loss plainly — add_note and
-// escalate carry the notice, the winner's verbs stay clean, and a
+// escalate carry the notice, the winner's tools stay clean, and a
 // finish through the MCP surface delivers the coerced record with the
 // referee's message.
-func TestVerbTimeStandDownNotices(t *testing.T) {
+func TestCallTimeStandDownNotices(t *testing.T) {
 	d, c := startDaemon(t)
 	const winner, loser = "brandon/win", "brandon/lose"
 	task := createOne(t, c, "brandon", map[string]any{"title": "raced work"})

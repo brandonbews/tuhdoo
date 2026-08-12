@@ -6,7 +6,7 @@ package daemon
 // capture the session's actor (bound from the X-Tuhdoo-Actor header on
 // the initialize POST) and its claim set for lease auto-renewal —
 // session liveness, not agent diligence, is what keeps leases alive
-// (T5: no heartbeat verb).
+// (T5: no heartbeat tool).
 
 import (
 	"context"
@@ -251,7 +251,7 @@ func (d *Daemon) renewSessionLeases(s *mcpSession) {
 // finished) from tracking. A provisionally-voided claim is the one
 // exception (escalation-decided 2026-08-04, D6 clause 3): it stays
 // tracked but is never renewed — the loser must be able to hear "lost"
-// from its own verbs (confirm_claim gates on this session's tracking),
+// from its own tools (confirm_claim gates on this session's tracking),
 // while the unrenewed lease lapses on schedule so expiry synthesis
 // still closes a loser that never reports.
 func (d *Daemon) renewOnce(s *mcpSession) {
@@ -387,7 +387,7 @@ type addNoteInput struct {
 
 type eventIDResult struct {
 	ID      string `json:"id" jsonschema:"the recorded event's ID"`
-	Warning string `json:"warning,omitempty" jsonschema:"a stand-down notice when your claim on this task has lost its race (D6: losers learn at verb-time) — stand down, do not merge, close any open PR, and record the attempt with finish_run"`
+	Warning string `json:"warning,omitempty" jsonschema:"a stand-down notice when your claim on this task has lost its race (D6: losers learn at call-time) — stand down, do not merge, close any open PR, and record the attempt with finish_run"`
 }
 
 type createTasksInput struct {
@@ -411,7 +411,7 @@ type updateTaskInput struct {
 
 // ---- tool registration ----
 
-// addMCPTools registers exactly the twelve T5 verbs. Op failures return
+// addMCPTools registers exactly the twelve T5 tools. Op failures return
 // as Go errors, which the SDK packs into the result with IsError set —
 // a tool error the model can read and correct, never a protocol error.
 // Additions to this list require a design-doc revision first.
@@ -420,7 +420,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "get_backlog",
 		Description: "The claimable backlog: open tasks with met dependencies and no active claim, " +
 			"highest priority first — plus the inbox (untriaged captures) and held (deliberately " +
-			"paused) shelves, which claim verbs never serve. Omit scope for exactly that — the " +
+			"paused) shelves, which claim tools never serve. Omit scope for exactly that — the " +
 			"work-loop call. Pass scope (any of in_progress, blocked, done, cancelled, escalations) " +
 			"to orient on the other sections as slim rows — no descriptions; hydrate a discovered " +
 			"ID with get_task. Orientation only — use claim_next to actually take work.",

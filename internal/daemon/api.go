@@ -157,7 +157,7 @@ type hydratedTask struct {
 	Updates     []updateJSON     `json:"updates"`
 
 	// Warning carries the standing confirm-before-merge rule on claim
-	// responses (agent protocol step 5; D6 verb-time stand-down) and is
+	// responses (agent protocol step 5; D6 call-time stand-down) and is
 	// empty on plain hydration (get_task).
 	Warning string `json:"warning,omitempty" jsonschema:"on claim responses: the standing rule — call confirm_claim and merge only on a confirmed verdict; merging on an unconfirmed claim is a protocol violation"`
 }

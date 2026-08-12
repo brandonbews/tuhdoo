@@ -59,7 +59,7 @@ The run, end to end:
 6. fires `claim_next` from both actors behind a barrier, once per round;
 7. storms the sync loop with simultaneous eager writes on both machines;
 8. lets the two machines converge, then settles the claim rounds through
-   the public verbs alone — every fate is discovered from a daemon's
+   the public tools alone — every fate is discovered from a daemon's
    answer (`confirm_claim` answering lost, or `finish_run(done)` refereed
    through the gate), never decided by the harness reading state — and
    verifies. The harness writes no outcome on any daemon's behalf.
@@ -167,7 +167,7 @@ now looks lease-less, so it is recorded `expired` with a synthesized
 `interrupted` run, the confirmation binds via the ordinary
 provisional-winner arm, and the promised `superseded` run never exists.
 Deterministic, converged, and permanent on both machines — but the ledger
-says `interrupted` where the verb told the agent "recorded as superseded"
+says `interrupted` where the tool told the agent "recorded as superseded"
 (13 of 40 storm contests in the observed run).
 
 **The union merge resurrects deleted lease files, and that now matters.**
@@ -210,7 +210,7 @@ D6 — the daemon now referees every finish, coercing a lost attempt's report
 to `superseded` with its links kept, and replay synthesizes a branch-less
 `superseded` close for a loser that never reports. The harness no longer
 plays the losing daemon's part: `POST /v0/runs` is not called at all, and
-every outcome it checks was written through the public verbs. The original
+every outcome it checks was written through the public tools. The original
 text is kept below as the record of what was found.)* D6 clause 2
 said "the losing daemon tells its agent to stand down; half-done work is
 recorded as a Run with outcome `superseded` (branch name included)". Replay
