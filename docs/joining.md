@@ -117,7 +117,7 @@ git config tuhdoo.principal sarah
 
 ## For the repo admin: branch protection and CI
 
-Two one-time settings on the shared repository, both also printed by
+Three one-time settings on the shared repository, all also printed by
 `tuhdoo init`:
 
 - **Exempt the data branch from pull-request and review requirements.**
@@ -132,3 +132,22 @@ Two one-time settings on the shared repository, both also printed by
 - **Exclude the data branch from CI triggers**, so ledger syncs don't burn
   CI runs. For GitHub Actions:
   `on: { push: { branches-ignore: ["tuhdoo"] } }`.
+- **Exclude the data branch from hosted preview builders.** The data
+  branch is a real branch with all the quirks of a real branch, and
+  tuhdoo pushes it often once init has run. Hosts that auto-deploy every
+  branch by default (Vercel, Netlify, Cloudflare Pages) therefore attempt
+  a preview deployment on every ledger sync; each attempt fails, usually
+  with a notification email. These hosts configure branch deployment in
+  their dashboards, not in the repo, so the exclusion is dashboard-side.
+  On Vercel (verified against its docs, 2026-08-10): Project → Settings →
+  Git → Ignored Build Step → Custom, with the command
+
+  ```sh
+  if [ "$VERCEL_GIT_COMMIT_REF" = "tuhdoo" ]; then exit 0; else exit 1; fi
+  ```
+
+  The exit codes are inverted from shell convention: exit 0 *skips* the
+  build, exit 1 lets it proceed. `VERCEL_GIT_COMMIT_REF` requires the
+  project setting "Automatically expose System Environment Variables",
+  which is on by default. If your data branch is not named `tuhdoo`,
+  compare against its actual name.

@@ -97,6 +97,9 @@ Branch protection: exempt %q from any ruleset or protected-branch rule
   requiring pull requests or reviews — the daemon pushes this branch
   directly, fast-forward only, never force.
 
+Auto-deploys: the daemon pushes %q often — exclude it in any hosted
+  preview builder that deploys every branch by default.
+
 Agent harness: any MCP harness connects through the stdio shim — paste
 into its MCP config:
   {
@@ -110,7 +113,7 @@ Agent protocol: tuhdoo protocol (pipe into your agent instructions, or
 
 Next: tuhdoo status · tuhdoo backlog · tuhdoo (the TUI)
 Docs & workflow recipes: https://tuhdoo.com/docs
-`, branchName(), head, sync, c.socket, branchName(), branchName(), branchName())
+`, branchName(), head, sync, c.socket, branchName(), branchName(), branchName(), branchName())
 	return 0
 }
 
