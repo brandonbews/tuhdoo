@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 6 on hold · 14 inbox · 95 done · 23 cancelled
+1 in progress · 0 ready · 1 blocked · 6 on hold · 15 inbox · 95 done · 23 cancelled
 
 ## In progress
 
@@ -49,6 +49,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
 - [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness: unexercised D6 arms and unasserted claim-response warning
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
+- [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 
 ## Done
 
