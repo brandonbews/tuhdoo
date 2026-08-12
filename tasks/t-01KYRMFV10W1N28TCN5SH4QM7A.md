@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN5SH4QM7A`
 
-- **Status:** on hold — deliberately paused
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `milestone`
 - **Depends on:** [`t-gsw5`](t-01KYRMFV10W1N28TCN5NWAGSW5.md) (done), [`tuh-pk06`](tuh-01KZA0VT234XJYVZWT8S09PK06.md) (done)
@@ -39,3 +39,7 @@ depends_on +tuh-pk06
 ### 2026-08-07 21:53 UTC — edit by `brandon/claude-code-1`
 
 description edited
+
+### 2026-08-12 21:31 UTC — edit by `brandon/claude-code-1`
+
+status held→done

@@ -2,10 +2,10 @@
 
 `t-01KYRMFV10W1N28TCN62F6FRTH`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `storage`
-- **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (on hold)
+- **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (done)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
 
 ## Description

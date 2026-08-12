@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 6 on hold · 0 inbox · 93 done · 23 cancelled
+0 in progress · 3 ready · 1 blocked · 5 on hold · 0 inbox · 94 done · 23 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | `go` `storage` |
 | [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) | One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior) | 1 | `docs` `polish` `go` |
 | [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `polish` `go` |
 
@@ -17,7 +18,6 @@ _None._
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
-| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | depends on [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) |
 
 ## On hold
@@ -26,7 +26,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | `milestone` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
@@ -40,6 +39,7 @@ _None._
 ## Done
 
 - [`t-gsw5`](tasks/t-01KYRMFV10W1N28TCN5NWAGSW5.md) v0 definition of done: the dogfood week holds
+- [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) v1 milestone: steering surface and a second machine
 - [`t-c7km`](tasks/t-01KYRMFV10W1N28TCN5TDQC7KM.md) Grow watch into the interactive steering TUI (tuhdoo top)
 - [`t-cb1j`](tasks/t-01KYRMFV10W1N28TCN5WVTCB1J.md) Two-machine convergence: a deliberate claim-collision harness
 - [`t-z2c1`](tasks/t-01KYRMFV10W1N28TCN5ZZ9Z2C1.md) Retire full-replay-per-write and the grow-forever event overlay
