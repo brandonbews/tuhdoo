@@ -130,6 +130,22 @@ type Note struct {
 	AddedAt time.Time
 }
 
+// Update is the visible record of one task.updated event (2026-08-11
+// grill): who edited, and a compact summary per written field — old→new
+// for scalars, membership deltas for lists, name-only for text (the
+// current text is visible in the same view). Every edit gets an entry,
+// no filtering: a curated subset would recreate the invisible-edit bug
+// for whichever fields get deemed noise. One event touching several
+// fields is one entry. Derived at replay — old values read from state
+// before the field-level apply — so past edits on an existing ledger
+// appear retroactively, no event changes.
+type Update struct {
+	ID     string // the task.updated event ID
+	Task   string
+	Actor  string
+	Fields []string // per-field summaries, payload field order
+}
+
 // State is the full replayed project state. Slices hold IDs in ULID
 // (= replay) order; maps hold the entities.
 type State struct {
@@ -141,6 +157,7 @@ type State struct {
 	Escalations  map[string]*Escalation
 	EscOrder     []string
 	Notes        []Note
+	Updates      []Update // task.updated records, replay order
 }
 
 // ActiveClaim returns the active claim on a task, or nil.

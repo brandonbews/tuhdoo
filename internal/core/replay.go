@@ -3,7 +3,9 @@ package core
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
@@ -222,11 +224,16 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			return malformed("update of unknown task %s", e.Task)
 		}
 		// Field-level last-writer-wins, in ULID order (D6's logical
-		// ordering applied to curation).
+		// ordering applied to curation). Each written field also records
+		// its line in the task's edit history (2026-08-11: every edit
+		// gets an entry) — old values read here, before the write.
+		u := Update{ID: e.ID, Task: e.Task, Actor: e.Actor}
 		if p.Title != nil {
+			u.Fields = append(u.Fields, "retitled")
 			t.Title = *p.Title
 		}
 		if p.Description != nil {
+			u.Fields = append(u.Fields, "description edited")
 			t.Description = *p.Description
 		}
 		if p.Status != nil {
@@ -236,6 +243,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			if !knownStatus(*p.Status) {
 				return malformed("unknown task status %q", *p.Status)
 			}
+			u.Fields = append(u.Fields, "status "+t.Status+"→"+*p.Status)
 			// Close metadata follows the status: the event *entering* a
 			// terminal status is the closing event (re-asserting the same
 			// terminal status keeps the original stamp); leaving terminal
@@ -249,14 +257,18 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			t.Status = *p.Status
 		}
 		if p.Priority != nil {
+			u.Fields = append(u.Fields, fmt.Sprintf("priority %d→%d", t.Priority, *p.Priority))
 			t.Priority = *p.Priority
 		}
 		if p.Labels != nil {
+			u.Fields = append(u.Fields, listDelta("labels", t.Labels, *p.Labels, func(v string) string { return v }))
 			t.Labels = *p.Labels
 		}
 		if p.DependsOn != nil {
+			u.Fields = append(u.Fields, listDelta("depends_on", t.DependsOn, *p.DependsOn, event.ShortID))
 			t.DependsOn = *p.DependsOn
 		}
+		s.Updates = append(s.Updates, u)
 
 	case event.TypeClaimMade:
 		var p event.ClaimMade
@@ -440,6 +452,31 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			Sentinel: ErrCannotReplay, Reason: "type not handled by apply"}
 	}
 	return nil
+}
+
+// listDelta summarizes a list-field replacement as its membership
+// delta: "+x" per addition (new-list order), "−y" per removal (old-list
+// order), after the field name. A replacement that changes membership
+// not at all (a reorder, or a re-send of the same list) reads
+// name-only, like the text fields. render maps items for display —
+// identity for labels, the short-ID form for depends_on edges (T7: the
+// short form is the human contract; the grill's decided shape).
+func listDelta(field string, from, to []string, render func(string) string) string {
+	var parts []string
+	for _, v := range to {
+		if !slices.Contains(from, v) {
+			parts = append(parts, "+"+render(v))
+		}
+	}
+	for _, v := range from {
+		if !slices.Contains(to, v) {
+			parts = append(parts, "−"+render(v))
+		}
+	}
+	if len(parts) == 0 {
+		return field + " edited"
+	}
+	return field + " " + strings.Join(parts, " ")
 }
 
 // leaseExpiredBy reports whether claimID's lease had lapsed at instant t.

@@ -137,6 +137,15 @@ type noteJSON struct {
 	AddedAt time.Time `json:"added_at"`
 }
 
+// updateJSON is one task edit (core.Update): the actor and the compact
+// per-field summaries the history surfaces render verbatim.
+type updateJSON struct {
+	ID     string   `json:"id"`
+	Task   string   `json:"task"`
+	Actor  string   `json:"actor"`
+	Fields []string `json:"fields"`
+}
+
 // hydratedTask is one task with everything attached (T5 get_task:
 // start work in one call).
 type hydratedTask struct {
@@ -145,6 +154,7 @@ type hydratedTask struct {
 	Notes       []noteJSON       `json:"notes"`
 	Runs        []runJSON        `json:"runs"`
 	Escalations []escalationJSON `json:"escalations"`
+	Updates     []updateJSON     `json:"updates"`
 
 	// Warning carries the standing confirm-before-merge rule on claim
 	// responses (agent protocol step 5; D6 verb-time stand-down) and is

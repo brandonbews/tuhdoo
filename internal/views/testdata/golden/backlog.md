@@ -34,7 +34,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`t-sync`](tasks/t-sync.md) | Sync loop \| app-level merge | 2 |  |
-| [`t-web`](tasks/t-web.md) | Browser UI spike | 3 | `v2` |
+| [`t-web`](tasks/t-web.md) | Browser UI spike (kanban) | 1 | `v2` `web` |
 
 ## Inbox
 

@@ -337,6 +337,29 @@ func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
 	}
 }
 
+// Hydration exposes the edit records replay derives from task.updated
+// (2026-08-11 grill: every edit gets a history entry) — the same path
+// notes, runs, and escalations ride, so get_task and the CLI/TUI
+// history surfaces see every field edit, one entry per event.
+func TestHydrationCarriesUpdateRecords(t *testing.T) {
+	_, c := startDaemon(t)
+	id := createOne(t, c, "brandon", map[string]any{"title": "before", "priority": 5})
+	mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon", map[string]any{
+		"title": "after", "priority": 2, "labels": []string{"launch"},
+	}, http.StatusOK)
+
+	var h hydratedTask
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK), &h)
+	if len(h.Updates) != 1 {
+		t.Fatalf("updates = %+v, want exactly one entry for the multi-field edit", h.Updates)
+	}
+	u := h.Updates[0]
+	want := []string{"retitled", "priority 5→2", "labels +launch"}
+	if u.Task != id || u.Actor != "brandon" || !reflect.DeepEqual(u.Fields, want) {
+		t.Fatalf("update = %+v, want actor brandon with fields %v", u, want)
+	}
+}
+
 // One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): /v0/state serves
 // core's verdict per task — situation always present (ready /
 // in_progress / blocked for open tasks, the status word otherwise) and
