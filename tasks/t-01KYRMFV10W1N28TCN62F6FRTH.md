@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN62F6FRTH`
 
-- **Status:** open — ready
+- **Status:** on hold — deliberately paused
 - **Priority:** 1
 - **Labels:** `go` `storage`
 - **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (done)
@@ -29,3 +29,7 @@ description edited
 ### 2026-08-06 22:00 UTC — edit by `brandon/claude-code-1`
 
 description edited
+
+### 2026-08-12 21:32 UTC — edit by `brandon/claude-code-1`
+
+status open→held
