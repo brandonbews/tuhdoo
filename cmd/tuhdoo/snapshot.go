@@ -179,12 +179,35 @@ func waitingNote(t stateTask, disp func(string) string) string {
 // stateTaskOf finds one task's state-listing row; the zero row (no
 // annotations, no verdicts) when the ID is unknown.
 func (s *snapshot) stateTaskOf(id string) stateTask {
+	t, _ := s.findTask(id)
+	return t
+}
+
+// findTask is stateTaskOf with resolution reported: edge rendering
+// must distinguish "unknown to the snapshot" from a zero-value row.
+func (s *snapshot) findTask(id string) (stateTask, bool) {
 	for _, t := range s.state.Tasks {
 		if t.ID == id {
-			return t
+			return t, true
 		}
 	}
-	return stateTask{}
+	return stateTask{}, false
+}
+
+// dependentsOf lists the tasks whose depends_on names id — the reverse
+// edges behind the NEEDED BY sections (edge rows, 2026-08-11),
+// computed at read time from the snapshot: no stored reverse index.
+// The state listing arrives in creation (ULID) order, so the result is
+// ULID-ordered; every dependent is included regardless of status —
+// accuracy over noise, the status word carries the story.
+func (s *snapshot) dependentsOf(id string) []string {
+	var out []string
+	for _, t := range s.state.Tasks {
+		if slices.Contains(s.tasks[t.ID].Task.DependsOn, id) {
+			out = append(out, t.ID)
+		}
+	}
+	return out
 }
 
 // taskRef renders one task reference for TUI display: the short form,

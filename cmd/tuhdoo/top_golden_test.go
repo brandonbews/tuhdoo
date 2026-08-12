@@ -479,6 +479,56 @@ func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 	}
 }
 
+// The task view's edge sections at 80 columns, plain colors (edge
+// rows, 2026-08-11): DEPENDS ON renders one row per edge — short ID,
+// status word, title on one aligned grid, statuses padded to the
+// widest word — under a structural bar carrying the armed "enter open"
+// hint; the old depends-on field line is gone from the header block.
+// Byte-exact geometry.
+func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
+	s := edgeSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-epic")
+	pad := func(left, right string) string {
+		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
+	}
+	want := strings.Join([]string{
+		" tuhdoo · local-only                                          acting as brandon ",
+		"",
+		"▌ t-epic — ship the epic",
+		"",
+		"  id          t-epic",
+		"  status      open",
+		"  priority    0",
+		"  labels      none",
+		"  created     2026-08-10 12:00 UTC by brandon",
+		"",
+		pad(" DEPENDS ON (4)", "enter open "),
+		"  t-aaaa  done       first child",
+		"  t-bbbb  open       second child",
+		"  t-cccc  on hold    third child",
+		"  t-dddd  cancelled  dropped child",
+		"",
+		pad(" DESCRIPTION", ""),
+		"  none",
+		"",
+		pad(" HISTORY", ""),
+		"  no activity yet",
+	}, "\n") + "\n" +
+		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
+		// 22-39 are the blank pad.
+		strings.Repeat("\n", 18) +
+		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        "
+	got := m.View()
+	if got != want {
+		t.Errorf("plain 80-column edge sections diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("plain edge-section render leaked ANSI escapes:\n%q", got)
+	}
+}
+
 // Task-view composition with real colors: the NEEDS INPUT bar carries
 // the dashboard's magenta, DESCRIPTION and HISTORY the reverse-dim
 // bars, field names are bold on the grid, and the selected escalation
