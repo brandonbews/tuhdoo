@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 5 on hold · 5 inbox · 91 done · 22 cancelled
+0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 91 done · 22 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Socket-path length limit: stable TMPDIR fallback for deep repo paths | 0 | `go` `platform` |
 
 ## Blocked / waiting
 
@@ -24,7 +26,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) | v1 milestone: steering surface and a second machine | 0 | `milestone` |
-| [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Daemon portability: unix-only lock and the socket-path length limit | 0 | `go` `platform` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
