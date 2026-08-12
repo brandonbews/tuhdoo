@@ -2,7 +2,7 @@
 
 `tuh-01KZ9YBF1N06FQ37XV65940SSG`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
 - **Priority:** 0
 - **Labels:** `polish` `go`
 - **Created:** 2026-08-05 21:47 UTC by `brandon`
@@ -46,3 +46,7 @@ retitled · description edited · status inbox→open · priority 0→0 · label
 ### 2026-08-12 20:53 UTC — edit by `brandon/claude-code-1`
 
 description edited
+
+### 2026-08-12 21:49 UTC — note from `brandon/claude-code-bg`
+
+Findings-first fan-out in flight: six read-only readers by package cluster (internal/daemon; cmd/tuhdoo TUI half; cmd/tuhdoo CLI half; internal/core+event; internal/store+gitx+syncer+views; harness/collision), mandate report-only. Orchestrator synthesizes and applies. Intended branches: tuh-40ssg/go-sweep-app (PR 1, non-test) and tuh-40ssg/go-sweep-tests (PR 2, test sweep + audit), both off main at/after a8cbcdc (the verbs->tools rename this sweep was sequenced behind — already landed). No edits exist yet; if interrupted before branches push, restart from the fan-out.

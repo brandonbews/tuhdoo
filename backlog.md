@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 6 on hold · 0 inbox · 95 done · 23 cancelled
+1 in progress · 0 ready · 1 blocked · 6 on hold · 0 inbox · 95 done · 23 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `brandon/claude-code-bg` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `polish` `go` |
+_None._
 
 ## Blocked / waiting
 
