@@ -44,3 +44,7 @@ depends_on +tuh-r2ac
 ### 2026-08-12 20:41 UTC — edit by `brandon/claude-code-1`
 
 status open→done · depends_on −tuh-yayn
+
+### 2026-08-12 20:41 UTC — note from `brandon/claude-code-1`
+
+2026-08-12, Brandon (live session): declared this epic done. The announcement task (tuh-01KZPPRY7P2A6GN0AMSKPEYAYN) was deliberately removed from the child edges first — it stands alone now, held, because Brandon is unsure what he wants to do for an announcement; the launch materials and adoption surface are complete regardless (tuhdoo is live and publicly visible). All 12 remaining child edges were done at declaration time.
