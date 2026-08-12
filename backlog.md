@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 5 on hold · 1 inbox · 93 done · 23 cancelled
+0 in progress · 2 ready · 2 blocked · 6 on hold · 0 inbox · 93 done · 23 cancelled
 
 ## In progress
 
@@ -30,13 +30,12 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
+| [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) | Grill: run Matt Pocock's improve-codebase-architecture skill here? (parked until Brandon can read the Go) | 0 | `design` `go` |
 | [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | 0 | `design` `mcp` `tui` |
 
 ## Inbox
 
-Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
-
-- [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
+_None._
 
 ## Done
 
