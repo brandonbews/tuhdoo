@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"strings"
 	"testing"
@@ -2326,15 +2327,193 @@ func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
 	}
 }
 
-// e and E are retired (the ring replaced them, 2026-08-02): dead keys
-// in the armed task view.
+// The e/E edit chords are retired (the ring replaced them, 2026-08-02):
+// E stays a dead key, and e — rebound as the context toggle (escalation
+// readability, 2026-08-11) — is inert in an armed view unless an
+// escalation stop is focused: it never opens an editor, never leaves
+// the view. t-flak has no open escalation, so both keys change nothing.
 func TestTopDetailEAndEUnbound(t *testing.T) {
 	m := openDetail(t, newTopModel(newFakeSteering()), "t-flak")
+	v := m.View()
 	for _, r := range []rune{'e', 'E'} {
 		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		if mm.mode != modeDetail || cmd != nil {
-			t.Errorf("retired key %q: mode %d cmd %v, want modeDetail nil", r, mm.mode, cmd)
+			t.Errorf("key %q: mode %d cmd %v, want modeDetail nil", r, mm.mode, cmd)
 		}
+		if mm.View() != v {
+			t.Errorf("key %q changed the rendered view of a task with no open escalation", r)
+		}
+	}
+}
+
+// structuredEscSnapshot seeds one task with two open escalations
+// (escalation readability, 2026-08-11): 01E8 carries a multi-line
+// question — the structure the agent wrote — and a 13-line context;
+// 01E9 a one-line question with a one-line context. Ring order: title,
+// priority, labels, 01E8 (stop 3), 01E9 (stop 4), description.
+func structuredEscSnapshot() *snapshot {
+	raised := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
+	ctx := make([]string, 13)
+	for i := range ctx {
+		ctx[i] = fmt.Sprintf("context line %d", i+1)
+	}
+	e1 := escalationJSON{
+		ID: "01E8", Task: "t-big", Actor: "brandon/a3",
+		Question: "Pick a path.\nA) fork the library\nB) vendor the patch",
+		Context:  strings.Join(ctx, "\n"),
+		Blocking: true, RaisedAt: raised,
+	}
+	e2 := escalationJSON{
+		ID: "01E9", Task: "t-big", Actor: "brandon/a3",
+		Question: "Short one?", Context: "one line only", RaisedAt: raised,
+	}
+	return &snapshot{
+		state: stateResp{
+			Tasks: []stateTask{{ID: "t-big", Title: "structured ask", Status: "open", Holder: "brandon/a3",
+				Situation: "in_progress", BlockingEscalations: []string{"01E8"}}},
+			OpenEscalations: []escalationJSON{e1, e2},
+		},
+		tasks: map[string]hydratedTask{
+			"t-big": {Task: taskJSON{ID: "t-big", Title: "structured ask"},
+				Escalations: []escalationJSON{e1, e2}},
+		},
+	}
+}
+
+// gutterLines are the rendered body lines carrying the selection bar.
+func gutterLines(body []string) []string {
+	var out []string
+	for _, l := range body {
+		if strings.HasPrefix(l, "▌") {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// The escalation block's rework (escalation readability, 2026-08-11):
+// the question keeps its line structure instead of being one-lined; the
+// context collapses to its first line plus an accurate hidden-line
+// count; e toggles the focused escalation's context open and closed —
+// with the selection bar covering the whole block in both shapes, and
+// the focus ring intact across the height change. A context that fits
+// one line renders as-is, stub-free. The toggle state is view-local:
+// closing the view resets every context to the collapsed stub.
+func TestTopDetailEscalationStructureAndContextToggle(t *testing.T) {
+	s := structuredEscSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // first Needs Input row → t-big, 01E8 preselected
+	if m.mode != modeDetail || m.detailID != "t-big" || m.detailFocus != 3 {
+		t.Fatalf("enter on the Needs Input row: mode %d detail %q focus %d, want t-big with 01E8 preselected at 3",
+			m.mode, m.detailID, m.detailFocus)
+	}
+	body := m.detailBody()
+	joined := strings.Join(body, "\n")
+	// The question renders with its structure, every line selected.
+	mustContain(t, joined,
+		"▌ !   Pick a path.",
+		"▌     A) fork the library",
+		"▌     B) vendor the patch")
+	// The context is a collapsed stub: first line plus the hidden count.
+	mustContain(t, joined, "▌     context line 1", "▌     (+12 lines — e to expand)")
+	if strings.Contains(joined, "context line 2") {
+		t.Fatalf("collapsed context leaked past its first line; body:\n%s", joined)
+	}
+	// The one-line context renders as-is: exactly one stub on screen.
+	mustContain(t, joined, "one line only")
+	if strings.Count(joined, "e to expand") != 1 {
+		t.Errorf("want exactly one collapsed stub; body:\n%s", joined)
+	}
+	// The section bar advertises both section keys.
+	mustContain(t, m.View(), "enter answer · e context")
+	// The selection bar covers the whole collapsed block: three question
+	// lines, the two-line context stub, the meta line.
+	if g := gutterLines(body); len(g) != 6 {
+		t.Fatalf("collapsed block has %d gutter lines, want 6:\n%s", len(g), strings.Join(g, "\n"))
+	}
+	collapsedLen := len(body)
+	// e expands the focused context in full; the bar covers the taller
+	// shape, and the view grows by exactly the hidden lines.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	body = m.detailBody()
+	joined = strings.Join(body, "\n")
+	mustContain(t, joined, "▌     context line 2", "▌     context line 13")
+	if strings.Contains(joined, "e to expand") {
+		t.Fatalf("stub still renders while expanded; body:\n%s", joined)
+	}
+	if g := gutterLines(body); len(g) != 17 { // 3 question + 13 context + meta
+		t.Fatalf("expanded block has %d gutter lines, want 17:\n%s", len(g), strings.Join(g, "\n"))
+	}
+	if len(body) != collapsedLen+11 { // 13 lines where the 2-line stub sat
+		t.Errorf("expanding grew the body by %d lines, want 11", len(body)-collapsedLen)
+	}
+	// The height change feeds the same lines selection uses: a click on
+	// the last context line still hits the escalation stop.
+	if i := m.detailStopAt(screenLineOf(t, m, "context line 13")); i != 3 {
+		t.Errorf("click on an expanded context line maps to stop %d, want 3", i)
+	}
+	// The ring still walks over the taller block: j to 01E9, k back —
+	// the bar lands on the collapsed neighbor, then back on the tall one.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m.detailFocus != 4 {
+		t.Fatalf("j off the expanded escalation: focus %d, want 4", m.detailFocus)
+	}
+	if joined = strings.Join(m.detailBody(), "\n"); !strings.Contains(joined, "▌     Short one?") {
+		t.Fatalf("neighbor escalation not selected; body:\n%s", joined)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if m.detailFocus != 3 {
+		t.Fatalf("k back onto the expanded escalation: focus %d, want 3", m.detailFocus)
+	}
+	// e again re-collapses; enter still answers the focused escalation.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	joined = strings.Join(m.detailBody(), "\n")
+	if strings.Contains(joined, "context line 2") || !strings.Contains(joined, "(+12 lines — e to expand)") {
+		t.Fatalf("second e did not re-collapse; body:\n%s", joined)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeAnswer || m.target.esc.ID != "01E8" {
+		t.Fatalf("enter after toggling: mode %d target %q, want modeAnswer on 01E8", m.mode, m.target.esc.ID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	// Ephemeral view state: expand, close the view, reopen — collapsed.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav || m.escExpanded != nil {
+		t.Fatalf("closing the view kept toggle state: mode %d escExpanded %v", m.mode, m.escExpanded)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if joined = strings.Join(m.detailBody(), "\n"); !strings.Contains(joined, "(+12 lines — e to expand)") {
+		t.Fatalf("reopened view lost the collapsed default; body:\n%s", joined)
+	}
+}
+
+// Watch mode keeps the context toggle — expansion is reading, not
+// steering: with no focus ring, e flips every open escalation's
+// context, and nothing is ever selectable or armed.
+func TestWatchModeContextToggle(t *testing.T) {
+	s := structuredEscSnapshot()
+	m := topModel{snap: s, rows: buildRows(s)}
+	m, _ = press(t, m, keyOf(tea.KeyEnter)) // → read-only detail of t-big
+	if m.mode != modeDetail || m.detailID != "t-big" {
+		t.Fatalf("mode %d detail %q, want modeDetail t-big", m.mode, m.detailID)
+	}
+	v := m.View()
+	mustContain(t, v, "(+12 lines — e to expand)", "e context")
+	if strings.Contains(v, "context line 2") || strings.Contains(v, "enter answer") {
+		t.Fatalf("watch detail leaked the collapsed context or an answer hint; view:\n%s", v)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	v = m.View()
+	mustContain(t, v, "context line 2", "context line 13")
+	if strings.Contains(v, "e to expand") || strings.Contains(v, "▌") {
+		t.Fatalf("watch expand left a stub or a selection; view:\n%s", v)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	if v = m.View(); !strings.Contains(v, "(+12 lines — e to expand)") {
+		t.Fatalf("second e did not re-collapse; view:\n%s", v)
 	}
 }
 
@@ -2549,7 +2728,10 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 		{Type: tea.KeyRunes, Runes: []rune{'p'}},
 		{Type: tea.KeyRunes, Runes: []rune{'a'}},
 		{Type: tea.KeyRunes, Runes: []rune{'c'}}, // the freed key stays free here too
-		{Type: tea.KeyRunes, Runes: []rune{'e'}}, // edits are armed-only
+		// e is the context toggle — a read affordance watch keeps
+		// (TestWatchModeContextToggle); with no context on this
+		// escalation it changes nothing, and it never opens input.
+		{Type: tea.KeyRunes, Runes: []rune{'e'}},
 		{Type: tea.KeyRunes, Runes: []rune{'E'}},
 	} {
 		mm, cmd := press(t, m, k)

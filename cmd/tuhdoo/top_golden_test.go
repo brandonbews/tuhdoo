@@ -434,7 +434,9 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"  labels      none",
 		"  created     2026-07-29 12:00 UTC by brandon",
 		"",
-		" NEEDS INPUT (1)                                                   enter answer ",
+		// The section bar carries the context-toggle hint alongside the
+		// answer key (escalation readability, 2026-08-11).
+		" NEEDS INPUT (1)                                       enter answer · e context ",
 		"▌ !   Which license?",
 		"▌     brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
@@ -548,7 +550,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		return left + strings.Repeat(" ", 80-len([]rune(left))-len([]rune(right))) + right
 	}
 	for _, want := range []string{
-		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
+		"\x1b[30;45m" + pad(" NEEDS INPUT (1)", "enter answer · e context ") + "\x1b[0m",
 		// DESCRIPTION and HISTORY keep reverse-dim: neutral structural
 		// chrome, not shelf (chrome hierarchy, 2026-08-03).
 		"\x1b[7m\x1b[2m" + pad(" DESCRIPTION", "") + "\x1b[0m",
@@ -589,14 +591,19 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 			t.Errorf("selected line is %d cells, want the full 80: %q", w, l)
 		}
 	}
-	// Watch mode: same view, no steering hint, nothing selected.
+	// Watch mode: same view, no steering hint, nothing selected. The
+	// context toggle is reading, not steering, so its hint stays — alone
+	// (escalation readability, 2026-08-11).
 	w := newWatchModel()
 	w.col = ansiColors
 	w.width, w.height = 80, 40
 	w, _ = press(t, w, keyOf(tea.KeyEnter))
 	wv := w.View()
-	if !strings.Contains(wv, "\x1b[30;45m"+pad(" NEEDS INPUT (1)", "")+"\x1b[0m") {
-		t.Errorf("watch task view missing the hint-free NEEDS INPUT bar; view:\n%q", wv)
+	if !strings.Contains(wv, "\x1b[30;45m"+pad(" NEEDS INPUT (1)", "e context ")+"\x1b[0m") {
+		t.Errorf("watch task view missing the answer-hint-free NEEDS INPUT bar; view:\n%q", wv)
+	}
+	if strings.Contains(wv, "enter answer") {
+		t.Errorf("watch task view advertises answering; view:\n%q", wv)
 	}
 	if strings.Contains(wv, "▌") {
 		t.Errorf("watch task view renders a selected row; view:\n%q", wv)

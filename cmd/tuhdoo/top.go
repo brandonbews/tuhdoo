@@ -280,8 +280,12 @@ type topModel struct {
 	detailScroll int      // first visible body line in modeDetail
 	detailFocus  int      // focused stop in an armed detail (index into detailStops)
 	detailBack   []string // task views walked through by edge hops (edge rows, 2026-08-11): esc pops, newest last — a plain slice, boring Go
-	width        int    // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
-	height       int    // terminal rows; 0 renders all
+	// escExpanded holds the escalation contexts toggled open in the task
+	// view (escalation readability, 2026-08-11), keyed by escalation ID —
+	// ephemeral view state: cleared when the view closes, never persisted.
+	escExpanded map[string]bool
+	width       int // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
+	height      int // terminal rows; 0 renders all
 }
 
 func (m topModel) Init() tea.Cmd {
@@ -407,7 +411,8 @@ func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 		id = r.esc.Task
 	}
 	m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
-	m.detailBack = nil // a fresh entry from the list starts a fresh hop stack
+	m.detailBack = nil  // a fresh entry from the list starts a fresh hop stack
+	m.escExpanded = nil // …and every context back at its collapsed stub
 	if r.kind == rowEscalation {
 		for i, s := range m.detailStops() {
 			if s.kind == stopEscalation && s.esc.ID == r.esc.ID {
@@ -606,6 +611,7 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.detailScroll, m.detailFocus = 0, 0
 		} else {
 			m.mode, m.detailID, m.detailScroll, m.detailFocus = modeNav, "", 0, 0
+			m.escExpanded = nil // the toggle state dies with the view
 		}
 	case "j", "down":
 		if focus >= 0 && focus < len(stops)-1 {
@@ -625,6 +631,29 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if focus >= 0 { // armed; watch mode has no stops by construction
 			m.detailFocus = focus
 			return m.openStop(stops[focus])
+		}
+	case "e":
+		// The context toggle (escalation readability, 2026-08-11): an
+		// escalation's context block trades places with its collapsed
+		// stub. With an escalation stop focused, e flips that one; watch
+		// mode has no focus ring, so e flips every open escalation of the
+		// view — expansion is reading, and a disarmed pane still reads.
+		// Armed with focus elsewhere, e does nothing: the ring is the
+		// selector. (The one-day e/E edit chords retired 2026-08-02 stay
+		// retired; this is a new binding on the freed key.)
+		var ids []string
+		if focus >= 0 && stops[focus].kind == stopEscalation {
+			ids = []string{stops[focus].esc.ID}
+		} else if !m.armed {
+			for _, e := range m.detailEscalations() {
+				ids = append(ids, e.ID)
+			}
+		}
+		if len(ids) > 0 && m.escExpanded == nil {
+			m.escExpanded = map[string]bool{}
+		}
+		for _, id := range ids {
+			m.escExpanded[id] = !m.escExpanded[id]
 		}
 	case "p":
 		// Dead on terminal tasks (history view, 2026-08-02): a closed
@@ -1060,16 +1089,21 @@ func (m topModel) detailLines() []detailLine {
 	}
 	field(-1, "created", fmt.Sprintf("%s by %s", stamp(t.CreatedAt), t.CreatedBy))
 
-	// The escalations section: every open escalation, selectable.
+	// The escalations section: every open escalation, selectable. The
+	// context toggle is a section key, so its hint rides the section bar
+	// (the section-bar convention the dashboard uses) — the bottom footer
+	// legend is already full at the 80-column design width. Watch mode
+	// keeps the toggle (expansion is reading), so its bar carries the
+	// hint too, alone.
 	if open := m.detailEscalations(); len(open) > 0 {
 		add(-1, "")
-		hint := ""
+		hint := "e context "
 		if m.armed {
-			hint = "enter answer "
+			hint = "enter answer · e context "
 		}
 		addRaw(-1, barLine(col, col.bgMagenta, fmt.Sprintf(" NEEDS INPUT (%d)", len(open)), hint, width))
 		for _, e := range open {
-			addRaw(nextStop(), escalationRow(col, e, width))
+			addRaw(nextStop(), escalationRow(col, e, m.escExpanded[e.ID], width))
 		}
 	}
 
@@ -1149,10 +1183,19 @@ func (m topModel) detailLines() []detailLine {
 }
 
 // escalationRow renders one open escalation of the task view: badge
-// cell and question (bold, wrapped), any context, then dim meta — all
-// on the list's two-cell mark column, so the selection bar's ▌ gutter
-// and tint read exactly like the dashboard's rows.
-func escalationRow(col colors, e escalationJSON, width int) string {
+// cell and question (bold, wrapped, line structure kept — escalation
+// readability, 2026-08-11: the agent's A)/B) options and recommendation
+// survive, where oneLine used to flatten them), any context, then dim
+// meta — all on the list's two-cell mark column, so the selection bar's
+// ▌ gutter and tint read exactly like the dashboard's rows.
+//
+// The context collapses to a stub by default — its first screen line
+// plus a hidden-line count — so a fat context (old-style escalations
+// included: no migration, no special case) never buries the view;
+// expanded renders the full block. Contexts that fit one screen line
+// render as-is: nothing to hide, no stub. The count is screen lines at
+// this width — exactly what expanding reveals.
+func escalationRow(col colors, e escalationJSON, expanded bool, width int) string {
 	inner := width - 6
 	if inner < 10 {
 		inner = 10
@@ -1165,18 +1208,27 @@ func escalationRow(col colors, e escalationJSON, width int) string {
 		badge, style = "!", col.red+col.bold
 	}
 	var lines []string
-	for i, q := range wrapIndent(oneLine(e.Question)) {
-		if i == 0 {
-			lines = append(lines, "  "+sgr(col, style, padTo(badge, 2))+"  "+sgr(col, col.bold, q))
-			continue
+	first := true
+	for _, q := range strings.Split(strings.TrimRight(e.Question, "\n"), "\n") {
+		for _, l := range wrapIndent(q) {
+			if first {
+				lines = append(lines, "  "+sgr(col, style, padTo(badge, 2))+"  "+sgr(col, col.bold, l))
+				first = false
+				continue
+			}
+			lines = append(lines, "      "+sgr(col, col.bold, l))
 		}
-		lines = append(lines, "      "+sgr(col, col.bold, q))
 	}
 	if e.Context != "" {
+		var ctx []string
 		for _, c := range strings.Split(strings.TrimRight(e.Context, "\n"), "\n") {
-			for _, l := range wrapIndent(c) {
-				lines = append(lines, "      "+sgr(col, col.dim, l))
-			}
+			ctx = append(ctx, wrapIndent(c)...)
+		}
+		if !expanded && len(ctx) > 1 {
+			ctx = []string{ctx[0], fmt.Sprintf("(+%s — e to expand)", plural(len(ctx)-1, "line"))}
+		}
+		for _, l := range ctx {
+			lines = append(lines, "      "+sgr(col, col.dim, l))
 		}
 	}
 	lines = append(lines, "      "+sgr(col, col.dim, fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))))
