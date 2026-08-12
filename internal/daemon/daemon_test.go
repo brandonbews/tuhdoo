@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1309,5 +1310,113 @@ func TestReplayAcceptsStoredClaimlessRun(t *testing.T) {
 	}
 	if got := d.state.Tasks[task].Status; got != "open" {
 		t.Fatalf("task status = %q, want open (a non-holder run moves nothing)", got)
+	}
+}
+
+// socketPath is a pure function of its two inputs; table-driven.
+func TestSocketPath(t *testing.T) {
+	deep := "/" + strings.Repeat("d", maxSocketPath) // any join under it busts the limit
+	cases := []struct {
+		name    string
+		dir     string
+		tmp     string
+		wantDir string // directory the socket must land in; "" means error
+	}{
+		{"fits beside daemon.json", "/repo/.git/tuhdoo", "/tmp", "/repo/.git/tuhdoo"},
+		{"deep repo falls back to the temp dir", deep, "/tmp", "/tmp"},
+		{"deep repo and deep temp dir is an error", deep, deep, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := socketPath(tc.dir, tc.tmp)
+			if tc.wantDir == "" {
+				if err == nil {
+					t.Fatalf("socketPath(%q, %q) = %q, want error", tc.dir, tc.tmp, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("socketPath(%q, %q): %v", tc.dir, tc.tmp, err)
+			}
+			if filepath.Dir(got) != tc.wantDir {
+				t.Errorf("socket %q, want it under %q", got, tc.wantDir)
+			}
+			if len(got) > maxSocketPath {
+				t.Errorf("socket path is %d bytes, over the %d-byte limit", len(got), maxSocketPath)
+			}
+		})
+	}
+}
+
+// The fallback is a function of the runtime dir: stable across restarts
+// (a crashed daemon's stale socket must be found again) and distinct
+// between two deep repos sharing one temp dir.
+func TestSocketPathFallbackStable(t *testing.T) {
+	a := "/" + strings.Repeat("a", maxSocketPath)
+	b := "/" + strings.Repeat("b", maxSocketPath)
+	a1, err := socketPath(a, "/tmp")
+	if err != nil {
+		t.Fatalf("socketPath: %v", err)
+	}
+	a2, err := socketPath(a, "/tmp")
+	if err != nil {
+		t.Fatalf("socketPath: %v", err)
+	}
+	b1, err := socketPath(b, "/tmp")
+	if err != nil {
+		t.Fatalf("socketPath: %v", err)
+	}
+	if a1 != a2 {
+		t.Errorf("same dir, different sockets: %q vs %q", a1, a2)
+	}
+	if a1 == b1 {
+		t.Errorf("different dirs share a socket: %q", a1)
+	}
+}
+
+// A repo nested past the sun_path limit starts and serves anyway: the
+// daemon binds the temp-dir fallback, removes a stale socket planted
+// there, and daemon.json carries the path clients actually dial.
+func TestDeepRepoServesOverFallbackSocket(t *testing.T) {
+	setGitEnv(t)
+	root := filepath.Join(shortTempDir(t), strings.Repeat("d", 50), strings.Repeat("e", 50))
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	runGit(t, root, "init", "--quiet", "-b", "main")
+
+	dir := filepath.Join(root, ".git", "tuhdoo")
+	want, err := socketPath(dir, os.TempDir())
+	if err != nil {
+		t.Fatalf("socketPath: %v", err)
+	}
+	if want == filepath.Join(dir, "daemon.sock") {
+		t.Fatalf("test repo %q not deep enough to force the fallback", root)
+	}
+	if err := os.WriteFile(want, nil, 0o644); err != nil {
+		t.Fatalf("plant stale socket: %v", err)
+	}
+
+	d, client := startDaemonAt(t, root, Options{
+		Quiet: 50 * time.Millisecond,
+		Log:   log.New(io.Discard, "", 0),
+	})
+	if got := d.SocketPath(); got != want {
+		t.Fatalf("SocketPath = %q, want fallback %q", got, want)
+	}
+	mustDo(t, client, "GET", "/v0/state", "", nil, http.StatusOK)
+
+	b, err := os.ReadFile(filepath.Join(dir, "daemon.json"))
+	if err != nil {
+		t.Fatalf("read daemon.json: %v", err)
+	}
+	var disc struct {
+		Socket string `json:"socket"`
+	}
+	if err := json.Unmarshal(b, &disc); err != nil {
+		t.Fatalf("daemon.json: %v", err)
+	}
+	if disc.Socket != want {
+		t.Fatalf("daemon.json socket = %q, want %q", disc.Socket, want)
 	}
 }
