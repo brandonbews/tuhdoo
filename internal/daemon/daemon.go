@@ -7,6 +7,7 @@ package daemon
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -42,6 +43,26 @@ const DefaultMCPKeepAlive = 30 * time.Second
 // maxSocketPath is the longest unix socket path we bind (sun_path is
 // 104 bytes on macOS including the NUL).
 const maxSocketPath = 103
+
+// socketPath picks where the daemon binds its unix socket: beside
+// daemon.json in the runtime dir when that fits sun_path, else a short
+// path under tmpDir. The fallback is a hash of the runtime dir rather
+// than a random name so that a daemon restarting after a crash computes
+// the same path, keeping it distinct per repo and reachable by the
+// stale-socket removal in New. Discovery is unaffected either way:
+// clients dial whatever daemon.json says. Callers pass os.TempDir().
+func socketPath(dir, tmpDir string) (string, error) {
+	sock := filepath.Join(dir, "daemon.sock")
+	if len(sock) <= maxSocketPath {
+		return sock, nil
+	}
+	sum := sha256.Sum256([]byte(dir))
+	fallback := filepath.Join(tmpDir, "tuhdoo-"+hex.EncodeToString(sum[:6])+".sock")
+	if len(fallback) > maxSocketPath {
+		return "", fmt.Errorf("daemon: socket path %s exceeds the %d-byte unix socket limit, and so does the fallback %s", sock, maxSocketPath, fallback)
+	}
+	return fallback, nil
+}
 
 // defaultIdent commits on behalf of the daemon; the true author of each
 // change is the actor stamped on the events themselves.
@@ -228,9 +249,9 @@ func New(root string, opts Options) (*Daemon, error) {
 		logger.Printf("daemon: starting in fail-safe read-only mode: %v", err)
 	}
 
-	sock := filepath.Join(dir, "daemon.sock")
-	if len(sock) > maxSocketPath {
-		return nil, fmt.Errorf("daemon: socket path %s exceeds the %d-byte unix socket limit", sock, maxSocketPath)
+	sock, err := socketPath(dir, os.TempDir())
+	if err != nil {
+		return nil, err
 	}
 	// A leftover socket file from a crashed daemon is safe to remove:
 	// the flock above proves no live daemon owns it.

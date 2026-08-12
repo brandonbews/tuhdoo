@@ -7,7 +7,9 @@ no vendor, no accounts.
 
 ## Install
 
-tuhdoo is a single static binary; pick whichever path suits you.
+tuhdoo is a single static binary; pick whichever path suits you. It
+runs on macOS and Linux. Windows is not supported — on a Windows
+machine, run it inside WSL, where it is an ordinary Linux program.
 
 ### npm (recommended for TS/JS projects)
 

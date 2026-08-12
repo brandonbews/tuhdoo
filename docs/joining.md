@@ -42,6 +42,7 @@ A plain, full clone (as above) is the recommended shape. Other shapes:
 ## 2. Install the binary
 
 Any one of these works; all produce the same single static binary.
+tuhdoo runs on macOS and Linux; on Windows, use WSL.
 
 Via npm (recommended for TS/JS projects, because it pins the version in
 your lockfile):
