@@ -1,8 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 3 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
-
-**[1 open question](escalations.md) is waiting on a human.**
+0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
 
 ## In progress
 
@@ -10,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) | Test the escalation flow as a human | 0 | `test` `ux` |
 
 ## Blocked / waiting
 
@@ -18,7 +18,6 @@ _None._
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
-| [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) | Test the escalation flow as a human | 0 | an [open question](escalations.md) |
 
 ## On hold
 
