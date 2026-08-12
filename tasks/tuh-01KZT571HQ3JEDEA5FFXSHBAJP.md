@@ -2,7 +2,7 @@
 
 `tuh-01KZT571HQ3JEDEA5FFXSHBAJP`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `docs` `polish` `go`
 - **Created:** 2026-08-12 04:55 UTC by `brandon/claude-code-1`
@@ -28,3 +28,11 @@ Constraints: prose/identifier-comments only — zero behavior diffs; renaming a 
 ### 2026-08-12 20:52 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · priority 0→1 · labels +go
+
+### 2026-08-12 21:46 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-shbajp/verbs-to-tools`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/76>
+- Merged as: `a8cbcdcbc84c5095e1f64b17dbe411dba2e0ef48`
+
+Vocabulary sweep landed via PR #76 (squash a8cbcdc): "tool(s)" replaces "verb(s)" for the twelve MCP tools across the two sanctioned agent-visible strings in internal/daemon/mcp.go, CLAUDE.md's T5 law, internal-docs (002 T5 heading now "MCP tool surface"; 001 D6 amended with dated revision notes per convention), all code comments, and test names (TestMCPConfirmClaimVerb→TestMCPConfirmClaimTool, TestVerbTimeStandDownNotices→TestCallTimeStandDownNotices; harness const verbRetries→toolRetries). "verb-time" → "call-time" everywhere, defined in D6 clause 3. Untouched by design: textinput.go's submit-word param, noun.verb event naming, "verbatim", frozen TUI mockups, CLI-subcommand senses ("verb-less TUI", TestHelpDocumentsWriteVerbs), and 7 harness/smoke diagnostic string literals (string changes beyond the two sanctioned were out of scope; no test asserts their text — a follow-up could sanction them if full unification is wanted). 73 insertions/73 deletions, zero behavior diffs, make test lint green. The Go sweep (tuh-01KZ9YBF1N06FQ37XV65940SSG) can now start against settled vocabulary.

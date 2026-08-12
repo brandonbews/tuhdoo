@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 1 ready · 1 blocked · 6 on hold · 0 inbox · 94 done · 23 cancelled
+0 in progress · 1 ready · 1 blocked · 6 on hold · 0 inbox · 95 done · 23 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) | One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -133,6 +131,7 @@ _None._
 - [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) Task-view escalations: structured question always visible, context collapsed by default
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
+- [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior)
 
 ## Cancelled
 
