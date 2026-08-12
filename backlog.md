@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 1 blocked · 5 on hold · 3 inbox · 93 done · 23 cancelled
+0 in progress · 2 ready · 1 blocked · 5 on hold · 2 inbox · 93 done · 23 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) | One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior) | 1 | `docs` `polish` `go` |
 | [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `polish` `go` |
 
 ## Blocked / waiting
@@ -36,7 +37,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
-- [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) Align remaining "verbs" wording with the settled "tools" term (mcp.go tool description, code comments, internal docs)
 
 ## Done
 
