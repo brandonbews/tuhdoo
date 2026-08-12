@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 3 ready · 3 blocked · 4 on hold · 4 inbox · 88 done · 22 cancelled
+1 in progress · 2 ready · 3 blocked · 4 on hold · 4 inbox · 88 done · 22 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | `docs` `web` `launch` |
 | [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |
 | [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `tui` `ux` |
 
