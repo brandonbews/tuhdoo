@@ -9,7 +9,7 @@ them by hand. Docs: https://tuhdoo.com
 
 ## At a glance
 
-**[2 open questions](escalations.md) are waiting on a human.**
+**[1 open question](escalations.md) is waiting on a human.**
 
 | In progress | Ready | Blocked | On hold | Inbox | Done | Cancelled |
 |---:|---:|---:|---:|---:|---:|---:|

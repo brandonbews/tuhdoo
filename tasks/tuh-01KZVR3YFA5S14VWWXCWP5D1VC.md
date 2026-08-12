@@ -19,7 +19,7 @@ A throwaway fixture task: it exists so Brandon can walk the answering UX end to 
 
 This escalation is a test fixture: Brandon asked for a throwaway task with real UX questions so he can walk the answering flow end to end. The referenced decision is genuine though — answering it here saves a future triage pass.
 
-_Unanswered._
+**Answer** (`brandon`): i like a, but maybe that's a more robust ux change. i feel like escalations are a tricky ux, and i would want to get it right. we can keep the task, but lets put it on hold and make sure to note that we want grill whether the answering experience should open on enter (and look like claude code's qa module) o rbe something simpler.
 
 ### 2026-08-12 19:46 UTC — escalation from `brandon/claude-code-1` (blocking)
 

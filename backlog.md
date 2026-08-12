@@ -2,7 +2,7 @@
 
 0 in progress · 0 ready · 3 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
 
-**[2 open questions](escalations.md) are waiting on a human.**
+**[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
