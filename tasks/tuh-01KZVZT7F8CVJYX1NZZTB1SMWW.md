@@ -1,0 +1,16 @@
+# closedByRun can erase a lost attempt's promised superseded trace; loser salvage runs unlinked to their claim
+
+`tuh-01KZVZT7F8CVJYX1NZZTB1SMWW`
+
+- **Status:** inbox — untriaged capture
+- **Priority:** 0
+- **Labels:** `audit-finding`
+- **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
+
+## Description
+
+Go-sweep audit finding, internal/core. replay.go ~511-518 matches a voided claim's 'closing' run by (same task, same actor, run ID > claim ID) — not by claim, because apply stores non-holder runs with Claim="" (replay.go ~383-384). Scenario: actor's claim voided, lease lapses, winner releases without finishing, same actor re-claims and finishes — that later run suppresses superseded-run synthesis for the FIRST lost attempt (zero runs, contradicting D6 clause 3 'a loser that never reports leaves a trace anyway' / 'one close per attempt') and double-books as attempt two's close. Related asymmetry: a loser's real coerced-superseded run has Claim="" while the synthesized one carries Claim=c.ID — D6 calls the reported run the claim's salvage record, but state cannot connect them. Fixing linkage would fix the matching. Deterministic, low severity, genuine divergence from D6 clause-3 wording.
+
+## History
+
+_No activity yet._

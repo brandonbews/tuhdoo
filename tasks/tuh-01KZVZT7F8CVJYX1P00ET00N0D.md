@@ -1,0 +1,16 @@
+# Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
+
+`tuh-01KZVZT7F8CVJYX1P00ET00N0D`
+
+- **Status:** inbox — untriaged capture
+- **Priority:** 0
+- **Labels:** `audit-finding`
+- **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
+
+## Description
+
+Go-sweep audit finding, internal/daemon. Untested designed mechanisms needing more than a table row: (1) gateVerdict's bounded retry loop answering 'remote kept moving for N attempts' (ops.go ~811-812) is tolerated by race tests, never asserted — needs a remote that always moves between fetch and push (gitx fake or hook); confirmGateRetries mirroring the syncer's constant is asserted nowhere. (2) Degraded-mode renewal stop (mcp.go ~266-270): a session holding a claim when the daemon degrades should stop renewing and let the lease lapse honestly — untested. (3) Shutdown's best-effort final sync (daemon.go ~315-319, the laptop-lid push) — untested; needs a remote-wired shutdown test.
+
+## History
+
+_No activity yet._

@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 6 on hold · 0 inbox · 95 done · 23 cancelled
+1 in progress · 0 ready · 1 blocked · 6 on hold · 14 inbox · 95 done · 23 cancelled
 
 ## In progress
 
@@ -33,7 +33,22 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 ## Inbox
 
-_None._
+Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
+
+- [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) HTTP surface accepts daemon-only outcomes and carries a dead manual renew endpoint
+- [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) get_task and /v0/state serve lease verdicts at last-refresh time, not read time
+- [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) closedByRun can erase a lost attempt's promised superseded trace; loser salvage runs unlinked to their claim
+- [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) Undesigned strictness asymmetry: escalation-answer task mismatch accepted, confirmation task mismatch malformed
+- [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) Replay letter-vs-code edges: holder's late finish after uncontested expiry; empty-task events malformed despite subject-less envelope support
+- [`tuh-jh5j`](tasks/tuh-01KZVZT7F8CVJYX1P000JQJH5J.md) T6 doc drift: view stamp documented at views/.meta, lives at .views-meta.json
+- [`tuh-a3a9`](tasks/tuh-01KZVZT7F8CVJYX1P003BNA3A9.md) D9 epoch compaction is on a collision course with the events union merge
+- [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) Lease-path parsing diverges between store loader and merge-path replay
+- [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) Batcher.LastError is a reporting channel nobody reads
+- [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) T7 doc drift: one-shot WAITING vocabulary and TUI sections omit later-designed tokens; parent-edge remnants
+- [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) tuhdoo answer swallows ambiguous task fragments instead of listing candidates
+- [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
+- [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness: unexercised D6 arms and unasserted claim-response warning
+- [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 
 ## Done
 
