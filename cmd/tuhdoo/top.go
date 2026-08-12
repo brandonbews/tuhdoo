@@ -380,8 +380,7 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "c":
 		// Cancel is c (status-vocabulary revision, 2026-08-01): the key
-		// spells its verb again. It briefly toured "a archive" while the
-		// verb was archive (2026-07-31–2026-08-01).
+		// spells its verb again.
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask && !terminalStatus(r.task.Status) {
 			m.mode, m.back, m.target, m.input, m.status = modeConfirmCancel, modeNav, r, textInput{}, ""
 		}
@@ -489,6 +488,15 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// renderWidth is the width every render pass draws to: the terminal's,
+// or 80 — the mockup's design width — before the first WindowSizeMsg.
+func (m topModel) renderWidth() int {
+	if m.width <= 0 {
+		return 80
+	}
+	return m.width
+}
+
 // detailStopAt maps a terminal row to the stop index rendered there,
 // or -1 for everything else. Like rowAt, it replays the exact layout
 // detailView draws — same header, same scroll window — off the same
@@ -498,10 +506,7 @@ func (m topModel) detailStopAt(y int) int {
 	if lines == nil {
 		return -1
 	}
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
+	width := m.renderWidth()
 	head := strings.Count(m.listHead(width), "\n")
 	scroll := m.detailScroll
 	if max := m.detailMaxScroll(); scroll > max {
@@ -530,10 +535,7 @@ func (m topModel) rowAt(y int) int {
 	if m.snap == nil || m.err != nil {
 		return -1
 	}
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
+	width := m.renderWidth()
 	line := strings.Count(m.listHead(width), "\n")
 	footLines := strings.Count("\n"+m.footerView(width), "\n")
 	for _, c := range visibleChunks(m.listChunks(width), m.height, line, footLines) {
@@ -990,10 +992,7 @@ func (m topModel) detailLines() []detailLine {
 		return nil
 	}
 	col, t := m.col, h.Task
-	width := m.width
-	if width <= 0 {
-		width = 80 // no WindowSizeMsg yet: the mockup's design width
-	}
+	width := m.renderWidth()
 	// The focus ring's stops share render order with this pass, so each
 	// stop line takes the next index as it renders — the counter walks
 	// detailStops' construction order exactly; watch mode has no stops
@@ -1195,6 +1194,16 @@ func (m topModel) detailLines() []detailLine {
 // expanded renders the full block. Contexts that fit one screen line
 // render as-is: nothing to hide, no stub. The count is screen lines at
 // this width — exactly what expanding reveals.
+// blockingBadge is the red ! badge (and its style) an escalation row
+// carries when blocking — the badge alone carries "blocking"; the word
+// is banned on this surface. Empty for non-blocking.
+func blockingBadge(col colors, blocking bool) (badge, style string) {
+	if blocking {
+		return "!", col.red + col.bold
+	}
+	return "", ""
+}
+
 func escalationRow(col colors, e escalationJSON, expanded bool, width int) string {
 	inner := width - 6
 	if inner < 10 {
@@ -1203,10 +1212,7 @@ func escalationRow(col colors, e escalationJSON, expanded bool, width int) strin
 	wrapIndent := func(s string) []string {
 		return strings.Split(strings.TrimRight(wrapTo(s, inner), "\n"), "\n")
 	}
-	badge, style := "", ""
-	if e.Blocking {
-		badge, style = "!", col.red+col.bold
-	}
+	badge, style := blockingBadge(col, e.Blocking)
 	var lines []string
 	first := true
 	for _, q := range strings.Split(strings.TrimRight(e.Question, "\n"), "\n") {
@@ -1330,10 +1336,7 @@ func (m topModel) detailRevealScroll() int {
 // which is taller while an input box is open. Counting the rendered
 // strings keeps the window honest against any footer shape.
 func (m topModel) detailWindow() int {
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
+	width := m.renderWidth()
 	w := m.height - strings.Count(m.listHead(width), "\n") - 1 -
 		strings.Count(m.detailFooter(), "\n")
 	if w < 1 {
@@ -1357,10 +1360,7 @@ func (m topModel) detailMaxScroll() int {
 }
 
 func (m topModel) detailView(body []string) string {
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
+	width := m.renderWidth()
 	var w strings.Builder
 	// The same header bar as the list: one screen identity (task-view
 	// rework, 2026-08-01).
@@ -1379,21 +1379,27 @@ func (m topModel) detailView(body []string) string {
 	w.WriteString(strings.Join(body, "\n"))
 	w.WriteString("\n\n")
 	// Same bottom-pinning as the list (chrome hierarchy, 2026-08-03):
-	// detailWindow already reserves these rows, so only the shortfall
-	// of a short body pads. detailStopAt needs no padding awareness —
-	// clicks below the body already miss every stop. Same trailing-
-	// newline trim as View: the pinned frame is exactly height
-	// split-lines, footer last and unterminated, or bubbletea drops the
-	// header row from the top.
-	if m.height > 0 {
-		if pad := m.detailWindow() - len(body); pad > 0 {
-			w.WriteString(strings.Repeat("\n", pad))
+	// detailWindow already reserves the footer rows, so only the
+	// shortfall of a short body pads. detailStopAt needs no padding
+	// awareness — clicks below the body already miss every stop.
+	return pinFrame(w.String(), m.detailWindow()-len(body), m.detailFooter(), m.height)
+}
+
+// pinFrame finishes a screen: content, pad blank lines so the footer
+// pins to the bottom row, footer last. The pinned frame must be exactly
+// height split-lines with the footer unterminated: bubbletea splits the
+// view on \n — a trailing newline is an extra (empty) line — and drops
+// any overflow from the TOP, so an unstripped final newline costs the
+// header row. Before the first WindowSizeMsg (height <= 0) the footer
+// floats unpadded and the frame keeps its trailing newline.
+func pinFrame(content string, pad int, footer string, height int) string {
+	if height > 0 {
+		if pad > 0 {
+			content += strings.Repeat("\n", pad)
 		}
-		w.WriteString(m.detailFooter())
-		return strings.TrimSuffix(w.String(), "\n")
+		return strings.TrimSuffix(content+footer, "\n")
 	}
-	w.WriteString(m.detailFooter())
-	return w.String()
+	return content + footer
 }
 
 // detailFooter is the task view's bottom line: the live input prompt
@@ -1409,10 +1415,7 @@ func (m topModel) detailFooter() string {
 		return f
 	}
 	col := m.col
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
+	width := m.renderWidth()
 	legend := [][2]string{{"↑/↓ (j/k)", "scroll"}, {"esc", "back"}, {"q", "quit"}}
 	if m.armed {
 		legend = [][2]string{{"↑/↓ (j/k)", "move"}, {"enter", "edit"},
@@ -1438,10 +1441,7 @@ func (m topModel) View() string {
 		// The task vanished under a refresh: fall through to the list.
 	}
 	col := m.col
-	width := m.width
-	if width <= 0 {
-		width = 80 // no WindowSizeMsg yet: the mockup's design width
-	}
+	width := m.renderWidth()
 	head := m.listHead(width)
 	if m.err != nil {
 		return head + wrapTo(fmt.Sprintf("%sdaemon unreachable:%s %v %s(retrying)%s\n",
@@ -1454,21 +1454,10 @@ func (m topModel) View() string {
 	headN, footN := strings.Count(head, "\n"), strings.Count(foot, "\n")
 	body := joinChunks(visibleChunks(m.listChunks(width), m.height, headN, footN))
 	// The footer — or the live input prompt riding in its place — pins
-	// to the bottom row by padding a short body with blank lines (chrome
-	// hierarchy, 2026-08-03); it floats only before the first
-	// WindowSizeMsg. rowAt needs no padding awareness: the pad sits
-	// below every row chunk, where clicks already miss. The pinned frame
-	// must be exactly height split-lines with the footer last and
-	// unterminated: bubbletea splits the view on \n — a trailing newline
-	// is an extra (empty) line — and drops any overflow from the TOP, so
-	// an unstripped final newline costs the header row.
-	if m.height > 0 {
-		if pad := m.height - headN - footN - strings.Count(body, "\n"); pad > 0 {
-			body += strings.Repeat("\n", pad)
-		}
-		return strings.TrimSuffix(head+body+foot, "\n")
-	}
-	return head + body + foot
+	// to the bottom row (chrome hierarchy, 2026-08-03). rowAt needs no
+	// padding awareness: the pad sits below every row chunk, where
+	// clicks already miss.
+	return pinFrame(head+body, m.height-headN-footN-strings.Count(body, "\n"), foot, m.height)
 }
 
 // listHead renders the list screen's header block (header bar, optional
@@ -1530,13 +1519,12 @@ func idColWidth(s *snapshot) int {
 }
 
 // topSection describes one dashboard section: which rows it collects,
-// its bar color, whether its rows render dim, and the steering keys the
-// bar advertises when the pane is armed.
+// its bar color, and the steering keys the bar advertises when the
+// pane is armed.
 type topSection struct {
 	key   string
 	label string
 	bg    func(colors) string
-	dim   bool // shelf sections: dim bar, dim rows
 	hint  string
 }
 
@@ -1545,21 +1533,21 @@ var topSections = []topSection{
 	// entity keeps its name; the header alone softens the severity the
 	// word overstates, and names no answerer — a future one may not be
 	// a human.
-	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, false, "enter answer"},
-	{"ready", "READY", func(c colors) string { return c.bgGreen }, false, "p priority · c cancel"},
-	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, false, ""},
+	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "enter answer"},
+	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c cancel"},
+	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
 	// BLOCKED's bgRed went dim red (bar recolors, 2026-08-04): the
 	// section holds only unmet-dependency tasks — ordinary sequencing,
 	// not a fire — so the bar keeps the hue and drops the alarm.
-	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, false, ""},
+	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
 	// The shelves (2026-07-31): held above inbox, both dim rows — parked
 	// and captured work sits below the live queue and never claims the
 	// eye. Chrome hierarchy (2026-08-03): held is shelved and takes the
 	// dark-gray bgGray bar. Bar recolors (2026-08-04): inbox awaits
 	// attention and takes the bright-white bgWhite bar (was reverse-dim)
 	// — its rows stay dim, but the bar no longer reads as shelf chrome.
-	{"held", "ON HOLD", func(c colors) string { return c.bgGray }, true, "c cancel"},
-	{"inbox", "INBOX", func(c colors) string { return c.bgWhite }, true, "i capture · c cancel"},
+	{"held", "ON HOLD", func(c colors) string { return c.bgGray }, "c cancel"},
+	{"inbox", "INBOX", func(c colors) string { return c.bgWhite }, "i capture · c cancel"},
 }
 
 // historySections are history mode's bars (history view, 2026-08-02):
@@ -1568,8 +1556,8 @@ var topSections = []topSection{
 // kept, never claiming the eye. No steering hints: the shelf is
 // read-only in both panes.
 var historySections = []topSection{
-	{"done", "DONE", func(c colors) string { return c.bgGreen }, false, ""},
-	{"cancelled", "CANCELLED", func(c colors) string { return c.bgGray }, true, ""},
+	{"done", "DONE", func(c colors) string { return c.bgGreen }, ""},
+	{"cancelled", "CANCELLED", func(c colors) string { return c.bgGray }, ""},
 }
 
 // sections is the on-screen list's section set.
@@ -1824,10 +1812,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		// metadata sits on line 3 because the question outranks it. The
 		// red ! badge alone carries "blocking" — the word is gone.
 		e := r.esc
-		badge, style := "", ""
-		if e.Blocking {
-			badge, style = "!", col.red+col.bold
-		}
+		badge, style := blockingBadge(col, e.Blocking)
 		meta := append(metaParts(s, e.Task), e.Actor, stamp(e.RaisedAt))
 		text = gridRow(col, idW, event.ShortID(e.Task), badge, style, s.tasks[e.Task].Task.Title, width) +
 			"\n" + secondLine(col, tcol, "question: ", col.magenta, e.Question, width) +

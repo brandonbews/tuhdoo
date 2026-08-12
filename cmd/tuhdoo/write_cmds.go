@@ -18,10 +18,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
 // writeActor resolves the acting principal for a write command exactly

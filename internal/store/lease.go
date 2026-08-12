@@ -36,23 +36,22 @@ func leasePath(claimID string) (string, error) {
 	return "leases/" + claimID + ".json", nil
 }
 
-// EncodeLease renders lease-file bytes for an expiry (UTC, second
-// precision). Exported so the sync layer can resolve lease-file merge
-// conflicts without duplicating the format.
-func EncodeLease(expires time.Time) []byte {
-	return encodeLease(expires, false)
+// encodeLease renders lease-file bytes for an expiry (UTC, second
+// precision).
+func encodeLease(expires time.Time) []byte {
+	return encodeLeaseFile(expires, false)
 }
 
-// EncodeLeaseTombstone renders released-tombstone bytes: the lease
+// encodeLeaseTombstone renders released-tombstone bytes: the lease
 // ended at expires, on purpose. Binaries that predate the marker ignore
 // the unknown field and read an ordinary lease lapsed at that instant —
 // the same verdict, minus the merge preference (leases are mutable
 // files, so this is acceptable degradation, not a T3 concern).
-func EncodeLeaseTombstone(expires time.Time) []byte {
-	return encodeLease(expires, true)
+func encodeLeaseTombstone(expires time.Time) []byte {
+	return encodeLeaseFile(expires, true)
 }
 
-func encodeLease(expires time.Time, released bool) []byte {
+func encodeLeaseFile(expires time.Time, released bool) []byte {
 	data, err := json.Marshal(leaseFile{
 		Expires:  expires.UTC().Truncate(time.Second).Format(time.RFC3339),
 		Released: released,
@@ -94,7 +93,7 @@ func (s *Store) WriteLease(claimID string, expires time.Time) error {
 	if err != nil {
 		return err
 	}
-	return s.AppendBatch(Batch{Files: map[string][]byte{path: EncodeLease(expires)}})
+	return s.AppendBatch(Batch{Files: map[string][]byte{path: encodeLease(expires)}})
 }
 
 // ReleaseLease overwrites the lease file for claimID with a released
@@ -107,7 +106,7 @@ func (s *Store) ReleaseLease(claimID string, at time.Time) error {
 	if err != nil {
 		return err
 	}
-	return s.AppendBatch(Batch{Files: map[string][]byte{path: EncodeLeaseTombstone(at)}})
+	return s.AppendBatch(Batch{Files: map[string][]byte{path: encodeLeaseTombstone(at)}})
 }
 
 // ReadLeases returns every lease as claim ID → expiry (UTC).

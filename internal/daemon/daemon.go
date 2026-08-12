@@ -334,7 +334,7 @@ func (d *Daemon) cleanup() {
 func (d *Daemon) SocketPath() string { return d.sockPath }
 
 // Refresh recomputes cached state from the branch. The sync loop (B7)
-// will call this after every fetch/merge.
+// calls this after every fetch/merge (wired via OnMerged in New).
 func (d *Daemon) Refresh() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
