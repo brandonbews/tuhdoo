@@ -21,6 +21,10 @@ Constraints: no new MCP verb — a field on an existing tool, T5's twelve-verb s
 
 ## History
 
+### 2026-08-06 21:02 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +go +mcp +protocol −design
+
 ### 2026-08-06 23:29 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-bsdh/merged-as-run-field`

@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T92BPEZ8`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-4`
 - **Priority:** 0
 - **Labels:** `tui` `ux`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -36,3 +36,7 @@ Pointers: `cmd/tuhdoo/top.go` — the depends-on field line (~1020), focus-stop 
 ### 2026-08-06 22:41 UTC — note from `brandon/claude-code-1`
 
 Partial progress on the "sweep for leftover parent/epic traces" item, 2026-08-06 triage session: docs/agent-protocol.md's two stale parents references (the Decomposition section's "parent edges pointing at the task you hold" and update_task's list-field note) were fixed directly in PR #44 — decomposition now reads "create children in one batch, then point the held task at them with depends_on". The eventual sweep still owes the rest of the codebase/docs; internal/event/catalog.go's "stored events may still carry parents (retired)" comment is deliberate read-side legacy handling, not drift — leave it.
+
+### 2026-08-11 23:19 UTC — edit by `brandon/claude-code-4`
+
+retitled · description edited · status inbox→open · labels +ux −design

@@ -25,6 +25,14 @@ Constraints: no event, API, or MCP surface changes; stored bytes untouched; bori
 
 ## History
 
+### 2026-07-31 06:37 UTC — edit by `brandon/claude-code-3`
+
+description edited
+
+### 2026-07-31 07:54 UTC — edit by `brandon/claude-code-10`
+
+depends_on +t-pvg4
+
 ### 2026-07-31 09:11 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `main`

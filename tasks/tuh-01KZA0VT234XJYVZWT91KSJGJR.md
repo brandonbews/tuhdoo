@@ -15,4 +15,6 @@ Cancelled at the 2026-08-06 grill (Brandon): cross-repo plans are explicitly out
 
 ## History
 
-_No activity yet._
+### 2026-08-06 21:39 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→cancelled

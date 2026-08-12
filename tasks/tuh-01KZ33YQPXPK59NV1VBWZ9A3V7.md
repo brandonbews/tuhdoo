@@ -37,6 +37,10 @@ Constraints: boring Go (T1); 16-color law untouched; one PR per the repo convent
 
 ## History
 
+### 2026-08-03 22:13 UTC — edit by `brandon/claude-code-2`
+
+retitled · description edited · status inbox→open · labels +tui +go
+
 ### 2026-08-03 22:37 UTC — run by `brandon/claude-code-2` — done
 
 - Branch: `tuh-a3v7/tui-chrome-hierarchy`

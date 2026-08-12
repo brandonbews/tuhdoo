@@ -33,6 +33,18 @@ Constraints: TUI list rendering only — the detail view, CLI one-shots (T7 seri
 
 ## History
 
+### 2026-08-05 19:35 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→open
+
+### 2026-08-05 19:39 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-05 19:39 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-05 20:31 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-0xjx/two-line-list-rows`

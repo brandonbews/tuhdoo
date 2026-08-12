@@ -21,4 +21,6 @@ Rejected at the grill: promoting a standalone flow-doc task now (would design th
 
 ## History
 
-_No activity yet._
+### 2026-08-06 22:56 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→cancelled

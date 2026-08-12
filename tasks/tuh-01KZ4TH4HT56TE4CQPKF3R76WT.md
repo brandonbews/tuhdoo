@@ -26,6 +26,10 @@ Constraints: boring Go (T1); replay stays pure; stored bytes never rewritten and
 
 ## History
 
+### 2026-08-04 08:01 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · priority 0→1 · depends_on +tuh-n777
+
 ### 2026-08-05 01:53 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-76wt/loser-handling`

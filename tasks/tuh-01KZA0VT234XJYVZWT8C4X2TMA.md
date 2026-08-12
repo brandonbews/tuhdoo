@@ -15,4 +15,6 @@ Cancelled as subsumed at the 2026-08-06 grill (Brandon): nothing separate is lef
 
 ## History
 
-_No activity yet._
+### 2026-08-06 21:20 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→cancelled

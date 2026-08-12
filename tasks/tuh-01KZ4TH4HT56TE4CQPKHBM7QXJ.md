@@ -20,3 +20,7 @@ Harmless in behaviour, but the doc should either say so or the intent behind the
 ### 2026-08-04 08:01 UTC — note from `brandon/claude-code-1`
 
 Absorbed by the 2026-08-04 confirmation-gate grill (Brandon's direction, this session). The D6 revision (PR #28) deleted the machine-id tiebreak clause outright as vacuous — ULIDs never tie — and went further: the mint-time ULID rule itself is demoted to a provisional verdict, with the final verdict now a claim.confirmed event won through the remote's CAS push. The doc change this capture asked for is a subset of that rewrite. Cancelling as absorbed, not as wrong: the finding was correct and is credited in the D6 revision note.
+
+### 2026-08-04 08:01 UTC — edit by `brandon/claude-code-1`
+
+status inbox→cancelled

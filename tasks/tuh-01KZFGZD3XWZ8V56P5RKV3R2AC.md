@@ -28,6 +28,10 @@ Constraints: no new .github/workflows files; fixes follow the toolchain gate (Bi
 
 ## History
 
+### 2026-08-10 20:57 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +web +launch · depends_on +tuh-wyqn +tuh-ban7 +tuh-jhqx
+
 ### 2026-08-11 21:15 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-r2ac/prod-readiness`

@@ -26,6 +26,14 @@ History: captured 2026-07-31; flavor-picker ceiling archived same day (see this 
 
 ## History
 
+### 2026-07-31 22:32 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→held
+
+### 2026-07-31 22:33 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-07-31 23:59 UTC — note from `brandon/claude-code-1`
 
 Position statement for the future grill (2026-07-31 session with Brandon) — inputs, not decisions:
@@ -43,6 +51,18 @@ Position statement for the future grill (2026-07-31 session with Brandon) — in
 ### 2026-08-01 00:03 UTC — note from `brandon/claude-code-1`
 
 Update (2026-07-31, same session): the init flavor picker (tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ, point 5 of the previous note) was archived same-day on Brandon's call, accepting two arguments against building it: (1) staleness — scaffolding files baked into the shipped binary encode fast-moving harness conventions (skill formats, AGENTS.md idioms) that a docs page can fix in minutes but a binary teaches wrong indefinitely, with tuhdoo's authority behind it; (2) menu-of-one — only one flavor (Brandon's) exists or is proven, and a picker with one real option plus filler is worse than a link to one excellent doc. Surviving scope for this task is the floor: init emits links to recipe docs after success; recipes are docs pages with copy-pasteable, vendorable per-host blocks. If distinct proven flavors ever accumulate and formats settle, a picker could be re-raised as a fresh capture — nothing here forecloses it.
+
+### 2026-08-07 18:04 UTC — edit by `brandon/claude-code-1`
+
+description edited · status held→open · depends_on +tuh-qf4g
+
+### 2026-08-07 21:38 UTC — edit by `brandon/claude-code-1`
+
+description edited · depends_on +tuh-kk4j
+
+### 2026-08-07 21:43 UTC — edit by `brandon/claude-code-1`
+
+description edited
 
 ### 2026-08-07 22:02 UTC — run by `brandon/claude-code-1` — done
 

@@ -36,6 +36,14 @@ Constraints: one-shot commands untouched (no selection concept there); boring Go
 
 ## History
 
+### 2026-07-31 21:04 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +cli +tui · depends_on +tuh-83bn
+
+### 2026-07-31 21:17 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-07-31 23:24 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-1dct/selection-highlight`

@@ -45,3 +45,7 @@ Brandon's reasoning: the branch being a real branch, with all the quirks of a re
 TRIPWIRE (why cancelled, not held): if real adopters report this friction post-launch, capture it FRESH with their evidence — do not revive this speculative capture (affinity-hints precedent, 2026-08-06). The verified facts above carry over; the decision does not auto-carry.
 
 Recorded: D4 consequence 3 re-affirmation note in 001-core-design.md (PR referencing this task). Sibling docs task tuh-01KZPW8CZPKF2KTWMA5B8QYVN0 promoted to ready with the doc-shape decisions folded in (principle + verified Vercel example; docs AND init line; no unverified vendor steps).
+
+### 2026-08-11 22:00 UTC — edit by `brandon/claude-code-1`
+
+status inbox→cancelled

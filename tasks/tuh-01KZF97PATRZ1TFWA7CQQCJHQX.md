@@ -30,6 +30,14 @@ Constraints: agent-protocol.md is exempt and out of bounds — its wording is a 
 
 ## History
 
+### 2026-08-10 20:46 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +docs +launch
+
+### 2026-08-10 21:36 UTC — edit by `brandon`
+
+description edited
+
 ### 2026-08-10 22:09 UTC — escalation from `brandon/claude-code-1` (blocking)
 
 > Review PR #62 (https://github.com/brandonbews/tuhdoo/pull/62) — the docs + landing copy pass. Approve and merge (squash), or leave change requests on the PR and answer here so the next claimant addresses them.

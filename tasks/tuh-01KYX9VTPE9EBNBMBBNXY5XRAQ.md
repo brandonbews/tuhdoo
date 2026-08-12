@@ -22,4 +22,6 @@ Tensions the grill must resolve:
 
 ## History
 
-_No activity yet._
+### 2026-08-01 00:03 UTC — edit by `brandon`
+
+status held→cancelled

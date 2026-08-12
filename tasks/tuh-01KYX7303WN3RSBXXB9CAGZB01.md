@@ -33,6 +33,18 @@ Constraints: boring Go; no new dependencies; read-only feature — no new daemon
 
 ## History
 
+### 2026-08-01 00:08 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→held · labels +design +tui +cli +product
+
+### 2026-08-01 06:11 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status held→open · depends_on +tuh-s8vt
+
+### 2026-08-02 06:42 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited
+
 ### 2026-08-03 05:58 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-zb01/history-view`

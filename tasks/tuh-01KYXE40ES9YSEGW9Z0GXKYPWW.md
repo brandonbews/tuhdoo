@@ -45,6 +45,14 @@ One shared text-input component used by every text entry in the TUI:
 
 ## History
 
+### 2026-08-01 01:21 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +cli +tui +ux
+
+### 2026-08-01 02:09 UTC — edit by `brandon`
+
+description edited
+
 ### 2026-08-01 02:40 UTC — run by `brandon/claude-code-1` — interrupted
 
 lease expired without a finish or release

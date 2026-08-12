@@ -24,4 +24,18 @@ Constraints: agents must not work this task. If you are an agent holding this cl
 
 ## History
 
-_No activity yet._
+### 2026-08-03 20:06 UTC — edit by `brandon`
+
+status open→held
+
+### 2026-08-03 20:56 UTC — edit by `brandon`
+
+description edited
+
+### 2026-08-06 21:27 UTC — edit by `brandon/claude-code-1`
+
+depends_on +tuh-pk06
+
+### 2026-08-07 21:53 UTC — edit by `brandon/claude-code-1`
+
+description edited

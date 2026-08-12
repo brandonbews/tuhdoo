@@ -38,3 +38,7 @@ The DoD has been rewritten (docs/plan/roadmap.md, v0) from elapsed time to five 
 Why the week was retired rather than waited out: the binary changed every few minutes throughout, so a strict reading reset the clock on every deploy and the criterion was unsatisfiable for as long as development continued. The load-bearing clause was never the week — it was 'no manual repair', which is point 2 and is mechanically checkable. The rapid iteration made this a harsher test than the week intended, not a weaker one: a live schema bump on a running ledger and dozens of mid-claim restarts are exactly the failure modes the criterion existed to catch.
 
 Filing note: this escalation was the wrong fence. Nothing had stalled — the milestone was simply not to be worked yet, which is 'held'. It was chosen on 2026-07-30, one day before the held status existed. The rule is now written down: docs/agent-protocol.md, 'no attempt, no escalation'.
+
+### 2026-08-03 20:07 UTC — edit by `brandon`
+
+status open→done

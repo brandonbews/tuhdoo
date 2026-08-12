@@ -23,4 +23,18 @@ When unblocked: decide how parent-grouping coexists with the status-first sectio
 
 ## History
 
-_No activity yet._
+### 2026-07-31 15:49 UTC — edit by `brandon`
+
+description edited · status open→held
+
+### 2026-08-01 05:42 UTC — edit by `brandon/claude-code-1`
+
+depends_on −t-d83w
+
+### 2026-08-03 21:07 UTC — edit by `brandon`
+
+description edited
+
+### 2026-08-05 21:43 UTC — edit by `brandon/claude-code-1`
+
+description edited · status held→cancelled

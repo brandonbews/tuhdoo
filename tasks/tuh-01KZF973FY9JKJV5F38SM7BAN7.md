@@ -24,6 +24,14 @@ Constraints: no glassy panels, gradient washes, or 3D effects anywhere except th
 
 ## History
 
+### 2026-08-10 20:46 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +web +design +launch · depends_on +tuh-wyqn +tuh-7sqc
+
+### 2026-08-10 21:37 UTC — edit by `brandon`
+
+description edited
+
 ### 2026-08-11 03:16 UTC — escalation from `brandon/claude-code-1` (blocking)
 
 > Review PR #64 (https://github.com/brandonbews/tuhdoo/pull/64) — the site visual-identity pass. Vercel preview: https://tuhdoo-k0l3w44ey-bews-prod.vercel.app (behind your Vercel SSO; the PR page also links it). Approve visually and merge (squash), or leave change requests and answer here. Two derivation judgment calls specifically need your sign-off: (1) the light-mode mark and (2) the flat favicon.

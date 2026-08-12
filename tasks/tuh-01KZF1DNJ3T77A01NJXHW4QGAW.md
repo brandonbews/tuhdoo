@@ -27,4 +27,6 @@ Pointers: `internal/views/views.go` — `readme()`, `FormatVersion` (line 41), t
 
 ## History
 
-_No activity yet._
+### 2026-08-11 23:28 UTC — edit by `brandon/claude-code-4`
+
+retitled · description edited · status inbox→open · labels +views

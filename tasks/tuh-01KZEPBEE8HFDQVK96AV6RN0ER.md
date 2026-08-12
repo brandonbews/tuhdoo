@@ -25,4 +25,18 @@ Scope notes from the structuring grill: distribution is already solved (npm laun
 
 ## History
 
-_No activity yet._
+### 2026-08-07 21:17 UTC — edit by `brandon/claude-code-1`
+
+depends_on +tuh-kk4j
+
+### 2026-08-07 21:35 UTC — edit by `brandon/claude-code-1`
+
+depends_on +tuh-0q0x
+
+### 2026-08-10 20:46 UTC — edit by `brandon`
+
+depends_on +tuh-wyqn +tuh-ban7 +tuh-jhqx +tuh-7sqc +tuh-yayn
+
+### 2026-08-10 20:57 UTC — edit by `brandon`
+
+depends_on +tuh-r2ac

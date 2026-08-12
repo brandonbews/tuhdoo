@@ -38,6 +38,14 @@ Constraints: TUI-only — bg* codes never leak into one-shot command output (tha
 
 ## History
 
+### 2026-08-04 08:00 UTC — edit by `brandon`
+
+description edited
+
+### 2026-08-04 17:59 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +tui
+
 ### 2026-08-05 02:36 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-7hs6/tui-bar-recolors`

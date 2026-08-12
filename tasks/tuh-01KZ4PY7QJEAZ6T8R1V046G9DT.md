@@ -29,6 +29,10 @@ Acceptance:
 
 ## History
 
+### 2026-08-11 22:58 UTC — edit by `brandon/claude-code-4`
+
+retitled · description edited · status inbox→open · labels +go
+
 ### 2026-08-12 00:04 UTC — run by `brandon/claude-code-4` — done
 
 - Branch: `tuh-g9dt/task-history-edits`

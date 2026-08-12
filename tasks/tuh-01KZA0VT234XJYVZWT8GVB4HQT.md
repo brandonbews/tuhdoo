@@ -21,6 +21,14 @@ Constraints: stay workflow-agnostic (agent-protocol step 3: ordinary git on ordi
 
 ## History
 
+### 2026-08-06 20:13 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open
+
+### 2026-08-06 20:14 UTC — edit by `brandon/claude-code-1`
+
+labels +docs +protocol −design −ledger
+
 ### 2026-08-06 23:18 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-4hqt/salvage-breadcrumbs`

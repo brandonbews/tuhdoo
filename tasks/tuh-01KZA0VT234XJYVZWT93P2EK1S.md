@@ -21,6 +21,10 @@ Constraints: no new CLI or MCP surface; the doc must not assume a host (T2) — 
 
 ## History
 
+### 2026-08-06 21:17 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +cli +onboarding −design
+
 ### 2026-08-06 23:52 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-ek1s/uninstall-doc`

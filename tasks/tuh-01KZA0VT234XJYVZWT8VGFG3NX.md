@@ -25,4 +25,6 @@ Fact-check that dissolved the capture (2026-08-06, against live code):
 
 ## History
 
-_No activity yet._
+### 2026-08-06 22:40 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→cancelled

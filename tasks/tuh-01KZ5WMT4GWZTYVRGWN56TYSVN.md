@@ -48,6 +48,10 @@ Resume state: harness rewrite is COMPLETE on branch tuh-ysvn/collision-harness-r
 
 Harness rewrite complete and pushed (unmerged); blocked on escalation 01KZ7W28PB9GPHM0CSQQ2QFABM — two production lease-semantics gaps the storm exposed must be design-decided and fixed before the harness can go green (its acceptance bar).
 
+### 2026-08-05 05:39 UTC — edit by `brandon/claude-code-1`
+
+depends_on +tuh-d9bk
+
 ### 2026-08-05 06:44 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-ysvn/collision-harness-real-machinery`

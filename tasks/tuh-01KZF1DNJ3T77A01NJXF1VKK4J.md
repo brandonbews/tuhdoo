@@ -26,6 +26,10 @@ Constraints: moves, not copies — no doc content forked anywhere; .github/workf
 
 ## History
 
+### 2026-08-07 21:47 UTC — edit by `brandon/claude-code-1`
+
+priority 1→2
+
 ### 2026-08-07 21:55 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-kk4j/docs-swap`

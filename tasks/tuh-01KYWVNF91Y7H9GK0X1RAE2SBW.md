@@ -27,6 +27,14 @@ Constraints: eleven tools stay eleven within this task (T5) — gaps escalate wi
 
 ## History
 
+### 2026-07-31 21:24 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +mcp +dx +docs
+
+### 2026-07-31 21:30 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-01 00:19 UTC — escalation from `brandon/claude-code-1`
 
 > Parity audit found real MCP visibility gaps: agents cannot list in-progress, blocked, done, or cancelled tasks, nor open escalations. Do you want a T5 design revision (grill cycle) to add an orientation path — e.g. more get_backlog arrays or a /v0/state-shaped read verb?

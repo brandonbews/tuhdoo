@@ -32,6 +32,26 @@ History: captured 2026-07-31 intake; held behind v1-confidence gate; gate declar
 
 ## History
 
+### 2026-08-07 18:04 UTC — edit by `brandon/claude-code-1`
+
+description edited · status held→open · depends_on +tuh-qf4g
+
+### 2026-08-07 21:18 UTC — edit by `brandon/claude-code-1`
+
+description edited · depends_on +tuh-kk4j
+
+### 2026-08-07 21:33 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-07 21:35 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-07 21:42 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-07 22:15 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-hdm2/marketing-docs-site`

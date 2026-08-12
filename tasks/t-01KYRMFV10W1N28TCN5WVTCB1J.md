@@ -78,6 +78,10 @@ Resume state: no work done or possible yet — the week hasn't started. What the
 
 Blocked on escalation 01KYRS7H9003HS5H7W8QKW7KG8: the week is human-paced (Brandon must run the second machine), and a sync-latency instrumentation gap vs T8 needs his call before the week's evidence collection starts.
 
+### 2026-08-03 20:06 UTC — edit by `brandon`
+
+retitled · description edited
+
 ### 2026-08-03 22:04 UTC — note from `brandon/claude-code-1`
 
 Measurement record — collision harness run, 2026-08-03, defaults (`go run ./harness/collision`, harness landed in PR #25). Two independent runs the same day produced these figures on every line; the numbers below are the second, which I ran and verified myself.

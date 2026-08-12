@@ -33,6 +33,18 @@ Sequencing: lands BEFORE the copy-tightening pass (tuh-01KZSBDXFZCRNEDY7DMD4XGP7
 
 ## History
 
+### 2026-08-11 22:22 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +docs +protocol +launch
+
+### 2026-08-11 22:35 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-11 22:53 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-11 23:42 UTC — run by `brandon/claude-code-4` — done
 
 - Branch: `tuh-7q0m/agent-protocol-slim-down`

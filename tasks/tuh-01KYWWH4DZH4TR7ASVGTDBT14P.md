@@ -31,6 +31,14 @@ Constraints: eleven MCP tools untouched (T5). internal/views untouched. Complete
 
 ## History
 
+### 2026-07-31 21:24 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-07-31 22:09 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open
+
 ### 2026-08-01 01:15 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-t14p/one-shot-serialized-output`

@@ -26,6 +26,10 @@ Constraints: boring Go; display/input only — no event or API changes.
 
 ## History
 
+### 2026-07-31 07:53 UTC — edit by `brandon/claude-code-9`
+
+depends_on +t-q5ev
+
 ### 2026-07-31 14:54 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `main`

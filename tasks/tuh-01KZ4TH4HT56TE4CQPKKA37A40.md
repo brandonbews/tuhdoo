@@ -23,6 +23,10 @@ Constraints: classifier change only — no retry-loop behavior changes; boring G
 
 ## History
 
+### 2026-08-05 21:44 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→open · priority 0→1
+
 ### 2026-08-05 22:55 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-7a40/push-contention-classifier`

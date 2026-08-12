@@ -24,6 +24,10 @@ Constraints: boring Go; no event rewrites, no migration of existing IDs; the ele
 
 ## History
 
+### 2026-07-31 07:53 UTC — edit by `brandon/claude-code-9`
+
+depends_on +t-q5ev
+
 ### 2026-07-31 15:21 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `main`

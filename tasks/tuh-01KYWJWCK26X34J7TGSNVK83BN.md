@@ -31,6 +31,10 @@ Constraints: one-shot commands and internal/views untouched; 16-color ANSI only;
 
 ## History
 
+### 2026-07-31 20:05 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +cli +tui
+
 ### 2026-07-31 23:11 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-83bn/needs-input-single-home`

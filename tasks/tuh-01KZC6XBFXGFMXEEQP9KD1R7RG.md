@@ -16,4 +16,6 @@ Exiting the TUI does NOT stop the daemon. It has no idle timeout and no client c
 
 ## History
 
-_No activity yet._
+### 2026-08-07 19:18 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→done

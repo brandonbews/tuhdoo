@@ -32,6 +32,14 @@ Constraints: TUI-only change; platform label-agnosticism untouched (no ops-side 
 
 ## History
 
+### 2026-08-01 05:37 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→held
+
+### 2026-08-05 18:01 UTC — edit by `brandon/claude-code-1`
+
+description edited · status held→open
+
 ### 2026-08-05 20:12 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-bqkm/labels-editable-task-view`

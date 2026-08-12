@@ -25,6 +25,10 @@ Constraints: rendering only — no daemon/API/event changes; boring Go.
 
 ## History
 
+### 2026-08-01 05:46 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +cli +tui +ux
+
 ### 2026-08-03 06:11 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-vtfa/history-entry-formatting`

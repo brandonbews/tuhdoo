@@ -32,6 +32,22 @@ History: captured by Brandon 2026-08-05; absorbed the plan-materialization open-
 
 ## History
 
+### 2026-08-06 22:56 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-07 18:05 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +docs +product · depends_on +tuh-qf4g
+
+### 2026-08-07 21:18 UTC — edit by `brandon/claude-code-1`
+
+description edited · depends_on +tuh-kk4j
+
+### 2026-08-07 21:43 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-07 22:23 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-m6qy/user-docs`

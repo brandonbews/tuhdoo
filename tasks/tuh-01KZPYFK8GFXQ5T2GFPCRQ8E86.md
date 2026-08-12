@@ -29,4 +29,6 @@ Pointers: `cmd/tuhdoo/top.go` — `escalationRow`, `detailEscalations` (~line 71
 
 ## History
 
-_No activity yet._
+### 2026-08-11 22:53 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +tui +ux

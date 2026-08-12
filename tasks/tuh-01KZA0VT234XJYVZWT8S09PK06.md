@@ -21,6 +21,14 @@ Constraints: init stays flag-free and loud on unknown args (#42); no new command
 
 ## History
 
+### 2026-08-06 21:27 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +onboarding
+
+### 2026-08-06 22:40 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-06 23:40 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `tuh-pk06/joining-doc`

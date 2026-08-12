@@ -24,6 +24,10 @@ Constraints: boring Go; no new dependencies (bubbletea is already in go.mod).
 
 ## History
 
+### 2026-07-31 07:53 UTC — edit by `brandon/claude-code-9`
+
+depends_on +t-rqjm
+
 ### 2026-07-31 15:14 UTC — run by `brandon/claude-code-1` — done
 
 - Branch: `main`

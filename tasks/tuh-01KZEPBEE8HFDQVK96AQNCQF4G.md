@@ -52,3 +52,7 @@ Late additions from Brandon at close: (a) site component discipline — docs ren
 Where every decision landed: site task tuh-01KYX4Y0GZCJTQFNGPP6WMHDM2 (items 1, 2, 3, 4, 5-site-side + component discipline); user-docs task tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY (item 5 full contract + writing bar); recipes task tuh-01KYX3KJYP7Y178GH5DJ6JPMRQ (item 6). Execution surfaced: docs-swap tuh-01KZF1DNJ3T77A01NJXF1VKK4J (epic child, claimable), DNS wiring tuh-01KZF2D3MA0P24WKAWK89J0Q0X (epic child, human-led), views.go:141 wording capture tuh-01KZF1DNJ3T77A01NJXHW4QGAW (inbox). No announcement/launch-checklist child created — deliberate; capture when launch nears.
 
 Closed by status update at Brandon's direction — human-led task, no agent claim/run by design.
+
+### 2026-08-07 21:43 UTC — edit by `brandon/claude-code-1`
+
+status open→done

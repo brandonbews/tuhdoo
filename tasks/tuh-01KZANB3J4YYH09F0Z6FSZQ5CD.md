@@ -27,6 +27,18 @@ History: captured at the 2026-08-05 release session as the remaining essential f
 
 ## History
 
+### 2026-08-06 21:20 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
+### 2026-08-07 18:05 UTC — edit by `brandon/claude-code-1`
+
+description edited · status inbox→open · priority 0→1
+
+### 2026-08-07 21:53 UTC — edit by `brandon/claude-code-1`
+
+description edited
+
 ### 2026-08-07 21:55 UTC — escalation from `brandon/claude-code-1` (blocking)
 
 > Two decisions before building the ship-the-protocol command: (1) What is the subcommand's exact name? (2) Should `tuhdoo init` offer to WRITE the protocol doc into the host repo, or only PRINT a pointer telling the operator how to get it?

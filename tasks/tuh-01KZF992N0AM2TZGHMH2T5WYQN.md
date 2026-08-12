@@ -25,6 +25,10 @@ Constraints: no new .github/workflows files (extend test.yml only); GFM-never-MD
 
 ## History
 
+### 2026-08-10 20:45 UTC — edit by `brandon`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +web +tooling +launch
+
 ### 2026-08-10 22:28 UTC — escalation from `brandon/claude-code-1` (blocking)
 
 > Review the .github/workflows/test.yml diff in PR #63 (https://github.com/brandonbews/tuhdoo/pull/63) and squash-merge it — or answer "merge it" here and the next claimant merges. Also confirm you want "site" added as a required status check afterward.

@@ -25,6 +25,10 @@ Pointers: #62's PR body records the prior "settled writing bar" — read it to s
 
 ## History
 
+### 2026-08-11 22:23 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · priority 0→1 · labels +docs +web +launch · depends_on +tuh-7q0m
+
 ### 2026-08-11 23:49 UTC — escalation from `brandon/claude-code-4` (blocking)
 
 > The landing page is rewritten to a stricter register (branch tuh-gp75/copy-tightening, commit 190cb59) as the calibration slice your task mandated. Does it hit the bar, so the full docs+site sweep proceeds against it? Options: (a) register confirmed as-is, sweep everything; (b) mostly right, sweep after applying your corrections; (c) still off, re-calibrate the landing page again from your notes. Recommendation: (a). Three small calls folded in: 1) 'the roadmap' kept on the landing page but may be an overclaim (the ledger holds tasks, priorities, and dependency edges; there is no roadmap object) — keep or cut? 2) landing page says 'twelve tools' where docs say 'twelve verbs' — which is the term? 3) name the TUI concretely ('watch progress from the tuhdoo TUI') or keep the plain 'watch from the terminal'?

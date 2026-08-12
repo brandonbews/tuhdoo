@@ -28,4 +28,6 @@ Definition of done: the Show HN is submitted, the X echo posted, and Brandon spe
 
 ## History
 
-_No activity yet._
+### 2026-08-11 22:23 UTC — edit by `brandon/claude-code-1`
+
+description edited · status held→open · depends_on +tuh-7q0m +tuh-gp75
