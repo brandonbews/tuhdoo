@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 89 done · 22 cancelled
+0 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 90 done · 22 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `brandon/claude-code-bg` |
+_None._
 
 ## Ready
 
@@ -132,6 +130,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-wyqn`](tasks/tuh-01KZF992N0AM2TZGHMH2T5WYQN.md) Site toolchain: current create-next-app baseline — Tailwind v4, Biome, full CI gate
 - [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) Production-readiness sweep: the last full check before launch
 - [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) Logo finals: export and deliver the brand assets (human-led)
+- [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages)
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 

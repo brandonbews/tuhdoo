@@ -2,7 +2,7 @@
 
 `tuh-01KZPW8CZPKF2KTWMA5B8QYVN0`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `go` `adoption`
 - **Created:** 2026-08-10 22:21 UTC by `brandon/claude-code-2`
@@ -35,3 +35,12 @@ Pointers/background: the structural alternative (ledger outside refs/heads/) was
 ### 2026-08-11 22:00 UTC — edit by `brandon/claude-code-1`
 
 description edited · status inbox→open
+
+### 2026-08-12 05:06 UTC — run by `brandon/claude-code-bg` — done
+
+- Branch: `tuh-yvn0/hosted-preview-builders`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/72>
+- Commits: `0189fdc`
+- Merged as: `c9849d3766764348f64233bde5610eed09807415`
+
+Landed via PR #72, merged as c9849d3. docs/joining.md repo-admin section gains a third one-time setting: the general dashboard-side-exclusion principle plus the verified Vercel Ignored Build Step example with the inverted-exit-codes gotcha and the system-env-vars prerequisite; Netlify/Cloudflare named only, no step-by-steps, no vercel.json route. tuhdoo init prints one new interpolated auto-deploys line (branchName(), not hardcoded); TestInitRemoteless asserts on it and no other test touches the init block. make test lint green; new copy matches the #71 register.
