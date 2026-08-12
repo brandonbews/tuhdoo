@@ -2,7 +2,7 @@
 
 `tuh-01KZSGFNC11KY0ZYGPEAV48X0G`
 
-- **Status:** inbox — untriaged capture
+- **Status:** on hold — deliberately paused
 - **Priority:** 0
 - **Labels:** `design` `mcp` `tui`
 - **Created:** 2026-08-11 22:53 UTC by `brandon/claude-code-1`
@@ -11,6 +11,10 @@
 
 Deferred at the 2026-08-11 escalations grill (Brandon chose convention + collapse for now — see tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86). The idea: give `escalate` optional structured `options` / `recommendation` fields so the TUI can render escalation options as pickable answers instead of free-text entry. T3-additive on the event shape, but it extends a T5 verb's input surface and changes the answer flow — needs its own grill before building. Revisit after launch gates land.
 
+Steer from Brandon's 2026-08-12 escalation-UX walkthrough (answered on the tuh-d1vc fixture): keep this task, but held — escalations are a tricky UX and he wants it right, not soon. The grill must cover the answering interaction itself, not just the fields: should selecting an escalation open a dedicated answering mode on enter (in the spirit of Claude Code's question-answering module — options rendered as a pickable list, free-text as the escape hatch), or stay something simpler? Free-text-with-options-in-prose is the working convention meanwhile.
+
 ## History
 
-_No activity yet._
+### 2026-08-12 19:52 UTC — edit by `brandon`
+
+description edited · status inbox→held

@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
+0 in progress · 0 ready · 2 blocked · 5 on hold · 4 inbox · 92 done · 23 cancelled
 
 ## In progress
 
@@ -8,9 +8,7 @@ _None._
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) | Test the escalation flow as a human | 0 | `test` `ux` |
+_None._
 
 ## Blocked / waiting
 
@@ -29,6 +27,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
+| [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | 0 | `design` `mcp` `tui` |
 
 ## Inbox
 
@@ -37,7 +36,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) sweep for duplicate code, superfluous comments, and overall filler and fluff
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
-- [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields)
 - [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) Align remaining "verbs" wording with the settled "tools" term (mcp.go tool description, code comments, internal docs)
 
 ## Done
@@ -159,3 +157,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-nxeh`](tasks/tuh-01KZA0VT234XJYVZWT98B7NXEH.md) v2+ parked features (pointer): intake bridge, signing, kanban, view templates, webhook fetch, supervisor, read-only sharing
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 - [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
+- [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) Test the escalation flow as a human

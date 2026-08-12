@@ -2,7 +2,7 @@
 
 `tuh-01KZVR3YFA5S14VWWXCWP5D1VC`
 
-- **Status:** open — ready
+- **Status:** cancelled
 - **Priority:** 0
 - **Labels:** `test` `ux`
 - **Created:** 2026-08-12 19:45 UTC by `brandon`
@@ -32,3 +32,7 @@ This context block is intentionally long so you can judge the collapse UX at its
 ### 2026-08-12 19:46 UTC — run by `brandon/claude-code-1` — blocked
 
 Fixture run: raised two test escalations for Brandon's escalation-UX walkthrough. Nothing to build; archive the task once the walkthrough is done.
+
+### 2026-08-12 19:52 UTC — edit by `brandon`
+
+status open→cancelled
