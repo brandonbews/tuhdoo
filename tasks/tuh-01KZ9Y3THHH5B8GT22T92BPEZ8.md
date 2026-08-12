@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Y3THHH5B8GT22T92BPEZ8`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-4`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui` `ux`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
@@ -40,3 +40,11 @@ Partial progress on the "sweep for leftover parent/epic traces" item, 2026-08-06
 ### 2026-08-11 23:19 UTC — edit by `brandon/claude-code-4`
 
 retitled · description edited · status inbox→open · labels +ux −design
+
+### 2026-08-12 00:24 UTC — run by `brandon/claude-code-4` — done
+
+- Branch: `tuh-pez8/task-view-edges`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/69>
+- Merged as: `44fac367a5345f51209d430c7657f4df92ecb69d`
+
+Task view edges reworked per the 2026-08-11 grill: the comma-joined depends-on blob is gone; DEPENDS ON and NEEDED BY render as bar sections with one aligned row per edge (bold short-id, dim status word, plain title, hard-ellipsized, never wrapped). Needed-by computed at render from a plain reverse loop over the snapshot, ULID order, all statuses shown. Edge rows are focus stops: enter (and mouse click, which fell out of existing machinery) opens the target task; esc pops a plain back-stack slice, first task pops to the dashboard with cursor intact. One-shot tuhdoo task prints the same shape with full IDs plus a needed-by block. No epic UX built. Scope held to cmd/tuhdoo/; internal/views untouched, no T6 bump. Judgment calls in the PR body (section order, watch-mode rows unselectable, stored status word, pop resets scroll). make test lint green; merged via PR #69, squash commit 44fac36.

@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 3 ready · 4 blocked · 4 on hold · 4 inbox · 86 done · 22 cancelled
+0 in progress · 3 ready · 4 blocked · 4 on hold · 4 inbox · 87 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) | Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack | 0 | `brandon/claude-code-4` |
+_None._
 
 ## Ready
 
@@ -117,6 +115,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-nvyk`](tasks/tuh-01KZ9Y3THHH5B8GT22T650NVYK.md) Release plumbing: smoke.sh verb-count fix, release-workflow smoke gate, versioned make build
 - [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) init hardening: loud unknown-flag errors and the MCP snippet in init output
 - [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) Cut v0.2.0: final verification and tag handoff
+- [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) User-facing docs: the human story of steering tuhdoo, platform-agnostic
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs)
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed
