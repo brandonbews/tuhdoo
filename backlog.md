@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 4 ready · 4 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
+0 in progress · 4 ready · 4 blocked · 4 on hold · 4 inbox · 86 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) | Task history: render task.updated field edits — every edit, compact old→new lines | 0 | `brandon/claude-code-4` |
+_None._
 
 ## Ready
 
@@ -102,6 +100,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-mxbx`](tasks/tuh-01KZ0QFCE3PQMX9RFS1H8KMXBX.md) Task view: wrap-then-indent the title and description blocks so the focus gutter is continuous
 - [`tuh-hs07`](tasks/tuh-01KZ2HCCBM0RY70GJKMKHFHS07.md) Task view id line shows only the short form (T7 revision: the full ULID leaves the TUI)
 - [`tuh-a3v7`](tasks/tuh-01KZ33YQPXPK59NV1VBWZ9A3V7.md) TUI chrome hierarchy: unfilled frame, shelf-gray bars, bold-key footer
+- [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) Task history: render task.updated field edits — every edit, compact old→new lines
 - [`tuh-76wt`](tasks/tuh-01KZ4TH4HT56TE4CQPKF3R76WT.md) Loser handling: verb-time stand-down, coerced superseded, expiry synthesis (D6 revision)
 - [`tuh-7a40`](tasks/tuh-01KZ4TH4HT56TE4CQPKKA37A40.md) Status.Collisions undercounts push contention — a lost ref-update race is not classified as non-fast-forward
 - [`tuh-7hs6`](tasks/tuh-01KZ53FJHRFXB932MH8VSS7HS6.md) TUI bar recolors: dim-red BLOCKED, bright-white INBOX (section order confirmed unchanged)

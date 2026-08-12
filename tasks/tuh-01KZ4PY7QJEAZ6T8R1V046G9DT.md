@@ -2,7 +2,7 @@
 
 `tuh-01KZ4PY7QJEAZ6T8R1V046G9DT`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-4`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `go` `tui` `ledger`
 - **Created:** 2026-08-03 21:02 UTC by `brandon`
@@ -29,4 +29,10 @@ Acceptance:
 
 ## History
 
-_No activity yet._
+### 2026-08-12 00:04 UTC — run by `brandon/claude-code-4` — done
+
+- Branch: `tuh-g9dt/task-history-edits`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/68>
+- Merged as: `25329eef179413cd65f1f3623f86a4013851c747`
+
+task.updated edits now render in task history on both surfaces, per the 2026-08-11 grill decisions. Core: State.Updates records one entry per task.updated inside apply, old values read before the field writes — scalars old→new, list membership deltas (depends_on via short IDs), text fields name-only, one entry per multi-field event; table-driven tests incl. chaining. Daemon hydration exposes updates alongside notes/runs/escalations (no MCP verb changes); historyOf renders into TUI + one-shot task view; internal/views renders into generated task pages with FormatVersion 7→8 and regenerated goldens showing retroactive rendering of pre-existing edits. Judgment calls flagged in the PR body (glyphs, name-only for membership-preserving list replacements, honest same-value renders). make test lint green; merged via PR #68, squash commit 25329ee.
