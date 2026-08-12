@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 2 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
+0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 92 done · 22 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) | Test the escalation flow as a human | 0 | `test` `ux` |
 
 ## Blocked / waiting
 
