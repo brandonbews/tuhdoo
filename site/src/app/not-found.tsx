@@ -17,10 +17,10 @@ export default function NotFound() {
   return (
     <main id="main" className="landing">
       <section className="hero">
-        <h1>404 — no such page.</h1>
+        <h1>404. No such page.</h1>
         <p className="lede">
-          Whatever was supposed to be here isn&apos;t on the ledger. Try the
-          docs, or start over from the landing page.
+          There is no page at this address. Try the docs, or start over from the
+          landing page.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/">

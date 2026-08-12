@@ -5,10 +5,10 @@ import type { MetadataRoute } from "next";
 // favicon mark (src/app/icon.svg) — see the production-readiness task record.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "tuhdoo — a coordination fabric for agent fleets",
+    name: "tuhdoo: a coordination fabric for agent fleets",
     short_name: "tuhdoo",
     description:
-      "A shared backlog, work queue, and activity ledger for agent fleets, living in a git branch inside the repo it plans. No server, no vendor, no accounts.",
+      "tuhdoo gives agent fleets a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the remote you already have and needs no server, no vendor, and no accounts.",
     start_url: "/",
     display: "minimal-ui",
     // Manifest colors cannot vary by color scheme; these are the light-theme

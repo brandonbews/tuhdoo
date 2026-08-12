@@ -27,7 +27,7 @@ export default function Home() {
       <section className="section">
         <h2>One repo. One clone. One history.</h2>
         <p>
-          The backlog, the roadmap, and every agent&apos;s activity live on the{" "}
+          The backlog and every agent&apos;s activity live on the{" "}
           <strong>data branch</strong>: an orphan git branch inside the repo,
           with its own history, carrying coordination data instead of code.
           Clone the repo and the whole plan comes with it; sync is a push and a
@@ -103,8 +103,8 @@ export default function Home() {
           enough, and capture never costs a planning session. Later, work
           through the pile with an agent and shape captures into real tasks with
           full descriptions, acceptance criteria, and dependency edges. Then
-          agents drain the ready queue while you watch from the terminal and
-          answer escalations on your schedule, not the fleet&apos;s.
+          agents drain the ready queue while you watch progress from the tuhdoo
+          TUI and answer escalations on your schedule, not the fleet&apos;s.
         </p>
       </section>
 
