@@ -1,17 +1,18 @@
 # Backlog
 
-0 in progress · 3 ready · 2 blocked · 4 on hold · 5 inbox · 89 done · 22 cancelled
+1 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 89 done · 22 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `brandon/claude-code-bg` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
-| [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |
 | [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `tui` `ux` |
 
 ## Blocked / waiting

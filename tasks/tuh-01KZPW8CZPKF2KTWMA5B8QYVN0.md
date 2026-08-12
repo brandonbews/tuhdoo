@@ -2,7 +2,7 @@
 
 `tuh-01KZPW8CZPKF2KTWMA5B8QYVN0`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
 - **Priority:** 0
 - **Labels:** `docs` `go` `adoption`
 - **Created:** 2026-08-10 22:21 UTC by `brandon/claude-code-2`
