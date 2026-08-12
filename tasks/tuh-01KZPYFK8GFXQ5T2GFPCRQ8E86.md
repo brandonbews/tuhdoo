@@ -2,7 +2,7 @@
 
 `tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
 - **Priority:** 0
 - **Labels:** `tui` `ux`
 - **Created:** 2026-08-10 23:00 UTC by `brandon`

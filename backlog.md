@@ -1,17 +1,18 @@
 # Backlog
 
-0 in progress · 2 ready · 2 blocked · 4 on hold · 5 inbox · 90 done · 22 cancelled
+1 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 90 done · 22 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `brandon/claude-code-bg` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
-| [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `tui` `ux` |
 
 ## Blocked / waiting
 
