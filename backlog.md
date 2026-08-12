@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 4 on hold · 5 inbox · 91 done · 22 cancelled
+1 in progress · 0 ready · 2 blocked · 4 on hold · 5 inbox · 91 done · 22 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Socket-path length limit: stable TMPDIR fallback for deep repo paths | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`t-3a4d`](tasks/t-01KYRMFV10W1N28TCN62RR3A4D.md) | Socket-path length limit: stable TMPDIR fallback for deep repo paths | 0 | `go` `platform` |
+_None._
 
 ## Blocked / waiting
 

@@ -2,7 +2,7 @@
 
 `t-01KYRMFV10W1N28TCN62RR3A4D`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 0
 - **Labels:** `go` `platform`
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
