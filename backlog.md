@@ -1,17 +1,16 @@
 # Backlog
 
-1 in progress · 2 ready · 3 blocked · 4 on hold · 5 inbox · 88 done · 22 cancelled
+0 in progress · 3 ready · 2 blocked · 4 on hold · 5 inbox · 89 done · 22 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) | Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
 | [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |
 | [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `tui` `ux` |
 
@@ -21,7 +20,6 @@
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
 | [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
-| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | depends on [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) |
 
 ## On hold
 
@@ -134,6 +132,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-r2ac`](tasks/tuh-01KZFGZD3XWZ8V56P5RKV3R2AC.md) Production-readiness sweep: the last full check before launch
 - [`tuh-7sqc`](tasks/tuh-01KZPPRW1EKBTVKNR76H6Z7SQC.md) Logo finals: export and deliver the brand assets (human-led)
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
+- [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 
 ## Cancelled
 

@@ -2,7 +2,7 @@
 
 `tuh-01KZSBDXFZCRNEDY7DMD4XGP75`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `docs` `web` `launch`
 - **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done)
@@ -47,3 +47,12 @@ Resume state: calibration slice done and pushed on branch tuh-gp75/copy-tighteni
 - Commits: `190cb59`
 
 Calibration slice done; blocked on escalation 01KZSKPJ9JHFBKQEJK89JQFHWA (register confirmation from Brandon before the full sweep).
+
+### 2026-08-12 04:56 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-gp75/copy-tightening`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/71>
+- Commits: `996e63a`
+- Merged as: `bcb61fe4e71bfeca9f49b3eb689f8945f3cbd7ba`
+
+Full copy sweep landed (PR #71, merged as bcb61fe). Resumed from the confirmed calibration slice: all docs/*.md (recipes included), site chrome (title/description/footer/manifest/og alt/404), and llms.txt header rewritten to the confirmed register; the three escalation calls applied (roadmap overclaim cut from the landing page, "tools" not "verbs" everywhere published including agent-protocol.md's heading, TUI named concretely). agent-protocol.md got tone-only sentence rework, no restructuring; test-executed uninstall blocks byte-identical; adopting.md's "on-hold" state label verified as real CLI output and kept. Brandon's PR-review remains the final acceptance bar per the task. Leftover "verbs" wording in mcp.go's tool description, code comments, and internal-docs captured as inbox task tuh-01KZT571HQ3JEDEA5FFXSHBAJP.
