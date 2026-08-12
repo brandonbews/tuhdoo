@@ -222,6 +222,10 @@ func TestInitRemoteless(t *testing.T) {
 	// The branch-protection line: hosts whose rulesets require PRs on
 	// all branches would silently break the daemon's direct pushes.
 	mustContain(t, out, "Branch protection", "fast-forward only, never force")
+	// The auto-deploy line: hosted preview builders (Vercel and friends)
+	// deploy every branch by default, so the data branch's frequent
+	// pushes trigger a failing deployment each time unless excluded.
+	mustContain(t, out, "Auto-deploys", "preview builder")
 	// The docs pointer: the least-specific stable URL is a permanent
 	// promise baked into every shipped binary — recipes and guides live
 	// there, not in the binary, so they can be fixed without a release.
