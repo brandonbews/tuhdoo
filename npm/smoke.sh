@@ -4,7 +4,7 @@
 # installs the main + current-platform tarballs into a fresh git repo, and
 # checks the acceptance behaviors: init works, status reports local-only,
 # the launcher adds nothing to the binary's output, the MCP shim serves the
-# twelve verbs through it, and SIGTERM on the launcher reaches the binary.
+# twelve tools through it, and SIGTERM on the launcher reaches the binary.
 #
 #   npm/smoke.sh            # uses a temp dir, cleans up after itself
 set -euo pipefail
@@ -82,7 +82,7 @@ mcp_out="$(
     sleep 2
   } | ./node_modules/.bin/tuhdoo mcp
 )"
-# Named comparison, not a count: a missing or extra verb fails with its
+# Named comparison, not a count: a missing or extra tool fails with its
 # name. The list mirrors the registrations in internal/daemon/mcp.go.
 expected_tools="get_backlog get_task claim_next claim_task confirm_claim release_claim finish_run escalate relay_answer add_note create_task update_task"
 actual_tools="$(printf '%s\n' "$mcp_out" | node -e '

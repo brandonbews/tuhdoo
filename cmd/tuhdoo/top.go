@@ -74,7 +74,7 @@ type steeringAPI interface {
 }
 
 // httpSteering implements steeringAPI over the daemon's JSON HTTP API,
-// reusing the admin verbs that already exist there: no new write paths.
+// reusing the admin tools that already exist there: no new write paths.
 type httpSteering struct {
 	c     *client
 	actor string

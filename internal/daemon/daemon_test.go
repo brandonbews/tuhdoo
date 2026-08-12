@@ -226,7 +226,7 @@ func TestConcurrentCreatesLinearHistory(t *testing.T) {
 // leases, renewal extends, holder checks bite, release returns the
 // task to the pool.
 // Inbox and held (2026-07-31): captures and paused tasks are ordinary
-// shared state, but the claim verbs never serve them — open is the only
+// shared state, but the claim tools never serve them — open is the only
 // claimable status. Title-only capture works; promote/pause/resume
 // round-trips run through the ordinary update surface.
 func TestClaimNeverServesInboxOrHeld(t *testing.T) {
@@ -460,7 +460,7 @@ func TestUpdateTaskRefusesLoopClosingEdit(t *testing.T) {
 
 // seedDepLoop appends two mutually-dependent task.created events
 // straight into stored history — the union-merge arrival shape: each
-// write was individually acyclic, and no verb on this daemon ever saw
+// write was individually acyclic, and no tool on this daemon ever saw
 // the loop (the write surfaces refuse to close one knowingly).
 func seedDepLoop(t *testing.T, d *Daemon, a, b string) {
 	t.Helper()

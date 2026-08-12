@@ -277,9 +277,9 @@ func TestConfirmClaimTwoDaemonsOneWinner(t *testing.T) {
 	}
 }
 
-// TestMCPConfirmClaimVerb: the twelfth verb end to end — session-held
+// TestMCPConfirmClaimTool: the twelfth tool end to end — session-held
 // claims only, and a tool result an agent can act on without docs.
-func TestMCPConfirmClaimVerb(t *testing.T) {
+func TestMCPConfirmClaimTool(t *testing.T) {
 	d, c := startDaemon(t)
 	cs := mcpConnect(t, d, "brandon/impl-1", nil)
 
@@ -290,7 +290,7 @@ func TestMCPConfirmClaimVerb(t *testing.T) {
 	mustToolOK(t, cs, "claim_task", map[string]any{"task": held}, &claimed.Task)
 
 	// Confirming a task this session never claimed is refused at the
-	// verb: the gate certifies the session's own claim.
+	// tool: the gate certifies the session's own claim.
 	res := callTool(t, cs, "confirm_claim", map[string]any{"task": unheld})
 	if !res.IsError || !strings.Contains(contentText(res), "holds no claim") {
 		t.Fatalf("confirming an unheld task = %v %q, want a holds-no-claim error", res.IsError, contentText(res))

@@ -42,7 +42,7 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 	}
 	defer cs.Close()
 
-	// The mirrored surface is exactly the twelve T5 verbs, and sessions
+	// The mirrored surface is exactly the twelve T5 tools, and sessions
 	// carry the daemon's orientation instructions.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {

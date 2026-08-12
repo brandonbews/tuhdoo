@@ -21,7 +21,7 @@ v0 is built and dogfooding itself; its definition of done — the five checkable
 - **The deterministic core is pure functions**: replay, winner rules, lease expiry, compaction, view generation — data in, data out, no I/O, table-driven tests (T1).
 - **Host-agnostic by construction**: tuhdoo speaks the git protocol only; never call a host API from core paths; remoteless operation is a normal state, not an error (T2).
 - **Stored event bytes are never rewritten**; schema evolution is additive-first with in-memory upcasters; incomprehensible events trigger fail-safe read-only mode, never best-effort skipping (T3).
-- **Fewer, better MCP verbs**: the agent surface is twelve tools (T5); additions need a design-doc revision.
+- **Fewer, better MCP tools**: the agent surface is twelve tools (T5); additions need a design-doc revision.
 
 ## Building tasks
 

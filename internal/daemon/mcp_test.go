@@ -186,7 +186,7 @@ func TestMCPFullLoop(t *testing.T) {
 	const actor = "brandon/impl-1"
 	cs := mcpConnect(t, d, actor, nil)
 
-	// The surface is exactly the twelve T5 verbs.
+	// The surface is exactly the twelve T5 tools.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {
 		if err != nil {
@@ -315,7 +315,7 @@ func TestMCPFinishRunMergedAs(t *testing.T) {
 // Inbox and held over the MCP surface (2026-07-31): title-only capture
 // through create_task lands as a real inbox event; get_backlog shows
 // the shelves as their own arrays; claim_next skips them; and the full
-// promote round trip runs through update_task — fields, not verbs.
+// promote round trip runs through update_task — fields, not tools.
 func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 	d, _ := startDaemon(t)
 	const actor = "brandon/impl-1"
@@ -360,7 +360,7 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 		t.Fatalf("claim_task(inbox) = isError %v %q, want status-is-inbox error", res.IsError, contentText(res))
 	}
 
-	// Promotion is update_task with a real description — no new verb.
+	// Promotion is update_task with a real description — no new tool.
 	mustToolOK(t, cs, "update_task", map[string]any{
 		"task": idea, "status": "open",
 		"description": "Context, the ask, acceptance criteria.",
@@ -410,7 +410,7 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 }
 
 // Curation over the MCP surface (parity audit, 2026-07-31): every
-// steering action a human asks for rides update_task fields, not verbs.
+// steering action a human asks for rides update_task fields, not tools.
 // Cancelling is update_task status cancelled — the task leaves every
 // get_backlog array but stays readable by ID (nothing is deleted);
 // retitle, redescribe, and reprioritize land field-wise leaving the
@@ -709,7 +709,7 @@ func TestMCPConnectionDropExpiresLease(t *testing.T) {
 
 // While the session lives, the daemon renews the lease on its own —
 // with a short TTL, only auto-renewal can keep the claim active past
-// several expiry windows (T5: no heartbeat verb).
+// several expiry windows (T5: no heartbeat tool).
 func TestMCPSessionAutoRenewsLease(t *testing.T) {
 	const ttl = time.Second
 	d, hc := startDaemonOpts(t, Options{
@@ -1035,7 +1035,7 @@ func TestMCPBacklogScope(t *testing.T) {
 // get_backlog's blocked rows carry the loud annotations (2026-08-05
 // edge grill) additively: cyclic on loop members, cancelled_deps on
 // waiters of a cancelled dependency, plain rows unchanged. The loop is
-// seeded as stored history — the merge arrival shape — since no verb
+// seeded as stored history — the merge arrival shape — since no tool
 // knowingly writes one.
 func TestMCPBlockedRowsCarryLoopAndCancelledMarks(t *testing.T) {
 	d, _ := startDaemon(t)

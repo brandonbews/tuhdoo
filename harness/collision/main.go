@@ -27,7 +27,7 @@
 //     one claim.confirmed may land per contest;
 //  6. fires claim_next from both actors behind a barrier, repeatedly;
 //  7. lets both daemons converge, then closes every attempt through the
-//     public verbs alone: winners record done through the gate, and
+//     public tools alone: winners record done through the gate, and
 //     losers discover their fate from the daemon — a reported finish
 //     coerced to superseded, or a stand-down closed by replay's
 //     branch-less synthesized run. The harness never writes an outcome
@@ -170,7 +170,7 @@ type lab struct {
 	closing   sync.Once
 
 	statMu      sync.Mutex
-	gateRetries int // verb-level retries of the gate's honest 503 refusals
+	gateRetries int // tool-level retries of the gate's honest 503 refusals
 }
 
 func setup(cfg config) (*lab, error) {
@@ -251,7 +251,7 @@ type attempt struct {
 }
 
 // How an attempt's actor learned its attempt ended — always from a
-// daemon verb's answer, never from the harness reading replayed state
+// daemon tool's answer, never from the harness reading replayed state
 // and deciding for it (that was the impersonation this harness used to
 // commit before the 2026-08-04 D6 machinery existed).
 const (
@@ -300,7 +300,7 @@ func (l *lab) experiment() error {
 	// The race attempts settle after the claims have crossed. The gate
 	// would referee correctly either way — that is its whole point — but
 	// waiting here makes the split deterministic: every loser discovers
-	// its fate at verb-time from local state, and every winner's gate
+	// its fate at call-time from local state, and every winner's gate
 	// round-trip certifies against a remote that already holds the
 	// loser's claim.
 	if err := l.converge("post-race", append(claimIDs(raceAttempts), requiredEvents(stormAttempts)...)); err != nil {
@@ -538,7 +538,7 @@ func (l *lab) race() ([]attempt, int, error) {
 	return all, races, nil
 }
 
-// settle closes every race attempt through the public verbs alone. The
+// settle closes every race attempt through the public tools alone. The
 // harness never reads replayed state to decide who won — the daemons'
 // answers are the only oracle (D6, 2026-08-04: the daemon is the referee
 // of how attempts ended). Two agent styles alternate, both
@@ -550,7 +550,7 @@ func (l *lab) race() ([]attempt, int, error) {
 //     and never reports a run — replay closes that attempt with a
 //     branch-less synthesized superseded run.
 //   - report-only (odd attempts): finish_run(done) straight away; the
-//     gate rides the verb (D6 clause 2), so a winner's done is certified
+//     gate rides the tool (D6 clause 2), so a winner's done is certified
 //     at the remote and a loser's report is coerced to superseded with
 //     its branch kept as the salvage record.
 func (l *lab) settle(attempts []attempt) error {
@@ -763,12 +763,12 @@ func (l *lab) pair(fn func(i int, a *actor) error) error {
 	return errors.Join(errs...)
 }
 
-// verbRetries bounds the harness's patience with the gate's honest
+// toolRetries bounds the harness's patience with the gate's honest
 // retryable refusals. Under the storm both daemons' sync loops and both
 // gates contend for the one remote ref, so an occasional "remote kept
 // moving" 503 is expected; a protocol-following agent retries, and so
 // does the harness — counting every retry for the report.
-const verbRetries = 10
+const toolRetries = 10
 
 // gateRetryable matches the gate's honest refusals — nothing written,
 // retry later (ops.go gateVerdict): the remote kept moving past the
@@ -783,7 +783,7 @@ func gateRetryable(err error) bool {
 // retryGate runs call, retrying the gate's retryable refusals.
 func (l *lab) retryGate(what string, call func() error) error {
 	var err error
-	for i := 0; i < verbRetries; i++ {
+	for i := 0; i < toolRetries; i++ {
 		if err = call(); err == nil || !gateRetryable(err) {
 			return err
 		}
@@ -792,7 +792,7 @@ func (l *lab) retryGate(what string, call func() error) error {
 		l.statMu.Unlock()
 		time.Sleep(300 * time.Millisecond)
 	}
-	return fmt.Errorf("%s: still refused after %d retries: %w", what, verbRetries, err)
+	return fmt.Errorf("%s: still refused after %d retries: %w", what, toolRetries, err)
 }
 
 // confirmClaim is confirm_claim with the harness's retry posture.
@@ -807,7 +807,7 @@ func (l *lab) confirmClaim(a *actor, task, what string) (confirmOut, error) {
 }
 
 // finishDone is finish_run(done) with the harness's retry posture: the
-// gate rides the verb, so it shares confirm_claim's retryable refusals.
+// gate rides the tool, so it shares confirm_claim's retryable refusals.
 func (l *lab) finishDone(a *actor, task, branch, summary string) (finishOut, error) {
 	var out finishOut
 	err := l.retryGate(fmt.Sprintf("%s finish_run on %s", a.name, event.ShortID(task)), func() error {
