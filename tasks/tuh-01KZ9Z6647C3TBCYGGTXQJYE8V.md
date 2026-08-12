@@ -2,10 +2,10 @@
 
 `tuh-01KZ9Z6647C3TBCYGGTXQJYE8V`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 0
 - **Labels:** `docs` `go`
-- **Depends on:** [`tuh-0ssg`](tuh-01KZ9YBF1N06FQ37XV65940SSG.md) (open)
+- **Depends on:** [`tuh-0ssg`](tuh-01KZ9YBF1N06FQ37XV65940SSG.md) (done)
 - **Created:** 2026-08-05 22:02 UTC by `brandon`
 
 ## Description

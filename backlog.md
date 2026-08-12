@@ -1,22 +1,20 @@
 # Backlog
 
-1 in progress · 0 ready · 1 blocked · 6 on hold · 15 inbox · 95 done · 23 cancelled
+0 in progress · 1 ready · 0 blocked · 6 on hold · 15 inbox · 96 done · 23 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) | Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs) | 0 | `brandon/claude-code-bg` |
+_None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | `docs` `go` |
 
 ## Blocked / waiting
 
-| ID | Task | Priority | Waiting on |
-|---|---|---:|---|
-| [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | depends on [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) |
+_None._
 
 ## On hold
 
@@ -124,6 +122,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-y4re`](tasks/tuh-01KZ9Y3THHH5B8GT22T7JVY4RE.md) init hardening: loud unknown-flag errors and the MCP snippet in init output
 - [`tuh-r40k`](tasks/tuh-01KZ9Y3THHH5B8GT22T910R40K.md) Cut v0.2.0: final verification and tag handoff
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack
+- [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs)
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) User-facing docs: the human story of steering tuhdoo, platform-agnostic
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs)
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed

@@ -2,7 +2,7 @@
 
 `tuh-01KZ9YBF1N06FQ37XV65940SSG`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `polish` `go`
 - **Created:** 2026-08-05 21:47 UTC by `brandon`
@@ -50,3 +50,11 @@ description edited
 ### 2026-08-12 21:49 UTC — note from `brandon/claude-code-bg`
 
 Findings-first fan-out in flight: six read-only readers by package cluster (internal/daemon; cmd/tuhdoo TUI half; cmd/tuhdoo CLI half; internal/core+event; internal/store+gitx+syncer+views; harness/collision), mandate report-only. Orchestrator synthesizes and applies. Intended branches: tuh-40ssg/go-sweep-app (PR 1, non-test) and tuh-40ssg/go-sweep-tests (PR 2, test sweep + audit), both off main at/after a8cbcdc (the verbs->tools rename this sweep was sequenced behind — already landed). No edits exist yet; if interrupted before branches push, restart from the fan-out.
+
+### 2026-08-12 22:39 UTC — run by `brandon/claude-code-bg` — done
+
+- Branch: `tuh-40ssg/go-sweep-app`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/77>
+- Merged as: `5e6ca055526df4415a9d5574f2a4bde6c81bb781`, `cfe6758356596f0c21e3fda969a576f82fe388f2`
+
+Findings-first fan-out (six read-only readers over all ~30k lines) then two PRs. PR #77 (5e6ca05, non-test): dedup of real knowledge (release write-sequence in ops.go, mkTree-from-map triplication into gitx.MkTreeFromMap, client.go error surfacing, top.go renderWidth/blockingBadge/pinFrame, harness starting-gun barrier onto pair), dead code deleted (Batch.Delete, errIsAny, jsonUnmarshal, topSection.dim, equalStrings, burst dead return, 7 unread harness JSON fields, EncodeLease* unexported), stale/false comments fixed (deletes-vs-tombstones, future-tense B7, harness socket path). Called-out deviations in the PR body: data-branch commit messages lost the constant ", 0 deletions" segment (nothing parses them); harness pair reuse joins both-actor errors. PR #78 (cfe6758, tests): suite audited overwhelmingly SPEC — of ~150 tests only TestVersionDefault and TestTextInputHint were true mirrors (deleted, coverage retained elsewhere) and TestSanitizeAgentName was strengthened with a ValidateActor assertion; setup dedup (mintVoidedClaim, twoDaemonRemote, cloneShapeAdopt, mergeBothWays, permute/pointer helpers, padBar, openDetail swaps); 10 new gap-fill pins all green first try against untouched app code (ValidateActor table, HTTP 400/404 rejections, duplicate tmp name, partial overlay trim, LsTree gitlink rejection, ShortID home table, classify tie-break, TUI waiting line); post-#74 sun_path test workarounds deleted. Zero-behavior evidence: every test edit green first try against untouched app; goldens never -update, passed unchanged both PRs; full suite re-run uncached. Judged clean, per package: internal/core and internal/event near-spotless (comments design-mandated); internal/daemon disciplined (all 51 tests SPEC); syncer/store/gitx strong; cmd/tuhdoo both halves unusually clean; harness tight. Captures filed as found, all labeled audit-finding: 14 in one batch (tuh-01KZVZT7F8... series: HTTP daemon-only outcomes + dead /v0/claims/renew; stale read-time lease verdicts; closedByRun erasable superseded trace; escalation-answer strictness asymmetry; replay letter-vs-code edges; T6 stamp-path drift; D9-compaction-vs-union-merge collision course; lease-path parser divergence; Batcher.LastError unread; T7 vocabulary/parents/dimming drift; answer ambiguity swallow; selection-ladder undocumented; harness unexercised D6 arms; daemon structural test gaps) plus tuh-01KZW1WKW1MKWKJQ360Y5AR40S (LsTree accepts symlinks — found when the prescribed symlink gap-fill went red; app untouched per prime law).
