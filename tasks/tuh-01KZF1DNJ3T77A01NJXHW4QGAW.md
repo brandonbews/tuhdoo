@@ -2,7 +2,7 @@
 
 `tuh-01KZF1DNJ3T77A01NJXHW4QGAW`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-4`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `go` `ledger` `views`
 - **Created:** 2026-08-07 21:17 UTC by `brandon/claude-code-1`
@@ -30,3 +30,11 @@ Pointers: `internal/views/views.go` — `readme()`, `FormatVersion` (line 41), t
 ### 2026-08-11 23:28 UTC — edit by `brandon/claude-code-4`
 
 retitled · description edited · status inbox→open · labels +views
+
+### 2026-08-12 00:32 UTC — run by `brandon/claude-code-4` — done
+
+- Branch: `tuh-qgaw/data-branch-readme`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/70>
+- Merged as: `3001753e74e7d1219f980df06646cb4a2afd9785`
+
+Generated data-branch README fixed per the 2026-08-11 grill: the wrong host-repo docs/ sentence replaced with the product pointer Docs: https://tuhdoo.com (bare URL, site root); intro and view-link prose tightened to the utilitarian bar with structure unchanged. One forced deviation from the task text: FormatVersion bumped 8→9 rather than 7→8 because 8 was taken the same day by the task-history rendering change (PR #68) — same T6 rationale, noted in the PR body. Goldens: only README.md and the .views-meta.json stamp changed. make test lint green; merged via PR #70, squash commit 3001753.

@@ -1,14 +1,12 @@
 # Backlog
 
-1 in progress · 2 ready · 4 blocked · 4 on hold · 4 inbox · 87 done · 22 cancelled
+0 in progress · 2 ready · 4 blocked · 4 on hold · 4 inbox · 88 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `brandon/claude-code-4` |
+_None._
 
 ## Ready
 
@@ -127,6 +125,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) claim_next selection: document the label filter and priority order for agents; test the matching code
 - [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) Grill: site stack & content strategy (human-led)
 - [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/
+- [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose
 - [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) Vercel project + tuhdoo.com DNS wiring (human-led)
 - [`tuh-vq1p`](tasks/tuh-01KZF83BZVEXYJ2S3GGQQDVQ1P.md) Root .gitignore: ignore OS junk (.DS_Store and friends)
 - [`tuh-ban7`](tasks/tuh-01KZF973FY9JKJV5F38SM7BAN7.md) Site visual identity: Brandon's logo, full pass (landing, docs chrome, favicon, og)
