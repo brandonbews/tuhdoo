@@ -2,7 +2,7 @@
 
 `tuh-01KZSBDXFZCRNEDY7DMD4XGP75`
 
-- **Status:** open — waiting on an escalation answer
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `docs` `web` `launch`
 - **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done)
@@ -35,7 +35,7 @@ retitled · description edited · status inbox→open · priority 0→1 · label
 
 Register rules applied, for you to confirm or correct (the rules matter more than the instances): zero em dashes in body copy (parentheticals became colons, semicolons, or second sentences); complete sentences in prose, fragments only in headings where the fragment is the claim; counts and jargon only with what they buy the reader in the same breath ('twelve tools, few enough that the whole protocol fits in the single instruction file a harness loads'; 'fully hydrated' became the actual list); metaphors and filler cut ('same organism', 'one brain', 'markdown files and vibes'); tuhdoo as grammatical subject where it acts. Example, hero lede — before: 'Steering coding agents today is markdown files and vibes: parallel agents trample each other, sessions die with their context, nothing records what happened. tuhdoo is the fix — a shared backlog, work queue, and activity ledger on a git branch inside the repo it plans. No server, no vendor, no accounts.' After: 'Steering coding agents with TODO files breaks at fleet scale: parallel agents trample each other's work, sessions die and take their context with them, and nothing records what actually happened. tuhdoo replaces the TODO file with a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the remote you already have and needs no server, no vendor, and no accounts.' Full before/after is the commit diff (one file, site/src/app/page.tsx). Not yet touched, in sweep scope: docs/*.md, docs chrome, and layout.tsx's footer tagline and site metadata, which still carry the old cadence.
 
-_Unanswered._
+**Answer** (`brandon`, relayed by `brandon/claude-code-4`): Brandon, live in the working session, 2026-08-12: "we can answer the escalation in gp75. TUI is fine. tools is better than verbs. i dont really understand the roadmap point, but whatever you rec." Read against the escalation's three sub-calls: naming the TUI concretely is fine (use it); use twelve "tools", not "verbs"; on "the roadmap" he defers to the raising agent's recommendation, which was to cut it as an overclaim. No objection raised to the register rules — the sweep proceeds against them.
 
 ### 2026-08-11 23:49 UTC — note from `brandon/claude-code-4`
 
