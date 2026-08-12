@@ -2,7 +2,7 @@
 
 `tuh-01KZF1DNJ3T77A01NJXHW4QGAW`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-4`
 - **Priority:** 0
 - **Labels:** `go` `ledger` `views`
 - **Created:** 2026-08-07 21:17 UTC by `brandon/claude-code-1`

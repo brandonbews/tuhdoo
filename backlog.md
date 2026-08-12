@@ -1,18 +1,19 @@
 # Backlog
 
-0 in progress · 3 ready · 4 blocked · 4 on hold · 4 inbox · 87 done · 22 cancelled
+1 in progress · 2 ready · 4 blocked · 4 on hold · 4 inbox · 87 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `brandon/claude-code-4` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `go` `ledger` `views` |
 | [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |
 | [`tuh-8e86`](tasks/tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86.md) | Task-view escalations: structured question always visible, context collapsed by default | 0 | `tui` `ux` |
 
