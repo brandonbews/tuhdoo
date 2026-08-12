@@ -1,18 +1,19 @@
 # Backlog
 
-0 in progress · 5 ready · 4 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
+1 in progress · 4 ready · 4 blocked · 4 on hold · 4 inbox · 85 done · 22 cancelled
 
 **[1 open question](escalations.md) is waiting on a human.**
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) | Task history: render task.updated field edits — every edit, compact old→new lines | 0 | `brandon/claude-code-4` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-g9dt`](tasks/tuh-01KZ4PY7QJEAZ6T8R1V046G9DT.md) | Task history: render task.updated field edits — every edit, compact old→new lines | 0 | `go` `tui` `ledger` |
 | [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) | Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack | 0 | `tui` `ux` |
 | [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) | Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose | 0 | `go` `ledger` `views` |
 | [`tuh-yvn0`](tasks/tuh-01KZPW8CZPKF2KTWMA5B8QYVN0.md) | Adoption docs and `tuhdoo init` miss hosted preview builders (Vercel, Netlify, Cloudflare Pages) | 0 | `docs` `go` `adoption` |

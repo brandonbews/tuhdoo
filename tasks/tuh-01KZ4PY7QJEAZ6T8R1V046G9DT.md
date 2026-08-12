@@ -2,7 +2,7 @@
 
 `tuh-01KZ4PY7QJEAZ6T8R1V046G9DT`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-4`
 - **Priority:** 0
 - **Labels:** `go` `tui` `ledger`
 - **Created:** 2026-08-03 21:02 UTC by `brandon`
