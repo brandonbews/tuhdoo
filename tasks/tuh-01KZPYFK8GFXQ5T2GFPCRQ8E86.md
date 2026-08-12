@@ -2,7 +2,7 @@
 
 `tuh-01KZPYFK8GFXQ5T2GFPCRQ8E86`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-bg`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `tui` `ux`
 - **Created:** 2026-08-10 23:00 UTC by `brandon`
@@ -32,3 +32,12 @@ Pointers: `cmd/tuhdoo/top.go` — `escalationRow`, `detailEscalations` (~line 71
 ### 2026-08-11 22:53 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +tui +ux
+
+### 2026-08-12 05:23 UTC — run by `brandon/claude-code-bg` — done
+
+- Branch: `tuh-8e86/task-view-escalation-rendering`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/73>
+- Commits: `f1c8abf`
+- Merged as: `883f6a7eb560a2fc3c6b3c38f7c2c4aa7973ed1b`
+
+Landed via PR #73, merged as 883f6a7. Task view now renders escalation questions with their line structure (oneLine removed from that path) and collapses contexts to a first-line-plus-count stub; e toggles per escalation (free key, verified against all task-view bindings; watch mode flips all since it has no focus ring). Focus/selection/click/scroll correct in both shapes by construction and by test; answered escalations in History untouched; two new TUI tests, two goldens updated. One flagged deviation for review: the key hint rides the NEEDS INPUT section bar (enter answer · e context), not the bottom footer, which is full at 80 columns and would have dropped q quit; the PR body explains. Click-to-toggle not built: it did not fall out cheap (click already means select/answer). make test lint green.
