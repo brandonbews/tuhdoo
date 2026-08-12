@@ -32,3 +32,7 @@ Cross-links: t-01KYRMFV10W1N28TCN62F6FRTH (epoch compaction build task, blocked 
 ### 2026-08-06 23:04 UTC — edit by `brandon/claude-code-1`
 
 description edited · status inbox→held
+
+### 2026-08-12 21:32 UTC — note from `brandon/claude-code-1`
+
+2026-08-12: this capture's unpark condition said "no later than when epoch compaction unparks — i.e. at v1 milestone declaration." The v1 milestone task was closed today (as road-sign retirement, not a phase declaration), and Brandon deliberately parked epoch compaction held anyway. So this capture's unpark condition is consciously overridden: it stays held, paired with compaction — both unpark on real pressure (surface noise annoying the human, a short-ID tail collision, data-branch weight), not on the milestone label. The pressure signals listed in this description remain the trigger list.
