@@ -162,6 +162,28 @@ func TestMkTreeEmptyIsValidRoot(t *testing.T) {
 	}
 }
 
+// The data branch holds blobs only: an entry of any other object kind
+// means the tree is not ours, and LsTree must fail, not skip. A
+// gitlink (submodule) entry is the shape that pins the arm — git's
+// ls-tree types symlinks (120000) as blobs, so a gitlink's "commit" is
+// the one non-blob kind a recursive listing can surface.
+func TestLsTreeRejectsNonBlobEntries(t *testing.T) {
+	g := newRepo(t)
+	// Plant the gitlink with raw mktree; --missing admits the dangling
+	// commit OID, exactly as a real submodule pointer arrives.
+	cmd := exec.Command("git", "mktree", "--missing")
+	cmd.Dir = g.dir
+	cmd.Stdin = strings.NewReader("160000 commit 0123456789012345678901234567890123456789\tsub\n")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("mktree: %v\n%s", err, out)
+	}
+	tree := strings.TrimSpace(string(out))
+	if _, err := g.LsTree(tree); err == nil || !strings.Contains(err.Error(), "commit") {
+		t.Fatalf("LsTree over a gitlink entry = %v, want the fail-don't-skip rejection naming the object kind", err)
+	}
+}
+
 func TestMkTreeRejectsBadPaths(t *testing.T) {
 	g := newRepo(t)
 	oid, err := g.HashObject([]byte("x"))

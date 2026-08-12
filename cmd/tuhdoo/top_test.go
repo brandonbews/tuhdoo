@@ -7,12 +7,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/brandonbews/tuhdoo/internal/event"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
 // topSnapshot seeds every section: one blocking escalation (on an
@@ -92,6 +94,25 @@ func newTopModel(api steeringAPI) topModel {
 func newWatchModel() topModel {
 	s := topSnapshot()
 	return topModel{snap: s, rows: buildRows(s)}
+}
+
+// classify's ready ordering is claim_next's (snapshot.go): highest
+// priority first, and within a priority the creation (ULID) order the
+// state listing arrives in — the sort is stable, so equal-priority
+// tasks never swap.
+func TestClassifyReadyTieBreak(t *testing.T) {
+	s := topSnapshot()
+	s.state.Tasks = append(s.state.Tasks,
+		stateTask{ID: "t-tie1", Title: "born first", Status: "open", Priority: 3, Situation: "ready"},
+		stateTask{ID: "t-tie2", Title: "born second", Status: "open", Priority: 3, Situation: "ready"},
+	)
+	var ids []string
+	for _, task := range s.classify().ready {
+		ids = append(ids, task.ID)
+	}
+	if want := []string{"t-pars", "t-tie1", "t-tie2", "t-flor"}; !slices.Equal(ids, want) {
+		t.Errorf("ready order = %v, want %v", ids, want)
+	}
 }
 
 // newTopModelWithDep reseeds t-lic with an unmet dependency before
@@ -322,14 +343,7 @@ func TestTopDetailArrowsScroll(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 8})
 	m = mm.(topModel)
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flak: the longest biography
-		keyOf(tea.KeyEnter))
-	if m.mode != modeDetail {
-		t.Fatalf("mode = %d, want modeDetail", m.mode)
-	}
+	m = openDetail(t, m, "t-flak") // the longest biography
 	if m.detailMaxScroll() == 0 {
 		t.Fatal("detail fits in 8 rows; test needs scrollable content")
 	}
@@ -666,14 +680,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 func TestTopEnterOpensDetail(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	// A task row opens itself, with description and history visible.
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flak
-		keyOf(tea.KeyEnter))
-	if m.mode != modeDetail || m.detailID != "t-flak" {
-		t.Fatalf("enter on task row: mode %d detail %q, want modeDetail t-flak", m.mode, m.detailID)
-	}
+	m = openDetail(t, m, "t-flak")
 	v := m.View()
 	for _, want := range []string{
 		"t-flak — investigate the flake",
@@ -734,11 +741,7 @@ func TestTopDetailEscReturnsAndQQuits(t *testing.T) {
 // that adds a note shows up without leaving the screen.
 func TestTopDetailStaysLiveAcrossRefresh(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter)) // t-flak
+	m = openDetail(t, m, "t-flak")
 	fresh := topSnapshot()
 	h := fresh.tasks["t-flak"]
 	h.Notes = append(h.Notes, noteJSON{
@@ -761,11 +764,7 @@ func TestTopDetailStaysLiveAcrossRefresh(t *testing.T) {
 // j walks to the tail and clamps, k walks back to the top.
 func TestTopDetailScrollClamps(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter)) // t-flak: the longest biography
+	m = openDetail(t, m, "t-flak") // the longest biography
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = mm.(topModel)
 	body := m.detailBody()
@@ -1043,6 +1042,9 @@ func edgeSnapshot() *snapshot {
 // visible, never selectable, bar hint absent.
 func TestTopDetailEdgeSections(t *testing.T) {
 	s := edgeSnapshot()
+	// The daemon's loud verdict rides the state row: one of the epic's
+	// unmet deps sits cancelled.
+	s.state.Tasks[0].CancelledDeps = []string{"t-dddd"}
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
 	m = openDetail(t, m, "t-epic")
 	v := m.View()
@@ -1054,6 +1056,9 @@ func TestTopDetailEdgeSections(t *testing.T) {
 		"  t-bbbb  open       second child",
 		"  t-cccc  on hold    third child",
 		"  t-dddd  cancelled  dropped child",
+		// The cancelled dep also grows the detail's waiting field line
+		// (top.go's field(-1, "waiting", …) wiring), naming the dep.
+		"  waiting     waiting on cancelled t-dddd (cancelled — dropped child)",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("epic detail missing %q; view:\n%s", want, v)
@@ -2010,7 +2015,7 @@ func TestTopDetailEditLabelsFlow(t *testing.T) {
 	if am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if got := fake.labels["t-flak"]; !equalStrings(got, []string{"tui", "design", "ops"}) {
+	if got := fake.labels["t-flak"]; !slices.Equal(got, []string{"tui", "design", "ops"}) {
 		t.Errorf("labels written as %v, want [tui design ops]", got)
 	}
 	mm, _ := m.Update(am)
@@ -2087,7 +2092,7 @@ func TestTopDetailEditLabelsUnchangedRespacedClearAndEsc(t *testing.T) {
 	if am := cmd().(actionMsg); am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if got := fake.labels["t-flak"]; !equalStrings(got, []string{"design", "tui"}) {
+	if got := fake.labels["t-flak"]; !slices.Equal(got, []string{"design", "tui"}) {
 		t.Errorf("reorder written as %v, want [design tui]", got)
 	}
 }
@@ -3027,11 +3032,7 @@ func TestTopClickBeforeSnapshotIsInert(t *testing.T) {
 // it, so narrow terminals scroll real screen lines.
 func TestTopDetailWrapsToWidth(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter)) // t-flak
+	m = openDetail(t, m, "t-flak")
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 24, Height: 10})
 	m = mm.(topModel)
 	if w := maxLineWidth(m.View()); w > 24 {

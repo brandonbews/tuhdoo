@@ -33,6 +33,35 @@ func gateOpts() Options {
 	}
 }
 
+// twoDaemonRemote wires the collision-harness scaffold shared by the
+// two-daemon race tests: a bare origin, two clones of it, a daemon on
+// each. B joins from A's published data branch root (the harness's
+// joinSecondClone shape), so the pair share one history and every
+// merge is a race merge.
+func twoDaemonRemote(t *testing.T) (dA, dB *Daemon, rootA, rootB string) {
+	t.Helper()
+	setGitEnv(t)
+	base := shortTempDir(t)
+	bare := filepath.Join(base, "origin.git")
+	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
+	clone := func(name string) string {
+		root := filepath.Join(base, name)
+		if err := os.MkdirAll(root, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		runGit(t, root, "init", "--quiet", "-b", "main")
+		runGit(t, root, "remote", "add", "origin", bare)
+		return root
+	}
+	rootA, rootB = clone("alpha"), clone("bravo")
+
+	dA, _ = startDaemonAt(t, rootA, gateOpts())
+	mustCycle(t, dA) // publish A's data branch root
+	runGit(t, rootB, "fetch", "--quiet", "origin", "refs/heads/tuhdoo:refs/heads/tuhdoo")
+	dB, _ = startDaemonAt(t, rootB, gateOpts())
+	return dA, dB, rootA, rootB
+}
+
 // confirmedEvents returns the claim.confirmed events per task in evs.
 func confirmedEvents(t *testing.T, evs []event.Event) map[string][]event.ClaimConfirmed {
 	t.Helper()
@@ -122,27 +151,7 @@ func TestConfirmClaimUnreachableRemoteRefusesHonestly(t *testing.T) {
 // lands, every time; the loser is told it lost; zero duplicates across
 // the run.
 func TestConfirmClaimTwoDaemonsOneWinner(t *testing.T) {
-	setGitEnv(t)
-	base := shortTempDir(t)
-	bare := filepath.Join(base, "origin.git")
-	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
-	clone := func(name string) string {
-		root := filepath.Join(base, name)
-		if err := os.MkdirAll(root, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		runGit(t, root, "init", "--quiet", "-b", "main")
-		runGit(t, root, "remote", "add", "origin", bare)
-		return root
-	}
-	rootA, rootB := clone("alpha"), clone("bravo")
-
-	dA, _ := startDaemonAt(t, rootA, gateOpts())
-	mustCycle(t, dA) // publish A's data branch root
-	// B joins from A's root (the harness's joinSecondClone shape), so
-	// the pair share one history and every merge is a race merge.
-	runGit(t, rootB, "fetch", "--quiet", "origin", "refs/heads/tuhdoo:refs/heads/tuhdoo")
-	dB, _ := startDaemonAt(t, rootB, gateOpts())
+	dA, dB, rootA, rootB := twoDaemonRemote(t)
 	if dA.machine == dB.machine {
 		t.Fatalf("both clones minted machine id %s — they are not two machines", dA.machine)
 	}

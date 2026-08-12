@@ -95,6 +95,26 @@ func TestPathKnownValue(t *testing.T) {
 	}
 }
 
+// ShortID's documented contract: the prefix comes from the ID itself
+// (both the tuh- era and the older t- era), the tail is the ULID's last
+// four characters lowercased, and inputs too short to abbreviate pass
+// through whole. A bare ULID with no hyphen loses its (absent) prefix
+// and keeps only the lowercased tail — pinned as current behavior.
+func TestShortIDAbbreviation(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"tuh-01KYRMFV10W1N28TCN5ZZ9Z2C1", "tuh-z2c1"},
+		{"t-01BX5ZZKBKACTAV9WEVGEMMVRY", "t-mvry"},
+		{"esc-01ABCDEFGH", "esc-efgh"},
+		{"t-abc", "t-abc"},
+		{"01BX5ZZKBKACTAV9WEVGEMMVRY", "mvry"},
+	}
+	for _, tt := range tests {
+		if got := ShortID(tt.in); got != tt.want {
+			t.Errorf("ShortID(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestPathRejectsInvalidID(t *testing.T) {
 	for _, id := range []string{"", "not-a-ulid", "01BX5ZZKBK", "01BX5ZZKBKACTAV9WEVGEMMVRI"} {
 		if _, err := Path(id); err == nil {

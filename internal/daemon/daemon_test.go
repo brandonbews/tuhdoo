@@ -170,8 +170,8 @@ func createOne(t *testing.T, c *http.Client, actor string, item map[string]any) 
 	return resp.IDs[0]
 }
 
-// Test 1: two concurrent clients hammering task creation produce a
-// linear, gap-free event history — no lost writes, all IDs distinct.
+// Two concurrent clients hammering task creation produce a linear,
+// gap-free event history — no lost writes, all IDs distinct.
 func TestConcurrentCreatesLinearHistory(t *testing.T) {
 	d, c := startDaemon(t)
 
@@ -222,9 +222,6 @@ func TestConcurrentCreatesLinearHistory(t *testing.T) {
 	}
 }
 
-// Test 2: the claim lifecycle over the API — claim_next hydrates and
-// leases, renewal extends, holder checks bite, release returns the
-// task to the pool.
 // Inbox and held (2026-07-31): captures and paused tasks are ordinary
 // shared state, but the claim tools never serve them — open is the only
 // claimable status. Title-only capture works; promote/pause/resume
@@ -458,6 +455,24 @@ func TestUpdateTaskRefusesLoopClosingEdit(t *testing.T) {
 		map[string]any{"depends_on": []string{a}}, http.StatusOK)
 }
 
+// update_task's request validation: an edit naming no fields and an
+// edit to a made-up status are both caller mistakes, rejected 400.
+func TestUpdateTaskRejectsEmptyAndBadStatus(t *testing.T) {
+	_, c := startDaemon(t)
+	id := createOne(t, c, "brandon", map[string]any{"title": "untouched"})
+
+	body := string(mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon",
+		map[string]any{}, http.StatusBadRequest))
+	if !strings.Contains(body, "no fields") {
+		t.Errorf("empty update = %s, want a no-fields rejection", body)
+	}
+	body = string(mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon",
+		map[string]any{"status": "someday"}, http.StatusBadRequest))
+	if !strings.Contains(body, "invalid status") {
+		t.Errorf("bad status = %s, want an invalid-status rejection", body)
+	}
+}
+
 // seedDepLoop appends two mutually-dependent task.created events
 // straight into stored history — the union-merge arrival shape: each
 // write was individually acyclic, and no tool on this daemon ever saw
@@ -584,6 +599,23 @@ func TestClaimTaskConflictNamesBlockers(t *testing.T) {
 	}
 }
 
+// escalate and add_note against a task ID that does not exist: 404,
+// nothing recorded.
+func TestEscalateAndNoteUnknownTask(t *testing.T) {
+	d, c := startDaemon(t)
+	const ghost = "t-00000000000000000000000000"
+	mustDo(t, c, "POST", "/v0/escalations", "brandon/a1",
+		map[string]any{"task": ghost, "question": "anyone home?"}, http.StatusNotFound)
+	mustDo(t, c, "POST", "/v0/notes", "brandon/a1",
+		map[string]any{"task": ghost, "text": "into the void"}, http.StatusNotFound)
+	if n := len(flushedEvents(t, d)); n != 0 {
+		t.Fatalf("%d events landed against an unknown task, want none", n)
+	}
+}
+
+// The claim lifecycle over the API — claim_next hydrates and leases,
+// renewal extends, holder checks bite, release returns the task to the
+// pool.
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 
@@ -696,7 +728,7 @@ func TestClaimNextLabelFilter(t *testing.T) {
 	}
 }
 
-// Test 3: batch create with intra-batch tmp refs lands atomically with
+// Batch create with intra-batch tmp refs lands atomically with
 // resolved real IDs; invalid batches create nothing.
 func TestBatchCreateTmpRefs(t *testing.T) {
 	d, c := startDaemon(t)
@@ -766,6 +798,19 @@ func TestBatchCreateTmpRefs(t *testing.T) {
 		t.Fatalf("cyclic batch error should say so: %s", data)
 	}
 
+	// A duplicate tmp name in one batch: rejected whole.
+	dup := []map[string]any{
+		{"tmp": "twin", "title": "first twin"},
+		{"tmp": "twin", "title": "second twin"},
+	}
+	status, data, err = do(c, "POST", "/v0/tasks", "brandon", dup)
+	if err != nil || status != http.StatusBadRequest {
+		t.Fatalf("duplicate-tmp batch: status %d, err %v; body: %s", status, err, data)
+	}
+	if !strings.Contains(string(data), "duplicate tmp") {
+		t.Fatalf("duplicate-tmp batch error should say so: %s", data)
+	}
+
 	if err := d.batcher.Flush(); err != nil {
 		t.Fatalf("flush: %v", err)
 	}
@@ -778,8 +823,8 @@ func TestBatchCreateTmpRefs(t *testing.T) {
 	}
 }
 
-// Test 4: a second daemon instance on the same repo fails cleanly,
-// naming the live pid, while the first keeps running.
+// A second daemon instance on the same repo fails cleanly, naming the
+// live pid, while the first keeps running.
 func TestSecondInstanceFails(t *testing.T) {
 	d, c := startDaemon(t)
 
@@ -795,7 +840,7 @@ func TestSecondInstanceFails(t *testing.T) {
 	mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK)
 }
 
-// Test 5: T3 fail-safe — an incomprehensible event flips the daemon to
+// T3 fail-safe — an incomprehensible event flips the daemon to
 // read-only: writes 503 with the upgrade message, reads keep serving
 // the last good state.
 func TestFailSafeReadOnly(t *testing.T) {
@@ -868,7 +913,7 @@ func TestShutdownCleansUp(t *testing.T) {
 	d2.Shutdown("test cleanup")
 }
 
-// Test 7: views ride local writes (T6). After ordinary daemon writes —
+// Views ride local writes (T6). After ordinary daemon writes —
 // no sync merge anywhere — the data branch carries the four rendered
 // views alongside the events. The escalate call is eager, so this also
 // proves staged views ride an eager flush, not just the debounce.
@@ -901,7 +946,7 @@ func TestViewsRideLocalWrites(t *testing.T) {
 	}
 }
 
-// Test 8: highest version wins (B8). Views stamped by a newer generator
+// Highest version wins (B8). Views stamped by a newer generator
 // are never overwritten by this daemon's local writes — events flow,
 // views stay exactly as the newer peer left them.
 func TestViewsGuardRefusesNewerStamp(t *testing.T) {
@@ -980,6 +1025,17 @@ func TestOverlayTrimsAfterFlush(t *testing.T) {
 	}
 }
 
+// trimOverlay's partial case: of two staged events, only one has
+// landed on the branch — the trim keeps exactly the unlanded one.
+func TestTrimOverlayKeepsUnlandedEvent(t *testing.T) {
+	landed := event.Event{ID: "01LANDED00000000000000000000"}
+	pending := event.Event{ID: "01PENDING0000000000000000000"}
+	kept := trimOverlay([]event.Event{landed, pending}, []event.Event{landed})
+	if len(kept) != 1 || kept[0].ID != pending.ID {
+		t.Fatalf("trimOverlay kept %+v, want exactly the unlanded %s", kept, pending.ID)
+	}
+}
+
 // The finish_run guard (t-01KYVMD4PS9NMQVP1K5HQ8769X): a run.finished
 // event only lands when the acting principal has an attempt of their
 // own to close — the live claim, or their own released/voided claim not
@@ -1005,28 +1061,6 @@ func TestFinishRunGuard(t *testing.T) {
 	finish := func(t *testing.T, actor, task, outcome string) (finishRunResult, *opError) {
 		t.Helper()
 		return d.opFinishRun(actor, finishRunReq{Task: task, Outcome: outcome, Summary: "attempt closed"})
-	}
-	// mintClaim writes a claim.made event directly, the way a peer's
-	// claim arrives by sync — replay voids it when someone already
-	// holds. Like a real peer's daemon, it leases the claim (an unleased
-	// voided claim counts as already expired, and replay closes it with
-	// a synthesized superseded run); rows that want the loser's window
-	// shut re-point the lease at the past.
-	mintClaim := func(t *testing.T, actor, task string) string {
-		t.Helper()
-		d.mu.Lock()
-		ev, err := d.newEventLocked(event.TypeClaimMade, actor, task, event.ClaimMade{})
-		if err == nil {
-			err = d.commitLocked(false, ev)
-		}
-		d.mu.Unlock()
-		if err != nil {
-			t.Fatalf("mint claim by %s on %s: %v", actor, task, err)
-		}
-		if err := d.store.WriteLease(ev.ID, time.Now().Add(time.Hour)); err != nil {
-			t.Fatalf("lease minted claim: %v", err)
-		}
-		return ev.ID
 	}
 	// taskRuns returns the task's runs as (non-synthesized, synthesized)
 	// counts from freshly replayed state.
@@ -1161,7 +1195,7 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "race loser with a voided claim records superseded while the winner holds",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
-				mintClaim(t, "brandon/a2", task)
+				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
 			},
 			actor:       "brandon/a2",
 			outcome:     event.OutcomeSuperseded,
@@ -1173,7 +1207,7 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "race loser reporting done is coerced to superseded (D6)",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
-				mintClaim(t, "brandon/a2", task)
+				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
 			},
 			actor:       "brandon/a2",
 			outcome:     event.OutcomeDone,
@@ -1185,7 +1219,7 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "race loser reporting failed is coerced to superseded (D6)",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
-				mintClaim(t, "brandon/a2", task)
+				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
 			},
 			actor:       "brandon/a2",
 			outcome:     event.OutcomeFailed,
@@ -1197,7 +1231,7 @@ func TestFinishRunGuard(t *testing.T) {
 			name: "a loser whose lease expired is closed by its synthesized superseded run",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
-				id := mintClaim(t, "brandon/a2", task)
+				id := mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
 				if err := d.store.WriteLease(id, time.Now().Add(-time.Minute)); err != nil {
 					t.Fatalf("expire loser lease: %v", err)
 				}
@@ -1310,6 +1344,50 @@ func TestReplayAcceptsStoredClaimlessRun(t *testing.T) {
 	}
 	if got := d.state.Tasks[task].Status; got != "open" {
 		t.Fatalf("task status = %q, want open (a non-holder run moves nothing)", got)
+	}
+}
+
+// ValidateActor pins the D7 principal grammar ("human" or
+// "human/agent") — exported for the CLI's mcp shim, and until now only
+// pinned indirectly through its consumers.
+func TestValidateActor(t *testing.T) {
+	tests := []struct {
+		actor string
+		ok    bool
+	}{
+		{"brandon", true},
+		{"brandon/impl-1", true},
+		{"brandon/claude-code-2", true},
+		{"", false},
+		{"a/b/c", false},
+		{"/impl-1", false},
+		{"brandon/", false},
+		{"/", false},
+		{"two words", false},
+		{"brandon/agent 1", false},
+		{"tab\there", false},
+	}
+	for _, tt := range tests {
+		err := ValidateActor(tt.actor)
+		if tt.ok && err != nil {
+			t.Errorf("ValidateActor(%q) = %v, want nil", tt.actor, err)
+		}
+		if !tt.ok && err == nil {
+			t.Errorf("ValidateActor(%q) = nil, want error", tt.actor)
+		}
+	}
+}
+
+// requireActor on the HTTP surface: a write with a missing or
+// malformed X-Tuhdoo-Actor header is rejected 400 before any op runs.
+func TestHTTPWriteRejectsInvalidActor(t *testing.T) {
+	d, c := startDaemon(t)
+	for _, actor := range []string{"", "a/b/c", "two words"} {
+		mustDo(t, c, "POST", "/v0/tasks", actor,
+			[]map[string]any{{"title": "never lands"}}, http.StatusBadRequest)
+	}
+	if n := len(flushedEvents(t, d)); n != 0 {
+		t.Fatalf("%d events landed from rejected writes, want none", n)
 	}
 }
 

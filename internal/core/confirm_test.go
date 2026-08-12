@@ -7,7 +7,6 @@ package core
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
@@ -37,13 +36,9 @@ func TestConfirmedClaimBeatsEarlierUnconfirmed(t *testing.T) {
 		cB: testNow.Add(time.Hour),
 	}
 
-	var first *State
+	same := sameAsFirst(t)
 	for _, p := range permutations(len(events)) {
-		shuffled := make([]event.Event, len(events))
-		for i, idx := range p {
-			shuffled[i] = events[idx]
-		}
-		s := replay(t, shuffled, leases)
+		s := replay(t, permute(events, p), leases)
 		if got := s.Claims[cA].Status; got != ClaimVoided {
 			t.Fatalf("perm %v: earlier unconfirmed claim status = %s, want voided", p, got)
 		}
@@ -53,11 +48,7 @@ func TestConfirmedClaimBeatsEarlierUnconfirmed(t *testing.T) {
 		if ac := s.ActiveClaim("t1"); ac == nil || ac.ID != cB {
 			t.Fatalf("perm %v: active claim = %v, want %s", p, ac, cB)
 		}
-		if first == nil {
-			first = s
-		} else if !reflect.DeepEqual(first, s) {
-			t.Fatalf("perm %v: state differs from first permutation", p)
-		}
+		same(p, s)
 	}
 }
 
@@ -66,12 +57,16 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 	// ends, the task returns to the pool, a new contest opens, and its
 	// confirmation is honored. One confirmation per contest, not one
 	// per task forever.
+	type expectClaim struct {
+		status  ClaimStatus
+		confirm int // tick of the expected confirmation; 0 for none
+	}
 	cases := []struct {
 		name   string
 		events func(t *testing.T) []event.Event
 		leases func(t *testing.T) map[string]time.Time
-		want   map[string]Claim // claim ID (by tick) → expected status/confirmation
-		active int              // tick of the expected active claim; 0 for none
+		want   map[int]expectClaim // claim tick → expected verdict
+		active int                 // tick of the expected active claim; 0 for none
 	}{
 		{
 			name: "released confirmed claim yields a new contest whose confirmation is honored",
@@ -88,9 +83,9 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 			leases: func(t *testing.T) map[string]time.Time {
 				return map[string]time.Time{tick(t, 5): testNow.Add(time.Hour)}
 			},
-			want: map[string]Claim{
-				"2": {Status: ClaimReleased, Confirmation: "3"},
-				"5": {Status: ClaimActive, Confirmation: "6"},
+			want: map[int]expectClaim{
+				2: {status: ClaimReleased, confirm: 3},
+				5: {status: ClaimActive, confirm: 6},
 			},
 			active: 5,
 		},
@@ -114,9 +109,9 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 					tick(t, 40): testNow.Add(time.Hour),
 				}
 			},
-			want: map[string]Claim{
-				"2":  {Status: ClaimExpired, Confirmation: "3"},
-				"40": {Status: ClaimActive, Confirmation: "41"},
+			want: map[int]expectClaim{
+				2:  {status: ClaimExpired, confirm: 3},
+				40: {status: ClaimActive, confirm: 41},
 			},
 			active: 40,
 		},
@@ -131,8 +126,8 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 				}
 			},
 			leases: func(t *testing.T) map[string]time.Time { return nil },
-			want: map[string]Claim{
-				"2": {Status: ClaimReleased, Confirmation: ""},
+			want: map[int]expectClaim{
+				2: {status: ClaimReleased},
 			},
 			active: 0,
 		},
@@ -149,8 +144,8 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 			leases: func(t *testing.T) map[string]time.Time {
 				return map[string]time.Time{tick(t, 2): testNow.Add(time.Hour)}
 			},
-			want: map[string]Claim{
-				"2": {Status: ClaimActive, Confirmation: "3"},
+			want: map[int]expectClaim{
+				2: {status: ClaimActive, confirm: 3},
 			},
 			active: 2,
 		},
@@ -159,19 +154,18 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := replay(t, tc.events(t), tc.leases(t))
-			for tickStr, want := range tc.want {
-				n := atoiTick(t, tickStr)
+			for n, want := range tc.want {
 				c := s.Claims[tick(t, n)]
 				if c == nil {
 					t.Fatalf("claim at tick %d missing from state", n)
 				}
 				wantConf := ""
-				if want.Confirmation != "" {
-					wantConf = tick(t, atoiTick(t, want.Confirmation))
+				if want.confirm != 0 {
+					wantConf = tick(t, want.confirm)
 				}
-				if c.Status != want.Status || c.Confirmation != wantConf {
+				if c.Status != want.status || c.Confirmation != wantConf {
 					t.Fatalf("claim at tick %d = %s/%q, want %s/%q",
-						n, c.Status, c.Confirmation, want.Status, wantConf)
+						n, c.Status, c.Confirmation, want.status, wantConf)
 				}
 			}
 			ac := s.ActiveClaim("t1")
@@ -183,19 +177,6 @@ func TestConfirmationBindsToOneContest(t *testing.T) {
 			}
 		})
 	}
-}
-
-// atoiTick converts the table's tick shorthand ("2") to its int.
-func atoiTick(t *testing.T, s string) int {
-	t.Helper()
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			t.Fatalf("bad tick %q", s)
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n
 }
 
 func TestCorruptDoubleConfirmationResolvesDeterministically(t *testing.T) {
@@ -217,13 +198,9 @@ func TestCorruptDoubleConfirmationResolvesDeterministically(t *testing.T) {
 		cB: testNow.Add(time.Hour),
 	}
 
-	var first *State
+	same := sameAsFirst(t)
 	for _, p := range permutations(len(events)) {
-		shuffled := make([]event.Event, len(events))
-		for i, idx := range p {
-			shuffled[i] = events[idx]
-		}
-		s := replay(t, shuffled, leases)
+		s := replay(t, permute(events, p), leases)
 		if got := s.Claims[cB]; got.Status != ClaimActive || got.Confirmation != confB {
 			t.Fatalf("perm %v: claim B = %s/%q, want active/%s (earliest confirmation wins)",
 				p, got.Status, got.Confirmation, confB)
@@ -232,11 +209,7 @@ func TestCorruptDoubleConfirmationResolvesDeterministically(t *testing.T) {
 			t.Fatalf("perm %v: claim A = %s/%q, want voided with no confirmation",
 				p, got.Status, got.Confirmation)
 		}
-		if first == nil {
-			first = s
-		} else if !reflect.DeepEqual(first, s) {
-			t.Fatalf("perm %v: state differs from first permutation", p)
-		}
+		same(p, s)
 	}
 }
 

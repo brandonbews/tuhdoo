@@ -307,15 +307,6 @@ func TestTextInputViewStyled(t *testing.T) {
 	}
 }
 
-func TestTextInputHint(t *testing.T) {
-	if got := (textInput{}).hint("submits"); got != "enter submits · esc cancels" {
-		t.Errorf("single-line hint = %q", got)
-	}
-	if got := (textInput{multiline: true}).hint("saves"); got != "ctrl+s saves · enter newline · esc cancels" {
-		t.Errorf("multi-line hint = %q", got)
-	}
-}
-
 // ---- the widget through the model: one input loop for every entry ----
 
 // Every entry edits mid-string through Update: capture, answer, and

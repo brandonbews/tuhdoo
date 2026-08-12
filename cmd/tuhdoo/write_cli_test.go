@@ -5,10 +5,11 @@ package main
 // cli_test.go — real binary, real repo, real auto-spawned daemon.
 
 import (
-	"github.com/brandonbews/tuhdoo/internal/event"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
 // runCLIStdin is runCLI with the given stdin.
@@ -89,7 +90,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("task exit %d; output:\n%s", code, out)
 	}
-	mustContain(t, out, "priority    2", "Parse the thing.")
+	mustContain(t, out, "priority    2", "Parse the thing.", "edit by steer")
 	if strings.Contains(out, "parser,") || strings.Contains(out, ", parser") {
 		t.Errorf("labels not fully replaced:\n%s", out)
 	}

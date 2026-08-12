@@ -136,30 +136,7 @@ func TestMCPShimHonorsPrincipalOverride(t *testing.T) {
 			t.Fatalf("connect through shim: %v", err)
 		}
 		defer cs.Close()
-		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
-			Name:      "create_task",
-			Arguments: map[string]any{"tasks": []map[string]any{{"title": title}}},
-		})
-		if err != nil {
-			t.Fatalf("create_task: %v", err)
-		}
-		if res.IsError {
-			t.Fatalf("create_task returned a tool error: %+v", res.Content)
-		}
-		var created struct {
-			IDs []string `json:"ids"`
-		}
-		decodeStructured(t, res, &created)
-		res, err = cs.CallTool(context.Background(), &mcp.CallToolParams{
-			Name:      "get_task",
-			Arguments: map[string]any{"task": created.IDs[0]},
-		})
-		if err != nil {
-			t.Fatalf("get_task: %v", err)
-		}
-		var h hydratedTask
-		decodeStructured(t, res, &h)
-		return h.Task.CreatedBy
+		return createReadBack(t, cs, title).Task.CreatedBy
 	}
 
 	// No flags: the override is the human half, the daemon mints the
