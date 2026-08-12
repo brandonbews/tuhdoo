@@ -19,9 +19,9 @@ export function GET(): Response {
   const body = [
     "# tuhdoo",
     "",
-    "> A coordination fabric for agent fleets, steered by humans: a shared backlog, work queue, and activity ledger living in a git orphan branch inside the repo it plans. Synced through an ordinary git remote — no server, no vendor, no accounts.",
+    "> tuhdoo is a coordination fabric for agent fleets, steered by humans: a shared backlog, work queue, and activity ledger living in a git orphan branch inside the repo it plans. It syncs through an ordinary git remote and needs no server, no vendor, and no accounts.",
     "",
-    "Agents connect over a twelve-verb MCP surface and run one loop — claim, work, escalate, finish — recorded on the ledger. Humans capture and sculpt tasks, then steer by answering escalations and reviewing outcomes.",
+    "Agents connect over MCP and work one recorded loop: claim, work, escalate, finish. The entire surface is twelve tools, few enough that the whole protocol fits in a single instruction file. Humans capture and shape tasks, then steer by answering escalations and reviewing outcomes.",
     "",
     "The full documentation is concatenated in [llms-full.txt](" +
       `${ORIGIN}/llms-full.txt); the markdown source of every page lives in ` +

@@ -1,18 +1,18 @@
 ---
 title: Joining an existing tuhdoo repo
-description: How a new machine joins a repository that already uses tuhdoo — clone, install, tuhdoo init, verify — plus the branch-protection and CI settings the repo admin sets once.
+description: How a new machine joins a repository that already uses tuhdoo in four steps, plus the branch-protection and CI settings the repo admin sets once.
 ---
 
 # Joining an existing tuhdoo repo
 
-How a new machine — a teammate's laptop, your second workstation — joins a
-repository that already uses tuhdoo. There is no server to register with
-and no account to create: the coordination ledger is an orphan git branch
-(`tuhdoo` by default) inside the repo you are about to clone, and joining
-is four steps — clone, install the binary, `tuhdoo init`, verify. This page
-is self-contained.
+This page shows how a new machine, whether a teammate's laptop or your
+second workstation, joins a repository that already uses tuhdoo. There is
+no server to register with and no account to create; the coordination
+ledger is an orphan git branch (`tuhdoo` by default) inside the repo you
+are about to clone. Joining is four steps: clone, install the binary, run
+`tuhdoo init`, and verify. This page is self-contained.
 
-(The reverse move — removing tuhdoo from a machine or a repo — is
+(The reverse move, removing tuhdoo from a machine or a repo, is
 [`uninstall.md`](uninstall.md).)
 
 ## 1. Clone the repository
@@ -30,21 +30,21 @@ A plain, full clone (as above) is the recommended shape. Other shapes:
   remote-tracking configuration is assumed.
 - **Shallow clones (`--depth=…`) are fine.** The data branch is fetched
   fresh from the remote as above, and tuhdoo replays state from that
-  branch's tip tree only — truncated history on your code branches never
+  branch's tip tree only; truncated history on your code branches never
   matters to it.
 - **Do not run tuhdoo from a fork.** The daemon syncs with `origin` and
   nothing else. Cloned from a fork, it will faithfully sync the *fork's*
-  data branch — silently maintaining a divergent copy of the team's ledger.
+  data branch, silently maintaining a divergent copy of the team's ledger.
   Clone the repository the team actually shares.
 - **Bare and `--mirror` clones cannot run tuhdoo.** They have no worktree;
   tuhdoo runs inside a working repository.
 
 ## 2. Install the binary
 
-Any one of these; all produce the same single static binary.
+Any one of these works; all produce the same single static binary.
 
-Via npm (recommended for TS/JS projects — pins the version in your
-lockfile):
+Via npm (recommended for TS/JS projects, because it pins the version in
+your lockfile):
 
 ```sh
 npm i -D tuhdoo
@@ -73,13 +73,14 @@ tuhdoo init
 ```
 
 This starts the per-repo daemon and confirms the data branch exists. It is
-idempotent — safe to run again anytime — and joining is automatic: when the
-remote already carries a `tuhdoo` branch, the daemon adopts it as its local
-copy instead of minting a fresh one. Nothing to configure, no flags.
+idempotent, so running it again anytime is safe, and joining is automatic:
+when the remote already carries a `tuhdoo` branch, the daemon adopts it as
+its local copy instead of minting a fresh one. There is nothing to
+configure and no flags to pass.
 
-Offline at the time? Still fine: init works fully locally, and the first
-sync after the remote becomes reachable merges histories automatically —
-that convergence is tuhdoo's normal operating mode, not a repair.
+Running it offline is fine: init works fully locally, and the first sync
+after the remote becomes reachable merges histories automatically. That
+convergence is tuhdoo's normal operating mode, not a repair.
 
 ## 4. Verify
 
@@ -94,7 +95,7 @@ Then:
 tuhdoo backlog
 ```
 
-should list the team's existing tasks — the ledger you just joined, not an
+should list the team's existing tasks: the ledger you just joined, not an
 empty table. From here, bare `tuhdoo` opens the interactive TUI, and the
 init output includes the MCP snippet that connects an agent harness (agents
 then follow [`agent-protocol.md`](agent-protocol.md)).
@@ -103,9 +104,9 @@ then follow [`agent-protocol.md`](agent-protocol.md)).
 
 Everything you write to the ledger is attributed to a principal derived
 from your git identity: the local part of `user.email` (so
-`sarah@example.com` acts as `sarah`). When that derivation is wrong — a
-host noreply address like `4099114+sarah@users.noreply.github.com`, or a
-work identity that differs from your commit email — override it once per
+`sarah@example.com` acts as `sarah`). When that derivation is wrong, say a
+host noreply address like `4099114+sarah@users.noreply.github.com` or a
+work identity that differs from your commit email, override it once per
 clone:
 
 ```sh
@@ -126,8 +127,8 @@ Two one-time settings on the shared repository, both also printed by
   publishing while continuing to work locally. Exclude the `tuhdoo` branch
   from any rule requiring pull requests, reviews, or status checks. This is
   safe by construction: the branch is written only by tuhdoo daemons, moves
-  fast-forward only, and is never force-pushed — a rule *blocking* force
+  fast-forward only, and is never force-pushed, so a rule *blocking* force
   pushes to it is harmless.
 - **Exclude the data branch from CI triggers**, so ledger syncs don't burn
-  CI runs — e.g. for GitHub Actions:
+  CI runs. For GitHub Actions:
   `on: { push: { branches-ignore: ["tuhdoo"] } }`.

@@ -12,9 +12,9 @@ const sora = Sora({
   variable: "--font-sora",
 });
 
-const SITE_TITLE = "tuhdoo — a coordination fabric for agent fleets";
+const SITE_TITLE = "tuhdoo: a coordination fabric for agent fleets";
 const SITE_DESCRIPTION =
-  "A shared backlog, work queue, and activity ledger for agent fleets, living in a git branch inside the repo it plans. No server, no vendor, no accounts.";
+  "tuhdoo gives agent fleets a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the remote you already have and needs no server, no vendor, and no accounts.";
 
 export const metadata: Metadata = {
   // www is the canonical host: the apex 308-redirects to it (Vercel domain
@@ -65,7 +65,7 @@ export default function RootLayout({
         </a>
         <header className="site-header">
           <div className="site-header-inner">
-            <Link href="/" className="lockup" aria-label="tuhdoo — home">
+            <Link href="/" className="lockup" aria-label="tuhdoo: home">
               <TuhdooLogo />
             </Link>
             <nav aria-label="Site">
@@ -79,7 +79,7 @@ export default function RootLayout({
         {children}
         <footer className="site-footer">
           <div className="site-footer-inner">
-            <span>tuhdoo — coordination over git, nothing else.</span>
+            <span>tuhdoo: coordination over git, nothing else.</span>
             <a href="https://github.com/brandonbews/tuhdoo" rel="noopener">
               github.com/brandonbews/tuhdoo
             </a>
