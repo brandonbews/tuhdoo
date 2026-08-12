@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 2 blocked · 5 on hold · 3 inbox · 92 done · 23 cancelled
+0 in progress · 1 ready · 1 blocked · 5 on hold · 3 inbox · 93 done · 23 cancelled
 
 ## In progress
 
@@ -17,7 +17,6 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | depends on [`t-qm7a`](tasks/t-01KYRMFV10W1N28TCN5SH4QM7A.md) |
-| [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) | Launch tuhdoo: public-facing materials and adoption surface | 0 | depends on [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) |
 
 ## On hold
 
@@ -120,6 +119,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-r7rg`](tasks/tuh-01KZC6XBFXGFMXEEQP9KD1R7RG.md) is the daemon running whe i type tuhdoo and closed when i exit? how does that part work?
 - [`tuh-05fn`](tasks/tuh-01KZCMF7JKMXVDG0HANVVQ05FN.md) claim_next selection: document the label filter and priority order for agents; test the matching code
 - [`tuh-qf4g`](tasks/tuh-01KZEPBEE8HFDQVK96AQNCQF4G.md) Grill: site stack & content strategy (human-led)
+- [`tuh-n0er`](tasks/tuh-01KZEPBEE8HFDQVK96AV6RN0ER.md) Launch tuhdoo: public-facing materials and adoption surface
 - [`tuh-kk4j`](tasks/tuh-01KZF1DNJ3T77A01NJXF1VKK4J.md) Docs swap: root docs/ becomes the published content root; working docs move to internal-docs/
 - [`tuh-qgaw`](tasks/tuh-01KZF1DNJ3T77A01NJXHW4QGAW.md) Generated data-branch README: fix the wrong docs/ sentence, point at tuhdoo.com, tighten the prose
 - [`tuh-0q0x`](tasks/tuh-01KZF2D3MA0P24WKAWK89J0Q0X.md) Vercel project + tuhdoo.com DNS wiring (human-led)
