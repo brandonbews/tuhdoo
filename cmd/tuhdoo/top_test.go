@@ -75,7 +75,9 @@ func topSnapshot() *snapshot {
 			"t-lic":  {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
 			"t-park": {Task: taskJSON{ID: "t-park", Title: "polish the docs", Priority: 2}},
 			"t-idea": {Task: taskJSON{ID: "t-idea", Title: "idea: dark mode"}},
-			"t-chor": {Task: taskJSON{ID: "t-chor", Title: "old chore"}},
+			// Status matches the state row: t-chor's detail is a closed
+			// record (its ring drops the priority/labels stops).
+			"t-chor": {Task: taskJSON{ID: "t-chor", Title: "old chore", Status: "done"}},
 		},
 	}
 }
@@ -914,8 +916,12 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	for _, want := range []string{
 		"t-rqjm — its dependency",
 		"id          t-rqjm",
-		// Its dependency edge is short and annotated too.
-		"depends on  t-d83w (open — the long one)",
+		// Its edges render as section rows (edge rows, 2026-08-11) —
+		// short IDs there too, and this pair depends on each other, so
+		// both directions show the same row shape.
+		" DEPENDS ON (1)",
+		" NEEDED BY (1)",
+		"  t-d83w  open  the long one",
 	} {
 		if !strings.Contains(dv, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, dv)
@@ -958,8 +964,11 @@ func TestSnapshotTaskRef(t *testing.T) {
 	}
 }
 
-// The detail screen annotates dep/parent edges from the snapshot; an
-// edge to a task the snapshot has never heard of stays bare.
+// The task view's DEPENDS ON section (edge rows, 2026-08-11): the
+// comma-joined depends-on field line is gone — one row per edge now,
+// bold short ID (plain here), dim status word, plain title, each a
+// single line. An edge to a task the snapshot has never heard of
+// renders its bare short ID — never an invented status.
 func TestTopDetailAnnotatesEdges(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m, _ = press(t, m,
@@ -969,16 +978,258 @@ func TestTopDetailAnnotatesEdges(t *testing.T) {
 	for _, want := range []string{
 		"t-pars — write the parser",
 		"id          t-pars",
+		" DEPENDS ON (2)",
 		// t-chor resolves and annotates; t-epic is unknown to the
-		// snapshot and stays bare.
-		"depends on  t-chor (done — old chore), t-epic",
+		// snapshot and stays a bare row.
+		"  t-chor  done  old chore",
+		"\n  t-epic\n",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
 		}
 	}
+	if strings.Contains(v, "depends on  ") {
+		t.Errorf("the comma-joined depends-on field line survived; view:\n%s", v)
+	}
 	if strings.Contains(v, "t-epic (") {
 		t.Errorf("unresolvable edge grew an invented annotation; view:\n%s", v)
+	}
+	// Nothing depends on t-pars: no NEEDED BY section.
+	if strings.Contains(v, "NEEDED BY") {
+		t.Errorf("dependent-free task grew a NEEDED BY section; view:\n%s", v)
+	}
+}
+
+// edgeSnapshot seeds an epic-shaped structure for the edge sections
+// (edge rows, 2026-08-11): t-epic depends on four children spanning
+// every status family, t-bbbb is needed by two tasks (creation order),
+// and t-lone has no edges at all.
+func edgeSnapshot() *snapshot {
+	return &snapshot{
+		state: stateResp{
+			Sync: syncJSON{Mode: "local-only"},
+			Tasks: []stateTask{
+				{ID: "t-epic", Title: "ship the epic", Status: "open", Situation: "blocked",
+					UnmetDeps: []string{"t-bbbb", "t-cccc", "t-dddd"}},
+				{ID: "t-aaaa", Title: "first child", Status: "done", Situation: "done"},
+				{ID: "t-bbbb", Title: "second child", Status: "open", Situation: "ready"},
+				{ID: "t-cccc", Title: "third child", Status: "held", Situation: "held"},
+				{ID: "t-dddd", Title: "dropped child", Status: "cancelled", Situation: "cancelled"},
+				{ID: "t-late", Title: "build on it", Status: "open", Situation: "blocked",
+					UnmetDeps: []string{"t-bbbb"}},
+				{ID: "t-lone", Title: "no edges here", Status: "open", Situation: "ready"},
+			},
+		},
+		tasks: map[string]hydratedTask{
+			"t-epic": {Task: taskJSON{ID: "t-epic", Title: "ship the epic", Status: "open",
+				CreatedAt: time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC), CreatedBy: "brandon",
+				DependsOn: []string{"t-aaaa", "t-bbbb", "t-cccc", "t-dddd"}}},
+			"t-aaaa": {Task: taskJSON{ID: "t-aaaa", Title: "first child", Status: "done"}},
+			"t-bbbb": {Task: taskJSON{ID: "t-bbbb", Title: "second child", Status: "open"}},
+			"t-cccc": {Task: taskJSON{ID: "t-cccc", Title: "third child", Status: "held"}},
+			"t-dddd": {Task: taskJSON{ID: "t-dddd", Title: "dropped child", Status: "cancelled"}},
+			"t-late": {Task: taskJSON{ID: "t-late", Title: "build on it", Status: "open", DependsOn: []string{"t-bbbb"}}},
+			"t-lone": {Task: taskJSON{ID: "t-lone", Title: "no edges here", Status: "open"}},
+		},
+	}
+}
+
+// The edge sections end to end (edge rows, 2026-08-11): several deps
+// render as aligned single lines with their status words visible; the
+// depended-on task shows a NEEDED BY section listing every dependent
+// regardless of status, in ULID order; a task with neither edge
+// direction shows neither section. Watch mode renders the same rows —
+// visible, never selectable, bar hint absent.
+func TestTopDetailEdgeSections(t *testing.T) {
+	s := edgeSnapshot()
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	m = openDetail(t, m, "t-epic")
+	v := m.View()
+	// One aligned grid: statuses pad to the widest word ("cancelled"),
+	// so every title starts at the same column.
+	for _, want := range []string{
+		" DEPENDS ON (4)",
+		"  t-aaaa  done       first child",
+		"  t-bbbb  open       second child",
+		"  t-cccc  on hold    third child",
+		"  t-dddd  cancelled  dropped child",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("epic detail missing %q; view:\n%s", want, v)
+		}
+	}
+	if strings.Contains(v, "NEEDED BY") {
+		t.Errorf("nothing needs the epic, yet a NEEDED BY section rendered; view:\n%s", v)
+	}
+	// The depended-on child: NEEDED BY lists both dependents in ULID
+	// (creation) order — the epic first — statuses visible even though
+	// one dependent is blocked.
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	m = openDetail(t, m, "t-bbbb")
+	v = m.View()
+	needed := strings.Index(v, " NEEDED BY (2)")
+	if needed < 0 {
+		t.Fatalf("child detail missing the NEEDED BY section; view:\n%s", v)
+	}
+	epicRow := strings.Index(v, "  t-epic  open  ship the epic")
+	lateRow := strings.Index(v, "  t-late  open  build on it")
+	if epicRow < needed || lateRow < epicRow {
+		t.Errorf("dependents missing or out of ULID order (bar %d, epic %d, late %d); view:\n%s",
+			needed, epicRow, lateRow, v)
+	}
+	if strings.Contains(v, "DEPENDS ON") {
+		t.Errorf("dep-free child grew a DEPENDS ON section; view:\n%s", v)
+	}
+	// A task with neither edge direction shows neither section.
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	m = openDetail(t, m, "t-lone")
+	if v := m.View(); strings.Contains(v, "DEPENDS ON") || strings.Contains(v, "NEEDED BY") {
+		t.Errorf("edge-free task grew an edge section; view:\n%s", v)
+	}
+	// Watch mode: the rows render — reading is watch work — but nothing
+	// is selectable and the bar carries no steering hint.
+	w := topModel{snap: s, rows: buildRows(s)}
+	w = moveTo(t, w, "t-epic")
+	w, _ = press(t, w, keyOf(tea.KeyEnter))
+	wv := w.View()
+	if !strings.Contains(wv, "  t-cccc  on hold    third child") {
+		t.Errorf("watch detail lost the edge rows; view:\n%s", wv)
+	}
+	if strings.Contains(wv, "enter open") || strings.Contains(wv, "▌") {
+		t.Errorf("watch detail advertises or selects edge rows; view:\n%s", wv)
+	}
+}
+
+// Edge rows are selectable stops in the existing focus machinery:
+// enter on a dep row opens the target task's view (pushing the current
+// one onto the back stack), a hop along a NEEDED BY row pushes again,
+// and esc walks the visited stack back — reaching the dashboard,
+// cursor intact, after the first task. The selection bar covers the
+// focused edge row.
+func TestTopDetailEdgeNavigationAndBackStack(t *testing.T) {
+	m := openDetail(t, newTopModel(newFakeSteering()), "t-pars")
+	// Ring: title(0), priority(1), labels(2), dep t-chor(3) — the
+	// unresolvable t-epic is never a stop — description(4).
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	stops := m.detailStops()
+	if len(stops) != 5 {
+		t.Fatalf("ring has %d stops, want 5 (bare t-epic must not be a stop): %+v", len(stops), stops)
+	}
+	if s := stops[detailFocusIdx(m.detailFocus, len(stops))]; s.kind != stopDep || s.task != "t-chor" {
+		t.Fatalf("three j from the title: stop %+v, want the t-chor dep row", s)
+	}
+	if s := stops[len(stops)-1]; s.kind != stopDescription {
+		t.Fatalf("last stop %+v, want the description", s)
+	}
+	// The selection bar covers the focused edge row.
+	if body := strings.Join(m.detailBody(), "\n"); !strings.Contains(body, "▌ t-chor  done  old chore") {
+		t.Fatalf("selection bar not on the edge row; body:\n%s", body)
+	}
+	// enter hops to the dep's view, pushing the current task; the
+	// hopped-to view opens at the top with the title focused.
+	m, cmd := press(t, m, keyOf(tea.KeyEnter))
+	if m.mode != modeDetail || m.detailID != "t-chor" || cmd != nil {
+		t.Fatalf("enter on the dep row: mode %d detail %q cmd %v, want t-chor's view", m.mode, m.detailID, cmd)
+	}
+	if len(m.detailBack) != 1 || m.detailBack[0] != "t-pars" {
+		t.Fatalf("back stack = %v, want [t-pars]", m.detailBack)
+	}
+	if m.detailFocus != 0 || m.detailScroll != 0 {
+		t.Errorf("hop landed at focus %d scroll %d, want 0 0", m.detailFocus, m.detailScroll)
+	}
+	// t-chor is terminal: its ring is title(0), needed-by t-pars(1),
+	// description(2) — an edge hop is navigation, not steering, so the
+	// closed record keeps its edge stops. Hop back out along the
+	// reverse edge: a second push, not a pop.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if body := strings.Join(m.detailBody(), "\n"); !strings.Contains(body, "▌ t-pars  open  write the parser") {
+		t.Fatalf("needed-by row not focused; body:\n%s", body)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if m.detailID != "t-pars" || len(m.detailBack) != 2 || m.detailBack[1] != "t-chor" {
+		t.Fatalf("reverse hop: detail %q back %v, want t-pars with [t-pars t-chor]", m.detailID, m.detailBack)
+	}
+	// esc pops the stack one view at a time, then reaches the dashboard
+	// with the cursor where the walk began.
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeDetail || m.detailID != "t-chor" {
+		t.Fatalf("first esc: mode %d detail %q, want t-chor's view", m.mode, m.detailID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeDetail || m.detailID != "t-pars" {
+		t.Fatalf("second esc: mode %d detail %q, want t-pars's view", m.mode, m.detailID)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav || m.detailID != "" {
+		t.Fatalf("third esc: mode %d detail %q, want the dashboard", m.mode, m.detailID)
+	}
+	if r, ok := m.selected(); !ok || r.id() != "t-pars" {
+		t.Errorf("cursor lost across the walk: %+v", r)
+	}
+}
+
+// Click-to-open on edge rows falls out of the existing mouse
+// machinery: a click selects the row under the pointer, a click on the
+// selected row hops to its target; a bare, unresolvable edge row is
+// never a stop, so clicks on it hit nothing.
+func TestTopDetailEdgeClick(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m = openDetail(t, m, "t-pars")
+	y := screenLineOf(t, m, "old chore")
+	m, cmd := mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || cmd != nil {
+		t.Fatalf("click on the dep row: mode %d cmd %v, want selection only", m.mode, cmd)
+	}
+	stops := m.detailStops()
+	if s := stops[detailFocusIdx(m.detailFocus, len(stops))]; s.kind != stopDep || s.task != "t-chor" {
+		t.Fatalf("click selected stop %+v, want the t-chor dep row", s)
+	}
+	m, _ = mouseTo(t, m, clickAt(0, y))
+	if m.mode != modeDetail || m.detailID != "t-chor" {
+		t.Fatalf("click on the selected dep row: mode %d detail %q, want the hop to t-chor", m.mode, m.detailID)
+	}
+	if len(m.detailBack) != 1 || m.detailBack[0] != "t-pars" {
+		t.Errorf("back stack = %v, want [t-pars]", m.detailBack)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc)) // pop back to t-pars
+	focus := m.detailFocus
+	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "t-epic")))
+	if m.mode != modeDetail || m.detailID != "t-pars" || m.detailFocus != focus {
+		t.Errorf("click on the bare edge row: mode %d detail %q focus %d, want inert",
+			m.mode, m.detailID, m.detailFocus)
+	}
+}
+
+// The one-shot edge rows (edge rows, 2026-08-11): with a snapshot the
+// depends-on block renders one line per edge — full ID, status word,
+// title — plus a needed-by block of the reverse edges; unresolvable
+// IDs stay bare rows. Full IDs throughout: plumbing keeps full IDs.
+func TestPrintTaskEdgeRows(t *testing.T) {
+	s := topSnapshot()
+	var b strings.Builder
+	printTask(&b, colors{}, s.tasks["t-pars"], s.stateTaskOf("t-pars"), s)
+	v := b.String()
+	want := "  depends on  t-chor  done  old chore\n              t-epic\n"
+	if !strings.Contains(v, want) {
+		t.Errorf("one-shot depends-on block diverged; want:\n%q\noutput:\n%s", want, v)
+	}
+	if strings.Contains(v, "needed by") {
+		t.Errorf("dependent-free task grew a needed-by block; output:\n%s", v)
+	}
+	// The depended-on task carries the reverse edge.
+	b.Reset()
+	printTask(&b, colors{}, s.tasks["t-chor"], s.stateTaskOf("t-chor"), s)
+	v = b.String()
+	if want := "  needed by   t-pars  open  write the parser\n"; !strings.Contains(v, want) {
+		t.Errorf("one-shot needed-by block diverged; want %q; output:\n%s", want, v)
+	}
+	if strings.Contains(v, "depends on") {
+		t.Errorf("dep-free task grew a depends-on block; output:\n%s", v)
 	}
 }
 
@@ -988,15 +1239,19 @@ func TestTopDetailAnnotatesEdges(t *testing.T) {
 func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 	long := "t-01KYT63MB28Z535SMJC9B0D83W"
 	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	dep2 := "t-01KYT63MB28Z535SMJCBC7SY1P"
 	var b strings.Builder
 	printTask(&b, colors{}, hydratedTask{Task: taskJSON{
 		ID: long, Title: "the long one",
-		DependsOn: []string{dep},
-	}}, stateTask{})
+		DependsOn: []string{dep, dep2},
+	}}, stateTask{}, nil)
 	v := b.String()
 	for _, want := range []string{
 		long + " — the long one",
-		"depends on  " + dep + "\n",
+		// One row per edge (edge rows, 2026-08-11): the second dep sits
+		// on its own continuation line, indented to the value column —
+		// and with no snapshot the rows stay bare full IDs.
+		"depends on  " + dep + "\n              " + dep2 + "\n",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("one-shot rendering missing %q; output:\n%s", want, v)
@@ -1015,14 +1270,14 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 func TestPrintTaskWaitingLine(t *testing.T) {
 	h := hydratedTask{Task: taskJSON{ID: "t-x", Title: "stuck", DependsOn: []string{"t-dep"}}}
 	var b strings.Builder
-	printTask(&b, colors{}, h, stateTask{ID: "t-x", UnmetDeps: []string{"t-dep"}})
+	printTask(&b, colors{}, h, stateTask{ID: "t-x", UnmetDeps: []string{"t-dep"}}, nil)
 	if strings.Contains(b.String(), "waiting") {
 		t.Errorf("plain unmet dep grew a waiting line:\n%s", b.String())
 	}
 
 	b.Reset()
 	printTask(&b, colors{}, h, stateTask{ID: "t-x", UnmetDeps: []string{"t-dep"},
-		CancelledDeps: []string{"t-dep"}, Cyclic: true})
+		CancelledDeps: []string{"t-dep"}, Cyclic: true}, nil)
 	want := "  waiting     cyclic — a human must cut an edge; waiting on cancelled t-dep\n"
 	if !strings.Contains(b.String(), want) {
 		t.Errorf("annotated task view missing %q; output:\n%s", want, b.String())
@@ -1071,7 +1326,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 		}},
 	}
 	var b strings.Builder
-	printTask(&b, colors{}, h, stateTask{})
+	printTask(&b, colors{}, h, stateTask{}, nil)
 	// ULID order: escalation 01E2, then note 01N1, then run 01R1. The
 	// suffix match proves no blank line trails the last entry.
 	wantHist := strings.Join([]string{
@@ -1093,7 +1348,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 
 	// With real colors: dim stamp, bold descriptor, on every kind.
 	b.Reset()
-	printTask(&b, ansiColors, h, stateTask{})
+	printTask(&b, ansiColors, h, stateTask{}, nil)
 	v := b.String()
 	for _, want := range []string{
 		"  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a7\x1b[0m\n",
@@ -1111,7 +1366,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 		Notes: h.Notes,
 	}
 	b.Reset()
-	printTask(&b, colors{}, single, stateTask{})
+	printTask(&b, colors{}, single, stateTask{}, nil)
 	wantSingle := strings.Join([]string{
 		"History",
 		"  2026-07-29 15:00 UTC  note by brandon/a1",
@@ -1137,7 +1392,7 @@ func TestPrintTaskHistoryUpdateEntry(t *testing.T) {
 		}},
 	}
 	var b strings.Builder
-	printTask(&b, colors{}, h, stateTask{})
+	printTask(&b, colors{}, h, stateTask{}, nil)
 	wantHist := strings.Join([]string{
 		"History",
 		"  (unknown time)  edit by brandon",
@@ -1150,7 +1405,7 @@ func TestPrintTaskHistoryUpdateEntry(t *testing.T) {
 
 	// With real colors: dim stamp, bold descriptor, plain summary.
 	b.Reset()
-	printTask(&b, ansiColors, h, stateTask{})
+	printTask(&b, ansiColors, h, stateTask{}, nil)
 	want := "  \x1b[2m(unknown time)\x1b[0m  \x1b[1medit by brandon\x1b[0m\n" +
 		"    retitled · priority 0→2 · labels +launch −web\n"
 	if v := b.String(); !strings.Contains(v, want) {
@@ -1677,9 +1932,11 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	}
 	// A description-less task (t-pars): the dim "none" placeholder is a
 	// real ring stop, the editor opens empty, and a typed description is
-	// a real change.
+	// a real change. Four stops down: priority, labels, the t-chor dep
+	// row (edge rows, 2026-08-11), then the description.
 	m = openDetail(t, newTopModel(fake), "t-pars")
 	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
@@ -2025,9 +2282,12 @@ func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
 	if body[2] != "" {
 		t.Fatalf("title block should be two wrapped lines; line 2 = %q", body[2])
 	}
-	// Focus the description: every line of the block — continuations and
-	// the blank paragraph separator included — carries the gutter.
+	// Focus the description — four stops down, past priority, labels,
+	// and the t-chor dep row (edge rows, 2026-08-11): every line of the
+	// block — continuations and the blank paragraph separator included —
+	// carries the gutter.
 	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})

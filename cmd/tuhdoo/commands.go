@@ -240,33 +240,25 @@ func runTask(id string) int {
 	if code != 0 {
 		return code
 	}
-	// Resolve short forms and fragments against the live task list
-	// before fetching — input sugar only (T7): a full ID passes through
-	// as itself and the rendered output is untouched.
-	st, err := fetchState(c)
+	// One snapshot serves the whole command: short-form/fragment
+	// resolution against the live task list (input sugar only, T7 — a
+	// full ID passes through as itself), the daemon's blockage verdicts
+	// for the waiting line, edge-row annotation, and the needed-by
+	// reverse edges (edge rows, 2026-08-11) — which need every task's
+	// depends_on, so the full hydration fetchSnapshot already does
+	// replaces the old state-plus-one-task pair of fetches. N+1 over
+	// the local socket is cheap at v0 volumes (snapshot.go).
+	snap, err := fetchSnapshot(c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
 		return 1
 	}
-	full, err := resolveTaskID(id, st.Tasks)
+	full, err := resolveTaskID(id, snap.state.Tasks)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
 		return 1
 	}
-	var h hydratedTask
-	if err := c.get("/v0/tasks/"+full, &h); err != nil {
-		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
-		return 1
-	}
-	// The state listing already fetched for ID resolution carries the
-	// daemon's blockage verdicts — the waiting line renders off those.
-	var row stateTask
-	for _, t := range st.Tasks {
-		if t.ID == full {
-			row = t
-		}
-	}
-	printTask(os.Stdout, newColors(os.Stdout), h, row)
+	printTask(os.Stdout, newColors(os.Stdout), snap.tasks[full], snap.stateTaskOf(full), snap)
 	return 0
 }
 
@@ -320,25 +312,13 @@ func idMatches(id, frag string) bool {
 // plumbing form. st is the task's state-listing row (zero when the
 // caller has none): its loud blockage annotations — loop membership,
 // cancelled deps (2026-08-05 edge grill) — render as a waiting line.
-func printTask(w io.Writer, col colors, h hydratedTask, st stateTask) {
-	printTaskRef(w, col, h, nil, waitingNote(st, func(id string) string { return id }))
-}
-
-// printTaskRef is printTask with the task references — depends_on —
-// passed through ref: the TUI shortens and annotates them for display,
-// and gets the full ULID exactly once, dimmed on its own line as the
-// copyable canonical form. A nil ref keeps the one-shot rendering
-// byte-identical. waiting is the pre-rendered loud-annotation line
-// (waitingNote), "" for no line.
-func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) string, waiting string) {
+// s, when non-nil, annotates the depends-on rows with status and title
+// and computes the needed-by block of reverse edges (edge rows,
+// 2026-08-11); a nil snapshot renders bare depends-on IDs and no
+// needed-by block.
+func printTask(w io.Writer, col colors, h hydratedTask, st stateTask, s *snapshot) {
 	t := h.Task
-	if ref == nil {
-		ref = func(id string) string { return id }
-		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
-	} else {
-		fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, event.ShortID(t.ID), col.reset, oneLine(t.Title))
-		fmt.Fprintf(w, "  %sid          %s%s\n", col.dim, t.ID, col.reset)
-	}
+	fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
 	status := views.HumanStatus(t.Status)
 	if h.Claim != nil {
 		status += fmt.Sprintf(" — claimed by %s", h.Claim.Actor)
@@ -351,10 +331,11 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 	if len(t.Labels) > 0 {
 		fmt.Fprintf(w, "  labels      %s\n", strings.Join(t.Labels, ", "))
 	}
-	if len(t.DependsOn) > 0 {
-		fmt.Fprintf(w, "  depends on  %s\n", joinRefs(t.DependsOn, ref))
+	printEdges(w, col, s, "depends on", t.DependsOn)
+	if s != nil {
+		printEdges(w, col, s, "needed by", s.dependentsOf(t.ID))
 	}
-	if waiting != "" {
+	if waiting := waitingNote(st, func(id string) string { return id }); waiting != "" {
 		fmt.Fprintf(w, "  waiting     %s\n", waiting)
 	}
 	fmt.Fprintf(w, "  created     %s by %s\n", stamp(t.CreatedAt), t.CreatedBy)
@@ -376,13 +357,46 @@ func printTaskRef(w io.Writer, col colors, h hydratedTask, ref func(string) stri
 	}
 }
 
-// joinRefs renders a list of task references through ref.
-func joinRefs(ids []string, ref func(string) string) string {
-	out := make([]string, len(ids))
-	for i, id := range ids {
-		out[i] = ref(id)
+// printEdges prints one edge list — "depends on" or "needed by" — one
+// aligned line per edge (edge rows, 2026-08-11: the comma-joined blob
+// de-blobbed on every surface): full ID — plumbing keeps full IDs (T7)
+// — then dim status word and plain title where the ID resolves in s.
+// Continuation rows indent to the value column; unresolvable IDs stay
+// bare — never an invented status; nothing prints for an empty list.
+func printEdges(w io.Writer, col colors, s *snapshot, name string, ids []string) {
+	if len(ids) == 0 {
+		return
 	}
-	return strings.Join(out, ", ")
+	resolve := func(id string) (stateTask, bool) {
+		if s == nil {
+			return stateTask{}, false
+		}
+		return s.findTask(id)
+	}
+	var idW, statusW int
+	for _, id := range ids {
+		if n := len([]rune(id)); n > idW {
+			idW = n
+		}
+		if t, ok := resolve(id); ok {
+			if n := len([]rune(views.HumanStatus(t.Status))); n > statusW {
+				statusW = n
+			}
+		}
+	}
+	for i, id := range ids {
+		lead := strings.Repeat(" ", 14)
+		if i == 0 {
+			lead = "  " + name + strings.Repeat(" ", 12-len(name))
+		}
+		row := id
+		if t, ok := resolve(id); ok {
+			row = padTo(id, idW) + "  " +
+				sgr(col, col.dim, padTo(views.HumanStatus(t.Status), statusW)) + "  " +
+				oneLine(t.Title)
+		}
+		fmt.Fprintf(w, "%s%s\n", lead, row)
+	}
 }
 
 // histEntry is one history item; id is its event ULID, the

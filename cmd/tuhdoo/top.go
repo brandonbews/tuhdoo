@@ -276,9 +276,10 @@ type topModel struct {
 	editWas string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
 	status  string    // one-line result of the last action
 
-	detailID     string // task shown by modeDetail
-	detailScroll int    // first visible body line in modeDetail
-	detailFocus  int    // focused stop in an armed detail (index into detailStops)
+	detailID     string   // task shown by modeDetail
+	detailScroll int      // first visible body line in modeDetail
+	detailFocus  int      // focused stop in an armed detail (index into detailStops)
+	detailBack   []string // task views walked through by edge hops (edge rows, 2026-08-11): esc pops, newest last — a plain slice, boring Go
 	width        int    // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
 	height       int    // terminal rows; 0 renders all
 }
@@ -406,6 +407,7 @@ func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 		id = r.esc.Task
 	}
 	m.mode, m.detailID, m.detailScroll, m.detailFocus, m.status = modeDetail, id, 0, 0, ""
+	m.detailBack = nil // a fresh entry from the list starts a fresh hop stack
 	if r.kind == rowEscalation {
 		for i, s := range m.detailStops() {
 			if s.kind == stopEscalation && s.esc.ID == r.esc.ID {
@@ -596,7 +598,15 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		m.mode, m.detailID, m.detailScroll, m.detailFocus = modeNav, "", 0, 0
+		// The edge-hop back stack (edge rows, 2026-08-11): esc pops to
+		// the task view the hop came from; from the first task it steps
+		// back to the list — dashboard or history, whichever is under it.
+		if n := len(m.detailBack); n > 0 {
+			m.detailID, m.detailBack = m.detailBack[n-1], m.detailBack[:n-1]
+			m.detailScroll, m.detailFocus = 0, 0
+		} else {
+			m.mode, m.detailID, m.detailScroll, m.detailFocus = modeNav, "", 0, 0
+		}
 	case "j", "down":
 		if focus >= 0 && focus < len(stops)-1 {
 			m.detailFocus = focus + 1
@@ -633,14 +643,17 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // The task view's focusable stops, in render order: title, the
-// priority and labels meta lines, each open escalation, then the
+// priority and labels meta lines, each open escalation, each edge row
+// (DEPENDS ON, then NEEDED BY — edge rows, 2026-08-11), then the
 // description body. Bars and the read-only meta lines (id, status,
-// edges, created) are never stops.
+// created) are never stops.
 const (
 	stopTitle       = "title"
 	stopPriority    = "priority"
 	stopLabels      = "labels"
 	stopEscalation  = "escalation"
+	stopDep         = "dep"      // one DEPENDS ON row; enter opens the target task's view
+	stopNeededBy    = "neededby" // one NEEDED BY row; the same hop along the reverse edge
 	stopDescription = "description"
 )
 
@@ -648,15 +661,20 @@ const (
 type detailStop struct {
 	kind string
 	esc  escalationJSON // set when kind == stopEscalation
+	task string         // edge target, set when kind == stopDep or stopNeededBy
 }
 
 // detailStops is the focus ring: title, the priority and labels meta
-// lines, each open escalation, then the description body — the same
-// order they render in, which is what lets detailLines tag lines by
-// position. Empty in watch mode: the disarmed pane stays fully
-// read-only, so it has no focus to act on. A terminal task loses the
-// priority and labels stops (history view, 2026-08-02; labels
-// editable, 2026-08-05): a closed record is browsed, not steered.
+// lines, each open escalation, each edge row, then the description
+// body — the same order they render in, which is what lets detailLines
+// tag lines by position. Empty in watch mode: the disarmed pane stays
+// fully read-only, so it has no focus to act on. A terminal task loses
+// the priority and labels stops (history view, 2026-08-02; labels
+// editable, 2026-08-05): a closed record is browsed, not steered —
+// but keeps its edge stops, because an edge hop is navigation, not
+// steering. An edge that does not resolve in the snapshot is never a
+// stop: it has no view to open, so its row stays plain (the taskRef
+// never-invent rule, applied to selection).
 func (m topModel) detailStops() []detailStop {
 	if !m.armed || m.snap == nil {
 		return nil
@@ -672,14 +690,32 @@ func (m topModel) detailStops() []detailStop {
 	for _, e := range m.detailEscalations() {
 		stops = append(stops, detailStop{kind: stopEscalation, esc: e})
 	}
+	for _, dep := range h.Task.DependsOn {
+		if _, ok := m.snap.findTask(dep); ok {
+			stops = append(stops, detailStop{kind: stopDep, task: dep})
+		}
+	}
+	for _, id := range m.snap.dependentsOf(m.detailID) {
+		stops = append(stops, detailStop{kind: stopNeededBy, task: id})
+	}
 	return append(stops, detailStop{kind: stopDescription})
 }
 
 // openStop opens the focused stop's editor: title and description
 // prefilled through the shared widget (unchanged submit writes
 // nothing — the editWas rule), priority as the numeric input, an
-// escalation as answer entry. One opener for enter and the mouse.
+// escalation as answer entry. One opener for enter and the mouse —
+// which is how click-to-open on edge rows falls out of the existing
+// machinery for free.
 func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
+	// An edge stop navigates instead of editing (edge rows, 2026-08-11):
+	// push the current task and open the target's view in place; esc
+	// pops back through the visited views (updateDetail).
+	if s.kind == stopDep || s.kind == stopNeededBy {
+		m.detailBack = append(m.detailBack, m.detailID)
+		m.detailID, m.detailScroll, m.detailFocus, m.status = s.task, 0, 0, ""
+		return m, nil
+	}
 	if s.kind == stopEscalation {
 		m.mode, m.back = modeAnswer, modeDetail
 		m.target, m.input, m.status = topRow{kind: rowEscalation, esc: s.esc}, textInput{}, ""
@@ -1016,9 +1052,6 @@ func (m topModel) detailLines() []detailLine {
 		labels = strings.Join(t.Labels, ", ")
 	}
 	field(labelsStop, "labels", labels)
-	if len(t.DependsOn) > 0 {
-		field(-1, "depends on", joinRefs(t.DependsOn, m.snap.taskRef))
-	}
 	// Loud blockage annotations only (2026-08-05 edge grill): the line
 	// renders when a human must act — loop membership, cancelled deps —
 	// never for ordinary waiting, which the depends-on refs already tell.
@@ -1038,6 +1071,41 @@ func (m topModel) detailLines() []detailLine {
 		for _, e := range open {
 			addRaw(nextStop(), escalationRow(col, e, width))
 		}
+	}
+
+	// The edge sections (2026-08-11 grill): DEPENDS ON — the old
+	// comma-joined field line de-blobbed into one row per edge, because
+	// a container's dep list read top-to-bottom is its progress
+	// checklist and the status word is the glanceable signal — then
+	// NEEDED BY, the reverse edges computed at render from the snapshot
+	// (no stored reverse index). Every dependent renders regardless of
+	// status (accuracy over noise; the dim status word carries the
+	// story), in ULID order. Rows whose target resolves are selectable
+	// stops: enter hops to the target's view, esc walks back.
+	deps, dependents := t.DependsOn, m.snap.dependentsOf(t.ID)
+	if len(deps) > 0 || len(dependents) > 0 {
+		idW, statusW := edgeCols(m.snap, deps, dependents)
+		hint := ""
+		if m.armed {
+			hint = "enter open "
+		}
+		section := func(label string, ids []string) {
+			if len(ids) == 0 {
+				return
+			}
+			add(-1, "")
+			addRaw(-1, barLine(col, col.rev+col.dim, fmt.Sprintf(" %s (%d)", label, len(ids)), hint, width))
+			for _, id := range ids {
+				et, ok := m.snap.findTask(id)
+				stop := -1
+				if ok {
+					stop = nextStop()
+				}
+				addRaw(stop, edgeRow(col, idW, statusW, id, et, ok, width))
+			}
+		}
+		section("DEPENDS ON", deps)
+		section("NEEDED BY", dependents)
 	}
 
 	add(-1, "")
@@ -1113,6 +1181,46 @@ func escalationRow(col colors, e escalationJSON, width int) string {
 	}
 	lines = append(lines, "      "+sgr(col, col.dim, fmt.Sprintf("%s · %s", e.Actor, stamp(e.RaisedAt))))
 	return strings.Join(lines, "\n")
+}
+
+// edgeCols derives the shared columns of the task view's edge rows —
+// the widest short ID and human status word across both sections — so
+// DEPENDS ON and NEEDED BY read as one aligned grid.
+func edgeCols(s *snapshot, deps, dependents []string) (idW, statusW int) {
+	for _, ids := range [][]string{deps, dependents} {
+		for _, id := range ids {
+			if n := len([]rune(event.ShortID(id))); n > idW {
+				idW = n
+			}
+			if t, ok := s.findTask(id); ok {
+				if n := len([]rune(views.HumanStatus(t.Status))); n > statusW {
+					statusW = n
+				}
+			}
+		}
+	}
+	return idW, statusW
+}
+
+// edgeRow renders one edge of the task view on the two-cell mark
+// column: bold short ID, dim status word, plain title — hard-truncated
+// to one line with an ellipsis, never wrapped (edge rows, 2026-08-11;
+// chosen over id+title alone because the status word is the glanceable
+// signal of a dep checklist). An edge the snapshot cannot resolve
+// renders its bare short ID — never an invented status (the taskRef
+// rule).
+func edgeRow(col colors, idW, statusW int, id string, t stateTask, ok bool, width int) string {
+	short := event.ShortID(id)
+	if !ok {
+		return "  " + sgr(col, col.bold, short)
+	}
+	budget := width - 2 - idW - 2 - statusW - 2
+	if budget < 2 {
+		budget = 2
+	}
+	return "  " + sgr(col, col.bold, padTo(short, idW)) + "  " +
+		sgr(col, col.dim, padTo(views.HumanStatus(t.Status), statusW)) + "  " +
+		ellipsize(oneLine(t.Title), budget)
 }
 
 // detailBody is the task view's screen lines — detailLines stripped of

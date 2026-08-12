@@ -465,7 +465,11 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		t.Fatalf("task exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, "Parse the thing.", "Acceptance: it parses.",
-		"Do we need unicode?", "A (brandon): ASCII first.")
+		"Do we need unicode?", "A (brandon): ASCII first.",
+		// The docs task depends on the parser, so the parser's one-shot
+		// view carries the reverse edge as a needed-by row — full ID,
+		// status word, title (edge rows, 2026-08-11).
+		"needed by   "+docs+"  open  ship the docs")
 
 	// task with an unknown id: clear failure.
 	out, code = runCLI(t, repo, "task", "t-nope")
