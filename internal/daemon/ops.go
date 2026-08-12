@@ -1279,6 +1279,7 @@ func (d *Daemon) hydrateLocked(id string) hydratedTask {
 		Notes:       []noteJSON{},
 		Runs:        []runJSON{},
 		Escalations: []escalationJSON{},
+		Updates:     []updateJSON{},
 	}
 	if c := d.state.ActiveClaim(id); c != nil {
 		cj := claimJSONOf(c)
@@ -1301,6 +1302,11 @@ func (d *Daemon) hydrateLocked(id string) hydratedTask {
 	for _, eid := range d.state.EscOrder {
 		if e := d.state.Escalations[eid]; e.Task == id {
 			h.Escalations = append(h.Escalations, escalationJSONOf(e))
+		}
+	}
+	for _, u := range d.state.Updates {
+		if u.Task == id {
+			h.Updates = append(h.Updates, updateJSON{ID: u.ID, Task: u.Task, Actor: u.Actor, Fields: u.Fields})
 		}
 	}
 	return h

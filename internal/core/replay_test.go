@@ -948,3 +948,78 @@ func TestClosedMetadataOrderInsensitive(t *testing.T) {
 		}
 	}
 }
+
+// Every task.updated leaves an Update record (2026-08-11 grill: every
+// edit gets a line, no filtering): actor plus one compact summary per
+// written field — old→new for scalars, captured from state before the
+// field-level apply; membership deltas for lists (short-ID form for
+// depends_on edges); name-only for the text fields. One event touching
+// several fields is one entry. Retroactivity is by construction:
+// records are replay-derived, so past edits on an existing ledger get
+// entries with no event changes.
+func TestUpdateHistoryEntries(t *testing.T) {
+	st := func(s string) *string { return &s }
+	num := func(n int) *int { return &n }
+	list := func(vs ...string) *[]string { return &vs }
+	longDep := "tuh-01KYRMFV10W1N28TCN5NDADMN4"
+
+	tests := []struct {
+		name   string
+		update event.TaskUpdated
+		want   []string
+	}{
+		{"scalars capture old to new",
+			event.TaskUpdated{Status: st(StatusHeld), Priority: num(2)},
+			[]string{"status open→held", "priority 5→2"}},
+		{"text fields read name-only",
+			event.TaskUpdated{Title: st("after"), Description: st("new body")},
+			[]string{"retitled", "description edited"}},
+		{"list fields read as deltas",
+			event.TaskUpdated{Labels: list("go", "launch"), DependsOn: list(longDep)},
+			[]string{"labels +launch −web", "depends_on +tuh-dmn4 −t-dep"}},
+		{"membership-preserving replacement reads name-only",
+			event.TaskUpdated{Labels: list("web", "go")},
+			[]string{"labels edited"}},
+		{"multi-field edit is one entry, payload field order",
+			event.TaskUpdated{Title: st("after"), Priority: num(9), Labels: list("go")},
+			[]string{"retitled", "priority 5→9", "labels −web"}},
+		{"field-less update still records the edit",
+			event.TaskUpdated{},
+			nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			events := []event.Event{
+				evt(t, 1, event.TypeTaskCreated, "brandon", "t1", event.TaskCreated{
+					Title: "before", Description: "old body", Priority: 5,
+					Labels: []string{"go", "web"}, DependsOn: []string{"t-dep"},
+				}),
+				evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", tt.update),
+			}
+			s := replay(t, events, nil)
+			want := []Update{{ID: tick(t, 2), Task: "t1", Actor: "sarah", Fields: tt.want}}
+			if !reflect.DeepEqual(s.Updates, want) {
+				t.Errorf("Updates = %+v, want %+v", s.Updates, want)
+			}
+		})
+	}
+}
+
+// Successive edits chain: each entry's old values are the state the
+// previous edit left, and entries keep replay (ULID) order.
+func TestUpdateHistoryEntriesChain(t *testing.T) {
+	num := func(n int) *int { return &n }
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Priority: num(2)}),
+		evt(t, 3, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Priority: num(7)}),
+	}
+	s := replay(t, events, nil)
+	want := []Update{
+		{ID: tick(t, 2), Task: "t1", Actor: "brandon", Fields: []string{"priority 0→2"}},
+		{ID: tick(t, 3), Task: "t1", Actor: "sarah", Fields: []string{"priority 2→7"}},
+	}
+	if !reflect.DeepEqual(s.Updates, want) {
+		t.Errorf("Updates = %+v, want %+v", s.Updates, want)
+	}
+}

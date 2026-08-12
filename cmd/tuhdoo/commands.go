@@ -392,8 +392,8 @@ type histEntry struct {
 	text string
 }
 
-// historyOf merges a task's notes, runs, and escalations into one
-// chronological (ULID-ordered) sequence, mirroring internal/views.
+// historyOf merges a task's notes, runs, escalations, and edits into
+// one chronological (ULID-ordered) sequence, mirroring internal/views.
 // Each entry's header is a dim stamp and a bold descriptor (entry
 // formatting, 2026-08-03); consecutive entries are separated by one
 // blank line, carried as a leading newline on every entry after the
@@ -433,6 +433,15 @@ func historyOf(col colors, h hydratedTask) []histEntry {
 			fmt.Fprintf(&b, "    %ssynthesized by replay, not recorded by the agent%s\n", col.dim, col.reset)
 		}
 		out = append(out, histEntry{r.ID, b.String()})
+	}
+	for _, u := range h.Updates {
+		var b strings.Builder
+		fmt.Fprintf(&b, "  %s%s%s  %sedit by %s%s\n",
+			col.dim, idStamp(u.ID), col.reset, col.bold, u.Actor, col.reset)
+		if len(u.Fields) > 0 {
+			fmt.Fprintf(&b, "    %s\n", strings.Join(u.Fields, " · "))
+		}
+		out = append(out, histEntry{u.ID, b.String()})
 	}
 	for _, e := range h.Escalations {
 		var b strings.Builder

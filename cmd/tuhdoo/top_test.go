@@ -1123,6 +1123,41 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 	}
 }
 
+// Task edits render in history (2026-08-11 grill): every task.updated
+// is an entry — dim stamp, bold "edit by <actor>" descriptor, and the
+// daemon's compact per-field summaries verbatim on the detail line;
+// a multi-field edit is one entry. Both surfaces share historyOf, so
+// this pins the shape once at the source.
+func TestPrintTaskHistoryUpdateEntry(t *testing.T) {
+	h := hydratedTask{
+		Task: taskJSON{ID: "t-hist", Title: "the biography"},
+		Updates: []updateJSON{{
+			ID: "01U1", Task: "t-hist", Actor: "brandon",
+			Fields: []string{"retitled", "priority 0→2", "labels +launch −web"},
+		}},
+	}
+	var b strings.Builder
+	printTask(&b, colors{}, h, stateTask{})
+	wantHist := strings.Join([]string{
+		"History",
+		"  (unknown time)  edit by brandon",
+		"    retitled · priority 0→2 · labels +launch −web",
+		"",
+	}, "\n")
+	if v := b.String(); !strings.HasSuffix(v, wantHist) {
+		t.Errorf("update entry diverged.\nwant suffix:\n%s\ngot:\n%s", wantHist, v)
+	}
+
+	// With real colors: dim stamp, bold descriptor, plain summary.
+	b.Reset()
+	printTask(&b, ansiColors, h, stateTask{})
+	want := "  \x1b[2m(unknown time)\x1b[0m  \x1b[1medit by brandon\x1b[0m\n" +
+		"    retitled · priority 0→2 · labels +launch −web\n"
+	if v := b.String(); !strings.Contains(v, want) {
+		t.Errorf("colored update entry missing %q; output:\n%q", want, v)
+	}
+}
+
 // resolveTaskID is the input half of the short-ID contract: full IDs
 // pass through, short forms and unambiguous fragments resolve,
 // ambiguity errors listing every candidate, and nothing is guessed.

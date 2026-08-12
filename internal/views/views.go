@@ -38,7 +38,9 @@ import (
 // "on hold" for held stays as the one sanctioned display mapping.
 // 7: blocked rows mark dependency-loop members and cancelled
 // dependencies (2026-08-05 edge grill).
-const FormatVersion = 7
+// 8: task edits render in history (2026-08-11 grill) — every
+// task.updated is an entry: actor, stamp, compact per-field summary.
+const FormatVersion = 8
 
 // MetaPath is where the view-format stamp lives. T6 named "views/.meta",
 // but the views render at the branch root (README.md and friends), so
@@ -413,13 +415,18 @@ type entry struct {
 	text string
 }
 
-// history merges a task's notes, runs, and escalations into one
+// history merges a task's notes, runs, escalations, and edits into one
 // chronological (ULID-ordered) sequence of rendered blocks.
 func history(s *core.State, taskID string) []entry {
 	var out []entry
 	for i := range s.Notes {
 		if n := &s.Notes[i]; n.Task == taskID {
 			out = append(out, entry{n.ID, noteEntry(n)})
+		}
+	}
+	for i := range s.Updates {
+		if u := &s.Updates[i]; u.Task == taskID {
+			out = append(out, entry{u.ID, updateEntry(u)})
 		}
 	}
 	for i := range s.Runs {
@@ -440,6 +447,20 @@ func noteEntry(n *core.Note) string {
 	var w strings.Builder
 	fmt.Fprintf(&w, "### %s — note from `%s`\n\n", stamp(n.AddedAt), n.Actor)
 	writeBlock(&w, n.Text)
+	return w.String()
+}
+
+// updateEntry renders one task edit: actor, stamp, and the compact
+// per-field summaries core recorded at replay (2026-08-11 grill —
+// every edit gets an entry). A summary-less entry (an event that wrote
+// no fields) keeps its heading: the edit still happened.
+func updateEntry(u *core.Update) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "### %s — edit by `%s`\n", idStamp(u.ID), u.Actor)
+	if len(u.Fields) > 0 {
+		w.WriteString("\n")
+		writeBlock(&w, strings.Join(u.Fields, " · "))
+	}
 	return w.String()
 }
 

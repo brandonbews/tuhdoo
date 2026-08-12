@@ -189,6 +189,15 @@ func goldenInput(t *testing.T) core.Input {
 			Title:     "Build on the go-git spike",
 			DependsOn: []string{"t-old"},
 		}),
+		// A multi-field edit (2026-08-11 grill): one task.updated, one
+		// history entry — text field name-only, scalar old→new, and
+		// membership deltas on both list fields.
+		evt(t, 27, event.TypeTaskUpdated, "brandon", "t-web", event.TaskUpdated{
+			Title:     ptr("Browser UI spike (kanban)"),
+			Priority:  ptr(1),
+			Labels:    ptr([]string{"v2", "web"}),
+			DependsOn: ptr([]string{"t-core"}),
+		}),
 		// An open non-blocking escalation raised BEFORE t-flak's open
 		// blocking one (tick 17): escalations.md must list the blocking
 		// question first regardless of raise order, and a non-blocking
@@ -289,7 +298,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":7}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":8}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -374,8 +383,8 @@ func TestCanWrite(t *testing.T) {
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
 		{"lower", []byte(`{"format":2}`), true},
-		{"equal", []byte(`{"format":7}`), true},
-		{"higher", []byte(`{"format":8}`), false},
+		{"equal", []byte(`{"format":8}`), true},
+		{"higher", []byte(`{"format":9}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

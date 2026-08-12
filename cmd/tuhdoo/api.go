@@ -69,6 +69,15 @@ type noteJSON struct {
 	AddedAt time.Time `json:"added_at"`
 }
 
+// updateJSON is one task edit: the actor and the compact per-field
+// summaries the history surfaces render verbatim.
+type updateJSON struct {
+	ID     string   `json:"id"`
+	Task   string   `json:"task"`
+	Actor  string   `json:"actor"`
+	Fields []string `json:"fields"`
+}
+
 // hydratedTask is GET /v0/tasks/{id}: one task with everything attached.
 type hydratedTask struct {
 	Task        taskJSON         `json:"task"`
@@ -76,6 +85,7 @@ type hydratedTask struct {
 	Notes       []noteJSON       `json:"notes"`
 	Runs        []runJSON        `json:"runs"`
 	Escalations []escalationJSON `json:"escalations"`
+	Updates     []updateJSON     `json:"updates"`
 }
 
 type stateTask struct {
