@@ -2,7 +2,7 @@
 
 `tuh-01KZVR3YFA5S14VWWXCWP5D1VC`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — waiting on an escalation answer
 - **Priority:** 0
 - **Labels:** `test` `ux`
 - **Created:** 2026-08-12 19:45 UTC by `brandon`
@@ -28,3 +28,7 @@ _Unanswered._
 This context block is intentionally long so you can judge the collapse UX at its worst. What PR #73 changed: the structured question is always visible in the task view, while this background section starts collapsed and expands on demand — the bet being that the question alone usually carries the decision and the context is a fallback, not the lead. Things worth noticing while you are here: whether the collapsed indicator makes it obvious there is more to read; whether expanding and re-collapsing leaves the cursor where you expect; whether long lines wrap cleanly at your terminal width inside the expanded block; whether the escalation you are not currently looking at stays selectable without scrolling confusion; and whether answering from the expanded state feels different from answering with context collapsed. A second thing to evaluate: two open escalations on one task is the multi-escalation rendering path — check the Needs Input row for this task only shows it once, and that the task view lists both questions in a sane order (oldest first, presumably). If any of that feels off, that observation is itself the answer to record here.
 
 _Unanswered._
+
+### 2026-08-12 19:46 UTC — run by `brandon/claude-code-1` — blocked
+
+Fixture run: raised two test escalations for Brandon's escalation-UX walkthrough. Nothing to build; archive the task once the walkthrough is done.
