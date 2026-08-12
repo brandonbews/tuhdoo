@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 2 ready · 3 blocked · 4 on hold · 4 inbox · 88 done · 22 cancelled
+1 in progress · 2 ready · 3 blocked · 4 on hold · 5 inbox · 88 done · 22 cancelled
 
 ## In progress
 
@@ -42,6 +42,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) create tight but meaningful design doc for my review to help me understand the codebase and have a starting point for understanding go against it. should include a mermaid diagram that visualizes all the pieces and details on all of the modules and sections of the codebase
 - [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) do an imrpvoe architecture skill pass (need to bring this skill into my skill library)
 - [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields)
+- [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) Align remaining "verbs" wording with the settled "tools" term (mcp.go tool description, code comments, internal docs)
 
 ## Done
 
