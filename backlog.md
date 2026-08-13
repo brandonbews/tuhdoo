@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 0 blocked · 6 on hold · 17 inbox · 97 done · 23 cancelled
+0 in progress · 0 ready · 0 blocked · 6 on hold · 18 inbox · 97 done · 23 cancelled
 
 ## In progress
 
@@ -48,6 +48,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) points made by agent dog fooding init in different project: 1. The README says npm i -D tuhdoo. pnpm add -D worked identically, but a pnpm/yarn line would help — pnpm users hit the "does it handle os/cpu optional deps" question, and it does. 2. tuhdoo init --help errors with unexpected argument "--help" instead of printing usage. Minor, but --help on a subcommand is muscle memory.
+- [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) should list name of working directory in the header for sense of place
 
 ## Done
 
