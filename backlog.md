@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 6 on hold · 16 inbox · 96 done · 23 cancelled
+0 in progress · 0 ready · 0 blocked · 6 on hold · 16 inbox · 97 done · 23 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -125,6 +123,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-pez8`](tasks/tuh-01KZ9Y3THHH5B8GT22T92BPEZ8.md) Task-view edges: one-line dep rows, a needed-by section, edge navigation with a back stack
 - [`tuh-0ssg`](tasks/tuh-01KZ9YBF1N06FQ37XV65940SSG.md) Go codebase sweep: duplicate mechanisms, comment fluff, and a test-suite spec audit (zero behavior diffs)
 - [`tuh-m6qy`](tasks/tuh-01KZ9YD2Q9V7BSZJBDGVNYM6QY.md) User-facing docs: the human story of steering tuhdoo, platform-agnostic
+- [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact
 - [`tuh-4hqt`](tasks/tuh-01KZA0VT234XJYVZWT8GVB4HQT.md) Agent protocol: document how a successor finds a predecessor's branch (salvage breadcrumbs)
 - [`tuh-bsdh`](tasks/tuh-01KZA0VT234XJYVZWT8KT0BSDH.md) Run records: additive merged_as field for the commit that actually landed
 - [`tuh-pk06`](tasks/tuh-01KZA0VT234XJYVZWT8S09PK06.md) Onboarding remainder: teammate joining doc and branch-protection guidance (doc + init line)

@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Z6647C3TBCYGGTXQJYE8V`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 0
 - **Labels:** `docs` `go`
 - **Depends on:** [`tuh-0ssg`](tuh-01KZ9YBF1N06FQ37XV65940SSG.md) (done)
@@ -34,3 +34,11 @@ Acceptance: the map lands as one PR (make test lint green — doc-only, but the 
 ### 2026-08-12 21:18 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · priority 0→0 · labels +docs +go · depends_on +tuh-0ssg
+
+### 2026-08-13 04:25 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01KZ9Z66/architecture-map`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/79>
+- Merged as: `fb4cdfff9cb23ca0fe844cf79f9976e928cfa37c`
+
+Both deliverables live. (1) The map: internal-docs/architecture.md, merged to main via PR #79 (squash fb4cdff) — layered mermaid system diagram, claim_next end-to-end trace, bounded per-package sections with T/D decision pointers; header says "snapshot of 2026-08-12; regenerate, don't patch". (2) The companion: private claude.ai artifact "Reading tuhdoo" at https://claude.ai/code/artifact/6a3af71d-c2fb-4459-99ad-26bdbc39bb15 — on-ramp (package mechanics, go.mod roster, TS-mapped fundamentals), then eight stops (event → core → views → gitx → store → syncer → daemon → cmd) each with first-met idioms and one read-this-function prompt, sized for three evenings. Ground-truth rule honored: everything written from a fresh read of today's tree by nine parallel package readers plus one claim_next trace agent; no design-doc paraphrasing. Side capture: the trace found claim_next never pokes the syncer and never regenerates views (bypasses commitLocked) — filed as inbox task tuh-01KZWNMJH264W3B3TGNP7FP51R rather than judged in the doc. Brandon's post-merge review is the real bar; expect follow-up edits as he reads against both.
