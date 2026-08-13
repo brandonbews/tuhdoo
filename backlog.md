@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 6 on hold · 15 inbox · 96 done · 23 cancelled
+1 in progress · 0 ready · 0 blocked · 6 on hold · 16 inbox · 96 done · 23 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-ye8v`](tasks/tuh-01KZ9Z6647C3TBCYGGTXQJYE8V.md) | Codebase map + private Go reading companion: architecture doc in internal-docs, learning collateral as an artifact | 0 | `docs` `go` |
+_None._
 
 ## Blocked / waiting
 
@@ -48,6 +48,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness: unexercised D6 arms and unasserted claim-response warning
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
+- [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
 
 ## Done
 

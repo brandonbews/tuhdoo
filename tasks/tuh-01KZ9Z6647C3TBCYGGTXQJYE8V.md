@@ -2,7 +2,7 @@
 
 `tuh-01KZ9Z6647C3TBCYGGTXQJYE8V`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 0
 - **Labels:** `docs` `go`
 - **Depends on:** [`tuh-0ssg`](tuh-01KZ9YBF1N06FQ37XV65940SSG.md) (done)
