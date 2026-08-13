@@ -27,8 +27,12 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Test and lint
-        run: make test lint
+      - name: Test and lint (Go only)
+        # The release gates on the Go half: the site is not a release
+        # artifact and its deps are never installed on this runner
+        # (make test-site needs `cd site && npm ci` first). The site has
+        # its own full gate in test.yml on every PR to main.
+        run: make test-go lint-go
 
       - name: Cross-compile
         # GITHUB_REF_NAME is the tag (e.g. v0.1.0); using the runner's
