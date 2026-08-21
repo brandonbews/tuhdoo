@@ -14,18 +14,18 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`t-view`](tasks/t-view.md) | Render markdown views | 5 | `core` |
 | [`t-epic`](tasks/t-epic.md) | v0 build-out | 1 |  |
+| [`t-view`](tasks/t-view.md) | Render markdown views | 5 | `core` |
 
 ## Blocked / waiting
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`t-flak`](tasks/t-flak.md) | Fix flaky TestFoo | 8 | an [open question](escalations.md) |
-| [`t-rout`](tasks/t-rout.md) | Route claims by label | 0 | depends on [`t-idea`](tasks/t-idea.md) |
-| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | 0 | **cyclic** — a human must cut an edge; depends on [`t-lpb`](tasks/t-lpb.md) |
-| [`t-lpb`](tasks/t-lpb.md) | Rework store tests on the interface | 0 | **cyclic** — a human must cut an edge; depends on [`t-lpa`](tasks/t-lpa.md) |
-| [`t-onit`](tasks/t-onit.md) | Build on the go-git spike | 0 | waiting on cancelled [`t-old`](tasks/t-old.md) |
+| [`t-rout`](tasks/t-rout.md) | Route claims by label | — | depends on [`t-idea`](tasks/t-idea.md) |
+| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | — | **cyclic** — a human must cut an edge; depends on [`t-lpb`](tasks/t-lpb.md) |
+| [`t-lpb`](tasks/t-lpb.md) | Rework store tests on the interface | — | **cyclic** — a human must cut an edge; depends on [`t-lpa`](tasks/t-lpa.md) |
+| [`t-onit`](tasks/t-onit.md) | Build on the go-git spike | — | waiting on cancelled [`t-old`](tasks/t-old.md) |
 
 ## On hold
 

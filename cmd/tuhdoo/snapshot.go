@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brandonbews/tuhdoo/internal/core"
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
@@ -92,10 +93,11 @@ func (s *snapshot) classify() buckets {
 			b.inbox = append(b.inbox, t)
 		}
 	}
-	// Highest priority first, creation (ULID) order within a priority —
-	// the same ordering core.ReadyTasks serves claim_next from.
+	// Most urgent first (P0-highest, 2026-08-21), creation (ULID) order
+	// within a rank — the same ordering core.ReadyTasks serves
+	// claim_next from.
 	sort.SliceStable(b.ready, func(i, j int) bool {
-		return b.ready[i].Priority > b.ready[j].Priority
+		return core.MoreUrgent(b.ready[i].Priority, b.ready[j].Priority)
 	})
 	return b
 }

@@ -3,7 +3,7 @@
 `t-lpb`
 
 - **Status:** open — blocked on dependencies
-- **Priority:** 0
+- **Priority:** none
 - **Depends on:** [`t-lpa`](t-lpa.md) (open)
 - **Created:** 2026-07-29 12:25 UTC by `brandon`
 

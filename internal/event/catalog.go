@@ -37,9 +37,19 @@ const (
 // claim.confirmed is new on 2026-08-04 (D6 confirmation gate): a new
 // type, not a version bump — additive-first (T3). Older binaries meeting
 // one enter read-only fail-safe with the "upgrade tuhdoo" message.
+// task.created/task.updated moved to v3 on 2026-08-21 (P0-highest
+// priority flip): priority becomes nullable — null/absent means
+// "unprioritized" (sorts after every prioritized task), and among
+// numbers LOWER is now more urgent, 0 the most. The bump is the value
+// flip, not the shape: a v2 reader would decode a v3 "priority":0 —
+// deliberately most-urgent — as its old least-urgent default, silent
+// mis-ordering at the exact value the flip exists for. The v2→v3
+// upcasters translate old semantics faithfully: 0 (v2's "default,
+// unprioritized") lifts to null; nonzero values carry through
+// numerically (internal/core/upcast.go).
 var Versions = map[string]int{
-	TypeTaskCreated:        2,
-	TypeTaskUpdated:        2,
+	TypeTaskCreated:        3,
+	TypeTaskUpdated:        3,
 	TypeClaimMade:          1,
 	TypeClaimConfirmed:     1,
 	TypeClaimReleased:      1,
@@ -73,14 +83,16 @@ const (
 // TaskCreated is the payload of "task.created". DependsOn is the DAG
 // edge: task IDs of prerequisite tasks. Status (v2, 2026-07-31) is the
 // task's initial status; empty means "open", the only reading v1 events
-// could carry. Stored events may still carry "parents" (retired
-// 2026-08-05, display-only while it lived); it rides the Unknown map
-// like any other field this binary has no place for.
+// could carry. Priority (v3, 2026-08-21) is nullable: null means
+// "unprioritized", and among numbers lower is more urgent, 0 the most.
+// Stored events may still carry "parents" (retired 2026-08-05,
+// display-only while it lived); it rides the Unknown map like any other
+// field this binary has no place for.
 type TaskCreated struct {
 	Title       string   `json:"title"`
 	Description string   `json:"description"`
 	Status      string   `json:"status"`
-	Priority    int      `json:"priority"`
+	Priority    *int     `json:"priority"`
 	Labels      []string `json:"labels"`
 	DependsOn   []string `json:"depends_on"`
 

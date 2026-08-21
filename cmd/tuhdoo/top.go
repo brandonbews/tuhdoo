@@ -1053,7 +1053,7 @@ func (m topModel) detailLines() []detailLine {
 	if !terminalStatus(t.Status) {
 		prioStop = nextStop() // terminal tasks have no priority stop
 	}
-	field(prioStop, "priority", strconv.Itoa(t.Priority))
+	field(prioStop, "priority", priorityWord(t.Priority))
 	// The labels line always renders — dim none placeholder when empty,
 	// the description-body pattern — armed, watch, and terminal alike
 	// (labels editable, 2026-08-05): one uniform rule.
@@ -1809,9 +1809,11 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		badge, badgeStyle, tail, tailStyle := "", "", "", ""
 		switch r.section {
 		case "ready":
-			badge, badgeStyle = fmt.Sprintf("p%d", t.Priority), col.dim
-			if t.Priority == 0 {
-				badgeStyle = col.yellow
+			// Unprioritized renders bare (P0-highest flip, 2026-08-21):
+			// no badge is the honest mark of "nobody set one" — the old
+			// yellow nag on the default value died with the default.
+			if t.Priority != nil {
+				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), col.dim
 			}
 		case "inprogress":
 			// The holder is the mode tail: yellow on the otherwise dim
@@ -1820,7 +1822,9 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		case "held":
 			// Priority is stored but inert while held (it bites again at
 			// resume), so the badge renders — dim, like the rest of the row.
-			badge, badgeStyle = fmt.Sprintf("p%d", t.Priority), col.dim
+			if t.Priority != nil {
+				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), col.dim
+			}
 		case "done", "cancelled":
 			// History rows (history view, 2026-08-02): the close stamp
 			// and closing actor are the mode tail, dim with the rest of

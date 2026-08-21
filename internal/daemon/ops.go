@@ -61,7 +61,7 @@ type createTaskItem struct {
 	Title       string   `json:"title" jsonschema:"short imperative summary of the work (required)"`
 	Description string   `json:"description,omitempty" jsonschema:"the task body — write it like a prompt: acceptance criteria, constraints, file pointers; output quality of whoever claims this is bounded by what you put here. For status inbox only, a fragment (or nothing) is legitimate: the prompt bar applies at promotion, not capture"`
 	Status      string   `json:"status,omitempty" jsonschema:"initial status: open (default — claimable), inbox (untriaged capture; title-only is fine), or held (triaged but deliberately paused). Only open tasks are ever served to claim_next/claim_task"`
-	Priority    int      `json:"priority,omitempty" jsonschema:"higher claims first; 0 is the default. Stored but inert while the task is inbox or held"`
+	Priority    *int     `json:"priority,omitempty" jsonschema:"P0-highest: 0 is most urgent and claims first, larger numbers claim later. Omit for no priority — unprioritized tasks sort after every prioritized one. Stored but inert while the task is inbox or held"`
 	Labels      []string `json:"labels,omitempty" jsonschema:"free-form capability/topic tags, matchable by claim_next"`
 	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"task IDs (or 'tmp:<name>' batch refs) that must be done before this task is claimable; a dependency in inbox or held blocks like any other not-done task. Epics are just container tasks that depends_on their children"`
 }
@@ -70,7 +70,7 @@ type updateTaskReq struct {
 	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
 	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
 	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
-	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
+	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. A set priority cannot be cleared back to unprioritized"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
 	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }

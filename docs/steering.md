@@ -132,9 +132,11 @@ Everything above happens per-idea. Steering proper is continuous and
 deliberately small: a handful of levers, all available from bare `tuhdoo`
 (the interactive TUI) or the one-shot CLI.
 
-- **Priorities.** A single number per task; higher wins. Agents take the
-  highest-priority ready task, oldest first within a priority. Reordering
-  the queue is editing numbers: `tuhdoo update <id> --priority 3`.
+- **Priorities.** A single number per task; P0 is highest — `0` is the
+  most urgent, larger numbers matter less, and a task with no priority
+  set waits behind every prioritized one. Agents take the most urgent
+  ready task, oldest first within a rank. Reordering the queue is
+  editing numbers: `tuhdoo update <id> --priority 3`.
 - **Dependencies.** Add an edge to sequence work, remove one to unblock it.
   Readiness recomputes immediately.
 - **Pause and resume.** `held` and back, per task, any time.

@@ -17,6 +17,10 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
+// pint builds the pointer literals nullable priority fixtures need
+// (P0-highest flip, 2026-08-21).
+func pint(n int) *int { return &n }
+
 // topSnapshot seeds every section: one blocking escalation (on an
 // unclaimed task, so that task classifies blocked), two ready tasks,
 // one in-progress task, one held task, one inbox capture, one done
@@ -31,11 +35,11 @@ func topSnapshot() *snapshot {
 		state: stateResp{
 			Sync: syncJSON{Mode: "local-only"},
 			Tasks: []stateTask{
-				{ID: "t-pars", Title: "write the parser", Status: "open", Priority: 5, Situation: "ready"},
-				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: 1, Situation: "ready"},
+				{ID: "t-pars", Title: "write the parser", Status: "open", Priority: pint(5), Situation: "ready"},
+				{ID: "t-flor", Title: "sweep the floor", Status: "open", Priority: pint(1), Situation: "ready"},
 				{ID: "t-flak", Title: "investigate the flake", Status: "open", Holder: "brandon/a1", Situation: "in_progress"},
 				{ID: "t-lic", Title: "choose a license", Status: "open", Situation: "blocked", BlockingEscalations: []string{"01E1"}},
-				{ID: "t-park", Title: "polish the docs", Status: "held", Priority: 2, Situation: "held"},
+				{ID: "t-park", Title: "polish the docs", Status: "held", Priority: pint(2), Situation: "held"},
 				{ID: "t-idea", Title: "idea: dark mode", Status: "inbox", Situation: "inbox"},
 				{ID: "t-chor", Title: "old chore", Status: "done", Situation: "done"},
 			},
@@ -53,7 +57,7 @@ func topSnapshot() *snapshot {
 				Task: taskJSON{
 					ID: "t-flak", Title: "investigate the flake",
 					Description: "The parser test flakes on CI.\nFind out why.",
-					Priority:    3,
+					Priority:    pint(3),
 				},
 				Notes: []noteJSON{{
 					ID: "01N1", Task: "t-flak", Actor: "brandon/a1",
@@ -76,7 +80,7 @@ func topSnapshot() *snapshot {
 				}},
 			},
 			"t-lic":  {Task: taskJSON{ID: "t-lic", Title: "choose a license"}, Escalations: []escalationJSON{esc}},
-			"t-park": {Task: taskJSON{ID: "t-park", Title: "polish the docs", Priority: 2}},
+			"t-park": {Task: taskJSON{ID: "t-park", Title: "polish the docs", Priority: pint(2)}},
 			"t-idea": {Task: taskJSON{ID: "t-idea", Title: "idea: dark mode"}},
 			// Status matches the state row: t-chor's detail is a closed
 			// record (its ring drops the priority/labels stops).
@@ -96,21 +100,22 @@ func newWatchModel() topModel {
 	return topModel{snap: s, rows: buildRows(s)}
 }
 
-// classify's ready ordering is claim_next's (snapshot.go): highest
-// priority first, and within a priority the creation (ULID) order the
-// state listing arrives in — the sort is stable, so equal-priority
-// tasks never swap.
+// classify's ready ordering is claim_next's (snapshot.go): most
+// urgent first (P0-highest, 2026-08-21 — lower number wins), and
+// within a priority the creation (ULID) order the state listing
+// arrives in — the sort is stable, so equal-priority tasks never
+// swap.
 func TestClassifyReadyTieBreak(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
-		stateTask{ID: "t-tie1", Title: "born first", Status: "open", Priority: 3, Situation: "ready"},
-		stateTask{ID: "t-tie2", Title: "born second", Status: "open", Priority: 3, Situation: "ready"},
+		stateTask{ID: "t-tie1", Title: "born first", Status: "open", Priority: pint(3), Situation: "ready"},
+		stateTask{ID: "t-tie2", Title: "born second", Status: "open", Priority: pint(3), Situation: "ready"},
 	)
 	var ids []string
 	for _, task := range s.classify().ready {
 		ids = append(ids, task.ID)
 	}
-	if want := []string{"t-pars", "t-tie1", "t-tie2", "t-flor"}; !slices.Equal(ids, want) {
+	if want := []string{"t-flor", "t-tie1", "t-tie2", "t-pars"}; !slices.Equal(ids, want) {
 		t.Errorf("ready order = %v, want %v", ids, want)
 	}
 }
@@ -242,8 +247,8 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 	rows := buildRows(topSnapshot())
 	want := []struct{ kind, section, id string }{
 		{rowEscalation, "escalations", "01E1"},
-		{rowTask, "ready", "t-pars"}, // p5 before p1
-		{rowTask, "ready", "t-flor"},
+		{rowTask, "ready", "t-flor"}, // p1 before p5 (P0-highest)
+		{rowTask, "ready", "t-pars"},
 		{rowTask, "inprogress", "t-flak"},
 		// t-lic is blocked by its escalation alone: its Needs Input row
 		// is its single representation — no blocked row (2026-07-31).
@@ -359,11 +364,11 @@ func TestTopDetailArrowsScroll(t *testing.T) {
 
 func TestTopSelectionSurvivesRefresh(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // t-pars
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // t-flor (p1 leads ready)
 	fresh := topSnapshot()
 	mm, _ := m.Update(snapMsg{snap: fresh})
 	m = mm.(topModel)
-	if r, ok := m.selected(); !ok || r.id() != "t-pars" {
+	if r, ok := m.selected(); !ok || r.id() != "t-flor" {
 		t.Errorf("selection lost across refresh: %+v", r)
 	}
 
@@ -494,7 +499,7 @@ func TestTopPriorityFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flor (p1 leads ready)
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if m.mode != modePriority {
 		t.Fatalf("mode = %d, want modePriority", m.mode)
@@ -519,7 +524,7 @@ func TestTopPriorityFlow(t *testing.T) {
 	if am := cmd().(actionMsg); am.err != nil {
 		t.Fatalf("action error: %v", am.err)
 	}
-	if got := fake.priorities["t-pars"]; got != 7 {
+	if got := fake.priorities["t-flor"]; got != 7 {
 		t.Errorf("priority set to %d, want 7", got)
 	}
 }
@@ -529,6 +534,7 @@ func TestTopCancelFlow(t *testing.T) {
 	m := newTopModel(fake)
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars (second in ready under P0-highest)
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
 	if m.mode != modeConfirmCancel {
 		t.Fatalf("mode = %d, want modeConfirmCancel", m.mode)
@@ -804,7 +810,7 @@ func TestTopEdgeMarkers(t *testing.T) {
 		if !strings.Contains(v, "write the parser\n              2 deps") {
 			t.Errorf("%s: parser row missing its edge meta line; view:\n%s", name, v)
 		}
-		if !strings.Contains(v, "sweep the floor\n\n") {
+		if !strings.Contains(v, "sweep the floor\n  t-pars") {
 			t.Errorf("%s: edge-free row grew a second line; view:\n%s", name, v)
 		}
 	}
@@ -895,7 +901,7 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s)}
 	v := m.View()
 	for _, want := range []string{
-		"▌ t-rqjm  p0  its dependency", // ready row, selected
+		"▌ t-rqjm      its dependency", // ready row, selected; unprioritized = no badge
 		"▌             1 dep",          // its edge marker on the meta line, barred too
 		"t-d83w      the long one",     // blocked row: blank badge cell
 		// The waiting: reason annotates its dep with status and title.
@@ -972,7 +978,8 @@ func TestSnapshotTaskRef(t *testing.T) {
 func TestTopDetailAnnotatesEdges(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars (second in ready under P0-highest)
 		keyOf(tea.KeyEnter))
 	v := m.View()
 	for _, want := range []string{
@@ -2150,8 +2157,8 @@ func TestTopDetailRingTraversalAndReveal(t *testing.T) {
 	// j walks the ring in render order, revealing each stop; the
 	// previous stop hands the bar off.
 	walk := []struct{ now, previous string }{
-		{"▌ priority    0", "▌ t-two — twice escalated"},
-		{"▌ labels      none", "▌ priority    0"},
+		{"▌ priority    none", "▌ t-two — twice escalated"},
+		{"▌ labels      none", "▌ priority    none"},
 		{"▌ !   First question?", "▌ labels      none"},
 		{"▌     Second question?", "▌ !   First question?"},
 		{"▌ A line of description.", "▌     Second question?"},
@@ -2840,7 +2847,7 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 		name, aim string
 		want      int // cursor after the click; -1 = unchanged
 	}{
-		{"one-line ready row", "sweep the floor", 2},
+		{"one-line ready row", "sweep the floor", 1}, // t-flor leads ready (P0-highest)
 		{"in-progress row", "investigate the flake", 3},
 		{"escalation title line", "choose a license", 0},
 		{"escalation question line", "question: Which license?", 0},
@@ -2853,11 +2860,11 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := m
-			m.cursor = 1 // t-pars: nothing under test starts selected
+			m.cursor = 2 // t-pars: nothing under test starts selected
 			m, cmd := mouseTo(t, m, clickAt(0, screenLineOf(t, m, tt.aim)))
 			want := tt.want
 			if want == -1 {
-				want = 1
+				want = 2
 			}
 			if m.cursor != want || m.mode != modeNav || cmd != nil {
 				t.Errorf("click on %s: cursor %d mode %d cmd %v, want cursor %d modeNav nil",
@@ -2866,9 +2873,9 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 		})
 	}
 	// A click past the rendered frame hits nothing.
-	m.cursor = 1
-	if m, _ := mouseTo(t, m, clickAt(0, 39)); m.cursor != 1 || m.mode != modeNav {
-		t.Errorf("click below the list: cursor %d mode %d, want 1 modeNav", m.cursor, m.mode)
+	m.cursor = 2
+	if m, _ := mouseTo(t, m, clickAt(0, 39)); m.cursor != 2 || m.mode != modeNav {
+		t.Errorf("click below the list: cursor %d mode %d, want 2 modeNav", m.cursor, m.mode)
 	}
 }
 
@@ -2883,17 +2890,17 @@ func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	// Double-click a task row: first press selects, second opens detail.
 	y := screenLineOf(t, m, "write the parser")
 	m, _ = mouseTo(t, m, clickAt(0, y))
-	if m.cursor != 1 || m.mode != modeNav {
-		t.Fatalf("first click: cursor %d mode %d, want 1 modeNav", m.cursor, m.mode)
+	if m.cursor != 2 || m.mode != modeNav {
+		t.Fatalf("first click: cursor %d mode %d, want 2 modeNav", m.cursor, m.mode)
 	}
 	m, _ = mouseTo(t, m, clickAt(0, y))
 	if m.mode != modeDetail || m.detailID != "t-pars" {
 		t.Fatalf("second click: mode %d detail %q, want modeDetail t-pars", m.mode, m.detailID)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	// Click the escalation row (cursor starts there after esc restores
-	// nav on row 1 — walk back first).
-	m, _ = press(t, m, keyOf(tea.KeyUp))
+	// Click the escalation row (esc restores nav on row 2 under
+	// P0-highest — walk back up first).
+	m, _ = press(t, m, keyOf(tea.KeyUp), keyOf(tea.KeyUp))
 	m, _ = mouseTo(t, m, clickAt(0, screenLineOf(t, m, "Which license?")))
 	if m.mode != modeDetail || m.detailID != "t-lic" || m.detailFocus != 3 {
 		t.Fatalf("click on selected escalation row: mode %d detail %q focus %d, want the task view of t-lic with its escalation stop focused",

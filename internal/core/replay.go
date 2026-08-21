@@ -258,8 +258,8 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			t.Status = *p.Status
 		}
 		if p.Priority != nil {
-			u.Fields = append(u.Fields, fmt.Sprintf("priority %d→%d", t.Priority, *p.Priority))
-			t.Priority = *p.Priority
+			u.Fields = append(u.Fields, "priority "+priorityLabel(t.Priority)+"→"+priorityLabel(p.Priority))
+			t.Priority = p.Priority
 		}
 		if p.Labels != nil {
 			u.Fields = append(u.Fields, listDelta("labels", t.Labels, *p.Labels, func(v string) string { return v }))
@@ -453,6 +453,16 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			Sentinel: ErrCannotReplay, Reason: "type not handled by apply"}
 	}
 	return nil
+}
+
+// priorityLabel renders a nullable priority for edit-history lines:
+// the number, or "none" for unprioritized (P0-highest flip,
+// 2026-08-21).
+func priorityLabel(p *int) string {
+	if p == nil {
+		return "none"
+	}
+	return fmt.Sprintf("%d", *p)
 }
 
 // listDelta summarizes a list-field replacement as its membership

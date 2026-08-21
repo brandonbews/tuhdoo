@@ -103,6 +103,8 @@ the life of the pane — the dashboard that sits beside a working agent.
                 same plain-column form; grep open or blocking
   create <t>    add a task: --desc <text|-> --priority <n> --labels a,b
                 --depends-on <ids> (- reads stdin)
+                priority is P0-highest: 0 is most urgent, bigger is
+                later; omitted means unprioritized, served last
                 --status inbox|held captures without opening the task
                 (inbox: title-only is fine; agents never get served it)
   update <id>   change fields: --title --desc --priority --status

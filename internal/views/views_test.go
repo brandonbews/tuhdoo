@@ -73,23 +73,23 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 1, event.TypeTaskCreated, "brandon", "t-epic", event.TaskCreated{
 			Title:       "v0 build-out",
 			Description: "Umbrella task for the v0 milestone.",
-			Priority:    1,
+			Priority:    ptr(1),
 		}),
 		evt(t, 2, event.TypeTaskCreated, "brandon", "t-core", event.TaskCreated{
 			Title:       "Build the replay engine",
 			Description: "Pure function: event set -> state.\n\nAcceptance:\n- order-insensitive replay\n- lease expiry returns tasks to the pool",
-			Priority:    5,
+			Priority:    ptr(5),
 			Labels:      []string{"core", "go"},
 		}),
 		evt(t, 3, event.TypeTaskCreated, "brandon", "t-view", event.TaskCreated{
 			Title:     "Render markdown views",
-			Priority:  5,
+			Priority:  ptr(5),
 			Labels:    []string{"core"},
 			DependsOn: []string{"t-core"},
 		}),
 		evt(t, 4, event.TypeTaskCreated, "brandon", "t-sync", event.TaskCreated{
 			Title:     "Sync loop | app-level merge",
-			Priority:  2,
+			Priority:  ptr(2),
 			DependsOn: []string{"t-view"},
 		}),
 		// A tuh-era ULID-shaped ID (the others keep short word tails for
@@ -97,14 +97,14 @@ func goldenInput(t *testing.T) core.Input {
 		// (`tuh-dmn4`) while link targets keep the full ID.
 		evt(t, 5, event.TypeTaskCreated, "brandon", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.TaskCreated{
 			Title:    "Daemon skeleton",
-			Priority: 4,
+			Priority: ptr(4),
 		}),
 		evt(t, 6, event.TypeTaskCreated, "brandon", "t-old", event.TaskCreated{
 			Title: "Spike: evaluate go-git",
 		}),
 		evt(t, 7, event.TypeTaskCreated, "brandon", "t-flak", event.TaskCreated{
 			Title:    "Fix flaky TestFoo",
-			Priority: 8,
+			Priority: ptr(8),
 			Labels:   []string{"tests"},
 		}),
 		evt(t, 8, event.TypeClaimMade, "brandon/impl-1", "t-core", event.ClaimMade{}),
@@ -162,7 +162,7 @@ func goldenInput(t *testing.T) core.Input {
 		evt(t, 21, event.TypeTaskCreated, "brandon", "t-web", event.TaskCreated{
 			Title:    "Browser UI spike",
 			Status:   core.StatusHeld,
-			Priority: 3,
+			Priority: ptr(3),
 			Labels:   []string{"v2"},
 		}),
 		evt(t, 22, event.TypeTaskCreated, "brandon", "t-idea", event.TaskCreated{
@@ -298,7 +298,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 			t.Errorf("missing rendered path %s", path)
 		}
 	}
-	if meta := string(got[views.MetaPath]); meta != "{\"format\":9}\n" {
+	if meta := string(got[views.MetaPath]); meta != "{\"format\":10}\n" {
 		t.Errorf("meta stamp = %q", meta)
 	}
 }
@@ -315,7 +315,7 @@ func TestBacklogMarksLoopsAndCancelledDeps(t *testing.T) {
 		t.Errorf("backlog carries %d cyclic marks, want exactly the 2 loop members:\n%s", got, backlog)
 	}
 	for _, want := range []string{
-		"| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | 0 | " + cyclic + "; depends on [`t-lpb`](tasks/t-lpb.md) |",
+		"| [`t-lpa`](tasks/t-lpa.md) | Extract the store interface | — | " + cyclic + "; depends on [`t-lpb`](tasks/t-lpb.md) |",
 		"waiting on cancelled [`t-old`](tasks/t-old.md)",
 	} {
 		if !strings.Contains(backlog, want) {
@@ -383,8 +383,8 @@ func TestCanWrite(t *testing.T) {
 		{"wrong shape", []byte(`[1,2,3]`), true},
 		{"no format field", []byte(`{}`), true},
 		{"lower", []byte(`{"format":2}`), true},
-		{"equal", []byte(`{"format":9}`), true},
-		{"higher", []byte(`{"format":10}`), false},
+		{"equal", []byte(`{"format":10}`), true},
+		{"higher", []byte(`{"format":11}`), false},
 		{"much higher with extras", []byte(`{"format":99,"generator":"tuhdoo v9"}`), false},
 	}
 	for _, tt := range tests {

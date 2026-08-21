@@ -311,7 +311,7 @@ type getBacklogInput struct {
 }
 
 type backlogResult struct {
-	Ready []taskJSON `json:"ready" jsonschema:"claimable tasks: open, unclaimed, dependencies done, no blocking escalation; highest priority first"`
+	Ready []taskJSON `json:"ready" jsonschema:"claimable tasks: open, unclaimed, dependencies done, no blocking escalation; most urgent first (P0-highest: 0 leads, unprioritized last)"`
 	Inbox []taskJSON `json:"inbox" jsonschema:"untriaged captures (status inbox), creation order — never served by claim_next/claim_task; promoting one to open means supplying a prompt-quality description first"`
 	Held  []taskJSON `json:"held" jsonschema:"triaged but deliberately paused tasks (status held), creation order — never served by claim_next/claim_task; resume by setting status open"`
 
@@ -404,7 +404,7 @@ type updateTaskInput struct {
 	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
 	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
 	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
-	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority; omit to leave unchanged"`
+	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. A set priority cannot be cleared back to unprioritized"`
 	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
 	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }
@@ -419,7 +419,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "get_backlog",
 		Description: "The claimable backlog: open tasks with met dependencies and no active claim, " +
-			"highest priority first — plus the inbox (untriaged captures) and held (deliberately " +
+			"most urgent first (P0-highest: 0 leads, unprioritized last) — plus the inbox (untriaged captures) and held (deliberately " +
 			"paused) shelves, which claim tools never serve. Omit scope for exactly that — the " +
 			"work-loop call. Pass scope (any of in_progress, blocked, done, cancelled, escalations) " +
 			"to orient on the other sections as slim rows — no descriptions; hydrate a discovered " +

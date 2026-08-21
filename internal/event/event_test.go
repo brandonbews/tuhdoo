@@ -48,7 +48,7 @@ func TestPayloadStructPreservesUnknownFields(t *testing.T) {
 	if err := json.Unmarshal(e.Data, &p); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if p.Title != "From the future" || p.Priority != 2 {
+	if p.Title != "From the future" || p.Priority == nil || *p.Priority != 2 {
 		t.Errorf("known fields lost: %+v", p)
 	}
 	if _, ok := p.Unknown["estimate"]; !ok {

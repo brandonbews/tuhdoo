@@ -44,15 +44,15 @@ func oneshotSnapshot() *snapshot {
 	}
 	return &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: parser, Title: "write the parser", Status: "open", Priority: 5, Labels: []string{"go", "parser"}, Situation: "ready"},
+			{ID: parser, Title: "write the parser", Status: "open", Priority: pint(5), Labels: []string{"go", "parser"}, Situation: "ready"},
 			{ID: docs, Title: "ship the docs", Status: "open", Situation: "blocked", UnmetDeps: []string{parser}},
 			{ID: flake, Title: "investigate the flake", Status: "open", Holder: "brandon/a1", Situation: "in_progress"},
 			{ID: license, Title: "choose a license", Status: "open", Situation: "blocked", BlockingEscalations: []string{eLic.ID}},
-			{ID: parked, Title: "polish the docs", Status: "held", Priority: 2, Labels: []string{"docs"}, Situation: "held"},
+			{ID: parked, Title: "polish the docs", Status: "held", Priority: pint(2), Labels: []string{"docs"}, Situation: "held"},
 			{ID: idea, Title: "idea: dark mode", Status: "inbox", Situation: "inbox"},
 			{ID: chore, Title: "old chore", Status: "done", Situation: "done"},
 			{ID: wrong, Title: "wrong idea", Status: "cancelled", Situation: "cancelled"},
-			{ID: floor, Title: "sweep the floor", Status: "open", Priority: 1, Situation: "ready"},
+			{ID: floor, Title: "sweep the floor", Status: "open", Priority: pint(1), Situation: "ready"},
 			// The loud blockage marks (2026-08-05 edge grill): a
 			// depends_on loop pair and a waiter on the cancelled task.
 			{ID: cyca, Title: "refactor auth", Status: "open", Situation: "blocked", UnmetDeps: []string{cycb}, Cyclic: true},
@@ -82,20 +82,22 @@ func oneshotSnapshot() *snapshot {
 func TestOneshotBacklogGolden(t *testing.T) {
 	var buf bytes.Buffer
 	printBacklog(&buf, oneshotSnapshot())
+	// Ready is P0-highest (2026-08-21): p1 before p5; unprioritized
+	// tasks render the empty-cell "-" in PRI, same as any absent value.
 	want := strings.Join([]string{
 		"ID                             STATE        PRI  HOLDER      LABELS     WAITING                                      TITLE",
-		"tuh-01K1G0000000000000000PARS  ready        5    -           go,parser  -                                            write the parser",
 		"tuh-01K1G0000000000000000SWEP  ready        1    -           -          -                                            sweep the floor",
-		"tuh-01K1G0000000000000000FAKE  in-progress  0    brandon/a1  -          -                                            investigate the flake",
-		"tuh-01K1G0000000000000000D0CS  blocked      0    -           -          dep:tuh-01K1G0000000000000000PARS            ship the docs",
-		"tuh-01K1G0000000000000000CENS  blocked      0    -           -          esc:01K1G000000000000000000ESCB              choose a license",
-		"tuh-01K1G0000000000000000CYCA  blocked      0    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCB     refactor auth",
-		"tuh-01K1G0000000000000000CYCB  blocked      0    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCA     split the auth pkg",
-		"tuh-01K1G0000000000000000STCK  blocked      0    -           -          dep:tuh-01K1G0000000000000000WRNG:cancelled  build on the wrong idea",
+		"tuh-01K1G0000000000000000PARS  ready        5    -           go,parser  -                                            write the parser",
+		"tuh-01K1G0000000000000000FAKE  in-progress  -    brandon/a1  -          -                                            investigate the flake",
+		"tuh-01K1G0000000000000000D0CS  blocked      -    -           -          dep:tuh-01K1G0000000000000000PARS            ship the docs",
+		"tuh-01K1G0000000000000000CENS  blocked      -    -           -          esc:01K1G000000000000000000ESCB              choose a license",
+		"tuh-01K1G0000000000000000CYCA  blocked      -    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCB     refactor auth",
+		"tuh-01K1G0000000000000000CYCB  blocked      -    -           -          cyclic,dep:tuh-01K1G0000000000000000CYCA     split the auth pkg",
+		"tuh-01K1G0000000000000000STCK  blocked      -    -           -          dep:tuh-01K1G0000000000000000WRNG:cancelled  build on the wrong idea",
 		"tuh-01K1G0000000000000000PARK  on-hold      2    -           docs       -                                            polish the docs",
-		"tuh-01K1G0000000000000000QC01  inbox        0    -           -          -                                            idea: dark mode",
-		"t-01K1G00000000000000000CH0R   done         0    -           -          -                                            old chore",
-		"tuh-01K1G0000000000000000WRNG  cancelled    0    -           -          -                                            wrong idea",
+		"tuh-01K1G0000000000000000QC01  inbox        -    -           -          -                                            idea: dark mode",
+		"t-01K1G00000000000000000CH0R   done         -    -           -          -                                            old chore",
+		"tuh-01K1G0000000000000000WRNG  cancelled    -    -           -          -                                            wrong idea",
 		"",
 	}, "\n")
 	got := buf.String()

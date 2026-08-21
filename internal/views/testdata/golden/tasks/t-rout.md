@@ -3,7 +3,7 @@
 `t-rout`
 
 - **Status:** open — blocked on dependencies
-- **Priority:** 0
+- **Priority:** none
 - **Depends on:** [`t-idea`](t-idea.md) (inbox)
 - **Created:** 2026-07-29 12:23 UTC by `brandon`
 

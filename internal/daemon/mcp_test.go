@@ -397,8 +397,8 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 	if capture == nil {
 		t.Fatal("no task.created event for the capture")
 	}
-	if capture.V != 2 {
-		t.Errorf("task.created v = %d, want 2 (old binaries must fail safe, not mis-bucket)", capture.V)
+	if capture.V != 3 {
+		t.Errorf("task.created v = %d, want 3 (old binaries must fail safe, not mis-bucket)", capture.V)
 	}
 	var p event.TaskCreated
 	if err := json.Unmarshal(capture.Data, &p); err != nil {
@@ -470,8 +470,8 @@ func TestMCPCurationUpdates(t *testing.T) {
 	mustToolOK(t, cs, "update_task", map[string]any{
 		"task": worked, "title": "renamed task", "priority": 5,
 	}, &updated)
-	if updated.Title != "renamed task" || updated.Priority != 5 {
-		t.Fatalf("after retitle = title %q priority %d, want renamed task / 5", updated.Title, updated.Priority)
+	if updated.Title != "renamed task" || updated.Priority == nil || *updated.Priority != 5 {
+		t.Fatalf("after retitle = title %q priority %v, want renamed task / 5", updated.Title, updated.Priority)
 	}
 	if updated.Description != "original body" || updated.Status != "open" {
 		t.Fatalf("unsent fields changed: %+v", updated)
