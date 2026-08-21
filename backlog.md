@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 0 blocked · 6 on hold · 20 inbox · 97 done · 23 cancelled
+0 in progress · 0 ready · 0 blocked · 7 on hold · 20 inbox · 97 done · 23 cancelled
 
 ## In progress
 
@@ -26,6 +26,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
 | [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) | Grill: run Matt Pocock's improve-codebase-architecture skill here? (parked until Brandon can read the Go) | 0 | `design` `go` |
 | [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | 0 | `design` `mcp` `tui` |
+| [`tuh-1djr`](tasks/tuh-01M0K9B230MNDYYH8D8XJS1DJR.md) | Configurable daemon commit identity (Options.Ident is unwired) — held until a non-Vercel author check bites | 0 | `design` `daemon` |
 
 ## Inbox
 
