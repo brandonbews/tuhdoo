@@ -2,7 +2,7 @@
 
 `tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 3
 - **Labels:** `go` `agent-protocol` `docs` `tui`
 - **Created:** 2026-08-21 06:32 UTC by `brandon/claude-code-1`
