@@ -1788,6 +1788,29 @@ func closeText(t stateTask) string {
 // 2026-08-05): full bold title, then a dim meta line — one rule across
 // every section, `[labels] · edges · <mode tail>` — rendered only when
 // non-empty, so a one-line row signals "no labels, no edges".
+// priorityBadgeStyle is the ready-row badge ramp (P0-highest grill,
+// 2026-08-21): p0 red, p1 orange — 256-color rung only, falling back
+// to yellow on the 16-color floor, where the p1/p2 collision is the
+// accepted cost of not faking orange — p2 yellow, everything less
+// urgent the same dim gray. Negative priorities are possible (the int
+// is unbounded) and more urgent than 0, so they take red too. Held
+// rows never use the ramp: shelf rows are dim by design.
+func priorityBadgeStyle(col colors, p int) string {
+	switch {
+	case p <= 0:
+		return col.red
+	case p == 1:
+		if col.orange != "" {
+			return col.orange
+		}
+		return col.yellow
+	case p == 2:
+		return col.yellow
+	default:
+		return col.dim
+	}
+}
+
 func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) chunk {
 	tcol := gridTitleCol(idW)
 	var text string
@@ -1813,7 +1836,7 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 			// no badge is the honest mark of "nobody set one" — the old
 			// yellow nag on the default value died with the default.
 			if t.Priority != nil {
-				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), col.dim
+				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), priorityBadgeStyle(col, *t.Priority)
 			}
 		case "inprogress":
 			// The holder is the mode tail: yellow on the otherwise dim
@@ -1821,7 +1844,8 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 			tail, tailStyle = "← "+t.Holder, col.yellow
 		case "held":
 			// Priority is stored but inert while held (it bites again at
-			// resume), so the badge renders — dim, like the rest of the row.
+			// resume), so the badge renders — dim, like the rest of the
+			// row: the ramp colors live urgency, and a shelf has none.
 			if t.Priority != nil {
 				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), col.dim
 			}
@@ -2073,6 +2097,7 @@ func runTUI(args []string) int {
 		// ▌ glyph alone marks selection there.
 		ans, dark := queryTermBG(os.Stdout)
 		m.col.selBG = selectionBG(ans, os.Getenv("TERM"), os.Getenv("COLORTERM"), dark)
+		m.col.orange = orangeFG(os.Getenv("TERM"))
 	}
 	if m.armed {
 		actor, err := topActor(as)

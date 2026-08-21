@@ -14,8 +14,11 @@ import (
 // (https://no-color.org). 16-color ANSI only — user themes must
 // survive. (Revised 2026-07-31: selBG, the TUI selection-bar
 // background, is the one sanctioned exception — the capability ladder
-// in selection.go may hand it a truecolor or 256-color code; every
-// other code stays 16-color.) The bg* codes are the TUI's section
+// in selection.go may hand it a truecolor or 256-color code. Revised
+// 2026-08-21, priority-badge ramp: orange is the second — it has no
+// 16-color slot, so it exists only from the 256-color rung up and
+// stays empty on the floor, where p1 falls back to yellow.) The bg*
+// codes are the TUI's section
 // bars; their zero values degrade bars to plain text with the same
 // geometry. Most are black-on-color; bgGray is the shelf bar (chrome
 // hierarchy, 2026-08-03): dim foreground on the bright-black
@@ -31,6 +34,19 @@ type colors struct {
 	bgMagenta, bgGreen, bgYellow, bgRed, bgGray        string
 	bgWhite                                            string
 	selBG                                              string // selection bar; set by runTUI only, never by newColors
+	orange                                             string // p1 badge; set by runTUI on the 256-color rung only, never by newColors
+}
+
+// orangeFG resolves the p1 badge's orange down the same capability
+// posture as the selection ladder (2026-08-21 ramp): the 256-color
+// rung earns indexed orange, everything else gets "" and the badge
+// ramp falls back to yellow. COLORTERM is deliberately not consulted —
+// the mosh finding (2026-07-31) stands.
+func orangeFG(term string) string {
+	if strings.Contains(term, "256color") {
+		return "\x1b[38;5;208m"
+	}
+	return ""
 }
 
 // isTTY reports whether f is a character device (a real terminal).
