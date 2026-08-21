@@ -95,6 +95,76 @@ func TestTopGoldenPlain80(t *testing.T) {
 // Bar composition with real colors, at 80 and 120 columns: one style
 // wraps the whole padded line; counts ride the left edge, steering
 // hints the right.
+// The ready-row priority badge ramp (P0-highest grill, 2026-08-21):
+// p0 red — negatives too, the int is unbounded and lower is more
+// urgent — p1 orange on the 256-color rung and yellow on the 16-color
+// floor (the p1/p2 collision there is the accepted cost of not faking
+// orange), p2 yellow, p3+ dim, no badge at all without a priority.
+// Held badges never take the ramp: shelf rows are dim by design.
+func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
+	const orange208 = "\x1b[38;5;208m"
+	mk := func(id string, p *int) stateTask {
+		return stateTask{ID: id, Title: "task " + id, Status: "open", Priority: p, Situation: "ready"}
+	}
+	s := &snapshot{state: stateResp{Tasks: []stateTask{
+		mk("t-neg1", pint(-1)),
+		mk("t-pri0", pint(0)),
+		mk("t-pri1", pint(1)),
+		mk("t-pri2", pint(2)),
+		mk("t-pri3", pint(3)),
+		mk("t-bare", nil),
+		{ID: "t-parkd", Title: "task t-parkd", Status: "held", Priority: pint(0), Situation: "held"},
+	}}}
+
+	col := ansiColors
+	col.orange = orange208
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 60, col: col}
+	v := m.View()
+	for _, want := range []string{
+		"\x1b[31mp-1\x1b[0m ", // more urgent than p0: red like it
+		"\x1b[31mp0\x1b[0m ",
+		orange208 + "p1\x1b[0m ",
+		"\x1b[33mp2\x1b[0m ",
+		"\x1b[2mp3\x1b[0m ",
+		// Held keeps the dim badge even at p0: the ramp colors live
+		// urgency, and a shelf has none. (t-parkd renders as its short
+		// form t-arkd — prefix plus 4-char tail.)
+		"\x1b[2mt-arkd\x1b[0m  \x1b[2mp0\x1b[0m ",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("ramp view missing %q; view:\n%q", want, v)
+		}
+	}
+	// The unprioritized row renders a blank badge cell, never p-anything.
+	if !strings.Contains(v, "\x1b[2mt-bare\x1b[0m      \x1b[1mtask t-bare\x1b[0m") {
+		t.Errorf("unprioritized row grew a badge; view:\n%q", v)
+	}
+
+	// The 16-color floor: no orange available, p1 falls back to yellow.
+	m.col.orange = ""
+	floor := m.View()
+	if !strings.Contains(floor, "\x1b[33mp1\x1b[0m ") {
+		t.Errorf("floor p1 not yellow; view:\n%q", floor)
+	}
+	if strings.Contains(floor, "38;5;208") {
+		t.Errorf("orange leaked onto the 16-color floor; view:\n%q", floor)
+	}
+}
+
+// orangeFG mirrors the selection ladder's capability posture: the
+// 256-color rung earns indexed orange, everything else — including a
+// truecolor COLORTERM claim, per the mosh finding — gets "".
+func TestOrangeFGLadder(t *testing.T) {
+	if got := orangeFG("xterm-256color"); got != "\x1b[38;5;208m" {
+		t.Errorf("256color TERM: orange = %q", got)
+	}
+	for _, term := range []string{"xterm", "screen", "vt100", ""} {
+		if got := orangeFG(term); got != "" {
+			t.Errorf("TERM %q: orange = %q, want empty (yellow fallback)", term, got)
+		}
+	}
+}
+
 func TestTopGoldenBars(t *testing.T) {
 	for _, width := range []int{80, 120} {
 		m := newTopModel(newFakeSteering())
