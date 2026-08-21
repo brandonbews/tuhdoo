@@ -1,48 +1,33 @@
-# Flip priority semantics to P0-highest (de facto standard); grill the default-value wrinkle first
+# Flip priority to true P0-highest: 0 = most urgent, absent = unprioritized (sorts last); badge color ramp
 
 `tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V`
 
-- **Status:** inbox — untriaged capture
-- **Priority:** 0
-- **Labels:** `docs` `adoption-friction` `agent-protocol`
+- **Status:** open — ready
+- **Priority:** 3
+- **Labels:** `go` `agent-protocol` `docs` `tui`
 - **Created:** 2026-08-21 06:32 UTC by `brandon/claude-code-1`
 
 ## Description
 
-## Context (adopter report 2026-08-21, direction revised same day)
+Context: an agent bootstrapping tuhdoo in Brandon's second repo assigned p0-p5 with the industry P0-is-most-critical instinct — backwards for tuhdoo's higher-number-wins. P0-highest is the de facto standard (PagerDuty, Bugzilla, Chromium, Linear) and tuhdoo's users are LLM agents carrying that instinct. Two ledgers exist, both Brandon's — it will never be cheaper to flip than now. GRILLED 2026-08-21 (Brandon); the shape below is decided — build it, don't re-litigate.
 
-An agent bootstrapping tuhdoo in a second repo assigned priorities p0–p5 with the industry P0-is-most-critical instinct — exactly backwards for tuhdoo, where **higher number claims first**. It caught and fixed the inversion itself, but the first pass shipped wrong, despite the direction being stated at both doc sites an agent would look (`internal/daemon/ops.go:64` schema string; `docs/agent-protocol.md:37`).
+**Decided shape — true P0-highest with nullable priority:**
+- `0` = most urgent; ascending = less urgent; unbounded int, no clamp (unchanged).
+- ABSENT = unprioritized: sorts after all prioritized tasks, renders with no badge. Key fact making this cheap: the create payload already serializes priority with omitempty, so every historically unprioritized task stores NO priority field — absent already means "nobody prioritized this" in the stored bytes. No stored event bytes are rewritten (T3); this is an in-memory reinterpretation.
+- Explicit p0 must be storable, so the create payload's priority becomes pointer-typed (plain int would omitempty-drop a meaningful 0). A has-priority distinction plumbs through state/replay/daemon requests/views/TUI — boring Go, a *int or a bool, nothing clever.
+- update_task: nil still means "leave unchanged"; consequence, ACCEPTED: a set priority cannot be cleared back to none (no sentinel invented — set a large number for "least urgent" instead).
+- Ordering everywhere: prioritized ascending by number, ULID order within a priority, unprioritized last (ULID order among themselves).
+- Rejected alternatives, for the record: Linear-style (0=none, 1=highest) keeps the observed trap — an agent writing p0-as-critical gets silently bottom-sorted; non-zero default is a magic number.
 
-P0-highest (lower number = more urgent) is confirmed the de facto standard across task/bug/incident tracking: the P0–P4 product/incident scheme, PagerDuty P1–P5, Bugzilla P1–P5, Chromium Pri-0, Linear (1=Urgent…4=Low, 0=no priority). Higher-number-wins survives mainly in OS-scheduler/queue-API contexts. tuhdoo is a backlog whose users are LLM agents carrying the P0 instinct; the live misread is the evidence.
+**TUI badge ramp (decided):** p0 red, p1 orange (256-color rung, e.g. index 208; falls back to yellow on the 16-color floor — p1/p2 collision there accepted), p2 yellow, p3+ the same dim gray, unprioritized = no badge. Slot into the existing capability ladder (cmd/tuhdoo/selection.go, render.go:15-27); pin exact codes with golden tests like the selection-bar ladder. ACCEPTED drop: the current yellow attention badge on Priority==0 ready rows (top.go:1813) disappears — nothing nags unprioritized ready tasks anymore; prioritization happens at triage/promotion.
 
-**Decision context on cost (Brandon, 2026-08-21):** adoption today is exactly two ledgers, both Brandon's (this repo + a handful of tasks in the second project). No external adopters. The earlier "no upcaster for intent" objection only bites when ledgers with unknown-intent priorities exist — none do. **It will never be cheaper to flip than now.** Stored event bytes still never get rewritten (T3): the migration is flip the comparator in core, hand-correct the few live tasks via ordinary update events (done/cancelled priorities are inert), rebuild + restart every daemon. Mixed-version peers reading one ledger would disagree on order, so rebuild everywhere the same day — trivial at two ledgers, the exact reason to do it now.
+The ask:
+1. Core flip: comparator at internal/core/state.go:338 (serves both claim_next and get_backlog), internal/views/views.go:133, cmd/tuhdoo/snapshot.go:98; introduce the has-priority distinction end to end. Sweep for any other buried higher-wins assumptions: backlog one-shot ordering (cmd/tuhdoo/commands.go), test fixtures encoding direction, TUI priority-input handling.
+2. Agent-facing surfaces state P0-highest plainly, none imply the old direction: internal/daemon/ops.go:64 and :73 jsonschema strings; docs/agent-protocol.md:37 (embedded in the binary — same file); get_backlog tool description; views' backlog headers if direction is implied; main.go usage text; docs/ anywhere priority direction appears.
+3. 002 gets a dated revision note where ordering is stated (T5 get_backlog row area), per the revision convention.
+4. Migration, same change window (mixed-version peers disagree on order — no window where an old daemon runs against the flipped ledger): hand-correct stored nonzero priorities via ordinary update events in BOTH ledgers — this repo (at execution time enumerate; currently the held epoch-compaction task at p1, plus the four priorities assigned at the 2026-08-21 triage which are under OLD semantics: this task p3, the Vercel docs task p2, the two p1s — remap all to P0-highest intent, confirming values with Brandon); the second repo's p0-p5 spread re-mapped to its original P0-highest intent. Then `make build`, restart every daemon (both ledgers' daemons are on this machine; follow the CLAUDE.md deploy steps — TERM the pid, wait for exit, respawn), same day.
 
-## The ask
-
-Route through a /grill-me cycle first (design-shaped; touches the deterministic core's ordering rule and the agent protocol). The grill must settle at minimum:
-
-1. **The default-value wrinkle (the real design question):** today `0` = default AND least urgent, so unprioritized tasks sort last for free. Naive flip makes default-0 *most* urgent — every unprioritized capture outranks everything. Candidate shapes: Linear-style (0/absent = no priority, sorts last; 1 = highest) vs a non-zero default. Sweep for other buried assumptions that `higher = more urgent` (sorting in views/TUI, claim_next selection, any test fixtures encoding direction).
-2. Migration plan per above (comparator flip + hand-correction of live tasks + same-day rebuild of all daemons; enumerate the live tasks needing correction at execution time).
-3. Doc/schema updates: `internal/daemon/ops.go:64` jsonschema string, `docs/agent-protocol.md:37`, any other agent-facing surface stating direction (views' backlog headers, get_backlog description). After the flip these should state the P0-highest rule plainly — and the naming-the-collision clause from the earlier framing of this task becomes unnecessary (the semantics will match agent instincts, which is the whole point).
-
-## Superseded framing
-
-This task originally proposed keeping higher-wins and merely naming the P0 collision in the docs, with the flip "explicitly out of scope" on migration-cost grounds. That reasoning assumed unknown-intent ledgers; at two known ledgers it doesn't hold, and Brandon has signaled intent to flip while it's cheap. If grilling nonetheless rejects the flip, fall back to the wording fix: add one clause at each doc site naming the reverse-of-P0 collision.
-
-## Acceptance
-
-- Design-doc revision note recording the decision (grilling convention), then implementation per its outcome.
-- All agent-facing surfaces state the final rule consistently; no surface still implies the old direction.
-- Live tasks' priorities corrected in the same change window as the comparator flip; daemons rebuilt/restarted on every machine running one.
-- `make test lint` green; one PR per coherent piece.
-
-## Pointers
-
-- `internal/daemon/ops.go:64` — Priority jsonschema string
-- `docs/agent-protocol.md:37` — claim-selection ordering paragraph
-- `internal/core/` — deterministic core ordering (comparator lives here; find exact site during grilling sweep)
-- `cmd/tuhdoo/top.go:1812` — TUI `p%d` badge (unbounded int, renders anything)
-- Priority is a plain unbounded int end-to-end — no clamp anywhere; p0–p2 was only ever this repo's usage convention.
+Acceptance: comparator flip + nullable priority with table-driven core tests; every agent-facing surface consistent with P0-highest; golden TUI tests pin the badge ramp and its 16-color fallback; live priorities corrected in both ledgers in the same window as the daemon rebuilds; `make test lint` green. One task, at most two PRs (core flip + docs/schema; TUI ramp may be the second).
 
 ## History
 
@@ -53,3 +38,7 @@ retitled · description edited
 ### 2026-08-21 06:50 UTC — edit by `brandon/claude-code-1`
 
 description edited
+
+### 2026-08-21 23:10 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · priority 0→3 · labels +go +tui −adoption-friction
