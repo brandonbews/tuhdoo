@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 7 on hold · 19 inbox · 97 done · 23 cancelled
+0 in progress · 2 ready · 0 blocked · 7 on hold · 18 inbox · 97 done · 23 cancelled
 
 ## In progress
 
@@ -11,6 +11,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 1 | `docs` `go` `cli` |
+| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 1 | `tui` `go` |
 
 ## Blocked / waiting
 
@@ -50,7 +51,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
-- [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) should list name of working directory in the header for sense of place
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Vercel adopter report: verified fix is vercel.json on the data branch itself; docs rewrite + init/identity design question
 - [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority semantics to P0-highest (de facto standard); grill the default-value wrinkle first
 
