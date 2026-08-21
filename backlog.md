@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 0 blocked · 6 on hold · 19 inbox · 97 done · 23 cancelled
+0 in progress · 0 ready · 0 blocked · 6 on hold · 20 inbox · 97 done · 23 cancelled
 
 ## In progress
 
@@ -50,6 +50,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) points made by agent dog fooding init in different project: 1. The README says npm i -D tuhdoo. pnpm add -D worked identically, but a pnpm/yarn line would help — pnpm users hit the "does it handle os/cpu optional deps" question, and it does. 2. tuhdoo init --help errors with unexpected argument "--help" instead of printing usage. Minor, but --help on a subcommand is muscle memory.
 - [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) should list name of working directory in the header for sense of place
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Vercel adopter report: data-branch pushes create blocked deploys; no repo-side fix verified yet (author check fires before every documented mitigation)
+- [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Priority direction is a live agent foot-gun: name the P0-is-critical collision at both doc sites
 
 ## Done
 
