@@ -50,7 +50,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) points made by agent dog fooding init in different project: 1. The README says npm i -D tuhdoo. pnpm add -D worked identically, but a pnpm/yarn line would help — pnpm users hit the "does it handle os/cpu optional deps" question, and it does. 2. tuhdoo init --help errors with unexpected argument "--help" instead of printing usage. Minor, but --help on a subcommand is muscle memory.
 - [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) should list name of working directory in the header for sense of place
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Vercel adopter report: verified fix is vercel.json on the data branch itself; docs rewrite + init/identity design question
-- [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Priority direction is a live agent foot-gun: name the P0-is-critical collision at both doc sites
+- [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority semantics to P0-highest (de facto standard); grill the default-value wrinkle first
 
 ## Done
 
