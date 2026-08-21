@@ -3,7 +3,7 @@
 `t-onit`
 
 - **Status:** open — blocked on dependencies
-- **Priority:** 0
+- **Priority:** none
 - **Depends on:** [`t-old`](t-old.md) (cancelled)
 - **Created:** 2026-07-29 12:26 UTC by `brandon`
 

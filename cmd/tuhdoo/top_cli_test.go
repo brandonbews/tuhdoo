@@ -150,7 +150,8 @@ func TestTopSteersRealDaemon(t *testing.T) {
 
 	// Visible to the next claimant: claim-next serves the same
 	// priority-ordered ready pool as get_backlog, so it must now hand
-	// out parser (p7) ahead of wrong (p0, earlier ULID).
+	// out parser (p7, prioritized) ahead of wrong (unprioritized,
+	// earlier ULID) — P0-highest: any number outranks none.
 	var next struct {
 		Task taskJSON `json:"task"`
 	}
@@ -161,8 +162,8 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	if next.Task.ID != parser {
 		t.Fatalf("claim_next served %s (%q), want reprioritized %s", next.Task.ID, next.Task.Title, parser)
 	}
-	if next.Task.Priority != 7 {
-		t.Errorf("priority = %d, want 7", next.Task.Priority)
+	if next.Task.Priority == nil || *next.Task.Priority != 7 {
+		t.Errorf("priority = %v, want 7", next.Task.Priority)
 	}
 
 	// ---- edit title and description from the task view ----
@@ -341,7 +342,7 @@ func TestTopQuickCaptureRealDaemon(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	for _, want := range []string{`"actor":"brandon"`, `"type":"task.created"`, `"v":2`} {
+	for _, want := range []string{`"actor":"brandon"`, `"type":"task.created"`, `"v":3`} {
 		if !strings.Contains(line, want) {
 			t.Errorf("capture event missing %s; event:\n%s", want, line)
 		}

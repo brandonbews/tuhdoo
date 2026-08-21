@@ -55,10 +55,10 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" READY (2)                                                p priority · c cancel ",
 		// Two-line rows (grill 2026-08-05): full title, dim meta line —
 		// and a bare row (t-flor) stays one line, the "no labels, no
-		// edges" signal.
+		// edges" signal. P0-highest (2026-08-21): p1 leads p5.
+		"  t-flor  p1  sweep the floor",
 		"  t-pars  p5  write the parser",
 		"              2 deps",
-		"  t-flor  p1  sweep the floor",
 		"",
 		" IN PROGRESS (1)                                                                ",
 		"  t-flak      investigate the flake",
@@ -243,8 +243,8 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	blkID := "t-01KYT63MB28Z535SMJCBC7SY1P"   // t-sy1p
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: newID, Title: "the new-era task", Status: "open", Priority: 2, Situation: "ready"},
-			{ID: oldID, Title: "the old-era task", Status: "open", Priority: 1, Situation: "ready"},
+			{ID: newID, Title: "the new-era task", Status: "open", Priority: pint(2), Situation: "ready"},
+			{ID: oldID, Title: "the old-era task", Status: "open", Priority: pint(1), Situation: "ready"},
 			{ID: blkID, Title: "the waiting task", Status: "open", Situation: "blocked", UnmetDeps: []string{oldID}},
 		}},
 		tasks: map[string]hydratedTask{
@@ -260,11 +260,12 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	// to the same column (the selected row's gutter replaces the first
 	// two cells).
 	mustContain(t, v,
-		// A ready row with labels and edges: two lines, both barred.
-		"▌ tuh-d83w  p2  the new-era task",
-		"▌               [era] · 1 dep",
-		"  t-rqjm    p1  the old-era task",
-		"                [infra]",
+		// P0-highest (2026-08-21): the p1 row leads ready and carries
+		// the selection bar on both of its lines.
+		"▌ t-rqjm    p1  the old-era task",
+		"▌               [infra]",
+		"  tuh-d83w  p2  the new-era task",
+		"                [era] · 1 dep",
 		"  t-sy1p        the waiting task",
 		"                1 dep",
 		"                waiting: depends on t-rqjm (open — the old-era task)")
@@ -334,8 +335,9 @@ func TestTopGoldenSelectionBar(t *testing.T) {
 	}
 	// A two-line task row (t-pars: title + meta line) carries the bar on
 	// both lines — the selection covers all of a row's lines, whatever
-	// its height (two-line rows, 2026-08-05).
-	m, _ = press(t, m, keyOf(tea.KeyDown))
+	// its height (two-line rows, 2026-08-05). Two steps: the one-line
+	// t-flor leads ready under P0-highest.
+	m, _ = press(t, m, keyOf(tea.KeyDown), keyOf(tea.KeyDown))
 	sel = nil
 	for _, l := range strings.Split(m.View(), "\n") {
 		if strings.Contains(l, "▌") {
@@ -378,9 +380,9 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	near := strings.Repeat("C", 60)
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
-			{ID: "t-lng1", Title: long, Status: "open", Priority: 1, Situation: "ready"},
-			{ID: "t-nea1", Title: near, Status: "open", Priority: 1, Labels: []string{"quality"}, Situation: "ready"},
-			{ID: "t-wide", Title: "wide meta", Status: "open", Priority: 1, Situation: "ready"},
+			{ID: "t-lng1", Title: long, Status: "open", Priority: pint(1), Situation: "ready"},
+			{ID: "t-nea1", Title: near, Status: "open", Priority: pint(1), Labels: []string{"quality"}, Situation: "ready"},
+			{ID: "t-wide", Title: "wide meta", Status: "open", Priority: pint(1), Situation: "ready"},
 		}},
 		tasks: map[string]hydratedTask{
 			"t-lng1": {Task: taskJSON{ID: "t-lng1"}},
@@ -433,7 +435,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"",
 		"  id          t-lic",
 		"  status      open",
-		"  priority    0",
+		"  priority    none",
 		// The labels line always renders — the dim placeholder degrades
 		// to plain "none" here (labels editable, 2026-08-05).
 		"  labels      none",
@@ -475,7 +477,7 @@ func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 	v := m.View()
 	mustContain(t, v,
 		"▌ t-pars — write the parser",
-		"  priority    0",    // an unfocused stop keeps the blank mark column
+		"  priority    none", // an unfocused stop keeps the blank mark column
 		"  labels      none", // the always-rendered labels line, unfocused
 		"  none")             // the empty-description placeholder, unfocused
 	if n := strings.Count(v, "▌"); n != 1 {
@@ -504,7 +506,7 @@ func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 		"",
 		"  id          t-epic",
 		"  status      open",
-		"  priority    0",
+		"  priority    none",
 		"  labels      none",
 		"  created     2026-08-10 12:00 UTC by brandon",
 		"",
@@ -700,7 +702,7 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"",
 		"  id          t-drop",
 		"  status      cancelled — 2026-07-27 by brandon",
-		"  priority    0",
+		"  priority    none",
 		// Rendered on terminal tasks too — one uniform rule — but never
 		// a stop there (labels editable, 2026-08-05).
 		"  labels      none",

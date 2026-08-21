@@ -619,10 +619,10 @@ func TestEscalateAndNoteUnknownTask(t *testing.T) {
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 
-	high := createOne(t, c, "brandon", map[string]any{"title": "urgent", "priority": 5})
+	high := createOne(t, c, "brandon", map[string]any{"title": "urgent", "priority": 0})
 	low := createOne(t, c, "brandon", map[string]any{"title": "later", "priority": 1})
 
-	// claim_next: highest priority first, hydrated, with a lease.
+	// claim_next: most urgent first (P0-highest), hydrated, with a lease.
 	var h hydratedTask
 	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"next": true}, http.StatusOK), &h)
 	if h.Task.ID != high {

@@ -11,7 +11,7 @@ type taskJSON struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Priority    int       `json:"priority"`
+	Priority    *int      `json:"priority"`
 	Labels      []string  `json:"labels"`
 	DependsOn   []string  `json:"depends_on"`
 	Status      string    `json:"status"`
@@ -92,7 +92,7 @@ type stateTask struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title"`
 	Status   string   `json:"status"`
-	Priority int      `json:"priority"`
+	Priority *int     `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder"`
 	// One classifier (2026-08-03): the daemon serves core's verdict —

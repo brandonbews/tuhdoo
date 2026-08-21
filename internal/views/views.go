@@ -43,7 +43,10 @@ import (
 // 9: README de-assumes the host repo (2026-08-11 grill) — the "design
 // lives in `docs/`" sentence becomes a https://tuhdoo.com pointer, and
 // the fixed prose is tightened to the utilitarian bar.
-const FormatVersion = 9
+// 10: P0-highest priority flip (2026-08-21) — ready sorts most-urgent
+// first (0 on top), and unprioritized tasks (no priority set) sort
+// last and render "—" in priority cells, "none" on task pages.
+const FormatVersion = 10
 
 // MetaPath is where the view-format stamp lives. T6 named "views/.meta",
 // but the views render at the branch root (README.md and friends), so
@@ -127,10 +130,11 @@ func classify(s *core.State) buckets {
 			b.inbox = append(b.inbox, t)
 		}
 	}
-	// Highest priority first, creation (ULID) order within a priority —
-	// the same ordering core.ReadyTasks serves claim_next from.
+	// Most urgent first (P0-highest, 2026-08-21), creation (ULID) order
+	// within a rank — the same ordering core.ReadyTasks serves
+	// claim_next from.
 	sort.SliceStable(b.ready, func(i, j int) bool {
-		return b.ready[i].Priority > b.ready[j].Priority
+		return core.MoreUrgent(b.ready[i].Priority, b.ready[j].Priority)
 	})
 	return b
 }
@@ -190,8 +194,8 @@ func backlog(s *core.State, b buckets) []byte {
 	} else {
 		w.WriteString("| ID | Task | Priority | Claimed by |\n|---|---|---:|---|\n")
 		for _, t := range b.inProgress {
-			fmt.Fprintf(&w, "| %s | %s | %d | `%s` |\n",
-				rootLink(t.ID), inline(t.Title), t.Priority, s.ActiveClaim(t.ID).Actor)
+			fmt.Fprintf(&w, "| %s | %s | %s | `%s` |\n",
+				rootLink(t.ID), inline(t.Title), priorityCell(t.Priority), s.ActiveClaim(t.ID).Actor)
 		}
 		w.WriteString("\n")
 	}
@@ -202,8 +206,8 @@ func backlog(s *core.State, b buckets) []byte {
 	} else {
 		w.WriteString("| ID | Task | Priority | Labels |\n|---|---|---:|---|\n")
 		for _, t := range b.ready {
-			fmt.Fprintf(&w, "| %s | %s | %d | %s |\n",
-				rootLink(t.ID), inline(t.Title), t.Priority, labelSpans(t.Labels))
+			fmt.Fprintf(&w, "| %s | %s | %s | %s |\n",
+				rootLink(t.ID), inline(t.Title), priorityCell(t.Priority), labelSpans(t.Labels))
 		}
 		w.WriteString("\n")
 	}
@@ -214,8 +218,8 @@ func backlog(s *core.State, b buckets) []byte {
 	} else {
 		w.WriteString("| ID | Task | Priority | Waiting on |\n|---|---|---:|---|\n")
 		for _, t := range b.blocked {
-			fmt.Fprintf(&w, "| %s | %s | %d | %s |\n",
-				rootLink(t.ID), inline(t.Title), t.Priority, waitingOn(s, t))
+			fmt.Fprintf(&w, "| %s | %s | %s | %s |\n",
+				rootLink(t.ID), inline(t.Title), priorityCell(t.Priority), waitingOn(s, t))
 		}
 		w.WriteString("\n")
 	}
@@ -229,8 +233,8 @@ func backlog(s *core.State, b buckets) []byte {
 		w.WriteString("Triaged, deliberately paused — never served to agents until reopened.\n\n")
 		w.WriteString("| ID | Task | Priority | Labels |\n|---|---|---:|---|\n")
 		for _, t := range b.held {
-			fmt.Fprintf(&w, "| %s | %s | %d | %s |\n",
-				rootLink(t.ID), inline(t.Title), t.Priority, labelSpans(t.Labels))
+			fmt.Fprintf(&w, "| %s | %s | %s | %s |\n",
+				rootLink(t.ID), inline(t.Title), priorityCell(t.Priority), labelSpans(t.Labels))
 		}
 		w.WriteString("\n")
 	}
@@ -353,12 +357,31 @@ func openEscalation(w *strings.Builder, s *core.State, e *core.Escalation) {
 	}
 }
 
+// priorityCell renders a nullable priority for backlog table cells:
+// the number, or an em dash for unprioritized (P0-highest flip,
+// 2026-08-21 — absent means "no priority", never 0).
+func priorityCell(p *int) string {
+	if p == nil {
+		return "—"
+	}
+	return fmt.Sprintf("%d", *p)
+}
+
+// priorityWord is priorityCell for prose lines: "none" reads better
+// than a dash after a bold field name.
+func priorityWord(p *int) string {
+	if p == nil {
+		return "none"
+	}
+	return fmt.Sprintf("%d", *p)
+}
+
 func taskPage(s *core.State, t *core.Task) []byte {
 	var w strings.Builder
 	fmt.Fprintf(&w, "# %s\n\n", inline(t.Title))
 	fmt.Fprintf(&w, "`%s`\n\n", t.ID)
 	fmt.Fprintf(&w, "- **Status:** %s\n", statusLine(s, t))
-	fmt.Fprintf(&w, "- **Priority:** %d\n", t.Priority)
+	fmt.Fprintf(&w, "- **Priority:** %s\n", priorityWord(t.Priority))
 	if len(t.Labels) > 0 {
 		fmt.Fprintf(&w, "- **Labels:** %s\n", labelSpans(t.Labels))
 	}

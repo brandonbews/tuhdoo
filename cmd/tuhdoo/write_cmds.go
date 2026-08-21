@@ -86,7 +86,8 @@ func runCreate(args []string) int {
 	const use = `usage: tuhdoo create <title> [--desc <text>|--desc -] [--priority <n>]
                      [--status open|inbox|held] [--labels a,b]
                      [--depends-on <ids>] [--as <human>]
-(--status inbox is capture: title-only is fine, agents are never served it;
+(--priority is P0-highest: 0 is most urgent; omitted = unprioritized, served last;
+ --status inbox is capture: title-only is fine, agents are never served it;
  --status held parks a triaged task; both promote later via update --status open)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(os.Stderr, use)
@@ -121,7 +122,15 @@ func runCreate(args []string) int {
 	if code != 0 {
 		return code
 	}
-	item := map[string]any{"title": title, "priority": priority}
+	item := map[string]any{"title": title}
+	// Only an explicit --priority travels (P0-highest, 2026-08-21):
+	// absent means unprioritized, and 0 now means most urgent — a
+	// always-sent default would put every capture on top of the queue.
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "priority" {
+			item["priority"] = priority
+		}
+	})
 	if description != "" {
 		item["description"] = description
 	}
@@ -166,8 +175,9 @@ func runUpdate(args []string) int {
                      [--priority <n>] [--status open|inbox|held|done|cancelled]
                      [--labels a,b] [--depends-on <ids>] [--as <human>]
 (list flags are full replacements; an empty value clears the list;
- --status open promotes/resumes, --status held pauses — promotion from
- inbox deserves a real description in the same breath)`
+ --priority is P0-highest: 0 is most urgent, and a set priority cannot
+ be cleared back to none; --status open promotes/resumes, --status held
+ pauses — promotion from inbox deserves a real description in the same breath)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(os.Stderr, use)
 		return 1

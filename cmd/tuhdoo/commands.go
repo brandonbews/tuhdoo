@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -193,8 +194,8 @@ func printBacklog(w io.Writer, s *snapshot) {
 	tw := newTabWriter(w)
 	fmt.Fprintln(tw, "ID\tSTATE\tPRI\tHOLDER\tLABELS\tWAITING\tTITLE")
 	row := func(t stateTask, state, waiting string) {
-		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%s\t%s\n",
-			t.ID, state, t.Priority, cell(t.Holder),
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			t.ID, state, cell(priorityText(t.Priority)), cell(t.Holder),
 			cell(strings.Join(t.Labels, ",")), waiting, oneLine(t.Title))
 	}
 	for _, t := range b.ready {
@@ -225,6 +226,26 @@ func printBacklog(w io.Writer, s *snapshot) {
 // commands share: two-space gutters, no minimum width, spaces only.
 func newTabWriter(w io.Writer) *tabwriter.Writer {
 	return tabwriter.NewWriter(w, 0, 8, 2, ' ', 0)
+}
+
+// priorityText renders a nullable priority as its number, or "" for
+// unprioritized — callers pick the placeholder (cell's "-", or
+// priorityWord's "none"). P0-highest (2026-08-21): 0 is most urgent;
+// no priority sorts last.
+func priorityText(p *int) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.Itoa(*p)
+}
+
+// priorityWord is priorityText for prose lines, "none" for
+// unprioritized.
+func priorityWord(p *int) string {
+	if p == nil {
+		return "none"
+	}
+	return strconv.Itoa(*p)
 }
 
 // cell renders one column value, "-" standing in for empty so every
@@ -330,7 +351,7 @@ func printTask(w io.Writer, col colors, h hydratedTask, st stateTask, s *snapsho
 		}
 	}
 	fmt.Fprintf(w, "  status      %s\n", status)
-	fmt.Fprintf(w, "  priority    %d\n", t.Priority)
+	fmt.Fprintf(w, "  priority    %s\n", priorityWord(t.Priority))
 	if len(t.Labels) > 0 {
 		fmt.Fprintf(w, "  labels      %s\n", strings.Join(t.Labels, ", "))
 	}

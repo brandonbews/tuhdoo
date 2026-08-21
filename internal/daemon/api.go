@@ -43,7 +43,7 @@ type taskJSON struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Priority    int       `json:"priority"`
+	Priority    *int      `json:"priority" jsonschema:"P0-highest: 0 is most urgent, larger numbers are less urgent; null means unprioritized (sorts after every prioritized task)"`
 	Labels      []string  `json:"labels"`
 	DependsOn   []string  `json:"depends_on"`
 	Status      string    `json:"status"`
@@ -65,7 +65,7 @@ type scopeTaskJSON struct {
 	ID           string     `json:"id"`
 	Title        string     `json:"title"`
 	Status       string     `json:"status"`
-	Priority     int        `json:"priority"`
+	Priority     *int       `json:"priority" jsonschema:"P0-highest: 0 is most urgent, larger numbers are less urgent; null means unprioritized (sorts after every prioritized task)"`
 	Labels       []string   `json:"labels"`
 	Holder       string     `json:"holder,omitempty" jsonschema:"in_progress rows: the principal holding the active claim"`
 	LeaseExpires *time.Time `json:"lease_expires,omitempty" jsonschema:"in_progress rows: when the holder's lease expires unless renewed"`
@@ -381,7 +381,7 @@ type stateTask struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title"`
 	Status   string   `json:"status"`
-	Priority int      `json:"priority"`
+	Priority *int     `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder,omitempty"` // actor of the active claim
 	// One classifier (2026-08-03): core's verdict rides the wire so no

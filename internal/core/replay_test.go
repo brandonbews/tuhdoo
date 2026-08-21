@@ -304,12 +304,13 @@ func TestReadyRespectsDependenciesAndPriority(t *testing.T) {
 		taskCreated(t, 1, "t1", "build daemon"),
 		taskCreated(t, 2, "t2", "build views", "t1"), // depends on t1
 		evt(t, 3, event.TypeTaskCreated, "brandon", "t3",
-			event.TaskCreated{Title: "urgent fix", Priority: 9}),
+			event.TaskCreated{Title: "urgent fix", Priority: num(0)}),
 	}
 	s := replay(t, events, nil)
 	if s.Ready("t2") {
 		t.Fatal("t2 ready before its dependency is done")
 	}
+	// P0-highest: the explicit p0 outranks the unprioritized t1.
 	ready := s.ReadyTasks()
 	if len(ready) != 2 || ready[0].ID != "t3" || ready[1].ID != "t1" {
 		t.Fatalf("ready order wrong: %+v", ready)
@@ -692,7 +693,8 @@ func TestRetiredParentsFieldTolerated(t *testing.T) {
 			if task == nil {
 				t.Fatal("t1 missing after replay")
 			}
-			if task.Title != tt.wantTitle || task.Status != StatusOpen || task.Priority != 3 {
+			if task.Title != tt.wantTitle || task.Status != StatusOpen ||
+				task.Priority == nil || *task.Priority != 3 {
 				t.Fatalf("task = %+v, want title %q, open, priority 3", task, tt.wantTitle)
 			}
 			if !reflect.DeepEqual(task.DependsOn, []string{"t0"}) {
@@ -781,16 +783,17 @@ func TestUnknownStatusUpdateStopsReplay(t *testing.T) {
 // old binary meeting bytes from the future — replay stops with
 // ErrCannotReplay ("upgrade tuhdoo"), never a mis-bucketed open task.
 func TestV2EventsFailSafeWithoutUpcasters(t *testing.T) {
-	v2 := evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
+	v3 := evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
 		event.TaskCreated{Title: "captured", Status: StatusInbox})
-	if v2.V != 2 {
-		t.Fatalf("task.created writes v%d, want v2", v2.V)
+	if v3.V != 3 {
+		t.Fatalf("task.created writes v%d, want v3", v3.V)
 	}
-	// An old binary has no idea v2 exists: its Versions map says 1, so
-	// upcast refuses upward. Simulate by asking this binary about v3 —
-	// the same "version above mine" gate the old binary hits at v2.
-	future := v2
-	future.V = 3
+	// An old binary has no idea v3 exists: its Versions map stops
+	// short, so upcast refuses upward. Simulate by asking this binary
+	// about v4 — the same "version above mine" gate an old binary hits
+	// at v3.
+	future := v3
+	future.V = 4
 	_, err := NewReplayer().Replay(Input{Events: []event.Event{future}, Now: testNow})
 	if !errors.Is(err, ErrCannotReplay) {
 		t.Fatalf("err = %v, want ErrCannotReplay", err)
@@ -863,6 +866,112 @@ func TestUpcasterLiftsOldEvents(t *testing.T) {
 	if _, err := NewReplayer().Replay(Input{Events: []event.Event{old}, Now: testNow}); !errors.Is(err, ErrCannotReplay) {
 		t.Fatalf("err = %v, want ErrCannotReplay without an upcaster", err)
 	}
+}
+
+// MoreUrgent is the one priority comparator (P0-highest flip,
+// 2026-08-21): among numbers lower wins, 0 the most urgent; a
+// prioritized task always outranks an unprioritized one; two
+// unprioritized tasks tie (callers keep ULID order via stable sort).
+func TestMoreUrgentP0Highest(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b *int
+		want bool
+	}{
+		{"zero beats one", num(0), num(1), true},
+		{"one loses to zero", num(1), num(0), false},
+		{"lower number wins", num(2), num(7), true},
+		{"equal numbers tie", num(3), num(3), false},
+		{"prioritized beats unprioritized", num(9), nil, true},
+		{"unprioritized loses to prioritized", nil, num(9), false},
+		{"unprioritized ties unprioritized", nil, nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MoreUrgent(tt.a, tt.b); got != tt.want {
+				t.Errorf("MoreUrgent(%v, %v) = %v, want %v", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
+}
+
+// The full ready ordering (P0-highest flip, 2026-08-21): prioritized
+// tasks ascending by number, unprioritized after all of them, creation
+// (ULID) order within a rank.
+func TestReadyTasksOrderP0Highest(t *testing.T) {
+	mk := func(n int, id string, p *int) event.Event {
+		return evt(t, n, event.TypeTaskCreated, "brandon", id,
+			event.TaskCreated{Title: id, Priority: p})
+	}
+	events := []event.Event{
+		mk(1, "t-none-a", nil),
+		mk(2, "t-three", num(3)),
+		mk(3, "t-zero", num(0)),
+		mk(4, "t-none-b", nil),
+		mk(5, "t-one-a", num(1)),
+		mk(6, "t-one-b", num(1)),
+	}
+	s := replay(t, events, nil)
+	var got []string
+	for _, task := range s.ReadyTasks() {
+		got = append(got, task.ID)
+	}
+	want := []string{"t-zero", "t-one-a", "t-one-b", "t-three", "t-none-a", "t-none-b"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ready order = %v, want %v", got, want)
+	}
+}
+
+// The v2→v3 priority upcasters (P0-highest flip, 2026-08-21): a v2
+// "priority": 0 — that era's "default, unprioritized" — lifts to null,
+// so historical zeros read as no-priority, never as v3's most-urgent;
+// nonzero values carry through numerically (live ones are
+// hand-corrected at migration, outside replay's concern).
+func TestV2PriorityZeroUpcastsToUnprioritized(t *testing.T) {
+	v2created := func(n int, id, priority string) event.Event {
+		return event.Event{ID: tick(t, n), Type: event.TypeTaskCreated, V: 2,
+			Actor: "brandon", Machine: "m-test", Task: id,
+			Data: json.RawMessage(`{"title":"old","status":"open","priority":` + priority + `}`)}
+	}
+
+	t.Run("created zero reads unprioritized", func(t *testing.T) {
+		s := replay(t, []event.Event{v2created(1, "t1", "0")}, nil)
+		if s.Tasks["t1"].Priority != nil {
+			t.Fatalf("priority = %v, want nil", *s.Tasks["t1"].Priority)
+		}
+	})
+	t.Run("created nonzero carries through", func(t *testing.T) {
+		s := replay(t, []event.Event{v2created(1, "t1", "2")}, nil)
+		if p := s.Tasks["t1"].Priority; p == nil || *p != 2 {
+			t.Fatalf("priority = %v, want 2", p)
+		}
+	})
+	t.Run("updated zero reads unchanged", func(t *testing.T) {
+		// v2 "set priority to 0" was a reset to the default; v3 cannot
+		// express "set to none", so the honest translation is
+		// not-an-edit: the earlier value stands and the history entry
+		// records a field-less update.
+		up := event.Event{ID: tick(t, 2), Type: event.TypeTaskUpdated, V: 2,
+			Actor: "brandon", Machine: "m-test", Task: "t1",
+			Data: json.RawMessage(`{"priority":0}`)}
+		s := replay(t, []event.Event{v2created(1, "t1", "4"), up}, nil)
+		if p := s.Tasks["t1"].Priority; p == nil || *p != 4 {
+			t.Fatalf("priority = %v, want 4 (zero-set reads unchanged)", p)
+		}
+		want := []Update{{ID: tick(t, 2), Task: "t1", Actor: "brandon"}}
+		if !reflect.DeepEqual(s.Updates, want) {
+			t.Fatalf("Updates = %+v, want one field-less entry", s.Updates)
+		}
+	})
+	t.Run("updated nonzero carries through", func(t *testing.T) {
+		up := event.Event{ID: tick(t, 2), Type: event.TypeTaskUpdated, V: 2,
+			Actor: "brandon", Machine: "m-test", Task: "t1",
+			Data: json.RawMessage(`{"priority":1}`)}
+		s := replay(t, []event.Event{v2created(1, "t1", "4"), up}, nil)
+		if p := s.Tasks["t1"].Priority; p == nil || *p != 1 {
+			t.Fatalf("priority = %v, want 1", p)
+		}
+	})
 }
 
 // ClosedAt/ClosedBy (2026-08-02, T5 read parity / history view): the
@@ -998,7 +1107,7 @@ func TestUpdateHistoryEntries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			events := []event.Event{
 				evt(t, 1, event.TypeTaskCreated, "brandon", "t1", event.TaskCreated{
-					Title: "before", Description: "old body", Priority: 5,
+					Title: "before", Description: "old body", Priority: num(5),
 					Labels: []string{"go", "web"}, DependsOn: []string{"t-dep"},
 				}),
 				evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", tt.update),
@@ -1022,7 +1131,7 @@ func TestUpdateHistoryEntriesChain(t *testing.T) {
 	}
 	s := replay(t, events, nil)
 	want := []Update{
-		{ID: tick(t, 2), Task: "t1", Actor: "brandon", Fields: []string{"priority 0→2"}},
+		{ID: tick(t, 2), Task: "t1", Actor: "brandon", Fields: []string{"priority none→2"}},
 		{ID: tick(t, 3), Task: "t1", Actor: "sarah", Fields: []string{"priority 2→7"}},
 	}
 	if !reflect.DeepEqual(s.Updates, want) {

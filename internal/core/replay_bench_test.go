@@ -56,10 +56,11 @@ func buildEventSet(tb testing.TB, n int) []event.Event {
 	for i := 0; len(events) < n; i++ {
 		task := fmt.Sprintf("t-bench-%06d", i)
 		actor := fmt.Sprintf("bench/agent-%d", i%8)
+		prio := i % 3
 		if !add(mint(event.TypeTaskCreated, "bench/planner", task, event.TaskCreated{
 			Title:       fmt.Sprintf("benchmark task %d", i),
 			Description: "synthetic task for replay scaling benchmarks",
-			Priority:    i % 3,
+			Priority:    &prio,
 			Labels:      []string{"bench"},
 		})) {
 			break

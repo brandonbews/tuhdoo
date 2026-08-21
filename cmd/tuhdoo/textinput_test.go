@@ -355,7 +355,7 @@ func TestTopAllInputsEditMidString(t *testing.T) {
 	fake = newFakeSteering()
 	m = newTopModel(fake)
 	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-pars
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flor (p1 leads ready under P0-highest)
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	m, _ = press(t, m, runes("17")...)
 	m, _ = press(t, m, keyOf(tea.KeyLeft), keyOf(tea.KeyBackspace))
@@ -366,7 +366,7 @@ func TestTopAllInputsEditMidString(t *testing.T) {
 	if am := cmd().(actionMsg); am.err != nil {
 		t.Fatalf("priority error: %v", am.err)
 	}
-	if got := fake.priorities["t-pars"]; got != 7 {
+	if got := fake.priorities["t-flor"]; got != 7 {
 		t.Errorf("priority set to %d, want 7", got)
 	}
 }

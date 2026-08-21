@@ -32,11 +32,14 @@ const (
 )
 
 // Task is the unit of intent (D5): DAG edges, not a fixed hierarchy.
+// Priority (P0-highest flip, 2026-08-21): nil means unprioritized —
+// such tasks sort after every prioritized one; among numbers lower is
+// more urgent, 0 the most. Unbounded, no clamp.
 type Task struct {
 	ID          string
 	Title       string
 	Description string
-	Priority    int
+	Priority    *int
 	Labels      []string
 	DependsOn   []string // prerequisite-task edges ("epics" are container tasks that depend on their children)
 	Status      string
@@ -325,8 +328,10 @@ func (s *State) Situation(taskID string) string {
 	return SituationBlocked
 }
 
-// ReadyTasks returns claimable tasks, highest priority first, ULID order
-// within a priority. This is the ordering claim_next serves from.
+// ReadyTasks returns claimable tasks, most urgent first: P0-highest
+// (2026-08-21 flip) — prioritized tasks ascending by number (0 first),
+// unprioritized tasks after all of them, ULID order within a rank.
+// This is the ordering claim_next serves from.
 func (s *State) ReadyTasks() []*Task {
 	var ready []*Task
 	for _, id := range s.TaskOrder {
@@ -334,9 +339,25 @@ func (s *State) ReadyTasks() []*Task {
 			ready = append(ready, s.Tasks[id])
 		}
 	}
-	// Stable sort keeps TaskOrder's ULID order within a priority.
-	sort.SliceStable(ready, func(i, j int) bool { return ready[i].Priority > ready[j].Priority })
+	// Stable sort keeps TaskOrder's ULID order within a rank.
+	sort.SliceStable(ready, func(i, j int) bool { return MoreUrgent(ready[i].Priority, ready[j].Priority) })
 	return ready
+}
+
+// MoreUrgent is the one priority comparator (P0-highest flip,
+// 2026-08-21): a prioritized task outranks an unprioritized one, and
+// among numbers lower wins, 0 the most urgent. Every surface that
+// orders by priority uses this, so no two surfaces can disagree about
+// the queue.
+func MoreUrgent(a, b *int) bool {
+	switch {
+	case a == nil:
+		return false
+	case b == nil:
+		return true
+	default:
+		return *a < *b
+	}
 }
 
 // OpenEscalations returns unanswered escalations in raise order — the

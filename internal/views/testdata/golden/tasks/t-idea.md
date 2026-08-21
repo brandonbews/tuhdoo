@@ -3,7 +3,7 @@
 `t-idea`
 
 - **Status:** inbox — untriaged capture
-- **Priority:** 0
+- **Priority:** none
 - **Created:** 2026-07-29 12:22 UTC by `brandon`
 
 ## Description

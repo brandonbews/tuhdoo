@@ -41,13 +41,15 @@ func goldenEvents(t *testing.T) map[string]Event {
 		task    string
 		payload any
 	}{
-		// task.created and task.updated are v2 (2026-07-31): status is a
-		// payload field, and the new inbox/held values pin their bytes.
+		// task.created and task.updated are v3 (2026-08-21, P0-highest
+		// flip): priority is nullable — these fixtures pin explicit
+		// numbers; the v2 fixtures' bytes live on through the upcaster
+		// tests in internal/core.
 		TypeTaskCreated: {0x01, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", TaskCreated{
 			Title:       "Write the event model",
 			Description: "Envelope, canonical JSON, catalog. See docs/design/002-technology.md T3.",
 			Status:      "inbox",
-			Priority:    2,
+			Priority:    num(2),
 			Labels:      []string{"core", "v0"},
 			DependsOn:   []string{"t-01BX5ZZKBKACTAV9WEVGEMMVRW"},
 		}},

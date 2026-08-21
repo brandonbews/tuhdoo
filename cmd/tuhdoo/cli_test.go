@@ -404,7 +404,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	}
 	mustContain(t, out, "ID", "STATE", "PRI", "HOLDER", "LABELS", "WAITING", "TITLE")
 	for state, wantRows := range map[string][]string{
-		"ready":       {"write the parser", "sweep the floor"},
+		"ready":       {"sweep the floor", "write the parser"},
 		"in-progress": {"investigate the flake"},
 		"blocked":     {"ship the docs", "choose a license"},
 		"on-hold":     {"polish the manual"},
@@ -423,13 +423,14 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 			}
 		}
 	}
-	// Ready is priority-ordered (p5 parser before p1 floor-sweeping —
-	// checked by row order above); waiting reasons are IDs, not prose;
-	// the holder is attributed on the in-progress row; labels ride the
-	// parser's row as a plain comma cell.
+	// Ready is priority-ordered — P0-highest (2026-08-21): p1
+	// floor-sweeping before p5 parser, checked by row order above;
+	// waiting reasons are IDs, not prose; the holder is attributed on
+	// the in-progress row; labels ride the parser's row as a plain
+	// comma cell.
 	mustContain(t, out, "dep:"+parser, "esc:"+lic.ID, "brandon/a1")
-	if ready := grepState(out, "ready"); len(ready) > 0 && !strings.Contains(ready[0], "go") {
-		t.Errorf("parser row lost its label cell: %q", ready[0])
+	if ready := grepState(out, "ready"); len(ready) > 1 && !strings.Contains(ready[1], "go") {
+		t.Errorf("parser row lost its label cell: %q", ready[1])
 	}
 	if strings.Contains(out, "depends on ") || strings.Contains(out, "escalation:") {
 		t.Errorf("backlog still renders prose waiting-reasons:\n%s", out)
