@@ -1,4 +1,4 @@
-# Vercel adopter report: Ignored Build Step is insufficient — commit-author check blocks first; verified fix is vercel.json git.deploymentEnabled
+# Vercel adopter report: data-branch pushes create blocked deploys; no repo-side fix verified yet (author check fires before every documented mitigation)
 
 `tuh-01M0HF5SS536W9JAS2CB2ZQCT8`
 
@@ -9,7 +9,7 @@
 
 ## Description
 
-## Context (real adopter report, evidence verified live 2026-08-20)
+## Context (real adopter report, evidence gathered live 2026-08-20)
 
 Brandon ran tuhdoo in a second repo whose Vercel project follows `docs/joining.md`'s documented mitigation (Ignored Build Step: `if [ "$VERCEL_GIT_COMMIT_REF" = "tuhdoo" ]; then exit 0; else exit 1; fi`). It did not help: every daemon push to the `tuhdoo` branch still produced a **blocked-deployment warning**.
 
@@ -19,39 +19,37 @@ Root cause (mechanism, confirmed against Vercel docs + live behavior):
 - The daemon commits as `daemon@tuhdoo.invalid` (hardcoded default, `internal/daemon/daemon.go:69`). `.invalid` can never receive verification mail, so that author can never be a Vercel account/team member — the check fails on every ledger push, forever.
 - Why the tuhdoo repo's own Vercel project never showed this: its Root Directory is `site/`, and Vercel's monorepo change-detection skips the push at the **webhook** stage (before deployment creation, so before the author check). The orphan data branch contains no `site/`, so every ledger push is "no relevant changes." Root-directory projects are naturally immune; root-of-repo projects are not.
 
-**Verified fix** (live on the second repo, 2026-08-20 — blocked-deploy warnings stopped): `vercel.json` on the **default branch** with
+**Falsified fix (tested live 2026-08-20):** `vercel.json` on the **default branch** with `{ "git": { "deploymentEnabled": { "tuhdoo": false } } }` does NOT stop the blocked deploys. Conclusion: Vercel reads `vercel.json` from the **pushed commit**, and the orphan data branch carries none. (An initial "it worked" observation was a false positive — the blocked deploy was merely delayed.)
 
-```json
-{ "git": { "deploymentEnabled": { "tuhdoo": false } } }
-```
-
-This stops deployment creation at the webhook stage. Empirically it works even though the pushed orphan branch carries no `vercel.json` (there were conflicting community reports on which branch the file is read from; the live test settles it for this shape).
+**Untested fallback:** commit that same `vercel.json` onto the data branch itself (single fast-forward hand commit). Mechanically the file would survive: appends overlay changed paths onto the existing HEAD tree (`internal/store/store.go:149-166`) and the syncer merge is a union of both trees with per-area rules only for `events/`/`leases/` (`internal/syncer/merge.go:47-92`), so a foreign path is carried forward indefinitely. But it violates the documented posture that the branch is written only by daemons, and pollutes every adopter's ledger with host-specific hygiene files — if it works, that pressure points at a `tuhdoo init` feature (seeding host-hygiene files on the data branch), which is a design question. Experiment outcome pending from Brandon's second repo.
 
 ## The ask
 
-Two separable pieces; triage may split them:
+Pieces, likely split at triage — note the docs piece is now **blocked on knowing what actually works**:
 
-1. **Docs (mechanical, ready once triaged):** update `docs/joining.md` (~lines 136–154) so the hosted-preview-builder section leads with `vercel.json` `git.deploymentEnabled` as the primary Vercel mitigation (repo-side, verified), demotes the Ignored Build Step to a footnote with an honest note that the commit-author check fires before it on team/private-repo setups, and mentions that monorepo projects with a Root Directory are naturally immune. Check whether `tuhdoo init` output mentions the hazard and needs the same correction. Netlify/Cloudflare Pages guidance: verify whether they have analogous author checks before claiming the doc's advice suffices there.
-2. **Design question (needs grilling, not a quick patch — D7/identity territory):** should the daemon's commit identity be configurable (e.g. default to the repo's `git config user.email` instead of `daemon@tuhdoo.invalid`)? The plumbing exists (`daemon.Options.Ident`) but no CLI/config path wires it. This would make host author-checks pass generally, beyond Vercel. Touches the identity model — route through a /grill-me cycle before deciding.
+1. **Design question (needs grilling — D7/identity territory):** should the daemon's commit identity be configurable (e.g. default to the repo's `git config user.email` instead of `daemon@tuhdoo.invalid`)? The plumbing exists (`daemon.Options.Ident`) but no CLI/config path wires it. This is currently the only known durable fix: a real author passes the check, and the already-documented Ignored Build Step then handles the skip. Also weigh the alternative surfaced above: `tuhdoo init` seeding host-hygiene files (e.g. `vercel.json`) on the data branch itself. Route through a /grill-me cycle.
+2. **Docs fix (after piece 1 or a verified workaround):** rewrite `docs/joining.md` (~lines 136–154) hosted-preview-builder section around the verified mechanism: author check precedes Ignored Build Step; `git.deploymentEnabled` on the default branch is confirmed ineffective (do not recommend it); monorepo projects with a Root Directory are naturally immune. Check `tuhdoo init` output for the same correction. Verify whether Netlify/Cloudflare Pages have analogous author checks before claiming the doc's advice suffices there. No claim in the section may be unverified: anything not tested live is labeled as such.
 
 ## Acceptance (for the docs half)
 
-- `docs/joining.md` reflects the verified mechanism and fix above, with the pipeline-ordering explanation (author check before Ignored Build Step) stated plainly.
-- No claim in the section is unverified: anything not tested live is labeled as such.
+- `docs/joining.md` reflects only verified mechanisms, with the pipeline-ordering explanation stated plainly.
 - `make test lint` green; one PR per the repo convention.
 
 ## Pointers
 
 - `docs/joining.md:125-155` — current hosted-builder section
 - `internal/daemon/daemon.go:66-74` — hardcoded ident + unwired `Options.Ident`
+- `internal/store/store.go:149-166`, `internal/syncer/merge.go:47-92` — why a foreign file on the data branch survives appends and merges
 - `internal-docs/design/001-core-design.md:54` — D1 re-affirmation note: revisit on real adopter reports captured fresh with evidence (this task is that capture); prior verified facts on cancelled task tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F
 - Vercel refs: https://vercel.com/docs/project-configuration/git-configuration (git.deploymentEnabled), https://vercel.com/docs/deployments/troubleshoot-project-collaboration (author check)
 
 ## Constraints
 
-- Piece 2 must not be implemented from this capture; it needs a design-doc revision first (grilling convention).
-- Never commit anything to the data branch by hand.
+- Piece 1 must not be implemented from this capture; it needs a design-doc revision first (grilling convention).
+- Nothing lands in docs that hasn't been verified live or against vendor docs, labeled which.
 
 ## History
 
-_No activity yet._
+### 2026-08-21 06:14 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited
