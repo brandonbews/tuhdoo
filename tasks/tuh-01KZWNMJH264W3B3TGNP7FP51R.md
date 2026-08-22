@@ -3,7 +3,7 @@
 `tuh-01KZWNMJH264W3B3TGNP7FP51R`
 
 - **Status:** inbox — untriaged capture
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `go` `daemon`
 - **Created:** 2026-08-13 04:21 UTC by `brandon/claude-code-1`
 

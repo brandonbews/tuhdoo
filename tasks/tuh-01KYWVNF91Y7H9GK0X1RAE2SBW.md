@@ -3,7 +3,7 @@
 `tuh-01KYWVNF91Y7H9GK0X1RAE2SBW`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `mcp` `dx` `docs`
 - **Created:** 2026-07-31 19:50 UTC by `brandon`
 

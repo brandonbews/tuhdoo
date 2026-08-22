@@ -3,7 +3,7 @@
 `tuh-01KZF1DNJ3T77A01NJXHW4QGAW`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `go` `ledger` `views`
 - **Created:** 2026-08-07 21:17 UTC by `brandon/claude-code-1`
 

@@ -35,7 +35,7 @@ Sequencing: lands BEFORE the copy-tightening pass (tuh-01KZSBDXFZCRNEDY7DMD4XGP7
 
 ### 2026-08-11 22:22 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +docs +protocol +launch
+retitled · description edited · status inbox→open · priority none→1 · labels +docs +protocol +launch
 
 ### 2026-08-11 22:35 UTC — edit by `brandon/claude-code-1`
 

@@ -3,7 +3,7 @@
 `tuh-01KZA0VT234XJYVZWT93P2EK1S`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `docs` `cli` `onboarding`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
 

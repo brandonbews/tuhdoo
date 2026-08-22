@@ -48,7 +48,7 @@ Rework the task view into the place where steering happens:
 
 ### 2026-08-01 01:21 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→2 · labels +cli +tui +ux +design
+retitled · description edited · status inbox→open · priority none→2 · labels +cli +tui +ux +design
 
 ### 2026-08-01 02:39 UTC — run by `brandon/claude-code-1` — done
 

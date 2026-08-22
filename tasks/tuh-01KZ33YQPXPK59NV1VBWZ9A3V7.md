@@ -3,7 +3,7 @@
 `tuh-01KZ33YQPXPK59NV1VBWZ9A3V7`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-03 06:11 UTC by `brandon`
 

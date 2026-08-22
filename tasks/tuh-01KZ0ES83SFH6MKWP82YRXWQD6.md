@@ -3,7 +3,7 @@
 `tuh-01KZ0ES83SFH6MKWP82YRXWQD6`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cleanup` `datashape`
 - **Created:** 2026-08-02 05:22 UTC by `brandon/claude-code-1`
 

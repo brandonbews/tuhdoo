@@ -26,7 +26,7 @@ Constraints: no glassy panels, gradient washes, or 3D effects anywhere except th
 
 ### 2026-08-10 20:46 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +web +design +launch · depends_on +tuh-wyqn +tuh-7sqc
+retitled · description edited · status inbox→open · priority none→1 · labels +web +design +launch · depends_on +tuh-wyqn +tuh-7sqc
 
 ### 2026-08-10 21:37 UTC — edit by `brandon`
 

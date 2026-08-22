@@ -3,7 +3,7 @@
 `tuh-01KZSB8EAZ2H3618SZVWH66K4Y`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design` `go`
 - **Created:** 2026-08-11 21:22 UTC by `brandon`
 

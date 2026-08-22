@@ -12,9 +12,9 @@
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) | Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer | 2 | `docs` `adoption-friction` |
-| [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 1 | `docs` `go` `cli` |
-| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 1 | `tui` `go` |
+| [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) | Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer | 1 | `docs` `adoption-friction` |
+| [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
+| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 
 ## Blocked / waiting
 
@@ -26,13 +26,13 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 1 | `go` `storage` |
-| [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | 0 | `design` |
-| [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | 0 | `design` `ledger` |
-| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | 0 | `launch` `product` |
-| [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) | Grill: run Matt Pocock's improve-codebase-architecture skill here? (parked until Brandon can read the Go) | 0 | `design` `go` |
-| [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | 0 | `design` `mcp` `tui` |
-| [`tuh-1djr`](tasks/tuh-01M0K9B230MNDYYH8D8XJS1DJR.md) | Configurable daemon commit identity (Options.Ident is unwired) — held until a non-Vercel author check bites | 0 | `design` `daemon` |
+| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 2 | `go` `storage` |
+| [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | — | `design` |
+| [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | — | `design` `ledger` |
+| [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | — | `launch` `product` |
+| [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) | Grill: run Matt Pocock's improve-codebase-architecture skill here? (parked until Brandon can read the Go) | — | `design` `go` |
+| [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | — | `design` `mcp` `tui` |
+| [`tuh-1djr`](tasks/tuh-01M0K9B230MNDYYH8D8XJS1DJR.md) | Configurable daemon commit identity (Options.Ident is unwired) — held until a non-Vercel author check bites | — | `design` `daemon` |
 
 ## Inbox
 

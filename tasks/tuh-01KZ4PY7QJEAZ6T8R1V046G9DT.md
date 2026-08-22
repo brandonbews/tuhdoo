@@ -3,7 +3,7 @@
 `tuh-01KZ4PY7QJEAZ6T8R1V046G9DT`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `go` `tui` `ledger`
 - **Created:** 2026-08-03 21:02 UTC by `brandon`
 

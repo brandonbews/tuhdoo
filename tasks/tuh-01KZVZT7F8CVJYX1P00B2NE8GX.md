@@ -3,7 +3,7 @@
 `tuh-01KZVZT7F8CVJYX1P00B2NE8GX`
 
 - **Status:** inbox — untriaged capture
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
 

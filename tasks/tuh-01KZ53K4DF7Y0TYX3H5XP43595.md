@@ -3,7 +3,7 @@
 `tuh-01KZ53K4DF7Y0TYX3H5XP43595`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `tui` `go` `bug`
 - **Created:** 2026-08-04 00:43 UTC by `brandon/claude-code-2`
 

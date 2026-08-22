@@ -33,7 +33,7 @@ description edited
 
 ### 2026-08-07 18:05 UTC — edit by `brandon/claude-code-1`
 
-description edited · status inbox→open · priority 0→1
+description edited · status inbox→open · priority none→1
 
 ### 2026-08-07 21:53 UTC — edit by `brandon/claude-code-1`
 

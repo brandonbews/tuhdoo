@@ -41,7 +41,7 @@ An edit affordance in the task view:
 
 ### 2026-08-01 01:21 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +cli +tui +ux · depends_on +tuh-a86y +tuh-ypww
+retitled · description edited · status inbox→open · priority none→1 · labels +cli +tui +ux · depends_on +tuh-a86y +tuh-ypww
 
 ### 2026-08-01 02:09 UTC — edit by `brandon`
 

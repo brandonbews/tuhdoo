@@ -3,7 +3,7 @@
 `tuh-01KZ9Y3THHH5B8GT22T92BPEZ8`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `tui` `ux`
 - **Created:** 2026-08-05 21:43 UTC by `brandon/claude-code-1`
 

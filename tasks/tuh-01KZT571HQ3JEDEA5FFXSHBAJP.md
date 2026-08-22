@@ -27,7 +27,7 @@ Constraints: prose/identifier-comments only — zero behavior diffs; renaming a 
 
 ### 2026-08-12 20:52 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +go
+retitled · description edited · status inbox→open · priority none→1 · labels +go
 
 ### 2026-08-12 21:46 UTC — run by `brandon/claude-code-1` — done
 

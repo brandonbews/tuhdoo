@@ -27,7 +27,7 @@ Pointers: #62's PR body records the prior "settled writing bar" — read it to s
 
 ### 2026-08-11 22:23 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +docs +web +launch · depends_on +tuh-7q0m
+retitled · description edited · status inbox→open · priority none→1 · labels +docs +web +launch · depends_on +tuh-7q0m
 
 ### 2026-08-11 23:49 UTC — escalation from `brandon/claude-code-4` (blocking)
 

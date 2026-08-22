@@ -23,7 +23,7 @@ Constraints: No new daemon API — existing steeringAPI writes only. Boring Go; 
 
 ### 2026-08-01 05:26 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +cli +tui +ux +design
+retitled · description edited · status inbox→open · priority none→1 · labels +cli +tui +ux +design
 
 ### 2026-08-02 06:42 UTC — edit by `brandon/claude-code-1`
 

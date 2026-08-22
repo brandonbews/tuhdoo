@@ -3,7 +3,7 @@
 `tuh-01KZSGFNC11KY0ZYGPEAV48X0G`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design` `mcp` `tui`
 - **Created:** 2026-08-11 22:53 UTC by `brandon/claude-code-1`
 

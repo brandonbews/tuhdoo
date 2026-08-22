@@ -3,7 +3,7 @@
 `tuh-01M0HF5SS536W9JAS2CB2ZQCT8`
 
 - **Status:** open — ready
-- **Priority:** 2
+- **Priority:** 1
 - **Labels:** `docs` `adoption-friction`
 - **Created:** 2026-08-21 06:12 UTC by `brandon/claude-code-1`
 
@@ -35,4 +35,8 @@ retitled · description edited
 
 ### 2026-08-21 23:09 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→2 · labels −design
+retitled · description edited · status inbox→open · priority none→2 · labels −design
+
+### 2026-08-21 23:59 UTC — edit by `brandon`
+
+priority 2→1

@@ -3,7 +3,7 @@
 `t-01KYRMFV10W1N28TCN62F6FRTH`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 1
+- **Priority:** 2
 - **Labels:** `go` `storage`
 - **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (done)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
@@ -37,3 +37,7 @@ status open→held
 ### 2026-08-12 21:32 UTC — note from `brandon/claude-code-1`
 
 2026-08-12, Brandon: the v1 milestone (t-01KYRMFV10W1N28TCN5SH4QM7A) was closed today, which satisfies this task's dependency edge — but Brandon parked this HELD deliberately instead of letting it go ready. Unpark on real repo-size pressure (data-branch weight actually hurting), not because the milestone label cleared. The retirement grill (tuh-01KZA0VT234XJYVZWT980V7K2Y) should still run together with or just before this one when it unparks — that pairing decision stands.
+
+### 2026-08-21 23:59 UTC — edit by `brandon`
+
+priority 1→2

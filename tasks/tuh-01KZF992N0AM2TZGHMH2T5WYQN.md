@@ -27,7 +27,7 @@ Constraints: no new .github/workflows files (extend test.yml only); GFM-never-MD
 
 ### 2026-08-10 20:45 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +web +tooling +launch
+retitled · description edited · status inbox→open · priority none→1 · labels +web +tooling +launch
 
 ### 2026-08-10 22:28 UTC — escalation from `brandon/claude-code-1` (blocking)
 

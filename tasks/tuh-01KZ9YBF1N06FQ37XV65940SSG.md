@@ -3,7 +3,7 @@
 `tuh-01KZ9YBF1N06FQ37XV65940SSG`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `polish` `go`
 - **Created:** 2026-08-05 21:47 UTC by `brandon`
 
@@ -41,7 +41,7 @@ retitled
 
 ### 2026-08-12 20:37 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→0 · labels +polish +go
+retitled · description edited · status inbox→open · labels +polish +go
 
 ### 2026-08-12 20:53 UTC — edit by `brandon/claude-code-1`
 

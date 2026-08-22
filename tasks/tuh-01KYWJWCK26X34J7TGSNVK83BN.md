@@ -3,7 +3,7 @@
 `tuh-01KYWJWCK26X34J7TGSNVK83BN`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cli` `tui`
 - **Created:** 2026-07-31 17:17 UTC by `brandon`
 

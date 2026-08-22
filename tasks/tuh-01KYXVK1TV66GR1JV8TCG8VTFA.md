@@ -3,7 +3,7 @@
 `tuh-01KYXVK1TV66GR1JV8TCG8VTFA`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cli` `tui` `ux`
 - **Created:** 2026-08-01 05:08 UTC by `brandon`
 

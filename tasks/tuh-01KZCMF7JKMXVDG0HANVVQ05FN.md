@@ -3,7 +3,7 @@
 `tuh-01KZCMF7JKMXVDG0HANVVQ05FN`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `docs` `mcp` `go` `protocol`
 - **Created:** 2026-08-06 22:52 UTC by `brandon/claude-code-1`
 

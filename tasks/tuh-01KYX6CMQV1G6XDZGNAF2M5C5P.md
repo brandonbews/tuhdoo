@@ -3,7 +3,7 @@
 `tuh-01KYX6CMQV1G6XDZGNAF2M5C5P`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `dx` `docs`
 - **Created:** 2026-07-31 22:58 UTC by `brandon/claude-code-1`
 

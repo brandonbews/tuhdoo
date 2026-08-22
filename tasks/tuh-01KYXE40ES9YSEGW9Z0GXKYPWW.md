@@ -47,7 +47,7 @@ One shared text-input component used by every text entry in the TUI:
 
 ### 2026-08-01 01:21 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +cli +tui +ux
+retitled · description edited · status inbox→open · priority none→1 · labels +cli +tui +ux
 
 ### 2026-08-01 02:09 UTC — edit by `brandon`
 

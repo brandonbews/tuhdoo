@@ -3,7 +3,7 @@
 `tuh-01KZA0VT234XJYVZWT91KSJGJR`
 
 - **Status:** cancelled
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design`
 - **Created:** 2026-08-05 22:31 UTC by `brandon/claude-code-1`
 

@@ -3,7 +3,7 @@
 `tuh-01KYWKT8NQ980F0NF4MN3VMT0Y`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `mcp` `dx`
 - **Created:** 2026-07-31 17:33 UTC by `brandon/claude-code-1`
 

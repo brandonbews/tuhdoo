@@ -3,7 +3,7 @@
 `tuh-01KZ4TH4HT56TE4CQPKHBM7QXJ`
 
 - **Status:** cancelled
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `docs` `d6`
 - **Created:** 2026-08-03 22:04 UTC by `brandon/claude-code-1`
 

@@ -3,7 +3,7 @@
 `t-01KYT63MB28Z535SMJCBC7SY1P`
 
 - **Status:** cancelled
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cli` `tui` `design`
 - **Created:** 2026-07-30 18:55 UTC by `4099114+brandonbews`
 

@@ -3,7 +3,7 @@
 `t-01KYVMD4PS9NMQVP1K5M1PVRD8`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `mcp` `daemon` `investigation`
 - **Created:** 2026-07-31 08:24 UTC by `brandon/claude-fable`
 

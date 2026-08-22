@@ -3,7 +3,7 @@
 `tuh-01M0K9B230MNDYYH8D8XJS1DJR`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design` `daemon`
 - **Created:** 2026-08-21 23:08 UTC by `brandon/claude-code-1`
 

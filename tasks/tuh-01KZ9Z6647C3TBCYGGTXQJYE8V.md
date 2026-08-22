@@ -3,7 +3,7 @@
 `tuh-01KZ9Z6647C3TBCYGGTXQJYE8V`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `docs` `go`
 - **Depends on:** [`tuh-0ssg`](tuh-01KZ9YBF1N06FQ37XV65940SSG.md) (done)
 - **Created:** 2026-08-05 22:02 UTC by `brandon`
@@ -33,7 +33,7 @@ Acceptance: the map lands as one PR (make test lint green — doc-only, but the 
 
 ### 2026-08-12 21:18 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→0 · labels +docs +go · depends_on +tuh-0ssg
+retitled · description edited · status inbox→open · labels +docs +go · depends_on +tuh-0ssg
 
 ### 2026-08-13 04:25 UTC — run by `brandon/claude-code-1` — done
 

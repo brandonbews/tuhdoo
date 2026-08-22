@@ -3,7 +3,7 @@
 `tuh-01KYX9VTPE9EBNBMBBNXY5XRAQ`
 
 - **Status:** cancelled
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cli` `docs` `product`
 - **Created:** 2026-07-31 23:58 UTC by `brandon/claude-code-1`
 

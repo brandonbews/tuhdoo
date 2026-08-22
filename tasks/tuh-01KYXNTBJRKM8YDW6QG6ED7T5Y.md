@@ -3,7 +3,7 @@
 `tuh-01KYXNTBJRKM8YDW6QG6ED7T5Y`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cleanup` `go`
 - **Created:** 2026-08-01 03:27 UTC by `brandon/claude-code-1`
 

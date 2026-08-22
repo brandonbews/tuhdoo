@@ -3,7 +3,7 @@
 `tuh-01KZ0ES83SFH6MKWP82Y2HNTPK`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cleanup` `vocabulary`
 - **Created:** 2026-08-02 05:22 UTC by `brandon/claude-code-1`
 

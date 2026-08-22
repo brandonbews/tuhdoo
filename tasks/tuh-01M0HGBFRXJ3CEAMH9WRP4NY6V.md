@@ -41,4 +41,4 @@ description edited
 
 ### 2026-08-21 23:10 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→3 · labels +go +tui −adoption-friction
+retitled · description edited · status inbox→open · priority none→3 · labels +go +tui −adoption-friction

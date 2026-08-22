@@ -32,7 +32,7 @@ Constraints: agent-protocol.md is exempt and out of bounds — its wording is a 
 
 ### 2026-08-10 20:46 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +docs +launch
+retitled · description edited · status inbox→open · priority none→1 · labels +docs +launch
 
 ### 2026-08-10 21:36 UTC — edit by `brandon`
 

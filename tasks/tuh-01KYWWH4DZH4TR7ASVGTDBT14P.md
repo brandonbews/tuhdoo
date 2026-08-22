@@ -3,7 +3,7 @@
 `tuh-01KYWWH4DZH4TR7ASVGTDBT14P`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `cli` `design`
 - **Created:** 2026-07-31 20:05 UTC by `brandon/claude-code-1`
 

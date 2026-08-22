@@ -3,7 +3,7 @@
 `tuh-01KYX7303WN3RSBXXB9CAGZB01`
 
 - **Status:** done
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design` `tui` `cli` `product`
 - **Depends on:** [`tuh-s8vt`](tuh-01KYXT2KAG7QXZGF1W47E6S8VT.md) (done)
 - **Created:** 2026-07-31 23:10 UTC by `brandon`

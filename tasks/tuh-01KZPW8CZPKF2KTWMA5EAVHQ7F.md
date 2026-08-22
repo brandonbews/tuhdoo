@@ -3,7 +3,7 @@
 `tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F`
 
 - **Status:** cancelled
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `design` `adoption`
 - **Created:** 2026-08-10 22:21 UTC by `brandon/claude-code-2`
 

@@ -40,7 +40,7 @@ A design pass on the generated markdown:
 
 ### 2026-08-01 01:22 UTC — edit by `brandon`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +views +design +ux
+retitled · description edited · status inbox→open · priority none→1 · labels +views +design +ux
 
 ### 2026-08-01 02:09 UTC — edit by `brandon`
 

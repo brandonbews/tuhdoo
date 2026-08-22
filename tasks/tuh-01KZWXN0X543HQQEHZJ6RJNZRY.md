@@ -3,7 +3,7 @@
 `tuh-01KZWXN0X543HQQEHZJ6RJNZRY`
 
 - **Status:** open — ready
-- **Priority:** 1
+- **Priority:** 2
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-13 06:41 UTC by `brandon`
 
@@ -25,4 +25,8 @@ Constraints: chrome-hierarchy rule holds (frame never competes with content); an
 
 ### 2026-08-21 23:09 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +tui +go
+retitled · description edited · status inbox→open · priority none→1 · labels +tui +go
+
+### 2026-08-21 23:59 UTC — edit by `brandon`
+
+priority 1→2

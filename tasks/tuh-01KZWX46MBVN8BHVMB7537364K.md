@@ -3,7 +3,7 @@
 `tuh-01KZWX46MBVN8BHVMB7537364K`
 
 - **Status:** open — ready
-- **Priority:** 1
+- **Priority:** 2
 - **Labels:** `docs` `go` `cli`
 - **Created:** 2026-08-13 06:32 UTC by `brandon`
 
@@ -26,4 +26,8 @@ Pointers: cmd/tuhdoo/main.go (dispatch ~line 28, usage() ~line 87), cmd/tuhdoo/c
 
 ### 2026-08-21 23:09 UTC — edit by `brandon/claude-code-1`
 
-retitled · description edited · status inbox→open · priority 0→1 · labels +docs +go +cli
+retitled · description edited · status inbox→open · priority none→1 · labels +docs +go +cli
+
+### 2026-08-21 23:59 UTC — edit by `brandon`
+
+priority 1→2

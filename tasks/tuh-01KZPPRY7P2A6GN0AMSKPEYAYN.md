@@ -3,7 +3,7 @@
 `tuh-01KZPPRY7P2A6GN0AMSKPEYAYN`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 0
+- **Priority:** none
 - **Labels:** `launch` `product`
 - **Depends on:** [`tuh-7q0m`](tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) (done), [`tuh-gp75`](tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) (done)
 - **Created:** 2026-08-10 20:45 UTC by `brandon`

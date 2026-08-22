@@ -22,7 +22,7 @@ Constraints: boring Go; display/input only — no event or API changes.
 
 ### 2026-07-31 06:16 UTC — edit by `brandon/claude-code-2`
 
-retitled · description edited · priority 0→1
+retitled · description edited · priority none→1
 
 ### 2026-07-31 07:53 UTC — edit by `brandon/claude-code-9`
 
