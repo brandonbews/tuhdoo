@@ -61,7 +61,7 @@ What actually happens, at 2026-08-12 HEAD, when an agent's harness calls the `cl
 2. **MCP handler** (`internal/daemon/mcp.go`): the tool closure decodes `{labels}` and calls `d.opClaimNext(principal, labels)`.
 3. **Serialization** (`internal/daemon/ops.go`): `opClaimNext` takes `d.mu` — the single write mutex — and holds it for the whole query-and-claim. Degraded (fail-safe read-only) mode rejects the write here.
 4. **Replay** (`daemon.refreshLocked` → `store.LoadReplayInput` → `core.Replay`): one `rev-parse` + one `ls-tree` on the data branch, events and leases decoded through OID-keyed caches, overlay events not yet committed appended, then a pure fold into `core.State`. Claim winner rules and lease expiry are decided inside replay, against event ULID timestamps and the leases map — never a live clock read.
-5. **Selection** (`core.ReadyTasks`): open tasks with no active claim, no unmet dependency, no open blocking escalation; priority descending, ULID order within a priority. First candidate carrying every requested label wins; no match returns `claimed: false` as a normal result, not an error.
+5. **Selection** (`core.ReadyTasks`): open tasks with no active claim, no unmet dependency, no open blocking escalation; most urgent first per `core.MoreUrgent` (P0-highest, 2026-08-21: priority ascending, 0 first, unprioritized after every prioritized task), ULID order within a rank. First candidate carrying every requested label wins; no match returns `claimed: false` as a normal result, not an error.
 6. **Event append** (`claimTargetLocked` → `newEventLocked` → `stageLocked`): a `claim.made` (v1) event is minted — payload empty; task, actor, machine ride the envelope — staged into the in-memory overlay, and flushed **eagerly** through the batcher (claims race across machines, so they never wait out the 2s debounce).
 7. **Commit** (`store.AppendBatch` → `gitx`): blob hashed, then a CAS loop — read ref, read tree, merge paths, `mktree`/`commit-tree`/`update-ref` with compare-and-swap, retried on CAS loss. One batch, one commit, worktree untouched.
 8. **Lease** (`store.WriteLease`): `leases/<claimID>.json` with a 15-minute expiry lands as a second, files-only commit. If it never lands, replay treats the claim as lapsed — self-healing, not corruption.
@@ -120,7 +120,7 @@ The per-repo daemon: single-instance flock, one unix socket, one write mutex, an
 
 ### internal/views — governed by T6
 
-Pure renderer from `core.State` to the generated markdown on the branch root: `README.md`, `backlog.md`, `escalations.md`, `tasks/<id>.md`, plus the `.views-meta.json` format stamp (currently format 9).
+Pure renderer from `core.State` to the generated markdown on the branch root: `README.md`, `backlog.md`, `escalations.md`, `tasks/<id>.md`, plus the `.views-meta.json` format stamp (currently format 10).
 
 - Files: `views.go` is the whole package; the golden files under `testdata/golden/` are the real rendering contract.
 - Key types/functions: `Render`, `FormatVersion`, `CanWrite`/`Format` (highest-version-wins guard), `HumanStatus` (the one stored-status → displayed-word mapping, shared by CLI and TUI).
