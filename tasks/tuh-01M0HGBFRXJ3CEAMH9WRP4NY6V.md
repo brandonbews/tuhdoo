@@ -2,7 +2,7 @@
 
 `tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 3
 - **Labels:** `go` `agent-protocol` `docs` `tui`
 - **Created:** 2026-08-21 06:32 UTC by `brandon/claude-code-1`
@@ -42,3 +42,11 @@ description edited
 ### 2026-08-21 23:10 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · priority none→3 · labels +go +tui −adoption-friction
+
+### 2026-08-22 00:05 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-ny6v/p0-highest-flip`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/81 https://github.com/brandonbews/tuhdoo/pull/82>
+- Merged as: `d19adb9`, `342d09b`
+
+P0-highest flip shipped end to end. PR #81 (squash d19adb9): task.created/task.updated v2->v3 — priority nullable (null = unprioritized, sorts last), lower number = more urgent, 0 the most; v2->v3 upcasters lift historical explicit-0 defaults to null (grill's omitempty assumption was false — event payloads always encode every field, so the T3 version-bump path was required, precedent 2026-07-31); one comparator core.MoreUrgent serves claim_next/get_backlog/views/TUI; all agent-facing surfaces restated (jsonschema strings, agent-protocol.md, steering.md, CLI usage); view format 10; 002 T3+T5 revision notes. PR #82 (squash 342d09b): TUI ready-badge ramp p0 red / p1 orange (256-color rung, yellow on 16-color floor) / p2 yellow / p3+ dim, unprioritized unbadged, held stays dim; golden-pinned; 002 T7 note; orange recorded as second sanctioned 16-color-law exception. Migration same window: v0.4.0 tagged -> GitHub Release + npm publish (trusted publishing); this repo's daemon rebuilt+restarted on v0.4.0; live priorities corrected by Brandon's decision (qct8->p1, 364k->p2, nzry->p2, held epoch-compaction->p2; flip task skipped, terminal). Panocash (second ledger, npm consumer): package.json bumped to ^0.4.0, reinstalled, daemon restarted on v0.4.0, p1-p5 inverted to p4-p0 restoring the bootstrap agent's original P0-highest intent (dep bump left uncommitted in its working tree for Brandon).
