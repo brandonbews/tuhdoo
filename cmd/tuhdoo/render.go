@@ -10,43 +10,42 @@ import (
 )
 
 // colors holds ANSI escape codes, or all-empty strings for plain
-// output. Color is on only when out is a terminal and NO_COLOR is unset
-// (https://no-color.org). 16-color ANSI only — user themes must
-// survive. (Revised 2026-07-31: selBG, the TUI selection-bar
-// background, is the one sanctioned exception — the capability ladder
-// in selection.go may hand it a truecolor or 256-color code. Revised
-// 2026-08-21, priority-badge ramp: orange is the second — it has no
-// 16-color slot, so it exists only from the 256-color rung up and
-// stays empty on the floor, where p1 falls back to yellow.) The bg*
-// codes are the TUI's section
-// bars; their zero values degrade bars to plain text with the same
-// geometry. Most are black-on-color; bgGray is the shelf bar (chrome
-// hierarchy, 2026-08-03): dim foreground on the bright-black
-// background — palette slot 8. Bar recolors (2026-08-04): bgRed is
-// dim foreground on red — BLOCKED holds only unmet-dependency tasks,
-// ordinary sequencing, so it keeps the hue family and drops the
-// alarm — and bgWhite (black on bright-white, slot 15) is the INBOX
-// bar, replacing reverse-dim. dimRed is the matching foreground for
-// the blocked row's waiting: lead. All still inside the 16-color law.
+// output. Color is on only when out is a terminal and NO_COLOR is
+// unset (https://no-color.org). The 16-color law: baseline styling is
+// 16-color ANSI — user themes must survive — with the 256-color rung
+// as the one sanctioned exception ladder. (Revised 2026-07-31: selBG,
+// the TUI selection-bar background, may carry a truecolor or 256-color
+// tint from the capability ladder in selection.go. Revised 2026-08-21,
+// priority-badge ramp: orange has no 16-color slot, so it exists only
+// from the 256-color rung up and stays empty on the floor, where p1
+// falls back to yellow. Third revision, 2026-08-25, contrast ramp: the
+// old "never by newColors" boundary is retired — newColors itself
+// resolves the rung, because mosh renders SGR-2 faint as a no-op
+// (empirical), which turned every faint surface normal-weight there.
+// On a 256color TERM, dim and the faint composites — dimRed, bgRed,
+// bgGray — swap SGR-2 for 256-indexed codes; on the floor they keep
+// their SGR-2 bytes untouched. Indexed codes exist only on the rung,
+// never faked on the floor, and COLORTERM is never consulted — the
+// mosh finding of 2026-07-31 stands. selBG alone still resolves in
+// runTUI: not as a boundary, but because its ladder needs the OSC 11
+// query, an interaction only the TUI can make.) The bg* codes are the
+// TUI's section bars; their zero values degrade bars to plain text
+// with the same geometry. Most are black-on-color; bgGray is the shelf
+// bar (chrome hierarchy, 2026-08-03): muted foreground on the
+// bright-black background — palette slot 8. Bar recolors (2026-08-04):
+// bgRed is muted foreground on red — BLOCKED holds only
+// unmet-dependency tasks, ordinary sequencing, so it keeps the hue
+// family and drops the alarm — and bgWhite (black on bright-white,
+// slot 15) is the INBOX bar, replacing reverse-dim. dimRed is the
+// matching foreground for the blocked row's waiting: lead.
 type colors struct {
 	reset, bold, dim, rev, green, yellow, red, magenta string
+	brightRed                                          string // p0/negative badge (contrast ramp, 2026-08-25): ANSI 91 — in-palette bright; normal red reads low-contrast on dark themes
 	dimRed                                             string
 	bgMagenta, bgGreen, bgYellow, bgRed, bgGray        string
 	bgWhite                                            string
-	selBG                                              string // selection bar; set by runTUI only, never by newColors
-	orange                                             string // p1 badge; set by runTUI on the 256-color rung only, never by newColors
-}
-
-// orangeFG resolves the p1 badge's orange down the same capability
-// posture as the selection ladder (2026-08-21 ramp): the 256-color
-// rung earns indexed orange, everything else gets "" and the badge
-// ramp falls back to yellow. COLORTERM is deliberately not consulted —
-// the mosh finding (2026-07-31) stands.
-func orangeFG(term string) string {
-	if strings.Contains(term, "256color") {
-		return "\x1b[38;5;208m"
-	}
-	return ""
+	selBG                                              string // selection bar; set by runTUI only — its ladder needs the OSC 11 query
+	orange                                             string // p1 badge; 256-color rung only, empty on the floor (yellow fallback)
 }
 
 // isTTY reports whether f is a character device (a real terminal).
@@ -55,18 +54,42 @@ func isTTY(f *os.File) bool {
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
-func newColors(out *os.File) colors {
-	if os.Getenv("NO_COLOR") != "" || !isTTY(out) {
-		return colors{}
-	}
-	return colors{
+// termColors resolves the palette for a TERM, floor first: the
+// 16-color set is the baseline every terminal gets; a TERM advertising
+// 256color swaps the faint surfaces for indexed equivalents — mosh
+// renders SGR-2 faint as a no-op (empirical, 2026-08-25), so on the
+// rung "muted" must be a real color, not an attribute. Gray 245 is the
+// standalone dim; 131 the muted red of the waiting: lead, distinct
+// from both col.red and plain text; the BLOCKED and shelf bars keep
+// their themed backgrounds (41, 100) and swap only the faint
+// foreground for gray 250. Orange rides the same rung check (it lived
+// in runTUI before this ladder existed). COLORTERM is deliberately not
+// consulted — the mosh finding (2026-07-31) stands.
+func termColors(term string) colors {
+	c := colors{
 		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
 		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
+		brightRed: "\x1b[91m",
 		dimRed:    "\x1b[2;31m",
 		bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 		bgYellow: "\x1b[30;43m", bgRed: "\x1b[2;41m",
 		bgGray: "\x1b[2;100m", bgWhite: "\x1b[30;107m",
 	}
+	if strings.Contains(term, "256color") {
+		c.dim = "\x1b[38;5;245m"
+		c.dimRed = "\x1b[38;5;131m"
+		c.bgRed = "\x1b[38;5;250;41m"
+		c.bgGray = "\x1b[38;5;250;100m"
+		c.orange = "\x1b[38;5;208m"
+	}
+	return c
+}
+
+func newColors(out *os.File) colors {
+	if os.Getenv("NO_COLOR") != "" || !isTTY(out) {
+		return colors{}
+	}
+	return termColors(os.Getenv("TERM"))
 }
 
 // syncLine renders the daemon's sync status (B7) as one line.

@@ -14,14 +14,43 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// ansiColors is the real escape set, for tests that pin bar styling.
+// ansiColors is the real escape set of the 16-color floor, for tests
+// that pin bar styling.
 var ansiColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
+	brightRed: "\x1b[91m",
 	dimRed:    "\x1b[2;31m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 	bgYellow: "\x1b[30;43m", bgRed: "\x1b[2;41m",
 	bgGray: "\x1b[2;100m", bgWhite: "\x1b[30;107m",
+}
+
+// rungColors is the same palette resolved on the 256-color rung
+// (contrast ramp, 2026-08-25): every faint surface swaps SGR-2 —
+// which mosh renders as a no-op — for an indexed code, and orange
+// exists.
+var rungColors = colors{
+	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[38;5;245m", rev: "\x1b[7m",
+	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
+	brightRed: "\x1b[91m",
+	dimRed:    "\x1b[38;5;131m",
+	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
+	bgYellow: "\x1b[30;43m", bgRed: "\x1b[38;5;250;41m",
+	bgGray: "\x1b[38;5;250;100m", bgWhite: "\x1b[30;107m",
+	orange: "\x1b[38;5;208m",
+}
+
+// noFaint asserts no SGR-2 byte sequence survives anywhere in a rung
+// render — the whole point of the ladder: mosh renders faint as a
+// no-op, so on the rung "muted" must never be spelled with it.
+func noFaint(t *testing.T, surface, v string) {
+	t.Helper()
+	for _, sgr2 := range []string{"\x1b[2m", "\x1b[2;"} {
+		if strings.Contains(v, sgr2) {
+			t.Errorf("%s: SGR-2 faint %q leaked onto the 256-color rung; view:\n%q", surface, sgr2, v)
+		}
+	}
 }
 
 // legendKey and legendSep compose the expected bytes of the unfilled
@@ -96,11 +125,13 @@ func TestTopGoldenPlain80(t *testing.T) {
 // wraps the whole padded line; counts ride the left edge, steering
 // hints the right.
 // The ready-row priority badge ramp (P0-highest grill, 2026-08-21):
-// p0 red — negatives too, the int is unbounded and lower is more
-// urgent — p1 orange on the 256-color rung and yellow on the 16-color
-// floor (the p1/p2 collision there is the accepted cost of not faking
-// orange), p2 yellow, p3+ dim, no badge at all without a priority.
-// Held badges never take the ramp: shelf rows are dim by design.
+// p0 bright red (contrast ramp, 2026-08-25 — normal red reads
+// low-contrast on dark themes; negatives too, the int is unbounded and
+// lower is more urgent), p1 orange on the 256-color rung and yellow on
+// the 16-color floor (the p1/p2 collision there is the accepted cost
+// of not faking orange), p2 yellow, p3+ dim, no badge at all without a
+// priority. Held badges never take the ramp: shelf rows are dim by
+// design.
 func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	const orange208 = "\x1b[38;5;208m"
 	mk := func(id string, p *int) stateTask {
@@ -121,8 +152,8 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s), width: 80, height: 60, col: col}
 	v := m.View()
 	for _, want := range []string{
-		"\x1b[31mp-1\x1b[0m ", // more urgent than p0: red like it
-		"\x1b[31mp0\x1b[0m ",
+		"\x1b[91mp-1\x1b[0m ", // more urgent than p0: bright red like it
+		"\x1b[91mp0\x1b[0m ",
 		orange208 + "p1\x1b[0m ",
 		"\x1b[33mp2\x1b[0m ",
 		"\x1b[2mp3\x1b[0m ",
@@ -140,29 +171,134 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 		t.Errorf("unprioritized row grew a badge; view:\n%q", v)
 	}
 
-	// The 16-color floor: no orange available, p1 falls back to yellow.
+	// The 16-color floor: no orange available, p1 falls back to yellow;
+	// p0 keeps bright red — 91 is in the 16-color palette.
 	m.col.orange = ""
 	floor := m.View()
 	if !strings.Contains(floor, "\x1b[33mp1\x1b[0m ") {
 		t.Errorf("floor p1 not yellow; view:\n%q", floor)
+	}
+	if !strings.Contains(floor, "\x1b[91mp0\x1b[0m ") {
+		t.Errorf("floor p0 not bright red; view:\n%q", floor)
 	}
 	if strings.Contains(floor, "38;5;208") {
 		t.Errorf("orange leaked onto the 16-color floor; view:\n%q", floor)
 	}
 }
 
-// orangeFG mirrors the selection ladder's capability posture: the
-// 256-color rung earns indexed orange, everything else — including a
-// truecolor COLORTERM claim, per the mosh finding — gets "".
-func TestOrangeFGLadder(t *testing.T) {
-	if got := orangeFG("xterm-256color"); got != "\x1b[38;5;208m" {
-		t.Errorf("256color TERM: orange = %q", got)
-	}
+// termColors is newColors' TERM resolution (contrast ramp,
+// 2026-08-25): every 16-color TERM gets the floor palette,
+// byte-identical to what the struct always carried — SGR-2 faint and
+// all — while a TERM advertising 256color swaps the faint surfaces for
+// indexed equivalents (mosh renders SGR-2 as a no-op) and earns
+// orange, which runTUI used to resolve. COLORTERM never unlocks the
+// rung — its signature takes only TERM: mosh advertises truecolor it
+// won't honor (the 2026-07-31 finding).
+func TestTermColorsLadder(t *testing.T) {
 	for _, term := range []string{"xterm", "screen", "vt100", ""} {
-		if got := orangeFG(term); got != "" {
-			t.Errorf("TERM %q: orange = %q, want empty (yellow fallback)", term, got)
+		if got := termColors(term); got != ansiColors {
+			t.Errorf("TERM %q: palette diverged from the 16-color floor:\ngot  %+v\nwant %+v", term, got, ansiColors)
 		}
 	}
+	for _, term := range []string{"xterm-256color", "screen-256color", "tmux-256color"} {
+		if got := termColors(term); got != rungColors {
+			t.Errorf("TERM %q: palette diverged from the 256-color rung:\ngot  %+v\nwant %+v", term, got, rungColors)
+		}
+	}
+}
+
+// The dashboard on the 256-color rung (contrast ramp, 2026-08-25):
+// every muted-by-design surface reads muted without SGR-2 — the ids,
+// badges, and meta lines take gray 245; the BLOCKED and shelf bars
+// keep their themed backgrounds and take the gray-250 foreground that
+// faint used to approximate; the blocked row's waiting: lead takes
+// muted red 131, still quieter than col.red (the 2026-08-04
+// drop-the-alarm intent survives mosh) — and no SGR-2 byte survives
+// anywhere in the frame.
+func TestTopGoldenRungMutedList(t *testing.T) {
+	s := topSnapshot()
+	s.state.Tasks = append(s.state.Tasks,
+		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open",
+			Situation: "blocked", UnmetDeps: []string{"t-flor"}})
+	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
+		ID: "t-wait", Title: "build on the idea",
+		Labels: []string{"infra"}, DependsOn: []string{"t-flor"},
+	}}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
+		col: rungColors, width: 120, height: 60}
+	v := m.View()
+	for _, want := range []string{
+		// Ready-row anatomy: gray id, gray p3+ badge, bold title, gray
+		// meta line.
+		"\x1b[38;5;245mt-pars\x1b[0m  \x1b[38;5;245mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
+		"              \x1b[38;5;245m2 deps\x1b[0m",
+		// The held row keeps the gray badge: shelf rows are dim by design.
+		"\x1b[38;5;245mt-park\x1b[0m  \x1b[38;5;245mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+		// BLOCKED and the shelves: themed backgrounds, gray-250 foreground.
+		"\x1b[38;5;250;41m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
+		"\x1b[38;5;250;100m" + padBar(120, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
+		// The blocked stack: muted-red lead, gray reason.
+		"              \x1b[38;5;131mwaiting: \x1b[0m\x1b[38;5;245mdepends on t-flor (open — sweep the floor)\x1b[0m",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("rung view missing %q; view:\n%q", want, v)
+		}
+	}
+	if strings.Contains(v, "\x1b[31mwaiting:") {
+		t.Errorf("blocked waiting: lead is full-brightness red on the rung; view:\n%q", v)
+	}
+	noFaint(t, "dashboard", v)
+}
+
+// The task view on the 256-color rung: the reverse-composite section
+// bars (DEPENDS ON, DESCRIPTION, HISTORY) pick the laddered gray up
+// through col.dim — reverse of foreground 245 reads as a mid-gray bar,
+// the same muted chrome faint-reverse gave — and the id value and
+// placeholders take the standalone gray. No SGR-2 anywhere.
+func TestTopGoldenRungTaskViewBars(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.col = rungColors
+	m.width, m.height = 80, 40
+	m = openDetail(t, m, "t-pars")
+	v := m.View()
+	for _, want := range []string{
+		"\x1b[7m\x1b[38;5;245m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
+		"\x1b[7m\x1b[38;5;245m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[7m\x1b[38;5;245m" + padBar(80, " HISTORY", "") + "\x1b[0m",
+		"  \x1b[1mid\x1b[0m          \x1b[38;5;245mt-pars\x1b[0m",
+		"  \x1b[1mlabels\x1b[0m      \x1b[38;5;245mnone\x1b[0m",
+		"\n  \x1b[38;5;245mnone\x1b[0m", // the empty-description placeholder
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("rung task view missing %q; view:\n%q", want, v)
+		}
+	}
+	noFaint(t, "task view", v)
+}
+
+// The CLI read commands inherit the ladder through newColors with zero
+// call-site churn: on the rung, status' claims line and the task
+// view's history stamps carry the same gray 245 the TUI renders, and
+// no SGR-2 byte survives in either command's output.
+func TestRungCLIReadSurfaces(t *testing.T) {
+	s := topSnapshot()
+	var b strings.Builder
+	printStatus(&b, rungColors, "abc1234", s)
+	v := b.String()
+	claim := "  \x1b[38;5;245mt-flak\x1b[0m  investigate the flake  \x1b[33m← brandon/a1\x1b[0m"
+	if !strings.Contains(v, claim) {
+		t.Errorf("status claims line not laddered gray; want %q; output:\n%q", claim, v)
+	}
+	noFaint(t, "printStatus", v)
+
+	b.Reset()
+	printTask(&b, rungColors, s.tasks["t-flak"], s.stateTaskOf("t-flak"), s)
+	v = b.String()
+	stamp := "  \x1b[38;5;245m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m"
+	if !strings.Contains(v, stamp) {
+		t.Errorf("task history stamp not laddered gray; want %q; output:\n%q", stamp, v)
+	}
+	noFaint(t, "printTask", v)
 }
 
 func TestTopGoldenBars(t *testing.T) {

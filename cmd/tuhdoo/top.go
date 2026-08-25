@@ -1789,16 +1789,19 @@ func closeText(t stateTask) string {
 // every section, `[labels] · edges · <mode tail>` — rendered only when
 // non-empty, so a one-line row signals "no labels, no edges".
 // priorityBadgeStyle is the ready-row badge ramp (P0-highest grill,
-// 2026-08-21): p0 red, p1 orange — 256-color rung only, falling back
-// to yellow on the 16-color floor, where the p1/p2 collision is the
-// accepted cost of not faking orange — p2 yellow, everything less
-// urgent the same dim gray. Negative priorities are possible (the int
-// is unbounded) and more urgent than 0, so they take red too. Held
-// rows never use the ramp: shelf rows are dim by design.
+// 2026-08-21): p0 bright red — ANSI 91 since the contrast ramp
+// (2026-08-25): normal red reads low-contrast on dark themes, and
+// bright is in the 16-color palette, so it holds on every rung — p1
+// orange — 256-color rung only, falling back to yellow on the 16-color
+// floor, where the p1/p2 collision is the accepted cost of not faking
+// orange — p2 yellow, everything less urgent the same muted gray.
+// Negative priorities are possible (the int is unbounded) and more
+// urgent than 0, so they take bright red too. Held rows never use the
+// ramp: shelf rows are dim by design.
 func priorityBadgeStyle(col colors, p int) string {
 	switch {
 	case p <= 0:
-		return col.red
+		return col.brightRed
 	case p == 1:
 		if col.orange != "" {
 			return col.orange
@@ -2097,7 +2100,6 @@ func runTUI(args []string) int {
 		// ▌ glyph alone marks selection there.
 		ans, dark := queryTermBG(os.Stdout)
 		m.col.selBG = selectionBG(ans, os.Getenv("TERM"), os.Getenv("COLORTERM"), dark)
-		m.col.orange = orangeFG(os.Getenv("TERM"))
 	}
 	if m.armed {
 		actor, err := topActor(as)
