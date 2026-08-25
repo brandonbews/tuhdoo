@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 0 blocked · 7 on hold · 16 inbox · 99 done · 23 cancelled
+0 in progress · 2 ready · 0 blocked · 7 on hold · 17 inbox · 99 done · 23 cancelled
 
 ## In progress
 
@@ -51,6 +51,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
+- [`tuh-hgy1`](tasks/tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1.md) Claim/release writes skip view regen — data-branch markdown never shows in-progress
 
 ## Done
 
