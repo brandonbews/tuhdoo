@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 2 ready · 0 blocked · 7 on hold · 17 inbox · 99 done · 23 cancelled
+0 in progress · 3 ready · 0 blocked · 7 on hold · 17 inbox · 99 done · 23 cancelled
 
 ## In progress
 
@@ -10,6 +10,7 @@ _None._
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-3rye`](tasks/tuh-01M0XE2FZCW0HCPRV6KD413RYE.md) | TUI/CLI contrast: p0 bright red; laddered gray replaces SGR-2 dim (a mosh no-op) | 1 |  |
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 
