@@ -2,7 +2,7 @@
 
 `tuh-01M0HF5SS536W9JAS2CB2ZQCT8`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `docs` `adoption-friction`
 - **Created:** 2026-08-21 06:12 UTC by `brandon/claude-code-1`
@@ -40,3 +40,11 @@ retitled · description edited · status inbox→open · priority none→2 · la
 ### 2026-08-21 23:59 UTC — edit by `brandon`
 
 priority 2→1
+
+### 2026-08-25 19:15 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-qct8/autodeploy-data-branch`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/84>
+- Merged as: `c21e27c661e5aa89f303f3f38e87d6cd9d4068f0`
+
+All four asks landed in one PR (#84, squash c21e27c). joining.md's preview-builder bullet rewritten around the verified mechanism: author-check-precedes-Ignored-Build-Step stated plainly, default-branch git.deploymentEnabled called out as ineffective, the data-branch hand commit named as the sanctioned exception (bullet 1 reworded to match), recipe linked. New docs/recipes/vercel.md carries the walkthrough; its command block was dry-run in a scratch repo and deliberately never writes local refs/heads/tuhdoo (detached worktree from FETCH_HEAD, push to HEAD:refs/heads/tuhdoo) so it cannot race the daemon's CAS loop. Item 4 verification corrected an existing docs error: Netlify does NOT deploy every branch by default (branch deploys are opt-in, per its docs; its private-repo analogue is "Pending approval" deploy requests for unrecognized authors), Cloudflare Pages does build all non-production branches by default with dashboard exclusion; both labeled "Not tested live" with vendor-doc links. init's Auto-deploys stanza points at https://tuhdoo.com/docs/joining (host-neutral; the recipe URL would be wrong for non-Vercel hosts), asserted in cli_test.go. site/src/lib/nav.ts gained the recipe entry (nav is manual; required to publish). make test lint green; no workflow files touched. Note for successors: no vercel.json was committed to THIS repo's data branch — this repo's site deploys via Root Directory and is immune; the recipe is for adopter repos.

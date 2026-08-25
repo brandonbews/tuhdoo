@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 2 ready · 0 blocked · 7 on hold · 16 inbox · 98 done · 23 cancelled
+0 in progress · 2 ready · 0 blocked · 7 on hold · 16 inbox · 99 done · 23 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) | Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer | 1 | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -153,6 +151,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 - [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior)
+- [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer
 - [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority to true P0-highest: 0 = most urgent, absent = unprioritized (sorts last); badge color ramp
 
 ## Cancelled
