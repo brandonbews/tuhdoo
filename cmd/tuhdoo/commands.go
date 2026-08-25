@@ -98,8 +98,9 @@ Branch protection: exempt %q from any ruleset or protected-branch rule
   requiring pull requests or reviews — the daemon pushes this branch
   directly, fast-forward only, never force.
 
-Auto-deploys: the daemon pushes %q often — exclude it in any hosted
-  preview builder that deploys every branch by default.
+Auto-deploys: the daemon pushes %q often. If a hosted preview builder
+  autodeploys this repo's branches, silence the data branch — per-host
+  guidance: https://tuhdoo.com/docs/joining
 
 Agent harness: any MCP harness connects through the stdio shim — paste
 into its MCP config:

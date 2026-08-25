@@ -127,28 +127,50 @@ Three one-time settings on the shared repository, all also printed by
   `tuhdoo` are rejected and every machine's ledger silently stops
   publishing while continuing to work locally. Exclude the `tuhdoo` branch
   from any rule requiring pull requests, reviews, or status checks. This is
-  safe by construction: the branch is written only by tuhdoo daemons, moves
-  fast-forward only, and is never force-pushed, so a rule *blocking* force
-  pushes to it is harmless.
+  safe by construction: the branch is written by tuhdoo daemons (plus at
+  most a rare sanctioned hand commit — see the auto-deploy bullet below),
+  moves fast-forward only, and is never force-pushed, so a rule *blocking*
+  force pushes to it is harmless.
 - **Exclude the data branch from CI triggers**, so ledger syncs don't burn
   CI runs. For GitHub Actions:
   `on: { push: { branches-ignore: ["tuhdoo"] } }`.
-- **Exclude the data branch from hosted preview builders.** The data
-  branch is a real branch with all the quirks of a real branch, and
-  tuhdoo pushes it often once init has run. Hosts that auto-deploy every
-  branch by default (Vercel, Netlify, Cloudflare Pages) therefore attempt
-  a preview deployment on every ledger sync; each attempt fails, usually
-  with a notification email. These hosts configure branch deployment in
-  their dashboards, not in the repo, so the exclusion is dashboard-side.
-  On Vercel (verified against its docs, 2026-08-10): Project → Settings →
-  Git → Ignored Build Step → Custom, with the command
+- **Silence the data branch in hosts that autodeploy it.** The data
+  branch is a real branch, and tuhdoo pushes it often once init has run.
+  Whether that triggers anything — and what actually stops it — differs by
+  host:
 
-  ```sh
-  if [ "$VERCEL_GIT_COMMIT_REF" = "tuhdoo" ]; then exit 0; else exit 1; fi
-  ```
-
-  The exit codes are inverted from shell convention: exit 0 *skips* the
-  build, exit 1 lets it proceed. `VERCEL_GIT_COMMIT_REF` requires the
-  project setting "Automatically expose System Environment Variables",
-  which is on by default. If your data branch is not named `tuhdoo`,
-  compare against its actual name.
+  - **Vercel** deploys automatically on every branch push, and on private
+    repos it first checks that the commit author is an authorized member
+    of the Vercel team ([Vercel's
+    docs](https://vercel.com/docs/deployments/troubleshoot-project-collaboration)).
+    The ledger's commits are authored by `tuhdoo daemon
+    <daemon@tuhdoo.invalid>`, which can never be a team member, so every
+    ledger push produces a blocked deployment and a warning. The author
+    check runs **before** the dashboard's Ignored Build Step (verified
+    live, 2026-08-21), so an ignore rule alone cannot silence it wherever
+    that check applies; and a `vercel.json` on your default branch does
+    nothing here, because Vercel reads configuration from the pushed
+    commit (also verified live). The fix that works is a `vercel.json`
+    committed onto the data branch itself — the one sanctioned hand
+    commit on an otherwise daemon-only branch (one ordinary commit, never
+    a force-push). Walkthrough: [`recipes/vercel.md`](recipes/vercel.md).
+    Projects that set a Root Directory (monorepos deploying a
+    subdirectory) are immune without any of this: pushes that don't touch
+    that directory are skipped up front (verified live).
+  - **Netlify** builds only the production branch unless branch deploys
+    were explicitly enabled ([Netlify's
+    docs](https://docs.netlify.com/deploy/deploy-types/branch-deploys/)),
+    so a default-configured site never builds the data branch — usually
+    there is nothing to do. If your site does deploy branches beyond
+    production, scope that setting (individual branches, or a prefix
+    pattern) so it misses the data branch. Not tested live. Per Netlify's
+    docs, private-repo builds triggered by authors who aren't team
+    members are held as "Pending approval" deploy requests — so a site
+    deploying all branches of a private repo would collect one held
+    request per ledger sync.
+  - **Cloudflare Pages** builds every non-production branch by default
+    ([Cloudflare's
+    docs](https://developers.cloudflare.com/pages/configuration/branch-build-controls/)).
+    Exclude the data branch in the project's branch-control settings
+    (custom branches, with an exclude rule). Its docs describe no
+    commit-author check like Vercel's. Not tested live.
