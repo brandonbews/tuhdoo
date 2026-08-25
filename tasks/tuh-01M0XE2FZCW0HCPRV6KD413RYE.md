@@ -2,7 +2,7 @@
 
 `tuh-01M0XE2FZCW0HCPRV6KD413RYE`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Created:** 2026-08-25 21:43 UTC by `brandon`
 
@@ -45,4 +45,10 @@ The #82 priority-badge ramp styles p0 with ANSI-31 normal red — low contrast o
 
 ## History
 
-_No activity yet._
+### 2026-08-25 22:05 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-3rye/contrast-gray-ladder`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/85>
+- Merged as: `0332cd691bee47c7eece5487e90770a1149667ab`
+
+All acceptance criteria met; squash-merged to main as 0332cd6 (PR #85), make test lint green. p0/negative badges now ANSI 91 bright red on every rung via a new colors.brightRed field. Rung detection moved into newColors through a new pure termColors(term): on a TERM containing "256color", dim → 38;5;245, dimRed (waiting: lead) → 38;5;131, bgRed/bgGray keep themed backgrounds 41/100 and swap the faint foreground for gray 250; 16-color floor stays SGR-2 byte-identical (TestTermColorsLadder pins both). All ~30 col.dim call sites (TUI + CLI) inherited with zero churn; rev+dim detail bars resolve through the laddered dim. COLORTERM never consulted. Consequence of retiring the "never by newColors" boundary: orange moved into termColors, orangeFG deleted (behavior-neutral; selBG stays in runTUI — it needs the OSC 11 query); colors law comment carries its third revision. New golden tests: rungColors set, dashboard/task-view/CLI rung goldens, each with a noFaint sweep asserting zero SGR-2 bytes on the rung. Daemon redeploy (rebuild + restart) is happening immediately after this finish_run.
