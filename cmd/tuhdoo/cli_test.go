@@ -208,10 +208,12 @@ func TestInitRemoteless(t *testing.T) {
 	// The branch-protection line: hosts whose rulesets require PRs on
 	// all branches would silently break the daemon's direct pushes.
 	mustContain(t, out, "Branch protection", "fast-forward only, never force")
-	// The auto-deploy line: hosted preview builders (Vercel and friends)
-	// deploy every branch by default, so the data branch's frequent
-	// pushes trigger a failing deployment each time unless excluded.
-	mustContain(t, out, "Auto-deploys", "preview builder")
+	// The auto-deploy pointer: hosts that autodeploy branches need the
+	// data branch silenced, and how differs by host (on Vercel a
+	// dashboard ignore rule is not even sufficient) — so the binary
+	// carries a pointer to the per-host guidance, not the guidance.
+	mustContain(t, out, "Auto-deploys", "preview builder",
+		"https://tuhdoo.com/docs/joining")
 	// The docs pointer: the least-specific stable URL is a permanent
 	// promise baked into every shipped binary — recipes and guides live
 	// there, not in the binary, so they can be fixed without a release.

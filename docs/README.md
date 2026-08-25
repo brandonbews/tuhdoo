@@ -13,5 +13,5 @@ The docs, in reading order:
 - [`steering.md`](steering.md) covers the human side of running a backlog: capturing ideas, triaging, promoting tasks to prompt quality, shaping the dependency graph, and answering escalations. It closes with a worked example.
 - [`joining.md`](joining.md) walks a new machine through joining a repo that already uses tuhdoo, and gives the repo admin the branch-protection and CI settings to set once.
 - [`agent-protocol.md`](agent-protocol.md) is the instruction text a harness loads for agents: connecting, the twelve tools, the work loop, and escalation.
-- [`recipes/`](recipes/README.md) collects recommended patterns for the code workflow around the backlog; they are suggestions, never protocol. Start with the [trunk-based PR flow](recipes/trunk-based-pr-flow.md).
+- [`recipes/`](recipes/README.md) collects recommended patterns for the code workflow and host settings around the backlog; they are suggestions, never protocol. Start with the [trunk-based PR flow](recipes/trunk-based-pr-flow.md).
 - [`uninstall.md`](uninstall.md) removes tuhdoo from a machine with zero trace, and retires a team's ledger.

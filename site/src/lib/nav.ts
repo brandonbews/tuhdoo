@@ -29,6 +29,11 @@ export const docsNav: NavEntry[] = [
     file: "recipes/trunk-based-pr-flow.md",
     title: "Trunk-based PR flow",
   },
+  {
+    slug: ["recipes", "vercel"],
+    file: "recipes/vercel.md",
+    title: "Vercel and the data branch",
+  },
   { slug: ["uninstall"], file: "uninstall.md", title: "Uninstalling" },
 ];
 
