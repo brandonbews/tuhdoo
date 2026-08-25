@@ -2,7 +2,7 @@
 
 `tuh-01M0HF5SS536W9JAS2CB2ZQCT8`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-2`
 - **Priority:** 1
 - **Labels:** `docs` `adoption-friction`
 - **Created:** 2026-08-21 06:12 UTC by `brandon/claude-code-1`
