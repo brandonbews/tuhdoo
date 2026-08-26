@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 6 ready · 0 blocked · 7 on hold · 17 inbox · 101 done · 23 cancelled
+0 in progress · 5 ready · 1 blocked · 8 on hold · 18 inbox · 101 done · 23 cancelled
 
 ## In progress
 
@@ -11,15 +11,16 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) | placeholder: p0 badge color check | 0 | `placeholder` |
-| [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) | placeholder: p1 badge color check | 1 | `placeholder` |
+| [`tuh-s7mj`](tasks/tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ.md) | placeholder: cancelled-row p0 badge check | 0 | `placeholder` |
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
-| [`tuh-k6vs`](tasks/tuh-01M0Y9RRZ088WXC3WQ4SXAK6VS.md) | placeholder: p2 badge color check | 2 | `placeholder` |
-| [`tuh-20sn`](tasks/tuh-01M0Y9RS12CV9HYGZ9H4AT20SN.md) | placeholder: p3 badge color check | 3 | `placeholder` |
+| [`tuh-aj4t`](tasks/tuh-01M0YEJBWYYTCHNVJEG502AJ4T.md) | placeholder: done-row p2 badge check | 2 | `placeholder` |
 
 ## Blocked / waiting
 
-_None._
+| ID | Task | Priority | Waiting on |
+|---|---|---:|---|
+| [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) | placeholder: p1 badge color check | 1 | depends on [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) |
 
 ## On hold
 
@@ -34,6 +35,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 | [`tuh-6k4y`](tasks/tuh-01KZSB8EAZ2H3618SZVWH66K4Y.md) | Grill: run Matt Pocock's improve-codebase-architecture skill here? (parked until Brandon can read the Go) | — | `design` `go` |
 | [`tuh-8x0g`](tasks/tuh-01KZSGFNC11KY0ZYGPEAV48X0G.md) | Structured escalation options: pickable answers in the TUI (escalate gains options/recommendation fields) | — | `design` `mcp` `tui` |
 | [`tuh-1djr`](tasks/tuh-01M0K9B230MNDYYH8D8XJS1DJR.md) | Configurable daemon commit identity (Options.Ident is unwired) — held until a non-Vercel author check bites | — | `design` `daemon` |
+| [`tuh-k6vs`](tasks/tuh-01M0Y9RRZ088WXC3WQ4SXAK6VS.md) | placeholder: p2 badge color check | 2 | `placeholder` |
 
 ## Inbox
 
@@ -56,6 +58,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
 - [`tuh-hgy1`](tasks/tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1.md) Claim/release writes skip view regen — data-branch markdown never shows in-progress
+- [`tuh-20sn`](tasks/tuh-01M0Y9RS12CV9HYGZ9H4AT20SN.md) placeholder: p3 badge color check
 
 ## Done
 
