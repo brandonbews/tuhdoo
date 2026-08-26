@@ -22,23 +22,26 @@ var ansiColors = colors{
 	brightRed: "\x1b[91m",
 	dimRed:    "\x1b[2;31m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
-	bgYellow: "\x1b[30;43m", bgRed: "\x1b[2;41m",
-	bgGray: "\x1b[2;100m", bgWhite: "\x1b[30;107m",
+	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;101m",
+	bgGray: "\x1b[30;47m", bgWhite: "\x1b[30;107m",
+	bgDarkGray: "\x1b[100m",
 }
 
 // rungColors is the same palette resolved on the 256-color rung
-// (contrast ramp, 2026-08-25): every faint surface swaps SGR-2 —
-// which mosh renders as a no-op — for an indexed code, and orange
-// exists.
+// (contrast ramp, 2026-08-25): the two faint survivors — dim, dimRed —
+// swap SGR-2, which mosh renders as a no-op, for indexed codes, and
+// orange exists. The bars carry the same in-palette bytes as the floor
+// (bar recolors II, 2026-08-25).
 var rungColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[38;5;245m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 	brightRed: "\x1b[91m",
 	dimRed:    "\x1b[38;5;131m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
-	bgYellow: "\x1b[30;43m", bgRed: "\x1b[38;5;250;41m",
-	bgGray: "\x1b[38;5;250;100m", bgWhite: "\x1b[30;107m",
-	orange: "\x1b[38;5;208m",
+	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;101m",
+	bgGray: "\x1b[30;47m", bgWhite: "\x1b[30;107m",
+	bgDarkGray: "\x1b[100m",
+	orange:     "\x1b[38;5;208m",
 }
 
 // noFaint asserts no SGR-2 byte sequence survives anywhere in a rung
@@ -130,8 +133,8 @@ func TestTopGoldenPlain80(t *testing.T) {
 // lower is more urgent), p1 orange on the 256-color rung and yellow on
 // the 16-color floor (the p1/p2 collision there is the accepted cost
 // of not faking orange), p2 yellow, p3+ dim, no badge at all without a
-// priority. Held badges never take the ramp: shelf rows are dim by
-// design.
+// priority. Since 2026-08-25 (steering) the ramp colors the badge in
+// every section — held rows included.
 func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	const orange208 = "\x1b[38;5;208m"
 	mk := func(id string, p *int) stateTask {
@@ -157,10 +160,10 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 		orange208 + "p1\x1b[0m ",
 		"\x1b[33mp2\x1b[0m ",
 		"\x1b[2mp3\x1b[0m ",
-		// Held keeps the dim badge even at p0: the ramp colors live
-		// urgency, and a shelf has none. (t-parkd renders as its short
-		// form t-arkd — prefix plus 4-char tail.)
-		"\x1b[2mt-arkd\x1b[0m  \x1b[2mp0\x1b[0m ",
+		// Held takes the ramp too (steering, 2026-08-25): a parked p0 is
+		// still a p0. (t-parkd renders as its short form t-arkd — prefix
+		// plus 4-char tail.)
+		"\x1b[2mt-arkd\x1b[0m  \x1b[91mp0\x1b[0m ",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("ramp view missing %q; view:\n%q", want, v)
@@ -207,19 +210,18 @@ func TestTermColorsLadder(t *testing.T) {
 	}
 }
 
-// The dashboard on the 256-color rung (contrast ramp, 2026-08-25):
-// every muted-by-design surface reads muted without SGR-2 — the ids,
-// badges, and meta lines take gray 245; the BLOCKED and shelf bars
-// keep their themed backgrounds and take the gray-250 foreground that
-// faint used to approximate; the blocked row's waiting: lead takes
-// muted red 131, still quieter than col.red (the 2026-08-04
-// drop-the-alarm intent survives mosh) — and no SGR-2 byte survives
-// anywhere in the frame.
+// The dashboard on the 256-color rung (contrast ramp + bar recolors
+// II, 2026-08-25): the muted-by-design row surfaces read muted without
+// SGR-2 — ids, p3+ badges, and meta lines take gray 245, the blocked
+// row's waiting: lead takes muted red 131 — while the bars carry the
+// same black-on-color bytes as the floor (BLOCKED black on bright red,
+// ON HOLD black on slot-7 gray) and badges ride the ramp in every
+// section. No SGR-2 byte survives anywhere in the frame.
 func TestTopGoldenRungMutedList(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
 		stateTask{ID: "t-wait", Title: "build on the idea", Status: "open",
-			Situation: "blocked", UnmetDeps: []string{"t-flor"}})
+			Priority: pint(1), Situation: "blocked", UnmetDeps: []string{"t-flor"}})
 	s.tasks["t-wait"] = hydratedTask{Task: taskJSON{
 		ID: "t-wait", Title: "build on the idea",
 		Labels: []string{"infra"}, DependsOn: []string{"t-flor"},
@@ -232,12 +234,17 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 		// meta line.
 		"\x1b[38;5;245mt-pars\x1b[0m  \x1b[38;5;245mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
 		"              \x1b[38;5;245m2 deps\x1b[0m",
-		// The held row keeps the gray badge: shelf rows are dim by design.
-		"\x1b[38;5;245mt-park\x1b[0m  \x1b[38;5;245mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
-		// BLOCKED and the shelves: themed backgrounds, gray-250 foreground.
-		"\x1b[38;5;250;41m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
-		"\x1b[38;5;250;100m" + padBar(120, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
-		// The blocked stack: muted-red lead, gray reason.
+		// The held row's badge rides the ramp (steering, 2026-08-25):
+		// p2 yellow, on the otherwise dim shelf row.
+		"\x1b[38;5;245mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+		// A blocked row's badge rides it too: p1 orange on the rung.
+		"\x1b[38;5;245mt-wait\x1b[0m  \x1b[38;5;208mp1\x1b[0m  \x1b[1mbuild on the idea\x1b[0m",
+		// Bar recolors II: black on bright red, black on slot-7 gray —
+		// in-palette on every rung.
+		"\x1b[30;101m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
+		"\x1b[30;47m" + padBar(120, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
+		// The blocked stack: muted-red lead, gray reason — the loud bar
+		// carries the urgency, the reason line never reads as an alarm.
 		"              \x1b[38;5;131mwaiting: \x1b[0m\x1b[38;5;245mdepends on t-flor (open — sweep the floor)\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
@@ -250,11 +257,11 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 	noFaint(t, "dashboard", v)
 }
 
-// The task view on the 256-color rung: the reverse-composite section
-// bars (DEPENDS ON, DESCRIPTION, HISTORY) pick the laddered gray up
-// through col.dim — reverse of foreground 245 reads as a mid-gray bar,
-// the same muted chrome faint-reverse gave — and the id value and
-// placeholders take the standalone gray. No SGR-2 anywhere.
+// The task view on the 256-color rung: the section bars (DEPENDS ON,
+// DESCRIPTION, HISTORY) are the quiet bgDarkGray chrome — white on
+// bright-black, the same bytes as the floor (bar recolors II,
+// 2026-08-25; was reverse-dim) — and the id value and placeholders
+// take the standalone laddered gray. No SGR-2 anywhere.
 func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = rungColors
@@ -262,9 +269,9 @@ func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m = openDetail(t, m, "t-pars")
 	v := m.View()
 	for _, want := range []string{
-		"\x1b[7m\x1b[38;5;245m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
-		"\x1b[7m\x1b[38;5;245m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
-		"\x1b[7m\x1b[38;5;245m" + padBar(80, " HISTORY", "") + "\x1b[0m",
+		"\x1b[100m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
+		"\x1b[100m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[100m" + padBar(80, " HISTORY", "") + "\x1b[0m",
 		"  \x1b[1mid\x1b[0m          \x1b[38;5;245mt-pars\x1b[0m",
 		"  \x1b[1mlabels\x1b[0m      \x1b[38;5;245mnone\x1b[0m",
 		"\n  \x1b[38;5;245mnone\x1b[0m", // the empty-description placeholder
@@ -301,6 +308,60 @@ func TestRungCLIReadSurfaces(t *testing.T) {
 	noFaint(t, "printTask", v)
 }
 
+// Badges ride the ramp in every section (steering, 2026-08-25 —
+// reversing the 2026-08-21 no-badge-in-inbox/blocked/history and
+// held-dim consequences): an in-progress p0 is bright red beside its
+// yellow holder tail, an inbox capture's p2 is yellow, and history
+// rows carry their stored priority — a closed p0 stays bright red.
+// Blocked and held badges are pinned by the rung golden; unprioritized
+// rows everywhere stay bare, pinned by the ramp golden.
+func TestTopGoldenBadgesEverySection(t *testing.T) {
+	s := topSnapshot()
+	for i := range s.state.Tasks {
+		switch s.state.Tasks[i].ID {
+		case "t-flak":
+			s.state.Tasks[i].Priority = pint(0)
+		case "t-idea":
+			s.state.Tasks[i].Priority = pint(2)
+		}
+	}
+	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
+		col: ansiColors, width: 80, height: 60}
+	v := m.View()
+	for _, want := range []string{
+		"\x1b[2mt-flak\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1minvestigate the flake\x1b[0m",
+		"\x1b[2mt-idea\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1midea: dark mode\x1b[0m",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("dashboard missing ramp badge %q; view:\n%q", want, v)
+		}
+	}
+
+	// History mode: the close metadata keeps the meta line; the badge
+	// keeps the ramp.
+	hm := newHistoryModel(newFakeSteering())
+	for i := range hm.snap.state.Tasks {
+		switch hm.snap.state.Tasks[i].ID {
+		case "t-ship":
+			hm.snap.state.Tasks[i].Priority = pint(1)
+		case "t-drop":
+			hm.snap.state.Tasks[i].Priority = pint(0)
+		}
+	}
+	hm.col = ansiColors
+	hm.width, hm.height = 80, 40
+	hm, _ = press(t, hm, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	hv := hm.View()
+	for _, want := range []string{
+		"\x1b[2mt-ship\x1b[0m  \x1b[33mp1\x1b[0m  \x1b[1mship the tui\x1b[0m",
+		"\x1b[2mt-drop\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1mdrop the wiki\x1b[0m",
+	} {
+		if !strings.Contains(hv, want) {
+			t.Errorf("history missing ramp badge %q; view:\n%q", want, hv)
+		}
+	}
+}
+
 func TestTopGoldenBars(t *testing.T) {
 	for _, width := range []int{80, 120} {
 		m := newTopModel(newFakeSteering())
@@ -329,14 +390,13 @@ func TestTopGoldenBars(t *testing.T) {
 			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + padBar(width, " READY (2)", "p priority · c cancel ") + "\x1b[0m",
 			"\x1b[30;43m" + padBar(width, " IN PROGRESS (1)", "") + "\x1b[0m",
-			// BLOCKED is dim red (bar recolors, 2026-08-04): unmet deps
-			// are sequencing, not a fire.
-			"\x1b[2;41m" + padBar(width, " BLOCKED (0)", "") + "\x1b[0m",
-			// The shelves split (chrome hierarchy, 2026-08-03): ON HOLD is
-			// shelved and takes the dark-gray bar (dim on bright black);
-			// INBOX awaits attention and takes black on bright-white (bar
-			// recolors, 2026-08-04 — was reverse-dim).
-			"\x1b[2;100m" + padBar(width, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
+			// Bar recolors II (2026-08-25): BLOCKED is black on bright
+			// red — the p0 badge's background twin — and ON HOLD black on
+			// slot-7 gray, so every dashboard bar reads black-on-color;
+			// INBOX keeps black on bright-white (bar recolors,
+			// 2026-08-04).
+			"\x1b[30;101m" + padBar(width, " BLOCKED (0)", "") + "\x1b[0m",
+			"\x1b[30;47m" + padBar(width, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
 			"\x1b[30;107m" + padBar(width, " INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
 			foot,
 		} {
@@ -353,10 +413,11 @@ func TestTopGoldenBars(t *testing.T) {
 		if !strings.Contains(v, "\x1b[35mquestion: \x1b[0m") {
 			t.Errorf("width %d: question lead not magenta; view:\n%s", width, v)
 		}
-		// Shelf rows keep dim id and badge, but titles are bold in every
-		// section (2026-07-31) — the shelves recede less, accepted.
+		// Shelf rows keep the dim id, but titles are bold in every
+		// section (2026-07-31) and badges ride the ramp everywhere
+		// (steering, 2026-08-25): the held p2 is yellow now.
 		for _, row := range []string{
-			"\x1b[2mt-park\x1b[0m  \x1b[2mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+			"\x1b[2mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
 			"\x1b[2mt-idea\x1b[0m      \x1b[1midea: dark mode\x1b[0m",
 			"\x1b[2mt-pars\x1b[0m  \x1b[2mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
 		} {
@@ -758,10 +819,11 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"\x1b[30;45m" + padBar(80, " NEEDS INPUT (1)", "enter answer · e context ") + "\x1b[0m",
-		// DESCRIPTION and HISTORY keep reverse-dim: neutral structural
-		// chrome, not shelf (chrome hierarchy, 2026-08-03).
-		"\x1b[7m\x1b[2m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
-		"\x1b[7m\x1b[2m" + padBar(80, " HISTORY", "") + "\x1b[0m",
+		// DESCRIPTION and HISTORY are quiet chrome — bgDarkGray, white
+		// on bright-black (bar recolors II, 2026-08-25; was
+		// reverse-dim): shelf, not queue.
+		"\x1b[100m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[100m" + padBar(80, " HISTORY", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill. The
 		// legend's visible width is 72 cells, so 8 cells of plain pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "edit") +
@@ -869,9 +931,10 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"\x1b[30;42m" + padBar(80, " DONE (3)", "") + "\x1b[0m",
-		// CANCELLED is shelved: the dark-gray bar (chrome hierarchy,
-		// 2026-08-03), same as ON HOLD on the dashboard.
-		"\x1b[2;100m" + padBar(80, " CANCELLED (2)", "") + "\x1b[0m",
+		// CANCELLED is quiet chrome — bgDarkGray, white on bright-black
+		// (bar recolors II, 2026-08-25): the brightened bgGray belongs
+		// to the dashboard's ON HOLD alone.
+		"\x1b[100m" + padBar(80, " CANCELLED (2)", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill. The
 		// legend's visible width is 48 cells, so 32 cells of plain pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +

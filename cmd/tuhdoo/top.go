@@ -1100,7 +1100,9 @@ func (m topModel) detailLines() []detailLine {
 	// (no stored reverse index). Every dependent renders regardless of
 	// status (accuracy over noise; the dim status word carries the
 	// story), in ULID order. Rows whose target resolves are selectable
-	// stops: enter hops to the target's view, esc walks back.
+	// stops: enter hops to the target's view, esc walks back. The task
+	// view's section bars are quiet chrome — shelf, not queue: bgDarkGray
+	// since bar recolors II (2026-08-25); was reverse-dim.
 	deps, dependents := t.DependsOn, m.snap.dependentsOf(t.ID)
 	if len(deps) > 0 || len(dependents) > 0 {
 		idW, statusW := edgeCols(m.snap, deps, dependents)
@@ -1113,7 +1115,7 @@ func (m topModel) detailLines() []detailLine {
 				return
 			}
 			add(-1, "")
-			addRaw(-1, barLine(col, col.rev+col.dim, fmt.Sprintf(" %s (%d)", label, len(ids)), hint, width))
+			addRaw(-1, barLine(col, col.bgDarkGray, fmt.Sprintf(" %s (%d)", label, len(ids)), hint, width))
 			for _, id := range ids {
 				et, ok := m.snap.findTask(id)
 				stop := -1
@@ -1128,7 +1130,7 @@ func (m topModel) detailLines() []detailLine {
 	}
 
 	add(-1, "")
-	addRaw(-1, barLine(col, col.rev+col.dim, " DESCRIPTION", "", width))
+	addRaw(-1, barLine(col, col.bgDarkGray, " DESCRIPTION", "", width))
 	if t.Description == "" {
 		addBlock(nextStop(), sgr(col, col.dim, "none"))
 	} else {
@@ -1136,7 +1138,7 @@ func (m topModel) detailLines() []detailLine {
 	}
 
 	add(-1, "")
-	addRaw(-1, barLine(col, col.rev+col.dim, " HISTORY", "", width))
+	addRaw(-1, barLine(col, col.bgDarkGray, " HISTORY", "", width))
 	// History keeps answered escalations (the single-home rule) — and,
 	// on a terminal task, the unanswered ones too (history view,
 	// 2026-08-02): the NEEDS INPUT section only serves open work, and a
@@ -1522,28 +1524,31 @@ var topSections = []topSection{
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }, "enter answer"},
 	{"ready", "READY", func(c colors) string { return c.bgGreen }, "p priority · c cancel"},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }, ""},
-	// BLOCKED's bgRed went dim red (bar recolors, 2026-08-04): the
-	// section holds only unmet-dependency tasks — ordinary sequencing,
-	// not a fire — so the bar keeps the hue and drops the alarm.
+	// BLOCKED is black on bright red (bar recolors II, 2026-08-25,
+	// steering — reversing the 2026-08-04 dim-red muting): the
+	// background twin of the p0 badge's 91, same dark text as READY and
+	// IN PROGRESS; the bar joins the black-on-color dashboard, and the
+	// row's muted waiting: lead carries the "ordinary sequencing" tone.
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }, ""},
 	// The shelves (2026-07-31): held above inbox, both dim rows — parked
 	// and captured work sits below the live queue and never claims the
-	// eye. Chrome hierarchy (2026-08-03): held is shelved and takes the
-	// dark-gray bgGray bar. Bar recolors (2026-08-04): inbox awaits
-	// attention and takes the bright-white bgWhite bar (was reverse-dim)
-	// — its rows stay dim, but the bar no longer reads as shelf chrome.
+	// eye. Bar recolors II (2026-08-25): held takes bgGray, black on
+	// slot-7 gray — bright enough for black text, so every dashboard bar
+	// reads black-on-color, and still distinct from inbox's bright-white
+	// bgWhite bar (bar recolors, 2026-08-04), which awaits attention.
 	{"held", "ON HOLD", func(c colors) string { return c.bgGray }, "c cancel"},
 	{"inbox", "INBOX", func(c colors) string { return c.bgWhite }, "i capture · c cancel"},
 }
 
 // historySections are history mode's bars (history view, 2026-08-02):
 // finished work first under the green bar, cancellations second under
-// the shelf's dark-gray bar (chrome hierarchy, 2026-08-03) — closed,
-// kept, never claiming the eye. No steering hints: the shelf is
-// read-only in both panes.
+// the quiet dark-gray chrome — bgDarkGray since bar recolors II
+// (2026-08-25); the brightened bgGray belongs to the dashboard's ON
+// HOLD alone — closed, kept, never claiming the eye. No steering
+// hints: the shelf is read-only in both panes.
 var historySections = []topSection{
 	{"done", "DONE", func(c colors) string { return c.bgGreen }, ""},
-	{"cancelled", "CANCELLED", func(c colors) string { return c.bgGray }, ""},
+	{"cancelled", "CANCELLED", func(c colors) string { return c.bgDarkGray }, ""},
 }
 
 // sections is the on-screen list's section set.
@@ -1796,8 +1801,10 @@ func closeText(t stateTask) string {
 // floor, where the p1/p2 collision is the accepted cost of not faking
 // orange — p2 yellow, everything less urgent the same muted gray.
 // Negative priorities are possible (the int is unbounded) and more
-// urgent than 0, so they take bright red too. Held rows never use the
-// ramp: shelf rows are dim by design.
+// urgent than 0, so they take bright red too. The ramp colors the
+// badge in every section (steering, 2026-08-25) — held, blocked,
+// inbox, and history rows included: priority is the fact being shown,
+// wherever the row lives.
 func priorityBadgeStyle(col colors, p int) string {
 	switch {
 	case p <= 0:
@@ -1833,46 +1840,40 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		t := r.task
 		meta := metaParts(s, t.ID)
 		badge, badgeStyle, tail, tailStyle := "", "", "", ""
+		// The ramp badge renders in every section (steering, 2026-08-25
+		// — reversing the 2026-08-21 held-dim and no-badge-in-inbox/
+		// blocked/history consequences): wherever a priority was set,
+		// the row says so in the ramp's colors, whatever the row's
+		// situation. Unprioritized still renders bare (P0-highest flip,
+		// 2026-08-21): no badge is the honest mark of "nobody set one".
+		// Escalation rows are the one exception — their badge cell
+		// carries the red !, and blocking outranks priority there.
+		if t.Priority != nil {
+			badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), priorityBadgeStyle(col, *t.Priority)
+		}
 		switch r.section {
-		case "ready":
-			// Unprioritized renders bare (P0-highest flip, 2026-08-21):
-			// no badge is the honest mark of "nobody set one" — the old
-			// yellow nag on the default value died with the default.
-			if t.Priority != nil {
-				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), priorityBadgeStyle(col, *t.Priority)
-			}
 		case "inprogress":
 			// The holder is the mode tail: yellow on the otherwise dim
 			// meta line.
 			tail, tailStyle = "← "+t.Holder, col.yellow
-		case "held":
-			// Priority is stored but inert while held (it bites again at
-			// resume), so the badge renders — dim, like the rest of the
-			// row: the ramp colors live urgency, and a shelf has none.
-			if t.Priority != nil {
-				badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), col.dim
-			}
 		case "done", "cancelled":
 			// History rows (history view, 2026-08-02): the close stamp
 			// and closing actor are the mode tail, dim with the rest of
-			// the meta line. No priority badge: recency is the browse
-			// axis here, not priority.
+			// the meta line.
 			if c := closeText(t); c != "" {
 				meta = append(meta, c)
 			}
 		}
-		// inbox and blocked carry no badge: an untriaged capture has no
-		// meaningful priority, and a blocked row's story is its waiting:
-		// line.
 		text = gridRow(col, idW, event.ShortID(t.ID), badge, badgeStyle, t.Title, width)
 		if ml := metaLine(col, tcol, meta, tail, tailStyle, width); ml != "" {
 			text += "\n" + ml
 		}
 		if r.section == "blocked" {
 			// The waiting: line stays its own line below the meta line —
-			// a reason, not metadata. Its lead is dim red (bar recolors,
-			// 2026-08-04): full-brightness red would be louder than the
-			// section's own dim-red bar.
+			// a reason, not metadata. Its lead stays muted red (bar
+			// recolors II, 2026-08-25): the loud bright-red bar carries
+			// the section's urgency now; the row only explains it, and a
+			// reason line is not an alarm.
 			text += "\n" + secondLine(col, tcol, "waiting: ", col.dimRed, blockedReasonTUI(t, s.taskRef), width)
 		}
 	}
