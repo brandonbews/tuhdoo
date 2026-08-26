@@ -12,7 +12,7 @@ _None._
 |---|---|---:|---|
 | [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) | placeholder: p0 badge color check | 0 | `placeholder` |
 | [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) | placeholder: p1 badge color check | 1 | `placeholder` |
-| [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) | TUI: ramp badges in every section; gray bars go standard white (bgGray unified, task-view bars switch) | 1 | `tui` `go` |
+| [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) | TUI: ramp badges everywhere; dashboard bars go black-on-color (BLOCKED bright red, ON HOLD gray); quiet chrome unified | 1 | `tui` `go` |
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 | [`tuh-k6vs`](tasks/tuh-01M0Y9RRZ088WXC3WQ4SXAK6VS.md) | placeholder: p2 badge color check | 2 | `placeholder` |
