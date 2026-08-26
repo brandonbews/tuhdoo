@@ -2,7 +2,7 @@
 
 `tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ`
 
-- **Status:** open — ready
+- **Status:** cancelled
 - **Priority:** 0
 - **Labels:** `placeholder`
 - **Created:** 2026-08-26 07:11 UTC by `brandon`
@@ -13,4 +13,6 @@ Badge test placeholder for the CANCELLED history row.
 
 ## History
 
-_No activity yet._
+### 2026-08-26 07:11 UTC — edit by `brandon`
+
+status open→cancelled

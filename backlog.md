@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 5 ready · 1 blocked · 8 on hold · 18 inbox · 101 done · 23 cancelled
+0 in progress · 3 ready · 1 blocked · 8 on hold · 18 inbox · 102 done · 24 cancelled
 
 ## In progress
 
@@ -11,10 +11,8 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) | placeholder: p0 badge color check | 0 | `placeholder` |
-| [`tuh-s7mj`](tasks/tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ.md) | placeholder: cancelled-row p0 badge check | 0 | `placeholder` |
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
-| [`tuh-aj4t`](tasks/tuh-01M0YEJBWYYTCHNVJEG502AJ4T.md) | placeholder: done-row p2 badge check | 2 | `placeholder` |
 
 ## Blocked / waiting
 
@@ -163,6 +161,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority to true P0-highest: 0 = most urgent, absent = unprioritized (sorts last); badge color ramp
 - [`tuh-3rye`](tasks/tuh-01M0XE2FZCW0HCPRV6KD413RYE.md) TUI/CLI contrast: p0 bright red; laddered gray replaces SGR-2 dim (a mosh no-op)
 - [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) TUI: ramp badges everywhere; dashboard bars go black-on-color (BLOCKED bright red, ON HOLD gray); quiet chrome unified
+- [`tuh-aj4t`](tasks/tuh-01M0YEJBWYYTCHNVJEG502AJ4T.md) placeholder: done-row p2 badge check
 
 ## Cancelled
 
@@ -189,3 +188,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 - [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
 - [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) Test the escalation flow as a human
+- [`tuh-s7mj`](tasks/tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ.md) placeholder: cancelled-row p0 badge check
