@@ -2,7 +2,7 @@
 
 `tuh-01M0YAVG3M1FJQJY15J8NM1DCS`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-26 06:06 UTC by `brandon`
@@ -53,3 +53,11 @@ _Synthesized by replay, not recorded by the agent._
 lease expired without a finish or release
 
 _Synthesized by replay, not recorded by the agent._
+
+### 2026-08-26 07:11 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-1dcs/bars-and-badges`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/86>
+- Merged as: `2a2df33dff8e6840c921227b49d199ad95753a24`
+
+All acceptance criteria met; squash-merged to main as 2a2df33 (PR #86), make test lint green. Ramp-colored priority badges now render in every section (ready, in progress, blocked, on hold, inbox, done/cancelled history); unprioritized rows stay bare and NEEDS INPUT rows keep the red bang. Bar recolors II: BLOCKED is black on bright red (30;101, the p0 badge background twin), ON HOLD black on slot-7 gray (30;47) — every dashboard bar black-on-color; new bgDarkGray (plain 100, white on bright-black, identical on every rung) carries the quiet chrome: CANCELLED bar and the task-view section bars, which dropped reverse-dim. The waiting: lead stays muted red (reason line, not alarm). termColors rung overrides shrink to dim/dimRed/orange. Goldens updated incl. new TestTopGoldenBadgesEverySection. Ledger note: this run released its own predecessor claim (a dead one-shot session whose lease outlived it) and re-claimed in a live session. Daemon redeploy follows this finish_run.

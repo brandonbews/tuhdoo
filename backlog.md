@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 6 ready · 0 blocked · 7 on hold · 17 inbox · 100 done · 23 cancelled
+0 in progress · 6 ready · 0 blocked · 7 on hold · 17 inbox · 101 done · 23 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) | TUI: ramp badges everywhere; dashboard bars go black-on-color (BLOCKED bright red, ON HOLD gray); quiet chrome unified | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -161,6 +159,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer
 - [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority to true P0-highest: 0 = most urgent, absent = unprioritized (sorts last); badge color ramp
 - [`tuh-3rye`](tasks/tuh-01M0XE2FZCW0HCPRV6KD413RYE.md) TUI/CLI contrast: p0 bright red; laddered gray replaces SGR-2 dim (a mosh no-op)
+- [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) TUI: ramp badges everywhere; dashboard bars go black-on-color (BLOCKED bright red, ON HOLD gray); quiet chrome unified
 
 ## Cancelled
 
