@@ -2,7 +2,7 @@
 
 `tuh-01M0YAVG3M1FJQJY15J8NM1DCS`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-26 06:06 UTC by `brandon`
@@ -41,3 +41,15 @@ Brandon's live review of PR #85 (2026-08-25): priority colors only reach READY �
 ### 2026-08-26 06:09 UTC — edit by `brandon`
 
 retitled · description edited
+
+### 2026-08-26 06:09 UTC — run by `brandon/claude-code-1` — interrupted
+
+lease expired without a finish or release
+
+_Synthesized by replay, not recorded by the agent._
+
+### 2026-08-26 06:25 UTC — run by `brandon/claude-code-1` — interrupted
+
+lease expired without a finish or release
+
+_Synthesized by replay, not recorded by the agent._
