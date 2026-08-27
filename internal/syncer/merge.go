@@ -339,7 +339,12 @@ func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.Stat
 			}
 			events = append(events, e)
 		case strings.HasPrefix(path, "leases/"):
-			claimID := strings.TrimSuffix(strings.TrimPrefix(path, "leases/"), ".json")
+			claimID, ok := store.LeaseClaimID(path)
+			if !ok {
+				// A path no writer produces; skipping matches the store
+				// loader, so both readers compute the same lease set.
+				continue
+			}
 			data, err := s.git.CatFile(oid)
 			if err != nil {
 				return nil, err

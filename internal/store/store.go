@@ -258,9 +258,8 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 			events = append(events, e)
 
 		case strings.HasPrefix(entry.Path, "leases/"):
-			claimID, _ := strings.CutPrefix(entry.Path, "leases/")
-			claimID, ok := strings.CutSuffix(claimID, ".json")
-			if !ok || strings.Contains(claimID, "/") {
+			claimID, ok := LeaseClaimID(entry.Path)
+			if !ok {
 				continue
 			}
 			expires, ok := s.leaseByOID[entry.OID]

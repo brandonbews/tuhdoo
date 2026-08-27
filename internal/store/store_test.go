@@ -416,6 +416,45 @@ func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
 	}
 }
 
+// TestLeaseClaimID pins the one lease-path parser both readers share
+// (the store loader and the sync layer's merge-time replay): exactly
+// the paths leasePath can produce parse; everything else is skipped as
+// noise.
+func TestLeaseClaimID(t *testing.T) {
+	cases := []struct {
+		name string
+		path string
+		want string
+		ok   bool
+	}{
+		{"valid", "leases/01K3V5C9J8Q2X4R6T8V0W2Y4Z6.json", "01K3V5C9J8Q2X4R6T8V0W2Y4Z6", true},
+		{"non-json file", "leases/01K3V5C9J8Q2X4R6T8V0W2Y4Z6", "", false},
+		{"nested path", "leases/a/b.json", "", false},
+		{"empty claim id", "leases/.json", "", false},
+		{"wrong prefix", "events/01K3V5C9J8Q2X4R6T8V0W2Y4Z6.json", "", false},
+		{"backslash in claim id", `leases/a\b.json`, "", false},
+		{"dotdot in claim id", "leases/a..b.json", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := LeaseClaimID(tc.path)
+			if got != tc.want || ok != tc.ok {
+				t.Errorf("LeaseClaimID(%q) = %q, %v; want %q, %v",
+					tc.path, got, ok, tc.want, tc.ok)
+			}
+			// The parser inverts leasePath: whatever it accepts must
+			// round-trip back to the path it came from.
+			if ok {
+				path, err := leasePath(got)
+				if err != nil || path != tc.path {
+					t.Errorf("leasePath(%q) = %q, %v; want the original %q",
+						got, path, err, tc.path)
+				}
+			}
+		})
+	}
+}
+
 func TestAppendBatchRetriesWhenRefMoves(t *testing.T) {
 	s, _ := newStore(t)
 
