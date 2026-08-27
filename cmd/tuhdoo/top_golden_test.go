@@ -6,6 +6,7 @@ package main
 // width/height (T1: deterministic rendering, table-driven).
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -78,7 +79,11 @@ func TestTopGoldenPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	want := strings.Join([]string{
-		" tuhdoo · local-only                                          acting as brandon ",
+		// The header (chrome pass, 2026-08-21): the bold repo-root
+		// basename — this fixture's repo is called tuhdoo — dim
+		// separator and sync word, and no badge at all: an armed pane
+		// acting as its own derived identity is the normal state.
+		" tuhdoo · local-only                                                            ",
 		"",
 		" NEEDS INPUT (1)                                                   enter answer ",
 		"▌ t-lic   !   choose a license",
@@ -386,11 +391,12 @@ func TestTopGoldenBars(t *testing.T) {
 			foot += strings.Repeat(" ", width-73)
 		}
 		for _, bar := range []string{
-			// The unfilled header (chrome hierarchy, 2026-08-03): tuhdoo
-			// bold, sync text dim, the armed badge at normal weight — no
-			// fill, so the frame stops competing with content.
-			"\x1b[1m tuhdoo\x1b[0m\x1b[90m · local-only\x1b[0m" +
-				strings.Repeat(" ", width-38) + "acting as brandon ",
+			// The unfilled header (chrome hierarchy, 2026-08-03; chrome
+			// pass, 2026-08-21): the repo-root basename bold, separator
+			// and sync word dim, and no badge — armed as your own derived
+			// identity is unmarked, the normal state.
+			"\x1b[1m tuhdoo\x1b[0m\x1b[90m · \x1b[0m\x1b[90mlocal-only\x1b[0m" +
+				strings.Repeat(" ", width-20),
 			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + padBar(width, " READY (2)", "p priority · c cancel ") + "\x1b[0m",
 			"\x1b[30;43m" + padBar(width, " IN PROGRESS (1)", "") + "\x1b[0m",
@@ -629,17 +635,160 @@ func TestTopGoldenSelectionBar(t *testing.T) {
 }
 
 // Watch mode: bars carry no steering hints, the header carries the
-// badge, and the footer legend is the disarmed one.
+// dim "watch" badge (chrome pass, 2026-08-21 — was "watch mode"), and
+// the footer legend is the disarmed one.
 func TestTopGoldenWatchBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.armed = false
 	m.width, m.height = 80, 40
 	v := m.View()
-	mustContain(t, v, "watch mode", "↑/↓ (j/k) move · enter open · h history · q quit")
+	mustContain(t, v, "watch ", "↑/↓ (j/k) move · enter open · h history · q quit")
 	for _, absent := range []string{"enter answer", "p priority", "c cancel", "i capture"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}
+	}
+}
+
+// The header chrome pass (T7, 2026-08-21), pinned state by state. The
+// bold name is the repo-root basename — no product name anywhere in
+// the frame: you know what you launched; you need to know which ledger
+// this is. Healthy sync (a fetch within two T8 fetch intervals) is a
+// static dim ⇅ glyph alone — no timestamp, no ticking relative time,
+// no spinner: sync is a ~60s background cycle, and motion would claim
+// a liveness the screen cannot honestly show. Stale sync adds the
+// relative age in yellow; local-only stays a word (remoteless is a
+// normal mode — a bare missing glyph would look broken); errors stay
+// loud text. Badge only when special: dim "watch" disarmed, "as
+// <principal>" at normal weight only when --as overrode the derived
+// identity, and nothing at all on an armed pane acting as its own
+// derived identity — absence is the normal state (the vim convention).
+func TestTopGoldenHeaderChrome(t *testing.T) {
+	newModel := func(sync syncJSON) topModel {
+		s := topSnapshot()
+		s.state.Sync = sync
+		return topModel{armed: true, actor: "brandon", repoName: "webapp",
+			snap: s, rows: buildRows(s), col: ansiColors, width: 80, height: 40}
+	}
+	head := func(m topModel) string { return strings.Split(m.View(), "\n")[0] }
+
+	// Healthy: the dim glyph after the bold repo name, nothing else —
+	// and no badge: the line is bare fill to the right edge.
+	fresh := time.Now().UTC().Format(time.RFC3339)
+	m := newModel(syncJSON{Mode: "syncing", Remote: "origin", LastFetch: fresh})
+	h := head(m)
+	if want := "\x1b[1m webapp\x1b[0m\x1b[90m · \x1b[0m\x1b[90m⇅\x1b[0m"; !strings.HasPrefix(h, want) {
+		t.Errorf("healthy header = %q, want it to open with %q", h, want)
+	}
+	for _, absent := range []string{"last fetch", "syncing", "origin", "as brandon", "watch"} {
+		if strings.Contains(h, absent) {
+			t.Errorf("healthy header still carries %q: %q", absent, h)
+		}
+	}
+	if v := m.View(); strings.Contains(v, "tuhdoo") {
+		t.Errorf("the product name survives somewhere in the frame; view:\n%q", v)
+	}
+
+	// Stale: the last fetch fell behind the ~60s cycle, so the glyph
+	// grows a relative age, yellow — the one relative time the TUI
+	// shows: a live screen redrawing every 2s cannot rot the way
+	// written views do (the render.go stamp discipline).
+	old := time.Now().Add(-8 * time.Minute).UTC().Format(time.RFC3339)
+	h = head(newModel(syncJSON{Mode: "syncing", Remote: "origin", LastFetch: old}))
+	if want := "\x1b[33m⇅ 8m\x1b[0m"; !strings.Contains(h, want) {
+		t.Errorf("stale header missing %q: %q", want, h)
+	}
+	// A syncing daemon with no parseable fetch stamp: stale of unknown
+	// age, glyph alone.
+	h = head(newModel(syncJSON{Mode: "syncing", Remote: "origin"}))
+	if want := "\x1b[33m⇅\x1b[0m"; !strings.Contains(h, want) {
+		t.Errorf("no-stamp header missing %q: %q", want, h)
+	}
+
+	// local-only stays a dim word.
+	h = head(newModel(syncJSON{Mode: "local-only"}))
+	if want := "\x1b[90m · \x1b[0m\x1b[90mlocal-only\x1b[0m"; !strings.Contains(h, want) {
+		t.Errorf("local-only header missing %q: %q", want, h)
+	}
+
+	// Errors stay loud text.
+	h = head(newModel(syncJSON{Mode: "error", Remote: "origin", LastError: "connection refused"}))
+	if want := "\x1b[31msync error (remote \"origin\"): connection refused\x1b[0m"; !strings.Contains(h, want) {
+		t.Errorf("error header missing %q: %q", want, h)
+	}
+
+	// The special badges: an --as override at normal weight, watch dim.
+	ma := newModel(syncJSON{Mode: "local-only"})
+	ma.asOverride = true
+	if h = head(ma); !strings.HasSuffix(h, " as brandon ") {
+		t.Errorf("as-override header = %q, want the normal-weight as badge at the right edge", h)
+	}
+	mw := newModel(syncJSON{Mode: "local-only"})
+	mw.armed, mw.actor = false, ""
+	if h = head(mw); !strings.HasSuffix(h, "\x1b[90mwatch \x1b[0m") {
+		t.Errorf("watch header = %q, want the dim watch badge at the right edge", h)
+	}
+}
+
+// The status strip (feedback only, chrome pass 2026-08-21): the line
+// below the header carries feedback alone — in-flight markers and
+// validation on the quiet chrome bar, errors on the loud bgRed bar,
+// full-width so feedback reads as frame, never as content — and a
+// success renders nothing at all: the screen updating is the
+// confirmation.
+func TestTopGoldenStatusStrip(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake)
+	m.col = ansiColors
+	m.width, m.height = 80, 40
+
+	// In-flight: the updating… marker rides the quiet chrome strip
+	// until the write's actionMsg lands.
+	m, _ = press(t, m,
+		keyOf(tea.KeyDown), // t-flor (p1 leads ready)
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	m, cmd := press(t, m, append(runes("2"), keyOf(tea.KeyEnter))...)
+	v := m.View()
+	if want := "\x1b[100m" + padBar(80, " updating…", "") + "\x1b[0m"; !strings.Contains(v, want) {
+		t.Errorf("in-flight strip missing %q; view:\n%q", want, v)
+	}
+
+	// Success: the strip vanishes and no confirmation replaces it.
+	am := cmd().(actionMsg)
+	if am.err != nil {
+		t.Fatalf("action error: %v", am.err)
+	}
+	mm, _ := m.Update(am)
+	m = mm.(topModel)
+	v = m.View()
+	for _, absent := range []string{"updating…", "set t-flor to p2", "\x1b[100m"} {
+		if strings.Contains(v, absent) {
+			t.Errorf("view after success still carries %q; view:\n%q", absent, v)
+		}
+	}
+
+	// Validation rides the quiet strip too.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}}, keyOf(tea.KeyEnter))
+	v = m.View()
+	if want := "\x1b[100m" + padBar(80, " title cannot be empty", "") + "\x1b[0m"; !strings.Contains(v, want) {
+		t.Errorf("validation strip missing %q; view:\n%q", want, v)
+	}
+
+	// Errors take the loud bar.
+	fake.err = errors.New("writes rejected (fail-safe read-only)")
+	m, _ = press(t, m, keyOf(tea.KeyEsc)) // abandon the capture
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	m, cmd = press(t, m, append(runes("9"), keyOf(tea.KeyEnter))...)
+	am = cmd().(actionMsg)
+	if am.err == nil {
+		t.Fatal("expected an action error")
+	}
+	mm, _ = m.Update(am)
+	m = mm.(topModel)
+	v = m.View()
+	want := "\x1b[30;101m" + padBar(80, " error: writes rejected (fail-safe read-only)", "") + "\x1b[0m"
+	if !strings.Contains(v, want) {
+		t.Errorf("error strip missing %q; view:\n%q", want, v)
 	}
 }
 
@@ -700,7 +849,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 			m.mode, m.detailID, m.detailFocus)
 	}
 	want := strings.Join([]string{
-		" tuhdoo · local-only                                          acting as brandon ",
+		" tuhdoo · local-only                                                            ",
 		"",
 		"  t-lic — choose a license",
 		"",
@@ -767,11 +916,11 @@ func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 // Byte-exact geometry.
 func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 	s := edgeSnapshot()
-	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-epic")
 	want := strings.Join([]string{
-		" tuhdoo · local-only                                          acting as brandon ",
+		" tuhdoo · local-only                                                            ",
 		"",
 		"▌ t-epic — ship the epic",
 		"",
@@ -892,7 +1041,7 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 	m.width, m.height = 80, 40
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	want := strings.Join([]string{
-		" tuhdoo · local-only                                          acting as brandon ",
+		" tuhdoo · local-only                                                            ",
 		"",
 		" DONE (3)                                                                       ",
 		// Two-line rows (grill 2026-08-05): the close stamp · closing
@@ -969,7 +1118,7 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		t.Fatalf("mode %d detail %q, want modeDetail t-drop", m.mode, m.detailID)
 	}
 	want := strings.Join([]string{
-		" tuhdoo · local-only                                          acting as brandon ",
+		" tuhdoo · local-only                                                            ",
 		"",
 		"▌ t-drop — drop the wiki",
 		"",

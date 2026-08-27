@@ -91,13 +91,16 @@ func topSnapshot() *snapshot {
 
 func newTopModel(api steeringAPI) topModel {
 	s := topSnapshot()
-	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	// repoName happens to match the product here, as it does when
+	// dogfooding in this repo — the header renders the repo-root
+	// basename, and this fixture's repo is called tuhdoo.
+	return topModel{api: api, actor: "brandon", armed: true, repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 }
 
 // newWatchModel is the same seeded model launched with --watch: disarmed.
 func newWatchModel() topModel {
 	s := topSnapshot()
-	return topModel{snap: s, rows: buildRows(s)}
+	return topModel{repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 }
 
 // classify's ready ordering is claim_next's (snapshot.go): most
@@ -271,7 +274,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	m.width = 100 // wide enough for the legend and the done tally together
 	v := m.View()
 	for _, want := range []string{
-		"tuhdoo · local-only", "acting as brandon",
+		"tuhdoo · local-only",
 		"NEEDS INPUT (1)", "question: Which license?", "brandon/a2 · 2026-07-29 14:03 UTC",
 		"READY (2)", "write the parser", "sweep the floor",
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
@@ -444,8 +447,10 @@ func TestTopAnswerFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if !strings.Contains(m.status, "answered") {
-		t.Errorf("status = %q, want an answered confirmation", m.status)
+	// Success says nothing (feedback only, 2026-08-21): the refreshed
+	// screen is the confirmation.
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success", m.status)
 	}
 }
 
@@ -567,11 +572,12 @@ func TestTopCancelFlow(t *testing.T) {
 	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-pars" {
 		t.Errorf("cancelled %v, want [t-pars]", fake.cancelled)
 	}
-	// The confirmation names the verb.
+	// No confirmation (feedback only, 2026-08-21): the row vanishing on
+	// the refresh is the confirmation.
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if m.status != "cancelled t-pars" {
-		t.Errorf("status = %q, want %q", m.status, "cancelled t-pars")
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success", m.status)
 	}
 }
 
@@ -662,12 +668,14 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	for _, want := range []string{"watch mode", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · h history · q quit"} {
+	// The badge reads a dim "watch" since the chrome pass (2026-08-21;
+	// was "watch mode").
+	for _, want := range []string{"watch", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · h history · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"acting as", "enter answer", "c cancel"} {
+	for _, reject := range []string{"as brandon", "enter answer", "c cancel"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
@@ -1606,8 +1614,10 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if v := m.View(); !strings.Contains(v, "answered") {
-		t.Errorf("detail view does not surface the action status; view:\n%s", v)
+	// Success says nothing (feedback only, 2026-08-21): the refresh
+	// below moving the answer into HISTORY is the confirmation.
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success", m.status)
 	}
 
 	// The refresh that lands the answer removes the selectable row: the
@@ -1730,8 +1740,10 @@ func TestTopDetailCancelFlow(t *testing.T) {
 	if m.mode != modeDetail {
 		t.Fatalf("cancel knocked the model out of detail: mode %d", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "cancelled t-lic") {
-		t.Errorf("cancel status not surfaced in detail; view:\n%s", v)
+	// Success says nothing (feedback only, 2026-08-21): the status word
+	// changing on the refresh below is the confirmation.
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success", m.status)
 	}
 	// The refresh lands the cancel: the task stays viewable — history
 	// stays on the ledger — with the stored status word.
@@ -1804,8 +1816,8 @@ func TestTopDetailEditTitleFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if !strings.Contains(m.status, "updated title of t-flak") {
-		t.Errorf("status = %q, want the title confirmation", m.status)
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
 	}
 	// The refresh lands the edit: the view re-renders with the new title.
 	fresh := topSnapshot()
@@ -1905,8 +1917,8 @@ func TestTopDetailEditDescriptionFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if !strings.Contains(m.status, "updated description of t-flak") {
-		t.Errorf("status = %q, want the description confirmation", m.status)
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
 	}
 	// The refresh lands the edit: the DESCRIPTION section re-renders.
 	fresh := topSnapshot()
@@ -2027,8 +2039,8 @@ func TestTopDetailEditLabelsFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	if !strings.Contains(m.status, "updated labels of t-flak") {
-		t.Errorf("status = %q, want the labels confirmation", m.status)
+	if m.status != "" {
+		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
 	}
 	// The refresh lands the edit: the meta line re-renders the new list.
 	fresh := topSnapshot()
@@ -2854,7 +2866,7 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 		{"escalation meta line", "brandon/a2", 0},
 		{"held row", "polish the docs", 4},
 		{"section bar", "READY (2)", -1},
-		{"header bar", "acting as brandon", -1},
+		{"header bar", "tuhdoo · local-only", -1},
 		{"footer bar", "h history", -1},
 	}
 	for _, tt := range tests {
@@ -3089,9 +3101,12 @@ func TestTopQuickCaptureFlow(t *testing.T) {
 	if m.mode != modeNav {
 		t.Errorf("mode after submit = %d, want modeNav", m.mode)
 	}
+	// No "captured to inbox" confirmation (feedback only, 2026-08-21):
+	// the INBOX section growing a row is the confirmation — accepted
+	// that it may land below the fold.
 	mm, _ := m.Update(am)
-	if m = mm.(topModel); !strings.Contains(m.status, "captured") {
-		t.Errorf("status = %q, want a captured confirmation", m.status)
+	if m = mm.(topModel); m.status != "" {
+		t.Errorf("status = %q, want empty after success", m.status)
 	}
 }
 
@@ -3318,7 +3333,7 @@ func historySnapshot() *snapshot {
 
 func newHistoryModel(api steeringAPI) topModel {
 	s := historySnapshot()
-	return topModel{api: api, actor: "brandon", armed: true, snap: s, rows: buildRows(s)}
+	return topModel{api: api, actor: "brandon", armed: true, repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 }
 
 // h opens history from the top list of both panes — browsing is

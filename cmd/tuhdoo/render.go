@@ -105,8 +105,10 @@ func newColors(out *os.File) colors {
 	return termColors(os.Getenv("TERM"))
 }
 
-// syncLine renders the daemon's sync status (B7) as one line.
-// local-only is a normal state, never an error (T2).
+// syncLine renders the daemon's sync status (B7) as one line, for the
+// one-shot surfaces (status, init). local-only is a normal state,
+// never an error (T2). The TUI header renders syncSegs instead (quiet
+// sync, chrome pass 2026-08-21 — top.go).
 func syncLine(s syncJSON) string {
 	switch s.Mode {
 	case "local-only":
