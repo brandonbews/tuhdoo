@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 7 ready · 0 blocked · 7 on hold · 7 inbox · 109 done · 30 cancelled
+1 in progress · 6 ready · 0 blocked · 7 on hold · 7 inbox · 109 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) | Police escalation.answered task mismatch as malformed, matching claim.confirmed | — | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) | Police escalation.answered task mismatch as malformed, matching claim.confirmed | — | `go` `core` `audit-finding` |
 | [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) | Pin replay edges: holder's late finish counts as done; reconcile the subject-less-event stance | — | `go` `core` `audit-finding` |
 | [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) | One lease-path parser: store loader and merge-time replay must compute the same lease set | — | `go` `storage` `audit-finding` |
 | [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) | 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding | — | `docs` `audit-finding` |
