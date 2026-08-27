@@ -1,17 +1,27 @@
 # Backlog
 
-0 in progress · 2 ready · 0 blocked · 7 on hold · 18 inbox · 105 done · 28 cancelled
+1 in progress · 10 ready · 0 blocked · 7 on hold · 7 inbox · 105 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 | [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) | User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site) | 2 | `docs` `site` `copy` |
+| [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) | get_task and /v0/state evaluate lease expiry at read time | — | `go` `daemon` `audit-finding` |
+| [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) | closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace | — | `go` `core` `audit-finding` |
+| [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) | Police escalation.answered task mismatch as malformed, matching claim.confirmed | — | `go` `core` `audit-finding` |
+| [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) | Pin replay edges: holder's late finish counts as done; reconcile the subject-less-event stance | — | `go` `core` `audit-finding` |
+| [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) | One lease-path parser: store loader and merge-time replay must compute the same lease set | — | `go` `storage` `audit-finding` |
+| [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) | 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding | — | `docs` `audit-finding` |
+| [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) | tuhdoo answer: surface ambiguous task fragments as candidate lists | — | `go` `cli` `audit-finding` |
+| [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) | Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync | — | `go` `daemon` `audit-finding` |
+| [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `go` `storage` `audit-finding` |
 
 ## Blocked / waiting
 
@@ -36,20 +46,9 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) HTTP surface accepts daemon-only outcomes and carries a dead manual renew endpoint
-- [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) get_task and /v0/state serve lease verdicts at last-refresh time, not read time
-- [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) closedByRun can erase a lost attempt's promised superseded trace; loser salvage runs unlinked to their claim
-- [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) Undesigned strictness asymmetry: escalation-answer task mismatch accepted, confirmation task mismatch malformed
-- [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) Replay letter-vs-code edges: holder's late finish after uncontested expiry; empty-task events malformed despite subject-less envelope support
-- [`tuh-jh5j`](tasks/tuh-01KZVZT7F8CVJYX1P000JQJH5J.md) T6 doc drift: view stamp documented at views/.meta, lives at .views-meta.json
-- [`tuh-a3a9`](tasks/tuh-01KZVZT7F8CVJYX1P003BNA3A9.md) D9 epoch compaction is on a collision course with the events union merge
-- [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) Lease-path parsing diverges between store loader and merge-path replay
 - [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) Batcher.LastError is a reporting channel nobody reads
-- [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) T7 doc drift: one-shot WAITING vocabulary and TUI sections omit later-designed tokens; parent-edge remnants
-- [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) tuhdoo answer swallows ambiguous task fragments instead of listing candidates
 - [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
 - [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness: unexercised D6 arms and unasserted claim-response warning
-- [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
-- [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree silently accepts symlink tree entries; its fail-don-t-skip arm only fires on gitlinks
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
 - [`tuh-hgy1`](tasks/tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1.md) Claim/release writes skip view regen — data-branch markdown never shows in-progress
 - [`tuh-hv8a`](tasks/tuh-01M10ZA2VCJ59WWYZG58RXHV8A.md) Grill: internal-docs tiering — decision records vs living mirrors vs stale artifacts
@@ -187,6 +186,8 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-ehmt`](tasks/tuh-01KZFH07P6GB1X1J827PHREHMT.md) marketing aspect of site should emphasize the serverless, owned, git tracked but still distributed nature
 - [`tuh-hq7f`](tasks/tuh-01KZPW8CZPKF2KTWMA5EAVHQ7F.md) Grill: is the data branch's CI/build-tooling friction a deal breaker for early adopters?
 - [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) Test the escalation flow as a human
+- [`tuh-jh5j`](tasks/tuh-01KZVZT7F8CVJYX1P000JQJH5J.md) T6 doc drift: view stamp documented at views/.meta, lives at .views-meta.json
+- [`tuh-a3a9`](tasks/tuh-01KZVZT7F8CVJYX1P003BNA3A9.md) D9 epoch compaction is on a collision course with the events union merge
 - [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) placeholder: p0 badge color check
 - [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) placeholder: p1 badge color check
 - [`tuh-k6vs`](tasks/tuh-01M0Y9RRZ088WXC3WQ4SXAK6VS.md) placeholder: p2 badge color check

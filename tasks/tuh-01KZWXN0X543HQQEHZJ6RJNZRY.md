@@ -2,7 +2,7 @@
 
 `tuh-01KZWXN0X543HQQEHZJ6RJNZRY`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-2`
 - **Priority:** 2
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-13 06:41 UTC by `brandon`

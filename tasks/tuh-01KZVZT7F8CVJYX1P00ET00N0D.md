@@ -1,16 +1,24 @@
-# Daemon structural test gaps: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
+# Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 
 `tuh-01KZVZT7F8CVJYX1P00ET00N0D`
 
-- **Status:** inbox — untriaged capture
+- **Status:** open — ready
 - **Priority:** none
-- **Labels:** `audit-finding`
+- **Labels:** `go` `daemon` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
 
 ## Description
 
-Go-sweep audit finding, internal/daemon. Untested designed mechanisms needing more than a table row: (1) gateVerdict's bounded retry loop answering 'remote kept moving for N attempts' (ops.go ~811-812) is tolerated by race tests, never asserted — needs a remote that always moves between fetch and push (gitx fake or hook); confirmGateRetries mirroring the syncer's constant is asserted nowhere. (2) Degraded-mode renewal stop (mcp.go ~266-270): a session holding a claim when the daemon degrades should stop renewing and let the lease lapse honestly — untested. (3) Shutdown's best-effort final sync (daemon.go ~315-319, the laptop-lid push) — untested; needs a remote-wired shutdown test.
+Context: Go-sweep audit finding, re-verified 2026-08-27 — all three mechanisms intact, all three still untested. Test-only task (tests-are-the-spec: if a test exposes a real defect, capture it fresh; don't fix production code in this PR).
+
+1. Gate retry exhaustion: the bounded loop at internal/daemon/ops.go:774 returns "remote kept moving for %d attempts" at 811-812 — never asserted; gate_test.go only retries PAST it (215-217, 321-322). Sharper than the audit knew: the collision harness string-matches that exact message (harness/collision/main.go:756-760, 1302), so production tooling depends on a string no test produces deliberately. Needs a remote that always moves between fetch and push (gitx fake or a hook). Also assert confirmGateRetries (ops.go:655) == syncer maxCycleRetries (syncer.go:28): the mirroring is claimed by comment (ops.go:652-654) and enforced nowhere — the constants can silently diverge.
+2. Degraded-mode renewal stop: mcp.go:266-271 — no test degrades a daemon while a session holds a claim and asserts renewal stops so the lease lapses honestly (renewOnce coverage: loser_test.go:520-572 never sets degraded; mcp_test.go:713-740 is happy-path).
+3. Shutdown best-effort final sync: daemon.go:315-319 (the laptop-lid push) — the only shutdown test (TestShutdownCleansUp, daemon_test.go:896-914) wires no remote. Assert pending local commits reach a wired remote on Shutdown.
+
+Acceptance: three named tests (or table rows) covering the above, plus the constants-mirror assertion; zero production-code changes (if a mechanism proves untestable without one, stop and capture why); make test lint green.
 
 ## History
 
-_No activity yet._
+### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status inbox→open · labels +go +daemon
