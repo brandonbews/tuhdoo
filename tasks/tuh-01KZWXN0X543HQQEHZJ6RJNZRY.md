@@ -2,7 +2,7 @@
 
 `tuh-01KZWXN0X543HQQEHZJ6RJNZRY`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-13 06:41 UTC by `brandon`
@@ -30,3 +30,11 @@ retitled · description edited · status inbox→open · priority none→1 · la
 ### 2026-08-21 23:59 UTC — edit by `brandon`
 
 priority 1→2
+
+### 2026-08-27 07:16 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-nzry/tui-chrome-pass`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/90>
+- Merged as: `4d7dffb`
+
+All four chrome changes landed via PR #90 (squash 4d7dffb on main). Header bold name is the repo-root basename (sense of place); new pure syncSegs in cmd/tuhdoo/top.go renders healthy sync (last fetch < 2m = two T8 fetch intervals) as a static dim glyph, stale adds yellow relative age, local-only stays a word, errors loud red; badge only when special (dim watch disarmed, as-principal only when --as overrode the derived identity, nothing armed-as-derived); status line is feedback-only — success confirmations dropped, errors on the red bar, validation/in-flight on the quiet chrome bar, full-width strip below the header. 002-technology.md T7 revised in place: one dated note covering the four plus two so-revised markers on the Cycle-4 badge/header sentences. Golden tests TestTopGoldenHeaderChrome and TestTopGoldenStatusStrip pin all acceptance states; make test lint green. Binary changed: rebuilt and daemon restarted post-finish.

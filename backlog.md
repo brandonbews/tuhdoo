@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 10 ready · 0 blocked · 7 on hold · 7 inbox · 105 done · 30 cancelled
+0 in progress · 10 ready · 0 blocked · 7 on hold · 7 inbox · 106 done · 30 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -153,6 +151,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 - [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior)
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) pnpm/yarn install lines in docs + -h/--help on every subcommand
+- [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer
 - [`tuh-ny6v`](tasks/tuh-01M0HGBFRXJ3CEAMH9WRP4NY6V.md) Flip priority to true P0-highest: 0 = most urgent, absent = unprioritized (sorts last); badge color ramp
 - [`tuh-3rye`](tasks/tuh-01M0XE2FZCW0HCPRV6KD413RYE.md) TUI/CLI contrast: p0 bright red; laddered gray replaces SGR-2 dim (a mosh no-op)
