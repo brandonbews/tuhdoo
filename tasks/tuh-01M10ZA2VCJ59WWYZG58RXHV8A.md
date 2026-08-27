@@ -1,0 +1,16 @@
+# Grill: internal-docs tiering — decision records vs living mirrors vs stale artifacts
+
+`tuh-01M10ZA2VCJ59WWYZG58RXHV8A`
+
+- **Status:** inbox — untriaged capture
+- **Priority:** none
+- **Labels:** `design` `docs`
+- **Created:** 2026-08-27 06:42 UTC by `brandon`
+
+## Description
+
+Raised by Brandon 2026-08-26: worry that internal-docs is drifting toward a spec-driven mess where docs must chase code. The grill question is NOT "delete the design docs" — it's per-file tiering: (a) decision records (001-core-design.md, 002-technology.md: rationale + accepted consequences, append-only, cheap to keep, and the defense against re-litigation) vs (b) living mirrors that must chase code (architecture.md — see commit "architecture.md: catch up to the P0-highest flip" for the drift-chasing cost; options: tombstone, shrink to pointers, or fund the maintenance explicitly) vs (c) stale point-in-time artifacts (design/mockups/tui-dashboard/ — four ANSI mockups + generator script from a decided cycle the TUI has since outgrown; likely deletable, git history keeps them). Related existing inbox captures: the T6/T7 doc-drift audit findings and "Selection-bar capability ladder is designed but unrecorded in internal-docs". Precedent for evacuation: backlog.md and open-questions.md are already tombstones.
+
+## History
+
+_No activity yet._
