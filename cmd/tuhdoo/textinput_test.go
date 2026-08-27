@@ -299,7 +299,7 @@ func TestTextInputViewStyled(t *testing.T) {
 	for _, want := range []string{
 		"\x1b[7m\x1b[1m answer · Q?" + strings.Repeat(" ", 28) + "\x1b[0m\n",
 		"\n> hi█\n",
-		"  \x1b[2menter submits · esc cancels\x1b[0m\n",
+		"  \x1b[90menter submits · esc cancels\x1b[0m\n",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("styled box missing %q; got:\n%q", want, v)

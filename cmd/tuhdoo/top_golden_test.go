@@ -17,7 +17,7 @@ import (
 // ansiColors is the real escape set of the 16-color floor, for tests
 // that pin bar styling.
 var ansiColors = colors{
-	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
+	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 	brightRed: "\x1b[91m",
 	dimRed:    "\x1b[2;31m",
@@ -27,20 +27,21 @@ var ansiColors = colors{
 	bgDarkGray: "\x1b[100m",
 }
 
-// rungColors is the same palette resolved on the 256-color rung
-// (contrast ramp, 2026-08-25): the two faint survivors — dim, dimRed —
-// swap SGR-2, which mosh renders as a no-op, for indexed codes, and
-// orange exists. The bars carry the same in-palette bytes as the floor
-// (bar recolors II, 2026-08-25).
+// rungColors is the same palette resolved on the 256-color rung: the
+// one faint survivor — dimRed — swaps SGR-2, which mosh renders as a
+// no-op, for an indexed code; orange exists; and bgDarkGray darkens to
+// fg 250 on bg 238 (steering, 2026-08-26). dim is theme-derived ANSI
+// 90 on every rung (fourth revision, 2026-08-26), so it matches the
+// floor.
 var rungColors = colors{
-	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[38;5;245m", rev: "\x1b[7m",
+	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 	brightRed: "\x1b[91m",
 	dimRed:    "\x1b[38;5;131m",
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;101m",
 	bgGray: "\x1b[30;47m", bgWhite: "\x1b[30;107m",
-	bgDarkGray: "\x1b[100m",
+	bgDarkGray: "\x1b[38;5;250;48;5;238m",
 	orange:     "\x1b[38;5;208m",
 }
 
@@ -60,10 +61,10 @@ func noFaint(t *testing.T, surface, v string) {
 // footer legend (chrome hierarchy, 2026-08-03): bold key token, dim
 // label, dim · separators.
 func legendKey(key, label string) string {
-	return "\x1b[1m" + key + "\x1b[0m\x1b[2m " + label + "\x1b[0m"
+	return "\x1b[1m" + key + "\x1b[0m\x1b[90m " + label + "\x1b[0m"
 }
 
-const legendSep = "\x1b[2m · \x1b[0m"
+const legendSep = "\x1b[90m · \x1b[0m"
 
 // padBar pads left..right with spaces to the given rune width — the
 // full-width bar shape the golden assertions rebuild.
@@ -159,18 +160,18 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 		"\x1b[91mp0\x1b[0m ",
 		orange208 + "p1\x1b[0m ",
 		"\x1b[33mp2\x1b[0m ",
-		"\x1b[2mp3\x1b[0m ",
+		"\x1b[90mp3\x1b[0m ",
 		// Held takes the ramp too (steering, 2026-08-25): a parked p0 is
 		// still a p0. (t-parkd renders as its short form t-arkd — prefix
 		// plus 4-char tail.)
-		"\x1b[2mt-arkd\x1b[0m  \x1b[91mp0\x1b[0m ",
+		"\x1b[90mt-arkd\x1b[0m  \x1b[91mp0\x1b[0m ",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("ramp view missing %q; view:\n%q", want, v)
 		}
 	}
 	// The unprioritized row renders a blank badge cell, never p-anything.
-	if !strings.Contains(v, "\x1b[2mt-bare\x1b[0m      \x1b[1mtask t-bare\x1b[0m") {
+	if !strings.Contains(v, "\x1b[90mt-bare\x1b[0m      \x1b[1mtask t-bare\x1b[0m") {
 		t.Errorf("unprioritized row grew a badge; view:\n%q", v)
 	}
 
@@ -189,14 +190,14 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	}
 }
 
-// termColors is newColors' TERM resolution (contrast ramp,
-// 2026-08-25): every 16-color TERM gets the floor palette,
-// byte-identical to what the struct always carried — SGR-2 faint and
-// all — while a TERM advertising 256color swaps the faint surfaces for
-// indexed equivalents (mosh renders SGR-2 as a no-op) and earns
-// orange, which runTUI used to resolve. COLORTERM never unlocks the
-// rung — its signature takes only TERM: mosh advertises truecolor it
-// won't honor (the 2026-07-31 finding).
+// termColors is newColors' TERM resolution (contrast ramp 2026-08-25;
+// dim theme-derived and bars darkened 2026-08-26): every 16-color TERM
+// gets the floor palette — dim is ANSI 90 there too, theme-derived on
+// every rung — while a TERM advertising 256color swaps dimRed's faint
+// for an indexed code (mosh renders SGR-2 as a no-op), darkens
+// bgDarkGray, and earns orange, which runTUI used to resolve.
+// COLORTERM never unlocks the rung — its signature takes only TERM:
+// mosh advertises truecolor it won't honor (the 2026-07-31 finding).
 func TestTermColorsLadder(t *testing.T) {
 	for _, term := range []string{"xterm", "screen", "vt100", ""} {
 		if got := termColors(term); got != ansiColors {
@@ -211,8 +212,9 @@ func TestTermColorsLadder(t *testing.T) {
 }
 
 // The dashboard on the 256-color rung (contrast ramp + bar recolors
-// II, 2026-08-25): the muted-by-design row surfaces read muted without
-// SGR-2 — ids, p3+ badges, and meta lines take gray 245, the blocked
+// II, 2026-08-25; dim theme-derived 2026-08-26): the muted-by-design
+// row surfaces read muted without SGR-2 — ids, p3+ badges, and meta
+// lines take the theme's own bright-black (ANSI 90), the blocked
 // row's waiting: lead takes muted red 131 — while the bars carry the
 // same black-on-color bytes as the floor (BLOCKED black on bright red,
 // ON HOLD black on slot-7 gray) and badges ride the ramp in every
@@ -232,20 +234,20 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 	for _, want := range []string{
 		// Ready-row anatomy: gray id, gray p3+ badge, bold title, gray
 		// meta line.
-		"\x1b[38;5;245mt-pars\x1b[0m  \x1b[38;5;245mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
-		"              \x1b[38;5;245m2 deps\x1b[0m",
+		"\x1b[90mt-pars\x1b[0m  \x1b[90mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
+		"              \x1b[90m2 deps\x1b[0m",
 		// The held row's badge rides the ramp (steering, 2026-08-25):
 		// p2 yellow, on the otherwise dim shelf row.
-		"\x1b[38;5;245mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+		"\x1b[90mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
 		// A blocked row's badge rides it too: p1 orange on the rung.
-		"\x1b[38;5;245mt-wait\x1b[0m  \x1b[38;5;208mp1\x1b[0m  \x1b[1mbuild on the idea\x1b[0m",
+		"\x1b[90mt-wait\x1b[0m  \x1b[38;5;208mp1\x1b[0m  \x1b[1mbuild on the idea\x1b[0m",
 		// Bar recolors II: black on bright red, black on slot-7 gray —
 		// in-palette on every rung.
 		"\x1b[30;101m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
 		"\x1b[30;47m" + padBar(120, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
 		// The blocked stack: muted-red lead, gray reason — the loud bar
 		// carries the urgency, the reason line never reads as an alarm.
-		"              \x1b[38;5;131mwaiting: \x1b[0m\x1b[38;5;245mdepends on t-flor (open — sweep the floor)\x1b[0m",
+		"              \x1b[38;5;131mwaiting: \x1b[0m\x1b[90mdepends on t-flor (open — sweep the floor)\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("rung view missing %q; view:\n%q", want, v)
@@ -258,10 +260,11 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 }
 
 // The task view on the 256-color rung: the section bars (DEPENDS ON,
-// DESCRIPTION, HISTORY) are the quiet bgDarkGray chrome — white on
-// bright-black, the same bytes as the floor (bar recolors II,
-// 2026-08-25; was reverse-dim) — and the id value and placeholders
-// take the standalone laddered gray. No SGR-2 anywhere.
+// DESCRIPTION, HISTORY) are the quiet bgDarkGray chrome, darkened on
+// the rung to fg 250 on bg 238 (steering, 2026-08-26 — slot-8
+// backgrounds render mid-gray on many themes, too loud for shelf
+// chrome) — and the id value and placeholders take the theme-derived
+// muted gray. No SGR-2 anywhere.
 func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = rungColors
@@ -269,12 +272,12 @@ func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m = openDetail(t, m, "t-pars")
 	v := m.View()
 	for _, want := range []string{
-		"\x1b[100m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
-		"\x1b[100m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
-		"\x1b[100m" + padBar(80, " HISTORY", "") + "\x1b[0m",
-		"  \x1b[1mid\x1b[0m          \x1b[38;5;245mt-pars\x1b[0m",
-		"  \x1b[1mlabels\x1b[0m      \x1b[38;5;245mnone\x1b[0m",
-		"\n  \x1b[38;5;245mnone\x1b[0m", // the empty-description placeholder
+		"\x1b[38;5;250;48;5;238m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
+		"\x1b[38;5;250;48;5;238m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[38;5;250;48;5;238m" + padBar(80, " HISTORY", "") + "\x1b[0m",
+		"  \x1b[1mid\x1b[0m          \x1b[90mt-pars\x1b[0m",
+		"  \x1b[1mlabels\x1b[0m      \x1b[90mnone\x1b[0m",
+		"\n  \x1b[90mnone\x1b[0m", // the empty-description placeholder
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("rung task view missing %q; view:\n%q", want, v)
@@ -285,14 +288,14 @@ func TestTopGoldenRungTaskViewBars(t *testing.T) {
 
 // The CLI read commands inherit the ladder through newColors with zero
 // call-site churn: on the rung, status' claims line and the task
-// view's history stamps carry the same gray 245 the TUI renders, and
+// view's history stamps carry the same theme-derived ANSI 90, and
 // no SGR-2 byte survives in either command's output.
 func TestRungCLIReadSurfaces(t *testing.T) {
 	s := topSnapshot()
 	var b strings.Builder
 	printStatus(&b, rungColors, "abc1234", s)
 	v := b.String()
-	claim := "  \x1b[38;5;245mt-flak\x1b[0m  investigate the flake  \x1b[33m← brandon/a1\x1b[0m"
+	claim := "  \x1b[90mt-flak\x1b[0m  investigate the flake  \x1b[33m← brandon/a1\x1b[0m"
 	if !strings.Contains(v, claim) {
 		t.Errorf("status claims line not laddered gray; want %q; output:\n%q", claim, v)
 	}
@@ -301,7 +304,7 @@ func TestRungCLIReadSurfaces(t *testing.T) {
 	b.Reset()
 	printTask(&b, rungColors, s.tasks["t-flak"], s.stateTaskOf("t-flak"), s)
 	v = b.String()
-	stamp := "  \x1b[38;5;245m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m"
+	stamp := "  \x1b[90m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m"
 	if !strings.Contains(v, stamp) {
 		t.Errorf("task history stamp not laddered gray; want %q; output:\n%q", stamp, v)
 	}
@@ -329,8 +332,8 @@ func TestTopGoldenBadgesEverySection(t *testing.T) {
 		col: ansiColors, width: 80, height: 60}
 	v := m.View()
 	for _, want := range []string{
-		"\x1b[2mt-flak\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1minvestigate the flake\x1b[0m",
-		"\x1b[2mt-idea\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1midea: dark mode\x1b[0m",
+		"\x1b[90mt-flak\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1minvestigate the flake\x1b[0m",
+		"\x1b[90mt-idea\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1midea: dark mode\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("dashboard missing ramp badge %q; view:\n%q", want, v)
@@ -353,8 +356,8 @@ func TestTopGoldenBadgesEverySection(t *testing.T) {
 	hm, _ = press(t, hm, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	hv := hm.View()
 	for _, want := range []string{
-		"\x1b[2mt-ship\x1b[0m  \x1b[33mp1\x1b[0m  \x1b[1mship the tui\x1b[0m",
-		"\x1b[2mt-drop\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1mdrop the wiki\x1b[0m",
+		"\x1b[90mt-ship\x1b[0m  \x1b[33mp1\x1b[0m  \x1b[1mship the tui\x1b[0m",
+		"\x1b[90mt-drop\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1mdrop the wiki\x1b[0m",
 	} {
 		if !strings.Contains(hv, want) {
 			t.Errorf("history missing ramp badge %q; view:\n%q", want, hv)
@@ -377,7 +380,7 @@ func TestTopGoldenBars(t *testing.T) {
 			legendSep + legendKey("p", "priority") + legendSep + legendKey("c", "cancel") +
 			legendSep + legendKey("h", "history") + legendSep + legendKey("q", "quit")
 		if width >= 120 {
-			foot += strings.Repeat(" ", width-73-7) + "\x1b[2m1 done \x1b[0m"
+			foot += strings.Repeat(" ", width-73-7) + "\x1b[90m1 done \x1b[0m"
 		} else {
 			foot += strings.Repeat(" ", width-73)
 		}
@@ -385,7 +388,7 @@ func TestTopGoldenBars(t *testing.T) {
 			// The unfilled header (chrome hierarchy, 2026-08-03): tuhdoo
 			// bold, sync text dim, the armed badge at normal weight — no
 			// fill, so the frame stops competing with content.
-			"\x1b[1m tuhdoo\x1b[0m\x1b[2m · local-only\x1b[0m" +
+			"\x1b[1m tuhdoo\x1b[0m\x1b[90m · local-only\x1b[0m" +
 				strings.Repeat(" ", width-38) + "acting as brandon ",
 			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
 			"\x1b[30;42m" + padBar(width, " READY (2)", "p priority · c cancel ") + "\x1b[0m",
@@ -417,9 +420,9 @@ func TestTopGoldenBars(t *testing.T) {
 		// section (2026-07-31) and badges ride the ramp everywhere
 		// (steering, 2026-08-25): the held p2 is yellow now.
 		for _, row := range []string{
-			"\x1b[2mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
-			"\x1b[2mt-idea\x1b[0m      \x1b[1midea: dark mode\x1b[0m",
-			"\x1b[2mt-pars\x1b[0m  \x1b[2mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
+			"\x1b[90mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
+			"\x1b[90mt-idea\x1b[0m      \x1b[1midea: dark mode\x1b[0m",
+			"\x1b[90mt-pars\x1b[0m  \x1b[90mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
 		} {
 			if !strings.Contains(v, row) {
 				t.Errorf("width %d: row styling wrong %q; view:\n%q", width, row, v)
@@ -445,9 +448,9 @@ func TestTopGoldenBlockedStack(t *testing.T) {
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
 		col: ansiColors, width: 120, height: 60}
 	v := m.View()
-	want := "  \x1b[2mt-wait\x1b[0m      \x1b[1mbuild on the idea\x1b[0m\n" +
-		"              \x1b[2m[infra] · 1 dep\x1b[0m\n" +
-		"              \x1b[2;31mwaiting: \x1b[0m\x1b[2mdepends on t-flor (open — sweep the floor)\x1b[0m"
+	want := "  \x1b[90mt-wait\x1b[0m      \x1b[1mbuild on the idea\x1b[0m\n" +
+		"              \x1b[90m[infra] · 1 dep\x1b[0m\n" +
+		"              \x1b[2;31mwaiting: \x1b[0m\x1b[90mdepends on t-flor (open — sweep the floor)\x1b[0m"
 	if !strings.Contains(v, want) {
 		t.Errorf("blocked row does not stack title / meta / waiting; want:\n%q\nview:\n%q", want, v)
 	}
@@ -467,8 +470,8 @@ func TestTopGoldenHolderTailYellow(t *testing.T) {
 	s.tasks["t-flak"] = h
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s),
 		col: ansiColors, width: 80, height: 40}
-	want := "  \x1b[2mt-flak\x1b[0m      \x1b[1minvestigate the flake\x1b[0m\n" +
-		"              \x1b[2m[ci] · \x1b[0m\x1b[33m← brandon/a1\x1b[0m"
+	want := "  \x1b[90mt-flak\x1b[0m      \x1b[1minvestigate the flake\x1b[0m\n" +
+		"              \x1b[90m[ci] · \x1b[0m\x1b[33m← brandon/a1\x1b[0m"
 	if v := m.View(); !strings.Contains(v, want) {
 		t.Errorf("holder tail not yellow on the dim meta line; want:\n%q\nview:\n%q", want, v)
 	}
@@ -831,11 +834,11 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
 			strings.Repeat(" ", 8),
 		// Bold field names on the grid; the canonical id value stays dim.
-		"  \x1b[1mid\x1b[0m          \x1b[2mt-lic\x1b[0m",
+		"  \x1b[1mid\x1b[0m          \x1b[90mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",
 		// The empty labels line: the placeholder is dim, like the empty
 		// description body (labels editable, 2026-08-05).
-		"  \x1b[1mlabels\x1b[0m      \x1b[2mnone\x1b[0m",
+		"  \x1b[1mlabels\x1b[0m      \x1b[90mnone\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("task view missing %q; view:\n%q", want, v)
@@ -942,8 +945,8 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 			strings.Repeat(" ", 32),
 		// The title line ends bold; the close metadata rides the dim
 		// meta line below it (two-line rows, 2026-08-05).
-		"\x1b[2mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\n" +
-			"              \x1b[2m1 dep · 2026-07-29 · brandon\x1b[0m",
+		"\x1b[90mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\n" +
+			"              \x1b[90m1 dep · 2026-07-29 · brandon\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("history view missing %q; view:\n%q", want, v)
@@ -1009,14 +1012,14 @@ func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 	m = openDetail(t, m, "t-flak")
 	v := m.View()
 	// ULID order: escalation 01E2, then note 01N1, then run 01R1.
-	want := "  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a1\x1b[0m\n" +
+	want := "  \x1b[90m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a1\x1b[0m\n" +
 		"    Q: Skip the flaky test until fixed?\n" +
 		"    A (brandon, relayed by brandon/a1): Skip it, link the issue.\n" +
 		"\n" +
-		"  \x1b[2m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n" +
+		"  \x1b[90m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n" +
 		"    Repros only under -race.\n" +
 		"\n" +
-		"  \x1b[2m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n" +
+		"  \x1b[90m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n" +
 		"    Bisecting the flake."
 	if !strings.Contains(v, want) {
 		t.Errorf("task view history entries diverged.\nwant block:\n%q\nview:\n%q", want, v)
