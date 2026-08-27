@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 3 ready · 1 blocked · 8 on hold · 18 inbox · 103 done · 24 cancelled
+0 in progress · 3 ready · 1 blocked · 8 on hold · 18 inbox · 104 done · 24 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-a3ng`](tasks/tuh-01M10S0DK46ZJNNXHK22M2A3NG.md) | TUI: quiet-chrome bars ride the background ladder (theme tint when OSC-answered; theme fg + neutral bg under mosh) | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -165,6 +163,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-1dcs`](tasks/tuh-01M0YAVG3M1FJQJY15J8NM1DCS.md) TUI: ramp badges everywhere; dashboard bars go black-on-color (BLOCKED bright red, ON HOLD gray); quiet chrome unified
 - [`tuh-aj4t`](tasks/tuh-01M0YEJBWYYTCHNVJEG502AJ4T.md) placeholder: done-row p2 badge check
 - [`tuh-nw2m`](tasks/tuh-01M10R9P8XVT5MWCBK3TVGNW2M.md) TUI/CLI: muted text goes theme-derived (ANSI 90); quiet-chrome bars darken on the rung (238)
+- [`tuh-a3ng`](tasks/tuh-01M10S0DK46ZJNNXHK22M2A3NG.md) TUI: quiet-chrome bars ride the background ladder (theme tint when OSC-answered; theme fg + neutral bg under mosh)
 
 ## Cancelled
 

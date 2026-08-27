@@ -2,7 +2,7 @@
 
 `tuh-01M10S0DK46ZJNNXHK22M2A3NG`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-27 04:52 UTC by `brandon`
@@ -37,4 +37,10 @@ Brandon's steering after PR #87 (2026-08-27): the task-view/CANCELLED bars' pinn
 
 ## History
 
-_No activity yet._
+### 2026-08-27 04:56 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-a3ng/chrome-bar-ladder`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/88>
+- Merged as: `bb28b7f746b062d0fbe3363ad03d54e04189261d`
+
+All acceptance criteria met; squash-merged to main as bb28b7f (PR #88), make test lint green. Quiet-chrome bars now ride the background ladder: chromeBG (beside selectionBG) resolves bgDarkGray in runTUI from the one OSC 11 query — answered terminals get a truecolor tint of the actual theme background (~15 percent toward the opposite, a step stronger than selection s 8 so they never collide); unanswered 256color TERMs (mosh) get 48;5;238 dark or 48;5;251 light with NO pinned foreground, so the theme s own default fg rides the bar; the floor keeps plain 100, which newColors now returns on every rung (the termColors rung override moved out — bgDarkGray is TUI-only). Ladder test added; rung golden pins 48;5;238 with theme fg; floor goldens unchanged. make test lint green. Daemon redeploy follows this finish_run.
