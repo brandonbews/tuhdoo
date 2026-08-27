@@ -22,13 +22,19 @@ import (
 // old "never by newColors" boundary is retired — newColors itself
 // resolves the rung, because mosh renders SGR-2 faint as a no-op
 // (empirical), which turned every faint surface normal-weight there.
-// On a 256color TERM, dim and dimRed swap SGR-2 for 256-indexed
-// codes; on the floor they keep their SGR-2 bytes untouched. Indexed
-// codes exist only on the rung, never faked on the floor, and
+// On a 256color TERM, dimRed swaps SGR-2 for a 256-indexed code and
+// bgDarkGray darkens; on the floor they keep their 16-color bytes.
+// Indexed codes exist only on the rung, never faked on the floor, and
 // COLORTERM is never consulted — the mosh finding of 2026-07-31
 // stands. selBG alone still resolves in runTUI: not as a boundary,
 // but because its ladder needs the OSC 11 query, an interaction only
-// the TUI can make.) The bg* codes are the TUI's section bars; their
+// the TUI can make. Fourth revision, 2026-08-26, steering: dim is
+// ANSI 90 — bright-black foreground, the slot themes themselves
+// designate as the muted gray (gruvbox dark: #928374) — on every
+// rung, replacing both the floor's SGR-2 faint and the rung's fixed
+// gray 245, which no theme informs. Accepted consequence: themes that
+// repurpose slot 8 as a near-background tone (solarized) mute harder
+// than intended.) The bg* codes are the TUI's section bars; their
 // zero values degrade bars to plain text with the same geometry. Bar
 // recolors II (2026-08-25, steering): every dashboard bar is
 // black-on-color — bgRed is black on bright red, slot 101, the
@@ -57,19 +63,24 @@ func isTTY(f *os.File) bool {
 }
 
 // termColors resolves the palette for a TERM, floor first: the
-// 16-color set is the baseline every terminal gets; a TERM advertising
-// 256color swaps the two faint survivors for indexed equivalents —
-// mosh renders SGR-2 faint as a no-op (empirical, 2026-08-25), so on
-// the rung "muted" must be a real color, not an attribute. Gray 245 is
-// the standalone dim; 131 the muted red of the waiting: lead, distinct
-// from both col.red and plain text. Orange rides the same rung check
-// (it lived in runTUI before this ladder existed). The bars stopped
-// needing the ladder with bar recolors II (2026-08-25): every bar
-// style is in-palette on every rung. COLORTERM is deliberately not
-// consulted — the mosh finding (2026-07-31) stands.
+// 16-color set is the baseline every terminal gets — dim included,
+// since ANSI 90 is theme-derived and mosh-safe on every rung (fourth
+// revision, 2026-08-26). A TERM advertising 256color swaps the one
+// faint survivor for an indexed equivalent — mosh renders SGR-2 faint
+// as a no-op (empirical, 2026-08-25), so on the rung "muted" must be
+// a real color, not an attribute: 131 is the muted red of the
+// waiting: lead, distinct from both col.red and plain text. Orange
+// rides the same rung check (it lived in runTUI before this ladder
+// existed). bgDarkGray darkens on the rung (steering 2026-08-26):
+// slot-8 as a background is a mid gray on many themes — too loud for
+// shelf chrome — so the rung pins fg 250 on bg 238, dark and legible
+// whatever the theme, one visible step off the 236 selection tint so
+// a bar never reads as a selected row; the floor keeps plain 100.
+// COLORTERM is deliberately not consulted — the mosh finding
+// (2026-07-31) stands.
 func termColors(term string) colors {
 	c := colors{
-		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", rev: "\x1b[7m",
+		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
 		green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
 		brightRed: "\x1b[91m",
 		dimRed:    "\x1b[2;31m",
@@ -79,9 +90,9 @@ func termColors(term string) colors {
 		bgDarkGray: "\x1b[100m",
 	}
 	if strings.Contains(term, "256color") {
-		c.dim = "\x1b[38;5;245m"
 		c.dimRed = "\x1b[38;5;131m"
 		c.orange = "\x1b[38;5;208m"
+		c.bgDarkGray = "\x1b[38;5;250;48;5;238m"
 	}
 	return c
 }

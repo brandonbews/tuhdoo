@@ -1364,9 +1364,9 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 	printTask(&b, ansiColors, h, stateTask{}, nil)
 	v := b.String()
 	for _, want := range []string{
-		"  \x1b[2m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a7\x1b[0m\n",
-		"  \x1b[2m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n",
-		"  \x1b[2m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n",
+		"  \x1b[90m2026-07-29 15:30 UTC\x1b[0m  \x1b[1mescalation from brandon/a7\x1b[0m\n",
+		"  \x1b[90m2026-07-29 15:00 UTC\x1b[0m  \x1b[1mnote by brandon/a1\x1b[0m\n",
+		"  \x1b[90m(unknown time)\x1b[0m  \x1b[1mrun by brandon/a1 — interrupted\x1b[0m\n",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("colored history missing %q; output:\n%q", want, v)
@@ -1419,7 +1419,7 @@ func TestPrintTaskHistoryUpdateEntry(t *testing.T) {
 	// With real colors: dim stamp, bold descriptor, plain summary.
 	b.Reset()
 	printTask(&b, ansiColors, h, stateTask{}, nil)
-	want := "  \x1b[2m(unknown time)\x1b[0m  \x1b[1medit by brandon\x1b[0m\n" +
+	want := "  \x1b[90m(unknown time)\x1b[0m  \x1b[1medit by brandon\x1b[0m\n" +
 		"    retitled · priority 0→2 · labels +launch −web\n"
 	if v := b.String(); !strings.Contains(v, want) {
 		t.Errorf("colored update entry missing %q; output:\n%q", want, v)
