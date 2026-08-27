@@ -524,6 +524,27 @@ func TestEscalationLifecycle(t *testing.T) {
 	}
 }
 
+func TestAnswerTaskMismatchIsMalformed(t *testing.T) {
+	// The envelope names one task, the payload an escalation on another:
+	// something wrote garbage — fail-safe, not best-effort, mirroring
+	// the claim.confirmed check. Tightening is compat-safe for the same
+	// reason that check was: no writer has ever produced a mismatched
+	// escalation.answered (the daemon derives the task from the
+	// escalation), so no real branch can carry the rejected shape.
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		taskCreated(t, 2, "t2", "fix logout"),
+		evt(t, 3, event.TypeEscalationRaised, "brandon/impl-1", "t1",
+			event.EscalationRaised{Question: "retry rate limits?"}),
+		evt(t, 4, event.TypeEscalationAnswered, "brandon", "t2",
+			event.EscalationAnswered{Answer: "yes", Escalation: tick(t, 3)}),
+	}
+	_, err := NewReplayer().Replay(Input{Events: events, Now: testNow})
+	if !errors.Is(err, ErrMalformedEvent) {
+		t.Fatalf("err = %v, want ErrMalformedEvent", err)
+	}
+}
+
 // Attribution of answers (T5 relay_answer, 2026-07-30 revision): the
 // payload's answered_by wins over the envelope actor when present, and
 // an envelope actor differing from it is recorded as the relay. Events

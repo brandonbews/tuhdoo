@@ -429,6 +429,10 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		if !ok {
 			return malformed("answer to unknown escalation %s", p.Escalation)
 		}
+		if esc.Task != e.Task {
+			return malformed("answer on task %s names escalation %s, which is on task %s",
+				e.Task, p.Escalation, esc.Task)
+		}
 		// Last answer wins: answers are human amendments, unlike claims.
 		// Attribution goes to the payload's answered_by when present (a
 		// relayed answer's envelope actor is the scribe, not the
