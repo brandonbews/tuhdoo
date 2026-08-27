@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 9 ready · 0 blocked · 7 on hold · 7 inbox · 106 done · 30 cancelled
+0 in progress · 9 ready · 0 blocked · 7 on hold · 7 inbox · 107 done · 30 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) | User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site) | 2 | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -160,6 +158,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-aj4t`](tasks/tuh-01M0YEJBWYYTCHNVJEG502AJ4T.md) placeholder: done-row p2 badge check
 - [`tuh-nw2m`](tasks/tuh-01M10R9P8XVT5MWCBK3TVGNW2M.md) TUI/CLI: muted text goes theme-derived (ANSI 90); quiet-chrome bars darken on the rung (238)
 - [`tuh-a3ng`](tasks/tuh-01M10S0DK46ZJNNXHK22M2A3NG.md) TUI: quiet-chrome bars ride the background ladder (theme tint when OSC-answered; theme fg + neutral bg under mosh)
+- [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site)
 
 ## Cancelled
 

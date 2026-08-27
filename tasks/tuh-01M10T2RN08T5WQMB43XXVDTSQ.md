@@ -2,7 +2,7 @@
 
 `tuh-01M10T2RN08T5WQMB43XXVDTSQ`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `docs` `site` `copy`
 - **Depends on:** [`tuh-364k`](tuh-01KZWX46MBVN8BHVMB7537364K.md) (done)
@@ -49,3 +49,11 @@ Pointers: README.md; docs/README.md, adopting.md, agent-protocol.md, joining.md,
 ### 2026-08-27 06:39 UTC — edit by `brandon`
 
 description edited
+
+### 2026-08-27 07:43 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-dtsq/docs-clear-writing + tuh-dtsq/pitch-clear-writing`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/91 + https://github.com/brandonbews/tuhdoo/pull/92>
+- Merged as: `5cc5bf0`, `86e232c`
+
+Landed as the two sanctioned PRs. PR #91 (squash 5cc5bf0): all nine docs/ reference files rewritten to the ISO 24495-1 rubric + Google dev-doc style; agent-protocol.md semantics preserved exactly (per-statement inventory in the PR body — the audit record), workflow machinery now explicitly marked as examples per the acceptance criterion, uninstall test blocks byte-identical, all anchors/cross-links verified, protocol embed + uninstall doc tests pass. PR #92 (squash 86e232c): root README restructured (install/get-started/join-leave/learn-more, terms defined at first use), npm README gains install/connect sections + pnpm/yarn lines, site copy tightened (MCP spelled out, ready pool, OG alt corrected against the actual image). One fixed vocabulary across both PRs (task, claim, lease, escalation, data branch, ledger, view, principal). Per-document conformance checklists live in both PR bodies. make test lint green both times. Note for steering: site nav orders Steering before Adopting while docs/README.md reading order puts Adopting first — pre-existing, not changed by this task. Protocol embed changed → binary rebuilt and daemon restarted post-finish.
