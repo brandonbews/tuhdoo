@@ -2,7 +2,7 @@
 
 `tuh-01KZWX46MBVN8BHVMB7537364K`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** 2
 - **Labels:** `docs` `go` `cli`
 - **Created:** 2026-08-13 06:32 UTC by `brandon`
@@ -31,3 +31,11 @@ retitled · description edited · status inbox→open · priority none→1 · la
 ### 2026-08-21 23:59 UTC — edit by `brandon`
 
 priority 1→2
+
+### 2026-08-27 06:56 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-364k/help-flags-pnpm-docs`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/89>
+- Merged as: `31a9ff0`
+
+Both halves landed via PR #89 (squash 31a9ff0 on main). Docs: README.md and docs/joining.md carry pnpm/yarn install lines beside npm with the optional-deps-resolve note. CLI: usage()'s command list is now a commandDocs table in cmd/tuhdoo/main.go; global usage and the new per-command helpFor both render from it (global output byte-identical to before). run() intercepts -h/--help in first position for known commands only — later positions stay data (answer text, --as values); unknown commands still error loudly; runInit's bespoke --as explanation untouched. cmd/tuhdoo/help_cli_test.go pins all 13 dispatch commands x both flags (exit 0, usage on stdout, stderr silent, every line present in global help, zero filesystem trace in a non-repo dir) and locks the table to the dispatch list. make test lint green; deploying rebuilt binary next.

@@ -2,10 +2,10 @@
 
 `tuh-01M10T2RN08T5WQMB43XXVDTSQ`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 2
 - **Labels:** `docs` `site` `copy`
-- **Depends on:** [`tuh-364k`](tuh-01KZWX46MBVN8BHVMB7537364K.md) (open)
+- **Depends on:** [`tuh-364k`](tuh-01KZWX46MBVN8BHVMB7537364K.md) (done)
 - **Created:** 2026-08-27 05:11 UTC by `brandon`
 
 ## Description
