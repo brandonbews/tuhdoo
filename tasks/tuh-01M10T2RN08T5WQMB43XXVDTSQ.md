@@ -38,6 +38,7 @@ Hard constraints:
 Acceptance:
 - Every in-scope file rewritten. The PR body carries a per-document conformance checklist against rubric items 1–4 plus the style layer — that checklist is the audit record.
 - The agent-protocol.md diff is accompanied by a PR-body list of its normative statements confirming each is semantically unchanged.
+- In agent-protocol.md, hard requirements and illustrative examples are unmistakably distinguishable after the rewrite: anything host- or workflow-specific (PRs, merge styles, branch names) appears only as a clearly marked example of one way to work, never phrased so it could be read as something tuhdoo requires. The dividing line the doc itself draws — protocol governs ledger writes, the code workflow is the adopter's — must survive sharpened, not blurred.
 - `make test lint` green from the repo root (the uninstall doc test runs there); `cd site && npm run build` succeeds if site files changed.
 - One or two PRs, agent's call: split into a strict docs/ pass and a pitch-surfaces pass if the diff warrants; each PR self-contained with its own checklist.
 
@@ -45,4 +46,6 @@ Pointers: README.md; docs/README.md, adopting.md, agent-protocol.md, joining.md,
 
 ## History
 
-_No activity yet._
+### 2026-08-27 06:39 UTC — edit by `brandon`
+
+description edited
