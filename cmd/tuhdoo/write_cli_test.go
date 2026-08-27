@@ -187,6 +187,66 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	mustContain(t, out, "no open escalation")
 }
 
+// An ambiguous task fragment in `answer` is a loud task-candidate
+// listing, never a silent fallthrough to escalation matching: the
+// resolver contract (T7) promises collisions list candidates, and
+// before the fix the discarded ambiguity fell through to "no open
+// escalation matches" or a guess. Not-found fragments must keep
+// falling through to escalation-ID matching.
+func TestAnswerAmbiguousTaskFragment(t *testing.T) {
+	repo := newRepo(t)
+	runGit(t, repo, "config", "user.email", "brandon@example.com")
+	if out, code := runCLI(t, repo, "init"); code != 0 {
+		t.Fatalf("init exit %d; output:\n%s", code, out)
+	}
+	out, code := runCLI(t, repo, "create", "parse the config")
+	if code != 0 {
+		t.Fatalf("create exit %d; output:\n%s", code, out)
+	}
+	confTask := createdID(t, out)
+	out, code = runCLI(t, repo, "create", "parse the flags")
+	if code != 0 {
+		t.Fatalf("create exit %d; output:\n%s", code, out)
+	}
+	hc := apiClient(t, repo)
+	api(t, hc, "POST", "/v0/escalations", "brandon/a1", map[string]any{
+		"task": confTask, "question": "TOML or YAML?", "blocking": true,
+	})
+
+	// Both ULIDs were minted moments apart, so they share a timestamp
+	// prefix: a fragment of it matches both tasks — ambiguous, listing
+	// task candidates, even though an open escalation also matches.
+	frag := strings.TrimPrefix(confTask, "tuh-")[:4]
+	out, code = runCLI(t, repo, "answer", frag, "irrelevant")
+	if code == 0 {
+		t.Fatalf("ambiguous task fragment exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, "ambiguous", "tasks match",
+		"parse the config", "parse the flags")
+
+	// A fragment that is no task at all still falls through to
+	// escalation-ID matching: the entropy half of the escalation's ULID
+	// names it uniquely.
+	out, code = runCLI(t, repo, "escalations")
+	if code != 0 {
+		t.Fatalf("escalations exit %d; output:\n%s", code, out)
+	}
+	escID := ""
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "TOML or YAML?") {
+			escID = strings.Fields(line)[0]
+		}
+	}
+	if escID == "" {
+		t.Fatalf("no escalation row found:\n%s", out)
+	}
+	out, code = runCLI(t, repo, "answer", escID[len(escID)-12:], "TOML.")
+	if code != 0 {
+		t.Fatalf("answer by escalation fragment exit %d; output:\n%s", code, out)
+	}
+	mustContain(t, out, "answered", "TOML or YAML?")
+}
+
 // Capture and the shelves over the CLI (2026-07-31): title-only
 // create --status inbox, park with --status held, promote/pause/resume
 // with update --status — the same round trips the MCP surface has.
