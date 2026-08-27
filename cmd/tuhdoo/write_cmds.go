@@ -16,6 +16,7 @@ package main
 // The MCP shim is the sanctioned work loop; the help text says so.
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -317,6 +318,15 @@ func resolveEscalation(frag string, st stateResp) (escalationJSON, error) {
 	taskID := ""
 	if full, err := resolveTaskID(frag, st.Tasks); err == nil {
 		taskID = full
+	} else {
+		var amb *ambiguityError
+		if errors.As(err, &amb) {
+			// An ambiguous task fragment is not "no task": falling
+			// through would answer some escalation the human never
+			// aimed at. Not-found still falls through to escalation-ID
+			// matching below.
+			return escalationJSON{}, err
+		}
 	}
 	var cands []escalationJSON
 	for _, e := range st.OpenEscalations {

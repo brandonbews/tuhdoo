@@ -287,6 +287,15 @@ func runTask(id string) int {
 	return 0
 }
 
+// ambiguityError marks input that matched more than one candidate.
+// Resolvers that treat not-found as "try the next namespace" (answer's
+// task-then-escalation fallthrough) must still surface ambiguity
+// loudly: collisions are an error listing the candidates, never a
+// guess (T7).
+type ambiguityError struct{ msg string }
+
+func (e *ambiguityError) Error() string { return e.msg }
+
 // resolveTaskID maps human input — a full ID, the short form, or any
 // unambiguous ID fragment — to one known task ID, the git model (T7):
 // the long ULID is plumbing, the short form is the human contract.
@@ -314,8 +323,8 @@ func resolveTaskID(frag string, tasks []stateTask) (string, error) {
 	for i, t := range cands {
 		lines[i] = fmt.Sprintf("  %s  %s  (%s)", event.ShortID(t.ID), oneLine(t.Title), t.ID)
 	}
-	return "", fmt.Errorf("%q is ambiguous — %d tasks match:\n%s",
-		frag, len(cands), strings.Join(lines, "\n"))
+	return "", &ambiguityError{fmt.Sprintf("%q is ambiguous — %d tasks match:\n%s",
+		frag, len(cands), strings.Join(lines, "\n"))}
 }
 
 // idMatches reports whether frag — case-insensitive, with or without
