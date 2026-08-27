@@ -11,17 +11,20 @@ tuhdoo is a single static binary; pick whichever path suits you. It
 runs on macOS and Linux. Windows is not supported — on a Windows
 machine, run it inside WSL, where it is an ordinary Linux program.
 
-### npm (recommended for TS/JS projects)
+### npm, pnpm, or yarn (recommended for TS/JS projects)
 
 ```sh
-npm i -D tuhdoo
+npm i -D tuhdoo      # or: pnpm add -D tuhdoo
+                     # or: yarn add -D tuhdoo
 npx tuhdoo init
 ```
 
 The `tuhdoo` package is a thin launcher; the real binary ships in a
-per-platform `@tuhdoo/*` package that npm selects via `os`/`cpu` fields
-(the esbuild pattern — no postinstall downloads). Installing as a
-devDependency pins the binary version per project through your lockfile.
+per-platform `@tuhdoo/*` package that your package manager selects via
+`os`/`cpu` fields (the esbuild pattern — no postinstall downloads).
+pnpm and yarn resolve those os/cpu-specific optional dependencies
+correctly, same as npm. Installing as a devDependency pins the binary
+version per project through your lockfile.
 The MCP stdio shim runs through it unchanged:
 
 ```json

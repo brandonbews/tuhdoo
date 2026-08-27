@@ -44,14 +44,18 @@ A plain, full clone (as above) is the recommended shape. Other shapes:
 Any one of these works; all produce the same single static binary.
 tuhdoo runs on macOS and Linux; on Windows, use WSL.
 
-Via npm (recommended for TS/JS projects, because it pins the version in
-your lockfile):
+Via npm, pnpm, or yarn (recommended for TS/JS projects, because it pins
+the version in your lockfile):
 
 ```sh
-npm i -D tuhdoo
+npm i -D tuhdoo      # or: pnpm add -D tuhdoo
+                     # or: yarn add -D tuhdoo
 ```
 
-then invoke it as `npx tuhdoo` wherever this page says `tuhdoo`.
+then invoke it as `npx tuhdoo` wherever this page says `tuhdoo`. The
+real binary ships in a per-platform package gated by `os`/`cpu` fields;
+pnpm and yarn resolve those os/cpu-specific optional dependencies
+correctly, same as npm.
 
 Via a release archive: download the archive for your platform and
 `checksums.txt` from <https://github.com/brandonbews/tuhdoo/releases>,
