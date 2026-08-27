@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1NZZV9YNXSM`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `core` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -22,3 +22,11 @@ Constraints: T3 — new strictness may only reject shapes no writer produces; st
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +core
+
+### 2026-08-27 08:24 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-nxsm/answered-task-mismatch`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/95>
+- Merged as: `5325625`
+
+Landed via PR #95 (squash 5325625). Replay now rejects escalation.answered whose envelope task mismatches the named escalation's task as ErrMalformedEvent, a four-line check mirroring claim.confirmed's. TestAnswerTaskMismatchIsMalformed mirrors the confirmation test; its comment records the compat-safety argument (no writer ever produced the mismatch — the daemon derives the task from the escalation). The audit's adjacent family note: escalation.raised already polices unknown tasks; nothing further surfaced in scope, so no fresh capture needed. make test lint green. Binary changed: rebuilt and daemon restarted post-finish.
