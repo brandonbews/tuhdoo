@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P00ET00N0D`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `daemon` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -22,3 +22,11 @@ Acceptance: three named tests (or table rows) covering the above, plus the const
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +daemon
+
+### 2026-08-27 09:10 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-2n0d/daemon-edge-tests`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/100>
+- Merged as: `a013e32`
+
+Landed via PR #100 (squash a013e32), test-only. TestConfirmClaimGateRetryExhaustion drives the gate against a movingRemoteGit fake that advances the bare remote before every push: retryable 503, the exact remote-kept-moving wording the collision harness greps, exactly confirmGateRetries pushes, zero confirmations. TestRenewOnceStopsWhenDegraded proves a degraded daemon's renewal tick renews nothing while a session holds a claim (lease expiry byte-identical; lapses honestly). TestShutdownFinalSyncPushesPendingCommits pins the laptop-lid push: debounced pending commits reach a wired remote on Shutdown. Twin literal tests in daemon and syncer pin confirmGateRetries == maxCycleRetries, each naming the other. No production defects surfaced — nothing to capture. make test lint green. Tests only: no daemon deploy needed.
