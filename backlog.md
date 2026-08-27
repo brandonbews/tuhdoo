@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 8 ready · 0 blocked · 7 on hold · 7 inbox · 107 done · 30 cancelled
+0 in progress · 8 ready · 0 blocked · 7 on hold · 7 inbox · 108 done · 30 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) | get_task and /v0/state evaluate lease expiry at read time | — | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -150,6 +148,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 - [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior)
+- [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) get_task and /v0/state evaluate lease expiry at read time
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) pnpm/yarn install lines in docs + -h/--help on every subcommand
 - [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer
