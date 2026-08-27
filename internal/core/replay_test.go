@@ -260,6 +260,32 @@ func TestFinishRunDone(t *testing.T) {
 	}
 }
 
+func TestHolderLateFinishLandsDone(t *testing.T) {
+	// The holder's lease lapsed long ago, no competing claim arrived,
+	// and run.finished(done) still lands done with nothing synthesized:
+	// a real close wins over a lapsed lease, the holder-side twin of
+	// TestVoidedClaimClosedByRealRunSkipsSynthesis. The lease is
+	// explicitly past-dated — TestFinishRunDone's nil leases pin the
+	// same verdict only incidentally (nil and lapsed replay alike).
+	c1 := tick(t, 2)
+	events := []event.Event{
+		taskCreated(t, 1, "t1", "fix login"),
+		evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "t1", event.ClaimMade{}),
+		evt(t, 40, event.TypeRunFinished, "brandon/impl-1", "t1", event.RunFinished{
+			Outcome: event.OutcomeDone, Branch: "feat/login", Summary: "fixed, slowly"}),
+	}
+	s := replay(t, events, map[string]time.Time{c1: base.Add(20 * time.Minute)})
+	if got := s.Tasks["t1"].Status; got != StatusDone {
+		t.Fatalf("task status = %s, want done", got)
+	}
+	if got := s.Claims[c1].Status; got != ClaimFinished {
+		t.Fatalf("claim status = %s, want finished", got)
+	}
+	if len(s.Runs) != 1 || s.Runs[0].Synthesized || s.Runs[0].Outcome != event.OutcomeDone {
+		t.Fatalf("runs = %+v, want exactly the holder's real done run", s.Runs)
+	}
+}
+
 // merged_as (additive, 2026-08-06 linkage grill): a run.finished may
 // carry the commit(s) that actually landed on a durable branch; events
 // written before the field existed replay unchanged with none — T3

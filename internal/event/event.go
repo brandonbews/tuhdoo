@@ -27,7 +27,10 @@ var nullJSON = json.RawMessage("null")
 
 // New builds an Event for a v1-catalog payload, marshaling the payload
 // into Data and setting Sig to null as T3 requires for new events.
-// task may be empty for events with no subject task.
+// task may be empty for events with no subject task — headroom for
+// future catalog types: every current type has a subject, and replay
+// rejects a subject-less event until a type that needs one arrives
+// with its own apply path.
 func New(id, typ string, v int, actor, machine, task string, payload any) (Event, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
