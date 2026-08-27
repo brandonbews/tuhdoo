@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P009AJJ4D9`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `docs` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -26,3 +26,11 @@ Constraints: decision-record posture — append revision notes, never rewrite th
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +docs
+
+### 2026-08-27 08:47 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-j4d9/002-drift-sweep`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/98>
+- Merged as: `c830ea6`
+
+Landed via PR #98 (squash c830ea6). Four dated revision notes in 002, each verified against shipped code first: (1) T6 view stamp corrected to root-level .views-meta.json (views/.meta was never implemented — checked git history to B8); (2) T7 WAITING enumeration gains the golden-pinned cyclic marker and dep:<id>:cancelled suffix, pointing at 001 D5 for semantics; (3) the parent remnants (· in <parent> marker, --parents resolver entry) deleted — repo-wide grep confirms no such flag; (4) shelf notes record the 2026-07-31 bold-titles decision and also the 2026-08-25 ramp-badges-everywhere reversal, because amending the PR #82 sentence while asserting held-badges-stay-dim would have written a false note (golden at top_golden_test.go:245-247 pins the ramp-colored held badge). No code changes; make test lint green. Doc-only — no daemon deploy needed.
