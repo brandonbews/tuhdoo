@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 1 blocked · 8 on hold · 18 inbox · 102 done · 24 cancelled
+0 in progress · 4 ready · 1 blocked · 8 on hold · 18 inbox · 102 done · 24 cancelled
 
 ## In progress
 
@@ -11,6 +11,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) | placeholder: p0 badge color check | 0 | `placeholder` |
+| [`tuh-nw2m`](tasks/tuh-01M10R9P8XVT5MWCBK3TVGNW2M.md) | TUI/CLI: muted text goes theme-derived (ANSI 90); quiet-chrome bars darken on the rung (238) | 1 | `tui` `go` |
 | [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 
