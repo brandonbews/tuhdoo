@@ -531,3 +531,14 @@ func TestNewerPeerOwnsViews(t *testing.T) {
 		t.Fatalf("merged backlog = %q, want the newer peer's rendering", backlog)
 	}
 }
+
+// TestMaxCycleRetriesMirrorsConfirmGate is the twin of the daemon's
+// TestConfirmGateRetriesMirrorsSyncerCycle: daemon.confirmGateRetries
+// is documented (ops.go) to mirror maxCycleRetries, neither package can
+// read the other's unexported constant, so each pins its own to the
+// same literal — either one drifting trips a test naming the other.
+func TestMaxCycleRetriesMirrorsConfirmGate(t *testing.T) {
+	if maxCycleRetries != 4 {
+		t.Fatalf("maxCycleRetries = %d, want 4 — daemon.confirmGateRetries mirrors it; change both constants and both pinning tests together", maxCycleRetries)
+	}
+}

@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
+	"github.com/brandonbews/tuhdoo/internal/gitx"
+	"github.com/brandonbews/tuhdoo/internal/syncer"
 )
 
 // gateOpts keeps the background sync loop out of the way (interval far
@@ -283,6 +285,116 @@ func TestConfirmClaimTwoDaemonsOneWinner(t *testing.T) {
 		if got[0].Claim != claims[actorA+":"+task] && got[0].Claim != claims[actorB+":"+task] {
 			t.Fatalf("task %s confirmed claim %s, which neither racer made", task, got[0].Claim)
 		}
+	}
+}
+
+// movingRemoteGit wraps the daemon's real git and advances the bare
+// remote's data branch just before delegating each push — the
+// deterministic worst case of D6 contention: a peer lands between every
+// fetch and push, so every push loses the remote's ref CAS for real
+// (the rejection travels the same gitx classification as production).
+type movingRemoteGit struct {
+	gitx.Git
+	t     *testing.T
+	bare  string
+	moves int
+}
+
+func (m *movingRemoteGit) Push(remote, refspec string) error {
+	m.moves++
+	head := strings.TrimSpace(runGit(m.t, m.bare, "rev-parse", "refs/heads/tuhdoo"))
+	tree := strings.TrimSpace(runGit(m.t, m.bare, "rev-parse", "refs/heads/tuhdoo^{tree}"))
+	next := strings.TrimSpace(runGit(m.t, m.bare, "commit-tree", "-p", head,
+		"-m", fmt.Sprintf("peer move %d", m.moves), tree))
+	runGit(m.t, m.bare, "update-ref", "refs/heads/tuhdoo", next)
+	return m.Git.Push(remote, refspec)
+}
+
+// TestConfirmClaimGateRetryExhaustion: when the remote moves between
+// every fetch and push, the gate's bounded loop gives up after exactly
+// confirmGateRetries attempts with a retryable 503 and writes nothing.
+// The exact wording is production tooling's contract: the collision
+// harness classifies honest retryable refusals by string-matching
+// "remote kept moving" (harness/collision/main.go, gateRetryable).
+func TestConfirmClaimGateRetryExhaustion(t *testing.T) {
+	setGitEnv(t)
+	base := shortTempDir(t)
+	bare := filepath.Join(base, "origin.git")
+	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
+	root := filepath.Join(base, "clone")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "init", "--quiet", "-b", "main")
+	runGit(t, root, "remote", "add", "origin", bare)
+
+	// Run is never called, so no background loop ever touches d.sync:
+	// the test drives ops directly and swaps the syncer for one whose
+	// pushes always lose the CAS. (New-without-Run is the successor
+	// idiom from TestShutdownCleansUp.)
+	d, err := New(root, gateOpts())
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { d.Shutdown("test cleanup") })
+	mustCycle(t, d) // publish the data branch: the bare now has a head to move
+
+	const actor = "brandon/impl-1"
+	ids, _, oe := d.opCreateTasks("brandon", []createTaskItem{{Title: "contested to exhaustion"}})
+	if oe != nil {
+		t.Fatalf("create: %v", oe)
+	}
+	task := ids[0]
+	if _, oe := d.opClaimTask(actor, task); oe != nil {
+		t.Fatalf("claim: %v", oe)
+	}
+
+	g, err := gitx.New(root)
+	if err != nil {
+		t.Fatalf("gitx.New: %v", err)
+	}
+	moving := &movingRemoteGit{Git: g, t: t, bare: bare}
+	d.sync = syncer.New(moving, syncer.Options{
+		Interval: time.Hour,
+		Ident:    testIdent,
+		OnMerged: func() {
+			if err := d.Refresh(); err != nil {
+				t.Errorf("refresh after gate reconcile: %v", err)
+			}
+		},
+		Log: log.New(io.Discard, "", 0),
+	})
+
+	_, oe = d.opConfirmClaim(actor, task)
+	if oe == nil {
+		t.Fatal("gate against a remote that always moves must exhaust, not confirm")
+	}
+	if oe.code != http.StatusServiceUnavailable {
+		t.Fatalf("exhaustion code = %d, want %d (retryable)", oe.code, http.StatusServiceUnavailable)
+	}
+	want := fmt.Sprintf("remote kept moving for %d attempts", confirmGateRetries)
+	if !strings.Contains(oe.Error(), want) {
+		t.Fatalf("exhaustion message %q does not carry %q — the collision harness greps that string", oe.Error(), want)
+	}
+	if moving.moves != confirmGateRetries {
+		t.Fatalf("gate pushed %d times, want exactly confirmGateRetries = %d", moving.moves, confirmGateRetries)
+	}
+	// An honest exhaustion certifies nothing: no confirmation on the
+	// ledger — the loop's built-but-rejected commits touched no ref.
+	if n := len(confirmedEvents(t, flushedEvents(t, d))); n != 0 {
+		t.Fatalf("exhausted gate left %d confirmations on the ledger, want none", n)
+	}
+}
+
+// TestConfirmGateRetriesMirrorsSyncerCycle pins confirmGateRetries to
+// the literal syncer.maxCycleRetries is pinned to (its twin lives in
+// internal/syncer/syncer_test.go): the mirroring is claimed by comment
+// in ops.go and enforced nowhere else, and neither package can read the
+// other's unexported constant — so each pins its own, and either one
+// drifting trips a test naming the other.
+func TestConfirmGateRetriesMirrorsSyncerCycle(t *testing.T) {
+	if confirmGateRetries != 4 {
+		t.Fatalf("confirmGateRetries = %d, want 4 — it mirrors syncer.maxCycleRetries; change both constants and both pinning tests together", confirmGateRetries)
 	}
 }
 
