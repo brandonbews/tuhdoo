@@ -266,10 +266,15 @@ func (g *CLI) LsTree(rev string) ([]TreeEntry, error) {
 		if !ok || len(fields) != 3 {
 			return nil, fmt.Errorf("gitx: ls-tree: cannot parse entry %q", rec)
 		}
-		// The data branch holds blobs only; anything else (submodule,
-		// symlink) means the tree is not ours — fail, don't skip.
+		// The data branch holds regular blobs only; anything else means
+		// the tree is not ours — fail, don't skip. The type field alone
+		// cannot enforce that: ls-tree types symlink (120000) entries as
+		// "blob" too, so the mode is the check that catches them.
 		if fields[1] != "blob" {
 			return nil, fmt.Errorf("gitx: ls-tree: unexpected %s object at %q", fields[1], path)
+		}
+		if fields[0] != "100644" && fields[0] != "100755" {
+			return nil, fmt.Errorf("gitx: ls-tree: unexpected mode %s at %q", fields[0], path)
 		}
 		entries = append(entries, TreeEntry{Path: path, OID: fields[2]})
 	}

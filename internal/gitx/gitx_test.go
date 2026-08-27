@@ -162,25 +162,42 @@ func TestMkTreeEmptyIsValidRoot(t *testing.T) {
 	}
 }
 
-// The data branch holds blobs only: an entry of any other object kind
-// means the tree is not ours, and LsTree must fail, not skip. A
-// gitlink (submodule) entry is the shape that pins the arm — git's
-// ls-tree types symlinks (120000) as blobs, so a gitlink's "commit" is
-// the one non-blob kind a recursive listing can surface.
+// The data branch holds regular blobs only: any other entry means the
+// tree is not ours, and LsTree must fail, not skip. Two shapes pin the
+// two checks — a gitlink (submodule) trips the type check ("commit"),
+// and a symlink trips the mode check (git's ls-tree types 120000
+// entries as "blob", so only the mode can catch them).
 func TestLsTreeRejectsNonBlobEntries(t *testing.T) {
 	g := newRepo(t)
-	// Plant the gitlink with raw mktree; --missing admits the dangling
-	// commit OID, exactly as a real submodule pointer arrives.
-	cmd := exec.Command("git", "mktree", "--missing")
-	cmd.Dir = g.dir
-	cmd.Stdin = strings.NewReader("160000 commit 0123456789012345678901234567890123456789\tsub\n")
-	out, err := cmd.CombinedOutput()
+	// Plant each with raw mktree; --missing admits the dangling commit
+	// OID, exactly as a real submodule pointer arrives.
+	blob, err := g.HashObject([]byte("target"))
 	if err != nil {
-		t.Fatalf("mktree: %v\n%s", err, out)
+		t.Fatal(err)
 	}
-	tree := strings.TrimSpace(string(out))
-	if _, err := g.LsTree(tree); err == nil || !strings.Contains(err.Error(), "commit") {
-		t.Fatalf("LsTree over a gitlink entry = %v, want the fail-don't-skip rejection naming the object kind", err)
+	cases := []struct {
+		name  string
+		entry string
+		want  string // substring of the rejection
+	}{
+		{"gitlink", "160000 commit 0123456789012345678901234567890123456789\tsub\n", "commit"},
+		{"symlink", "120000 blob " + blob + "\tlink\n", "mode 120000"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := exec.Command("git", "mktree", "--missing")
+			cmd.Dir = g.dir
+			cmd.Stdin = strings.NewReader(tc.entry)
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("mktree: %v\n%s", err, out)
+			}
+			tree := strings.TrimSpace(string(out))
+			if _, err := g.LsTree(tree); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("LsTree over a %s entry = %v, want the fail-don't-skip rejection carrying %q",
+					tc.name, err, tc.want)
+			}
+		})
 	}
 }
 
