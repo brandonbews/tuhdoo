@@ -445,8 +445,19 @@ func syncJSONOf(st syncer.Status) syncJSON {
 }
 
 func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	// Lease verdicts move with the clock, so replay at the current
+	// instant first (D6: expiry is evaluated at read time) — the status
+	// poll must not render a lapsed lease as a live holder. Degraded
+	// skips the refresh: the last good state keeps serving reads.
+	if d.degraded == nil {
+		if err := d.refreshLocked(now); err != nil {
+			writeOpError(w, d.writeErrLocked(err))
+			return
+		}
+	}
 	resp := stateResp{
 		Sync:            syncJSONOf(d.sync.Status()),
 		Tasks:           []stateTask{},
