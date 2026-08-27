@@ -543,8 +543,11 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 			oe = d.writeErrLocked(err)
 		}
 	}
+	// The guard also resolves WHICH attempt this finish closes — the
+	// claim the written run will name (close-by-claim, 2026-08-27).
+	var mine *core.Claim
 	if oe == nil {
-		oe = d.finishGuardLocked(req.Task, actor)
+		mine, oe = d.finishGuardLocked(req.Task, actor)
 	}
 	if oe != nil {
 		d.mu.Unlock()
@@ -555,11 +558,13 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 		// Non-done outcomes never certify work, so no gate — but a lost
 		// attempt still records as superseded, whatever the report said
 		// (D6 clause 3: the daemon is the referee of how attempts ended).
+		// The coercion judges the attempt actually being closed, so the
+		// recorded outcome and the recorded claim can never disagree.
 		defer d.mu.Unlock()
-		if mine := latestClaim(d.state, req.Task, actor); mine != nil && mine.Status == core.ClaimVoided {
-			return d.writeRunLocked(actor, req, event.OutcomeSuperseded)
+		if mine.Status == core.ClaimVoided {
+			return d.writeRunLocked(actor, req, event.OutcomeSuperseded, mine.ID)
 		}
-		return d.writeRunLocked(actor, req, req.Outcome)
+		return d.writeRunLocked(actor, req, req.Outcome, mine.ID)
 	}
 
 	// done: judge locally first — the confirmed winner, and contests
@@ -574,9 +579,9 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 	if res != nil {
 		defer d.mu.Unlock()
 		if res.Confirmed {
-			return d.writeRunLocked(actor, req, event.OutcomeDone)
+			return d.writeRunLocked(actor, req, event.OutcomeDone, mine.ID)
 		}
-		return d.writeRunLocked(actor, req, event.OutcomeSuperseded)
+		return d.writeRunLocked(actor, req, event.OutcomeSuperseded, mine.ID)
 	}
 	d.mu.Unlock()
 
@@ -601,22 +606,26 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 		return finishRunResult{}, d.writeErrLocked(err)
 	}
 	// Re-guard: the world may have moved while the gate was out.
-	if oe := d.finishGuardLocked(req.Task, actor); oe != nil {
+	mine, oe = d.finishGuardLocked(req.Task, actor)
+	if oe != nil {
 		return finishRunResult{}, oe
 	}
 	if verdict.Confirmed {
-		return d.writeRunLocked(actor, req, event.OutcomeDone)
+		return d.writeRunLocked(actor, req, event.OutcomeDone, mine.ID)
 	}
-	return d.writeRunLocked(actor, req, event.OutcomeSuperseded)
+	return d.writeRunLocked(actor, req, event.OutcomeSuperseded, mine.ID)
 }
 
-// writeRunLocked stamps one run.finished carrying the refereed outcome
-// and the caller's reported links, and answers with the record — plus
-// the referee's stand-down statement when the recorded outcome is not
-// the reported one. Caller holds d.mu with the finish guard passed.
-func (d *Daemon) writeRunLocked(actor string, req finishRunReq, outcome string) (finishRunResult, *opError) {
+// writeRunLocked stamps one run.finished carrying the refereed outcome,
+// the claim it closes (close-by-claim, 2026-08-27 — the finish guard
+// resolved it), and the caller's reported links, and answers with the
+// record — plus the referee's stand-down statement when the recorded
+// outcome is not the reported one. Caller holds d.mu with the finish
+// guard passed.
+func (d *Daemon) writeRunLocked(actor string, req finishRunReq, outcome, claimID string) (finishRunResult, *opError) {
 	ev, err := d.newEventLocked(event.TypeRunFinished, actor, req.Task, event.RunFinished{
 		Outcome:  outcome,
+		Claim:    claimID,
 		Branch:   req.Branch,
 		PR:       req.PR,
 		Commits:  req.Commits,
@@ -1182,19 +1191,19 @@ func latestClaim(st *core.State, taskID, actor string) *core.Claim {
 }
 
 // attemptCloseLocked reports how the attempt under claim c stands
-// closed: by a real run of the actor's minted after the claim, or by
-// replay's synthesized run for the claim itself (interrupted for an
+// closed: by a real run that closes it (core.RunCloses — claim-linked
+// runs match by claim, legacy runs by the actor+order heuristic), or
+// by replay's synthesized run for the claim itself (interrupted for an
 // expired holder, superseded for an expired loser). Caller holds d.mu.
 func (d *Daemon) attemptCloseLocked(c *core.Claim) (closed, synthesized bool) {
 	for i := range d.state.Runs {
 		r := &d.state.Runs[i]
-		if r.Task != c.Task || r.Actor != c.Actor {
+		if !core.RunCloses(r, c) {
 			continue
 		}
-		switch {
-		case r.Synthesized && r.Claim == c.ID:
+		if r.Synthesized {
 			synthesized = true
-		case r.ID > c.ID:
+		} else {
 			closed = true
 		}
 	}
@@ -1223,8 +1232,10 @@ func (d *Daemon) lostNoticeLocked(taskID, actor string) string {
 }
 
 // finishGuardLocked enforces that actor has an attempt of their own to
-// close on taskID before a run.finished event is written. Three shapes
-// are admitted: the actor holds the live claim (the normal finish); the
+// close on taskID before a run.finished event is written, and resolves
+// WHICH attempt that is — the claim the written run will name
+// (close-by-claim, 2026-08-27). Three shapes are admitted: the actor
+// holds the live claim (the normal finish); the
 // actor's latest claim ended released and no later run of theirs has
 // closed it (the blocking protocol: escalate → release_claim →
 // finish_run blocked); or it ended voided and is likewise unclosed — a
@@ -1238,28 +1249,28 @@ func (d *Daemon) lostNoticeLocked(taskID, actor string) string {
 // re-judges stored run.finished events (T3), so the claimless runs
 // already on ledgers stand untouched. Caller holds d.mu with freshly
 // replayed state.
-func (d *Daemon) finishGuardLocked(taskID, actor string) *opError {
+func (d *Daemon) finishGuardLocked(taskID, actor string) (*core.Claim, *opError) {
 	if _, ok := d.state.Tasks[taskID]; !ok {
-		return opErrf(http.StatusNotFound, "unknown task %s", taskID)
+		return nil, opErrf(http.StatusNotFound, "unknown task %s", taskID)
 	}
 	active := d.state.ActiveClaim(taskID)
 	if active != nil && active.Actor == actor {
-		return nil
+		return active, nil
 	}
 	// Not the live holder: the only closable attempt is the actor's own
 	// most recent claim on the task.
 	latest := latestClaim(d.state, taskID, actor)
 	if latest != nil && (latest.Status == core.ClaimReleased || latest.Status == core.ClaimVoided) {
-		// One close per attempt: ULIDs order events in time, so any run
-		// by this actor minted after the claim already closed it — and
+		// One close per attempt: a run naming this claim — or, legacy, any
+		// run by this actor minted after it — already closed it, and
 		// replay's synthesized superseded run closes a voided attempt
 		// whose lease ran out before the loser reported.
 		closed, synth := d.attemptCloseLocked(latest)
 		if !closed && !synth {
-			return nil
+			return latest, nil
 		}
 		if latest.Status == core.ClaimVoided && synth && !closed {
-			return opErrf(http.StatusConflict,
+			return nil, opErrf(http.StatusConflict,
 				"%s's attempt on task %s was already closed as superseded (claim %s lost its race "+
 					"and its lease expired before a report); if the branch is worth salvaging, "+
 					"record it with add_note", actor, taskID, latest.ID)
@@ -1267,15 +1278,15 @@ func (d *Daemon) finishGuardLocked(taskID, actor string) *opError {
 	}
 	switch {
 	case active != nil:
-		return opErrf(http.StatusForbidden,
+		return nil, opErrf(http.StatusForbidden,
 			"claim on task %s is held by %s, not %s", taskID, active.Actor, actor)
 	case latest == nil:
-		return opErrf(http.StatusConflict,
+		return nil, opErrf(http.StatusConflict,
 			"no claim by %s on task %s: finish_run closes your own attempt — claim before finishing", actor, taskID)
 	default:
 		// Finished or expired claim, or a released/voided one a later
 		// run of the actor's already closed.
-		return opErrf(http.StatusConflict,
+		return nil, opErrf(http.StatusConflict,
 			"%s's attempt on task %s (claim %s, %s) is already closed", actor, taskID, latest.ID, latest.Status)
 	}
 }
