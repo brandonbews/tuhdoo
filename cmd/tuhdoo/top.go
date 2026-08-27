@@ -14,6 +14,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
@@ -251,18 +252,21 @@ const (
 	modeEditLabels // labels as one comma-joined line (2026-08-05), same rules
 )
 
-// actionMsg is the result of one steering write.
+// actionMsg is the result of one steering write. Success carries
+// nothing (status line = feedback only, chrome pass 2026-08-21): the
+// screen updating on the refresh is the confirmation.
 type actionMsg struct {
-	desc string
-	err  error
+	err error
 }
 
 type topModel struct {
-	c     *client
-	api   steeringAPI
-	col   colors
-	actor string
-	armed bool // false in watch mode: steering keys are dead
+	c          *client
+	api        steeringAPI
+	col        colors
+	actor      string
+	armed      bool   // false in watch mode: steering keys are dead
+	repoName   string // repo-root directory basename: the header's sense of place (chrome pass, 2026-08-21)
+	asOverride bool   // --as overrode the derived identity; the header badge marks it
 
 	snap    *snapshot
 	err     error
@@ -335,7 +339,11 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = "error: " + msg.err.Error()
 		} else {
-			m.status = msg.desc
+			// Success clears the in-flight marker and says nothing more
+			// (feedback only, 2026-08-21): the refresh below putting the
+			// effect on screen is the confirmation. Accepted: a capture
+			// lands below the fold — trusted anyway.
+			m.status = ""
 		}
 		// Refresh immediately so the action's effect is on screen before
 		// the next tick.
@@ -852,10 +860,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "answering…"
 		return m, func() tea.Msg {
-			if err := api.answerEscalation(target.esc.ID, input); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: fmt.Sprintf("answered %q", oneLine(target.esc.Question))}
+			return actionMsg{err: api.answerEscalation(target.esc.ID, input)}
 		}
 	case modePriority:
 		p, err := strconv.Atoi(input)
@@ -865,18 +870,12 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
 		return m, func() tea.Msg {
-			if err := api.setPriority(target.task.ID, p); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: fmt.Sprintf("set %s to p%d", event.ShortID(target.task.ID), p)}
+			return actionMsg{err: api.setPriority(target.task.ID, p)}
 		}
 	case modeConfirmCancel:
 		m.mode, m.input, m.status = m.back, textInput{}, "cancelling…"
 		return m, func() tea.Msg {
-			if err := api.cancelTask(target.task.ID); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: "cancelled " + event.ShortID(target.task.ID)}
+			return actionMsg{err: api.cancelTask(target.task.ID)}
 		}
 	case modeCapture:
 		if input == "" {
@@ -885,10 +884,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "capturing…"
 		return m, func() tea.Msg {
-			if err := api.captureTask(input); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: fmt.Sprintf("captured %q to inbox", input)}
+			return actionMsg{err: api.captureTask(input)}
 		}
 	case modeEditTitle:
 		if input == "" {
@@ -901,10 +897,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
 		return m, func() tea.Msg {
-			if err := api.setTitle(target.task.ID, input); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: "updated title of " + event.ShortID(target.task.ID)}
+			return actionMsg{err: api.setTitle(target.task.ID, input)}
 		}
 	case modeEditLabels:
 		// The raw editWas guard first, like every edit mode; then the
@@ -925,10 +918,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
 		return m, func() tea.Msg {
-			if err := api.setLabels(target.task.ID, labels); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: "updated labels of " + event.ShortID(target.task.ID)}
+			return actionMsg{err: api.setLabels(target.task.ID, labels)}
 		}
 	case modeEditDesc:
 		// The description is kept byte-for-byte as typed — an editor
@@ -941,10 +931,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
 		return m, func() tea.Msg {
-			if err := api.setDescription(target.task.ID, raw); err != nil {
-				return actionMsg{err: err}
-			}
-			return actionMsg{desc: "updated description of " + event.ShortID(target.task.ID)}
+			return actionMsg{err: api.setDescription(target.task.ID, raw)}
 		}
 	}
 	return m, nil
@@ -1448,29 +1435,98 @@ func (m topModel) View() string {
 	return pinFrame(head+body, m.height-headN-footN-strings.Count(body, "\n"), foot, m.height)
 }
 
+// syncStaleAfter is quiet sync's health bar: a last fetch older than
+// two default fetch intervals (T8: 60s) means the background cycle is
+// not keeping up, and the glyph grows its age.
+const syncStaleAfter = 2 * time.Minute
+
+// relAge renders a stale fetch's age compactly ("8m", "3h", "2d") —
+// the one relative time the TUI shows: the stamp discipline
+// (render.go) exists because relative times rot the moment they are
+// written, and a live screen redrawing every 2s cannot rot.
+func relAge(d time.Duration) string {
+	switch {
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
+}
+
+// syncSegs renders the header's sync state (quiet sync, chrome pass
+// 2026-08-21). Healthy syncing is a static dim ⇅ glyph alone — no
+// timestamp, no spinner: sync is a ~60s background cycle, and motion
+// would claim a liveness the screen cannot honestly show. Stale sync
+// adds the relative age in yellow ("⇅ 8m"); a syncing daemon with no
+// parseable fetch stamp is stale of unknown age, glyph alone.
+// local-only stays a word — remoteless is a normal mode (T2), and a
+// bare missing glyph would look broken. Errors stay loud text, red.
+func syncSegs(col colors, s syncJSON, now time.Time) []seg {
+	switch s.Mode {
+	case "local-only":
+		return []seg{{col.dim, "local-only"}}
+	case "syncing":
+		t, err := time.Parse(time.RFC3339, s.LastFetch)
+		if err == nil && now.Sub(t) < syncStaleAfter {
+			return []seg{{col.dim, "⇅"}}
+		}
+		age := ""
+		if err == nil {
+			age = " " + relAge(now.Sub(t))
+		}
+		return []seg{{col.yellow, "⇅" + age}}
+	case "error":
+		return []seg{{col.red, fmt.Sprintf("sync error (remote %q): %s", s.Remote, s.LastError)}}
+	default:
+		return []seg{{col.dim, s.Mode}} // "starting": first cycle hasn't finished
+	}
+}
+
 // listHead renders the list screen's header block (header bar, optional
-// status line, blank separator). One function feeds both View and the
+// status strip, blank separator). One function feeds both View and the
 // mouse hit test, so the body's first screen row is counted off the
-// same bytes that get drawn.
+// same bytes that get drawn. The time.Now here is the render loop's
+// one clock read: the 2s tick redraws keep a stale age current.
 func (m topModel) listHead(width int) string {
 	col := m.col
-	sync := "..."
+	sync := []seg{{col.dim, "..."}}
 	if m.snap != nil {
-		sync = syncLine(m.snap.state.Sync)
+		sync = syncSegs(col, m.snap.state.Sync, time.Now())
 	}
 	// Unfilled header (chrome hierarchy, 2026-08-03): the frame stops
-	// competing with content. tuhdoo bold, the sync text dim, the badge
-	// right-aligned — watch mode dim, acting-as at normal weight (armed
-	// must be glanceable).
-	badge := []seg{{col.dim, "watch mode "}}
-	if m.armed {
-		badge = []seg{{"", "acting as " + m.actor + " "}}
+	// competing with content. The bold name is the repo-root basename,
+	// not the product (sense of place, chrome pass 2026-08-21): you
+	// know what you launched; you need to know which ledger this is.
+	// Badge only when special (same pass — absence is the normal state,
+	// the vim convention): dim watch when disarmed, "as <principal>" at
+	// normal weight when --as overrode the derived identity, nothing
+	// for an armed pane acting as its own derived identity. This
+	// revises the 2026-08-03 "armed must be glanceable" note:
+	// glanceability now means the special states are marked.
+	var badge []seg
+	switch {
+	case !m.armed:
+		badge = []seg{{col.dim, "watch "}}
+	case m.asOverride:
+		badge = []seg{{"", "as " + m.actor + " "}}
 	}
 	head := segLine(col,
-		[]seg{{col.bold, " tuhdoo"}, {col.dim, " · " + sync}},
+		append([]seg{{col.bold, " " + m.repoName}, {col.dim, " · "}}, sync...),
 		badge, width) + "\n"
 	if m.status != "" {
-		head += m.status + "\n"
+		// The status strip (feedback only, chrome pass 2026-08-21):
+		// errors ride the loud bgRed bar, validation and in-flight
+		// markers the quiet chrome bar — a full-width strip, so
+		// feedback reads as frame, never as content. The actionMsg
+		// handler is the one writer of the "error: " prefix, which is
+		// what makes the prefix a safe discriminator.
+		style := col.bgDarkGray
+		if strings.HasPrefix(m.status, "error: ") {
+			style = col.bgRed
+		}
+		head += barLine(col, style, " "+m.status, "", width) + "\n"
 	}
 	return head + "\n"
 }
@@ -2110,12 +2166,25 @@ func runTUI(args []string) int {
 			return 1
 		}
 		m.actor = actor
+		// The as badge marks an override of the derived identity, not
+		// the flag itself (badge only when special, 2026-08-21): --as
+		// with your own name is not special. When derivation fails with
+		// --as given, there is no derived identity to match — override
+		// by definition.
+		if as != "" {
+			derived, derr := gitEmailLocalPart("")
+			m.asOverride = derr != nil || derived != actor
+		}
 	}
-	_, c, code := connect()
+	r, c, code := connect()
 	if code != 0 {
 		return code
 	}
 	m.c = c
+	// The header's sense of place (chrome pass, 2026-08-21): the bold
+	// name is the repo-root directory basename — which ledger this is,
+	// not what binary drew it.
+	m.repoName = filepath.Base(r.root)
 	if m.armed {
 		m.api = httpSteering{c: c, actor: m.actor}
 	}
