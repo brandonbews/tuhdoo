@@ -944,6 +944,66 @@ func TestFailSafeReadOnly(t *testing.T) {
 	mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK)
 }
 
+// T3 fail-safe meets T5 leases: a degraded daemon must stop renewing
+// session-held claims. The last good state still lists the claim as
+// active, so without the mcp.go guard the renewal tick would keep
+// re-leasing off state the daemon can no longer verify; instead the
+// tick renews nothing and the lease lapses honestly on schedule.
+func TestRenewOnceStopsWhenDegraded(t *testing.T) {
+	d, c := startDaemon(t)
+	const actor = "brandon/impl-1"
+	task := createOne(t, c, "brandon", map[string]any{"title": "held through the fall"})
+	h, oe := d.opClaimTask(actor, task)
+	if oe != nil {
+		t.Fatalf("claim: %v", oe)
+	}
+	claim := h.Claim.ID
+	// Rewind the lease below a renewal's now+TTL so a renewal would be
+	// visible as a strictly later expiry (the loser_test.go idiom).
+	if err := d.store.WriteLease(claim, time.Now().Add(time.Minute)); err != nil {
+		t.Fatalf("rewind lease: %v", err)
+	}
+	if err := d.batcher.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	// Degrade the daemon the TestFailSafeReadOnly way: an event from a
+	// "newer" daemon that replay cannot comprehend.
+	futureID, err := event.NewID(time.Now(), rand.Reader)
+	if err != nil {
+		t.Fatalf("NewID: %v", err)
+	}
+	future, err := event.New(futureID, "task.teleported", 1, "future/agent", "m-ffff", "t-x", map[string]any{})
+	if err != nil {
+		t.Fatalf("event.New: %v", err)
+	}
+	if err := d.store.AppendBatch(store.Batch{Events: []event.Event{future}}); err != nil {
+		t.Fatalf("AppendBatch: %v", err)
+	}
+	if err := d.Refresh(); err == nil {
+		t.Fatal("Refresh succeeded, want a fail-safe replay error")
+	}
+
+	// A session still holds the claim when the renewal tick fires.
+	s := &mcpSession{actor: actor, stop: make(chan struct{}), claims: make(map[string]string)}
+	s.track(task, claim)
+	before, err := d.store.ReadLeases()
+	if err != nil {
+		t.Fatalf("ReadLeases before: %v", err)
+	}
+	d.renewOnce(s)
+	after, err := d.store.ReadLeases()
+	if err != nil {
+		t.Fatalf("ReadLeases after: %v", err)
+	}
+	if !after[claim].Equal(before[claim]) {
+		t.Fatalf("degraded daemon renewed lease %s (%s -> %s) — renewal must stop so the lease lapses honestly", claim, before[claim], after[claim])
+	}
+	if _, held := s.heldClaim(task); !held {
+		t.Fatal("degraded renewal tick evicted the claim from session tracking")
+	}
+}
+
 // Clean shutdown removes the socket and discovery file and releases the
 // lock so a successor can start.
 func TestShutdownCleansUp(t *testing.T) {
@@ -964,6 +1024,48 @@ func TestShutdownCleansUp(t *testing.T) {
 		t.Fatalf("successor New: %v", err)
 	}
 	d2.Shutdown("test cleanup")
+}
+
+// Shutdown's best-effort final sync (the laptop-lid push): commits
+// still pending locally reach a wired remote on Shutdown instead of
+// stranding until some future daemon syncs. Run is never called, so no
+// background loop ever pushes — Shutdown's final Cycle is the only path
+// to the remote, which is exactly what the test pins.
+func TestShutdownFinalSyncPushesPendingCommits(t *testing.T) {
+	setGitEnv(t)
+	base := shortTempDir(t)
+	bare := filepath.Join(base, "origin.git")
+	runGit(t, base, "init", "--quiet", "--bare", "-b", "main", bare)
+	root := filepath.Join(base, "clone")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "init", "--quiet", "-b", "main")
+	runGit(t, root, "remote", "add", "origin", bare)
+
+	d, err := New(root, Options{Quiet: 50 * time.Millisecond, Log: log.New(io.Discard, "", 0)})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { d.Shutdown("test cleanup") })
+
+	// Debounced, not eager: the write sits in the batcher, and nothing
+	// has ever pushed — the remote does not even have the branch yet.
+	if _, _, oe := d.opCreateTasks("brandon", []createTaskItem{{Title: "almost stranded"}}); oe != nil {
+		t.Fatalf("create: %v", oe)
+	}
+
+	d.Shutdown("test: laptop lid closing")
+
+	local := strings.TrimSpace(runGit(t, root, "rev-parse", "refs/heads/tuhdoo"))
+	remote := strings.TrimSpace(runGit(t, bare, "rev-parse", "refs/heads/tuhdoo"))
+	if local != remote {
+		t.Fatalf("final sync stranded local commits: local head %s, remote head %s", local, remote)
+	}
+	// The pending task itself made it across, not just some head.
+	if got := runGit(t, bare, "show", "refs/heads/tuhdoo:backlog.md"); !strings.Contains(got, "almost stranded") {
+		t.Fatalf("remote backlog.md after shutdown does not carry the pending task:\n%s", got)
+	}
 }
 
 // Views ride local writes (T6). After ordinary daemon writes —
