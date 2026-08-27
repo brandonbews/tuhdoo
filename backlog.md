@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 3 ready · 1 blocked · 8 on hold · 18 inbox · 104 done · 24 cancelled
+0 in progress · 3 ready · 2 blocked · 8 on hold · 18 inbox · 104 done · 24 cancelled
 
 ## In progress
 
@@ -19,6 +19,7 @@ _None._
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
 | [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) | placeholder: p1 badge color check | 1 | depends on [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) |
+| [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) | User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site) | 2 | depends on [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) |
 
 ## On hold
 
