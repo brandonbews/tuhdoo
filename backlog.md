@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 8 ready · 0 blocked · 7 on hold · 7 inbox · 108 done · 30 cancelled
+1 in progress · 7 ready · 0 blocked · 7 on hold · 7 inbox · 108 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) | closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace | — | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) | closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace | — | `go` `core` `audit-finding` |
 | [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) | Police escalation.answered task mismatch as malformed, matching claim.confirmed | — | `go` `core` `audit-finding` |
 | [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) | Pin replay edges: holder's late finish counts as done; reconcile the subject-less-event stance | — | `go` `core` `audit-finding` |
 | [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) | One lease-path parser: store loader and merge-time replay must compute the same lease set | — | `go` `storage` `audit-finding` |
