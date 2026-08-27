@@ -687,6 +687,59 @@ func TestClaimLifecycle(t *testing.T) {
 	}
 }
 
+// D6 clause 5: expiry is evaluated at read time. A lease that lapses
+// with no intervening write must read as lapsed on every read surface —
+// cached state cannot be trusted to age the verdict on its own, so
+// GET /v0/tasks/{id} and /v0/state (the TUI's poll) replay at the
+// current instant instead of serving the cache as-is.
+func TestReadPathsEvaluateLeaseExpiry(t *testing.T) {
+	d, c := startDaemon(t)
+	task := createOne(t, c, "brandon", map[string]any{"title": "the lease lapses quietly"})
+
+	var h hydratedTask
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"task": task}, http.StatusOK), &h)
+	if h.Claim == nil {
+		t.Fatal("claim response carried no claim")
+	}
+	// Rewind the lease to an already-lapsed expiry directly in the
+	// store: the daemon's cached state still shows a live claim, and no
+	// write arrives to refresh it.
+	if err := d.store.WriteLease(h.Claim.ID, time.Now().Add(-time.Minute)); err != nil {
+		t.Fatalf("WriteLease: %v", err)
+	}
+
+	// get_task reports the claim lapsed: no live claim, the attempt
+	// closed by its synthesized interrupted run.
+	var got hydratedTask
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+task, "", nil, http.StatusOK), &got)
+	if got.Claim != nil {
+		t.Errorf("get_task after lapse: claim = %+v, want none", got.Claim)
+	}
+	if len(got.Runs) != 1 || !got.Runs[0].Synthesized {
+		t.Errorf("get_task after lapse: runs = %+v, want exactly one synthesized run", got.Runs)
+	}
+
+	// /v0/state agrees: no holder, and the task reads ready again.
+	var st stateResp
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+	found := false
+	for _, row := range st.Tasks {
+		if row.ID != task {
+			continue
+		}
+		found = true
+		if row.Holder != "" {
+			t.Errorf("state after lapse: holder = %q, want none", row.Holder)
+		}
+		if row.Situation != "ready" {
+			t.Errorf("state after lapse: situation = %q, want %q", row.Situation, "ready")
+		}
+	}
+	if !found {
+		t.Fatalf("task %s missing from state", task)
+	}
+}
+
 // claim_next's label filter end to end (agent protocol, loop step 1): a
 // labelled claim matches all-of, skipping higher-priority non-matching
 // work; a filter that excludes everything renders exactly like an empty

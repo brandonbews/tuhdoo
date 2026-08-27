@@ -981,9 +981,18 @@ func (d *Daemon) opAddNote(actor, task, text string) (id, warning string, oe *op
 }
 
 // opGetTask hydrates one task (T5 get_task: start work in one call).
+// Lease verdicts move with the clock, so replay at the current instant
+// first (D6: expiry is evaluated at read time) — a stale expiry must
+// not hydrate a lapsed claim as live.
 func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
+	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if d.degraded == nil {
+		if err := d.refreshLocked(now); err != nil {
+			return hydratedTask{}, d.writeErrLocked(err)
+		}
+	}
 	if _, ok := d.state.Tasks[id]; !ok {
 		return hydratedTask{}, opErrf(http.StatusNotFound, "unknown task %s", id)
 	}
