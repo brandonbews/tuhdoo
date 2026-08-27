@@ -2,7 +2,7 @@
 
 `tuh-01KZWX46MBVN8BHVMB7537364K`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-2`
 - **Priority:** 2
 - **Labels:** `docs` `go` `cli`
 - **Created:** 2026-08-13 06:32 UTC by `brandon`

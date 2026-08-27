@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 1 blocked · 7 on hold · 18 inbox · 104 done · 28 cancelled
+1 in progress · 1 ready · 1 blocked · 7 on hold · 18 inbox · 104 done · 28 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) | pnpm/yarn install lines in docs + -h/--help on every subcommand | 2 | `docs` `go` `cli` |
 | [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) | TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line | 2 | `tui` `go` |
 
 ## Blocked / waiting
