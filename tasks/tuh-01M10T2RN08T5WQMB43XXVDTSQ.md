@@ -2,7 +2,7 @@
 
 `tuh-01M10T2RN08T5WQMB43XXVDTSQ`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-2`
 - **Priority:** 2
 - **Labels:** `docs` `site` `copy`
 - **Depends on:** [`tuh-364k`](tuh-01KZWX46MBVN8BHVMB7537364K.md) (done)

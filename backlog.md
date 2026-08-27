@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 10 ready · 0 blocked · 7 on hold · 7 inbox · 106 done · 30 cancelled
+1 in progress · 9 ready · 0 blocked · 7 on hold · 7 inbox · 106 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) | User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site) | 2 | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) | User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site) | 2 | `docs` `site` `copy` |
 | [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) | get_task and /v0/state evaluate lease expiry at read time | — | `go` `daemon` `audit-finding` |
 | [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) | closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace | — | `go` `core` `audit-finding` |
 | [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) | Police escalation.answered task mismatch as malformed, matching claim.confirmed | — | `go` `core` `audit-finding` |
