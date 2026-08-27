@@ -29,10 +29,10 @@ var ansiColors = colors{
 
 // rungColors is the same palette resolved on the 256-color rung: the
 // one faint survivor — dimRed — swaps SGR-2, which mosh renders as a
-// no-op, for an indexed code; orange exists; and bgDarkGray darkens to
-// fg 250 on bg 238 (steering, 2026-08-26). dim is theme-derived ANSI
-// 90 on every rung (fourth revision, 2026-08-26), so it matches the
-// floor.
+// no-op, for an indexed code, and orange exists. dim is theme-derived
+// ANSI 90 on every rung (fourth revision, 2026-08-26) and bgDarkGray
+// stays the floor's plain 100 here — runTUI re-resolves it down the
+// chromeBG ladder (steering, 2026-08-27).
 var rungColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
@@ -41,7 +41,7 @@ var rungColors = colors{
 	bgMagenta: "\x1b[30;45m", bgGreen: "\x1b[30;42m",
 	bgYellow: "\x1b[30;43m", bgRed: "\x1b[30;101m",
 	bgGray: "\x1b[30;47m", bgWhite: "\x1b[30;107m",
-	bgDarkGray: "\x1b[38;5;250;48;5;238m",
+	bgDarkGray: "\x1b[100m",
 	orange:     "\x1b[38;5;208m",
 }
 
@@ -194,8 +194,9 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 // dim theme-derived and bars darkened 2026-08-26): every 16-color TERM
 // gets the floor palette — dim is ANSI 90 there too, theme-derived on
 // every rung — while a TERM advertising 256color swaps dimRed's faint
-// for an indexed code (mosh renders SGR-2 as a no-op), darkens
-// bgDarkGray, and earns orange, which runTUI used to resolve.
+// for an indexed code (mosh renders SGR-2 as a no-op) and earns
+// orange, which runTUI used to resolve; bgDarkGray is runTUI's to
+// re-resolve (chromeBG), so newColors keeps it at the floor's 100.
 // COLORTERM never unlocks the rung — its signature takes only TERM:
 // mosh advertises truecolor it won't honor (the 2026-07-31 finding).
 func TestTermColorsLadder(t *testing.T) {
@@ -259,22 +260,22 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 	noFaint(t, "dashboard", v)
 }
 
-// The task view on the 256-color rung: the section bars (DEPENDS ON,
-// DESCRIPTION, HISTORY) are the quiet bgDarkGray chrome, darkened on
-// the rung to fg 250 on bg 238 (steering, 2026-08-26 — slot-8
-// backgrounds render mid-gray on many themes, too loud for shelf
-// chrome) — and the id value and placeholders take the theme-derived
-// muted gray. No SGR-2 anywhere.
+// The task view on the mosh rung: runTUI resolves bgDarkGray down the
+// chromeBG ladder — an unanswered dark 256color TERM lands on the
+// neutral bg 238 with no pinned foreground, the theme's own fg riding
+// the bar (steering, 2026-08-27) — and the id value and placeholders
+// take the theme-derived muted gray. No SGR-2 anywhere.
 func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = rungColors
+	m.col.bgDarkGray = chromeBG(bgAnswer{}, "xterm-256color", true)
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-pars")
 	v := m.View()
 	for _, want := range []string{
-		"\x1b[38;5;250;48;5;238m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
-		"\x1b[38;5;250;48;5;238m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
-		"\x1b[38;5;250;48;5;238m" + padBar(80, " HISTORY", "") + "\x1b[0m",
+		"\x1b[48;5;238m" + padBar(80, " DEPENDS ON (2)", "enter open ") + "\x1b[0m",
+		"\x1b[48;5;238m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
+		"\x1b[48;5;238m" + padBar(80, " HISTORY", "") + "\x1b[0m",
 		"  \x1b[1mid\x1b[0m          \x1b[90mt-pars\x1b[0m",
 		"  \x1b[1mlabels\x1b[0m      \x1b[90mnone\x1b[0m",
 		"\n  \x1b[90mnone\x1b[0m", // the empty-description placeholder

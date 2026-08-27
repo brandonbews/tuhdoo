@@ -5,7 +5,8 @@ package main
 // adaptive background tint resolved down a capability ladder. The
 // ladder and tint are pure functions; the terminal interaction lives
 // in the one queryTermBG seam, called once before the bubbletea
-// program starts.
+// program starts. Since 2026-08-27 the quiet-chrome bars ride the
+// same answer down their own rung set (chromeBG).
 
 import (
 	"fmt"
@@ -35,7 +36,7 @@ type bgAnswer struct {
 func selectionBG(ans bgAnswer, term, colorterm string, dark bool) string {
 	switch {
 	case ans.ok:
-		return tintSGR(ans.r, ans.g, ans.b, dark)
+		return tintSGR(ans.r, ans.g, ans.b, dark, 8)
 	case strings.Contains(term, "256color"):
 		if dark {
 			return "\x1b[48;5;236m"
@@ -46,15 +47,42 @@ func selectionBG(ans bgAnswer, term, colorterm string, dark bool) string {
 	}
 }
 
-// tintSGR nudges the terminal's own background ~8% toward the
+// chromeBG resolves the quiet-chrome bar background — the task view's
+// section bars and the CANCELLED history bar — down the same ladder as
+// the selection bar, one register stronger (steering, 2026-08-27:
+// pinned indexed colors read foreign next to the user's theme). An
+// answered query earns a truecolor tint of the actual theme background
+// at ~15% versus the selection's 8%, so the two surfaces never read as
+// one another; an unanswered query on a 256-color TERM (the mosh
+// day-to-day case, where the palette is unreadable) earns a neutral
+// indexed background picked by the dark/light verdict; anything else
+// keeps the floor's bright-black bar. No foreground is pinned on any
+// rung: the theme's own default fg rides the bar. COLORTERM is never
+// consulted (2026-07-31).
+func chromeBG(ans bgAnswer, term string, dark bool) string {
+	switch {
+	case ans.ok:
+		return tintSGR(ans.r, ans.g, ans.b, dark, 15)
+	case strings.Contains(term, "256color"):
+		if dark {
+			return "\x1b[48;5;238m"
+		}
+		return "\x1b[48;5;251m"
+	default:
+		return "\x1b[100m"
+	}
+}
+
+// tintSGR nudges the terminal's own background pct% toward the
 // opposite extreme — lighter on dark themes, darker on light — so the
-// bar reads as a tint of the user's theme, never a foreign color.
-func tintSGR(r, g, b uint8, dark bool) string {
+// bar reads as a tint of the user's theme, never a foreign color. The
+// selection bar tints at 8, the chrome bars at 15.
+func tintSGR(r, g, b uint8, dark bool, pct int) string {
 	tint := func(v uint8) uint8 {
 		if dark {
-			return v + uint8((255-int(v))*8/100)
+			return v + uint8((255-int(v))*pct/100)
 		}
-		return uint8(int(v) * 92 / 100)
+		return uint8(int(v) * (100 - pct) / 100)
 	}
 	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", tint(r), tint(g), tint(b))
 }

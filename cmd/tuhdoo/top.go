@@ -2101,6 +2101,7 @@ func runTUI(args []string) int {
 		// ▌ glyph alone marks selection there.
 		ans, dark := queryTermBG(os.Stdout)
 		m.col.selBG = selectionBG(ans, os.Getenv("TERM"), os.Getenv("COLORTERM"), dark)
+		m.col.bgDarkGray = chromeBG(ans, os.Getenv("TERM"), dark)
 	}
 	if m.armed {
 		actor, err := topActor(as)

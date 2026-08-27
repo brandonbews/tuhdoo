@@ -56,6 +56,52 @@ func TestSelectionBGLadder(t *testing.T) {
 	}
 }
 
+// The chrome-bar ladder (steering, 2026-08-27) mirrors the selection
+// ladder one register stronger: an answered query earns the ~15%
+// theme tint (vs the selection's 8%, so the surfaces stay distinct);
+// an unanswered 256-color TERM earns the dark/light-picked neutral
+// background — no pinned foreground on any rung, the theme's own fg
+// rides the bar; everything else keeps the floor's bright-black.
+func TestChromeBGLadder(t *testing.T) {
+	tests := []struct {
+		name string
+		ans  bgAnswer
+		term string
+		dark bool
+		want string
+	}{
+		{"answered dark theme lightens ~15%",
+			bgAnswer{ok: true, r: 0x1e, g: 0x1e, b: 0x2e}, "xterm-256color", true,
+			"\x1b[48;2;63;63;77m"},
+		{"answered light theme darkens ~15%",
+			bgAnswer{ok: true, r: 0xff, g: 0xff, b: 0xff}, "xterm-256color", false,
+			"\x1b[48;2;216;216;216m"},
+		{"answered pure black still lightens",
+			bgAnswer{ok: true}, "xterm", true,
+			"\x1b[48;2;38;38;38m"},
+		{"unanswered 256-color dark theme (mosh)",
+			bgAnswer{}, "xterm-256color", true,
+			"\x1b[48;5;238m"},
+		{"unanswered 256-color light theme",
+			bgAnswer{}, "screen-256color", false,
+			"\x1b[48;5;251m"},
+		{"unanswered 16-color TERM",
+			bgAnswer{}, "xterm", true,
+			"\x1b[100m"},
+		{"no TERM at all",
+			bgAnswer{}, "", true,
+			"\x1b[100m"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := chromeBG(tt.ans, tt.term, tt.dark); got != tt.want {
+				t.Errorf("chromeBG(%+v, %q, %v) = %q, want %q",
+					tt.ans, tt.term, tt.dark, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDarkRGB(t *testing.T) {
 	tests := []struct {
 		r, g, b uint8

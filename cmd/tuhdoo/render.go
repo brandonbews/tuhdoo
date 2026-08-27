@@ -22,13 +22,13 @@ import (
 // old "never by newColors" boundary is retired — newColors itself
 // resolves the rung, because mosh renders SGR-2 faint as a no-op
 // (empirical), which turned every faint surface normal-weight there.
-// On a 256color TERM, dimRed swaps SGR-2 for a 256-indexed code and
-// bgDarkGray darkens; on the floor they keep their 16-color bytes.
-// Indexed codes exist only on the rung, never faked on the floor, and
-// COLORTERM is never consulted — the mosh finding of 2026-07-31
-// stands. selBG alone still resolves in runTUI: not as a boundary,
-// but because its ladder needs the OSC 11 query, an interaction only
-// the TUI can make. Fourth revision, 2026-08-26, steering: dim is
+// On a 256color TERM, dimRed swaps SGR-2 for a 256-indexed code; on
+// the floor it keeps its 16-color bytes. Indexed codes exist only on
+// the rung, never faked on the floor, and COLORTERM is never
+// consulted — the mosh finding of 2026-07-31 stands. selBG — and,
+// since 2026-08-27, bgDarkGray — still resolve in runTUI: not as a
+// boundary, but because their ladders want the OSC 11 answer, an
+// interaction only the TUI can make. Fourth revision, 2026-08-26, steering: dim is
 // ANSI 90 — bright-black foreground, the slot themes themselves
 // designate as the muted gray (gruvbox dark: #928374) — on every
 // rung, replacing both the floor's SGR-2 faint and the rung's fixed
@@ -41,11 +41,14 @@ import (
 // background twin of the p0 badge's 91 (reversing the 2026-08-04
 // drop-the-alarm muting), and bgGray is black on gray, slot 7: bright
 // enough to carry black text, and distinct from bgWhite's bright-white
-// INBOX bar, slot 15. bgDarkGray — default foreground on bright-black,
-// slot 8 — is the quiet chrome for surfaces that are shelf, not queue:
-// the CANCELLED history bar and the task view's section bars, which
-// dropped reverse-dim for it. dimRed is the blocked row's waiting:
-// lead — a reason line, so it stays muted even under the loud bar.
+// INBOX bar, slot 15. bgDarkGray is the quiet chrome for surfaces
+// that are shelf, not queue — the CANCELLED history bar and the task
+// view's section bars, which dropped reverse-dim for it: default
+// foreground on bright-black here (the floor and the CLI-facing
+// value), re-resolved by runTUI down the background ladder (chromeBG,
+// 2026-08-27) so it tints the user's actual theme where the terminal
+// answers OSC 11. dimRed is the blocked row's waiting: lead — a
+// reason line, so it stays muted even under the loud bar.
 type colors struct {
 	reset, bold, dim, rev, green, yellow, red, magenta string
 	brightRed                                          string // p0/negative badge (contrast ramp, 2026-08-25): ANSI 91 — in-palette bright; normal red reads low-contrast on dark themes
@@ -71,13 +74,12 @@ func isTTY(f *os.File) bool {
 // a real color, not an attribute: 131 is the muted red of the
 // waiting: lead, distinct from both col.red and plain text. Orange
 // rides the same rung check (it lived in runTUI before this ladder
-// existed). bgDarkGray darkens on the rung (steering 2026-08-26):
-// slot-8 as a background is a mid gray on many themes — too loud for
-// shelf chrome — so the rung pins fg 250 on bg 238, dark and legible
-// whatever the theme, one visible step off the 236 selection tint so
-// a bar never reads as a selected row; the floor keeps plain 100.
-// COLORTERM is deliberately not consulted — the mosh finding
-// (2026-07-31) stands.
+// existed). bgDarkGray stays plain 100 here on every rung: it is
+// TUI-only chrome, and runTUI re-resolves it down the background
+// ladder (chromeBG, 2026-08-27 — a truecolor theme tint when the
+// terminal answers OSC 11, a dark/light-picked neutral bg with the
+// theme's own foreground under mosh). COLORTERM is deliberately not
+// consulted — the mosh finding (2026-07-31) stands.
 func termColors(term string) colors {
 	c := colors{
 		reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
@@ -92,7 +94,6 @@ func termColors(term string) colors {
 	if strings.Contains(term, "256color") {
 		c.dimRed = "\x1b[38;5;131m"
 		c.orange = "\x1b[38;5;208m"
-		c.bgDarkGray = "\x1b[38;5;250;48;5;238m"
 	}
 	return c
 }
