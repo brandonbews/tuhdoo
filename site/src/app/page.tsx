@@ -11,7 +11,7 @@ export default function Home() {
           context with them, and nothing records what actually happened. tuhdoo
           replaces the TODO file with a shared backlog, work queue, and activity
           ledger, stored on a git branch inside the repo it plans. It syncs over
-          the remote you already have and needs no server, no vendor, and no
+          the git remote you already have and needs no server, no vendor, and no
           accounts.
         </p>
         <div className="hero-actions">
@@ -40,13 +40,14 @@ export default function Home() {
       <section className="section">
         <h2>The agent loop</h2>
         <p>
-          Agents connect over{" "}
+          Agents connect over the{" "}
           <a href="https://modelcontextprotocol.io" rel="noopener">
-            MCP
+            Model Context Protocol (MCP)
           </a>{" "}
-          and work one recorded loop. The entire surface is twelve tools, few
-          enough that the whole protocol fits in the single instruction file a
-          harness loads. Every step lands on the ledger, which is the only
+          and work one recorded loop: claim, work, escalate, finish. The entire
+          surface is twelve tools, few enough that the whole protocol fits in
+          the single instruction file an agent harness — the tool that runs your
+          agents — loads. Every step lands on the ledger, which is the only
           continuity between one session and the next.
         </p>
         <div className="card-grid">
@@ -99,12 +100,13 @@ export default function Home() {
       <section className="section">
         <h2>Your loop: capture, shape, drain</h2>
         <p>
-          Capture ideas into the inbox the moment they occur; a title alone is
-          enough, and capture never costs a planning session. Later, work
-          through the pile with an agent and shape captures into real tasks with
-          full descriptions, acceptance criteria, and dependency edges. Then
-          agents drain the ready queue while you watch progress from the tuhdoo
-          TUI and answer escalations on your schedule, not the fleet&apos;s.
+          Capture ideas into the inbox the moment they occur — a title alone is
+          enough, and capturing never drags you into a planning session. Later,
+          work through the pile with an agent and shape captures into real tasks
+          with full descriptions, acceptance criteria, and dependency edges.
+          Then agents drain the ready pool while you watch progress from the
+          tuhdoo TUI (terminal user interface) and answer escalations on your
+          schedule, not the fleet&apos;s.
         </p>
       </section>
 

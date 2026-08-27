@@ -14,7 +14,7 @@ const sora = Sora({
 
 const SITE_TITLE = "tuhdoo: a coordination fabric for agent fleets";
 const SITE_DESCRIPTION =
-  "tuhdoo gives agent fleets a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the remote you already have and needs no server, no vendor, and no accounts.";
+  "tuhdoo gives your coding agents a shared backlog, work queue, and activity ledger, stored on a git branch inside the repo it plans. It syncs over the git remote you already have — no server, no vendor, no accounts.";
 
 export const metadata: Metadata = {
   // www is the canonical host: the apex 308-redirects to it (Vercel domain

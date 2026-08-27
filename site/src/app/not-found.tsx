@@ -19,12 +19,12 @@ export default function NotFound() {
       <section className="hero">
         <h1>404. No such page.</h1>
         <p className="lede">
-          There is no page at this address. Try the docs, or start over from the
-          landing page.
+          There is no page at this address. Try the docs, or head back to the
+          homepage.
         </p>
         <div className="hero-actions">
           <Link className="button" href="/">
-            Back to the start
+            Back to the homepage
           </Link>
           <Link className="button" href="/docs">
             Read the docs
