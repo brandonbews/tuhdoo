@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 7 on hold · 7 inbox · 115 done · 30 cancelled
+0 in progress · 0 ready · 0 blocked · 7 on hold · 7 inbox · 116 done · 30 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -149,6 +147,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding
 - [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) tuhdoo answer: surface ambiguous task fragments as candidate lists
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
+- [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) pnpm/yarn install lines in docs + -h/--help on every subcommand
 - [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer
