@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 4 ready · 0 blocked · 7 on hold · 7 inbox · 111 done · 30 cancelled
+0 in progress · 4 ready · 0 blocked · 7 on hold · 7 inbox · 112 done · 30 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) | One lease-path parser: store loader and merge-time replay must compute the same lease set | — | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -150,6 +148,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace
 - [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) Police escalation.answered task mismatch as malformed, matching claim.confirmed
 - [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) Pin replay edges: holder's late finish counts as done; reconcile the subject-less-event stance
+- [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) One lease-path parser: store loader and merge-time replay must compute the same lease set
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) pnpm/yarn install lines in docs + -h/--help on every subcommand
 - [`tuh-nzry`](tasks/tuh-01KZWXN0X543HQQEHZJ6RJNZRY.md) TUI chrome pass: repo name in header, quiet sync glyph, badge-only-when-special, feedback-only status line
 - [`tuh-qct8`](tasks/tuh-01M0HF5SS536W9JAS2CB2ZQCT8.md) Autodeploy hosts and the data branch: joining.md guidance + Vercel recipe page + init pointer

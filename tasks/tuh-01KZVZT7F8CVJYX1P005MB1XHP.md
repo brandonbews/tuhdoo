@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P005MB1XHP`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `storage` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -22,3 +22,11 @@ Constraints: valid paths parse identically to today; the only behavior change is
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +storage
+
+### 2026-08-27 08:39 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-1xhp/one-lease-parser`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/97>
+- Merged as: `8e93fac`
+
+Landed via PR #97 (squash 8e93fac). store.LeaseClaimID is the one lease-path parser (inverse of leasePath via a shared validClaimID predicate — writer and both readers hold one definition); the store loader and syncer replayTreeAt both use it. Malformed paths (suffix-less, nested, leases/.json, backslash, dotdot) now skip in both readers, erring toward the missing-lease lapsed verdict; valid paths parse identically (leasePath round-trip pinned). TestLeaseClaimID tables the parser; TestMergeReplaySkipsMalformedLeasePaths proves loader and merge-time replay agree on a salted tree, and fails deterministically with the blind parser restored. make test lint green. Binary changed: rebuilt and daemon restarted post-finish.
