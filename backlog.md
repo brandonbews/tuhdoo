@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 4 ready · 0 blocked · 7 on hold · 7 inbox · 112 done · 30 cancelled
+1 in progress · 3 ready · 0 blocked · 7 on hold · 7 inbox · 112 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) | 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding | — | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) | 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding | — | `docs` `audit-finding` |
 | [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) | tuhdoo answer: surface ambiguous task fragments as candidate lists | — | `go` `cli` `audit-finding` |
 | [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) | Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync | — | `go` `daemon` `audit-finding` |
 | [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `go` `storage` `audit-finding` |
