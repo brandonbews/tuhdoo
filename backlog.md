@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 7 on hold · 6 inbox · 116 done · 30 cancelled
+0 in progress · 2 ready · 0 blocked · 7 on hold · 5 inbox · 116 done · 30 cancelled
 
 ## In progress
 
@@ -11,6 +11,7 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
+| [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 
 ## Blocked / waiting
 
@@ -34,7 +35,6 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
-- [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) Batcher.LastError is a reporting channel nobody reads
 - [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
 - [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness: unexercised D6 arms and unasserted claim-response warning
 - [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
