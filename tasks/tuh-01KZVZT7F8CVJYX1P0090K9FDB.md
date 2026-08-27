@@ -22,3 +22,7 @@ Constraints: boring Go — a logger field or callback, nothing clever; store's p
 ### 2026-08-27 14:54 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +storage
+
+### 2026-08-27 15:11 UTC — edit by `brandon/claude-code-1`
+
+retitled · description edited · status open→open · labels edited
