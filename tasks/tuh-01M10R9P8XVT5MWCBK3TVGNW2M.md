@@ -2,7 +2,7 @@
 
 `tuh-01M10R9P8XVT5MWCBK3TVGNW2M`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-27 04:40 UTC by `brandon`
