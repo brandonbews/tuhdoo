@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1NZZWMSKKDT`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `core` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -20,3 +20,11 @@ Acceptance: the named test row exists; doc sentences in internal/core and intern
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +core
+
+### 2026-08-27 08:29 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-kkdt/pin-replay-edges`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/96>
+- Merged as: `4047ef0`
+
+Landed via PR #96 (squash 4047ef0). TestHolderLateFinishLandsDone names the previously-incidental pin: explicitly past-dated holder lease, no competing claim, run.finished(done) lands done with nothing synthesized — the holder-side twin of TestVoidedClaimClosedByRealRunSkipsSynthesis. Doc sentences added at core's apply subject-less rejection and event.New reconciling the stance (current catalog types all have subjects; New's subject-less support is headroom for future types that must arrive with their own apply path). No behavior change; make test lint green. Comments/test only — no deploy needed beyond the routine rebuild.
