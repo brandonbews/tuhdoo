@@ -130,8 +130,9 @@ func (r *Replayer) Replay(in Input) (*State, error) {
 	// attempt the race ended, and its loser owes a closing run — the
 	// daemon coerces any finish_run on it to "superseded". A loser that
 	// never reports leaves a trace anyway: once the voided claim's lease
-	// lapses with no run of that actor's closing the attempt, replay
-	// synthesizes a branch-less superseded run, exactly as interruptedRun
+	// lapses with no run closing the attempt (RunCloses: claim-linked
+	// runs match by claim, legacy runs by the actor+order heuristic),
+	// replay synthesizes a branch-less superseded run, exactly as interruptedRun
 	// does for expired holders. Deterministic at every instant: leases
 	// and Now are replay inputs, and only real runs count as closes
 	// (s.Runs holds no synthesized runs yet). The write-side finish guard
@@ -378,11 +379,20 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		default:
 			return malformed("unknown run outcome %q", p.Outcome)
 		}
-		run := Run{ID: e.ID, Task: e.Task, Actor: e.Actor, Machine: e.Machine,
-			Outcome: p.Outcome, Branch: p.Branch, PR: p.PR,
-			Commits: p.Commits, MergedAs: p.MergedAs, Summary: p.Summary}
+		// The event's own claim field (additive, 2026-08-27) is the real
+		// linkage; a legacy event without one falls back to inferring the
+		// holder's claim below. Never validated against s.Claims: a
+		// dangling reference deterministically links nothing, and the
+		// hold/status semantics never depend on it (T3: replay never
+		// re-judges stored runs).
+		run := Run{ID: e.ID, Task: e.Task, Claim: p.Claim, Actor: e.Actor,
+			Machine: e.Machine, Outcome: p.Outcome, Branch: p.Branch, PR: p.PR,
+			Commits: p.Commits, MergedAs: p.MergedAs, Summary: p.Summary,
+			claimFromEvent: p.Claim != ""}
 		if h := holder[e.Task]; h != nil && h.Status == ClaimActive && h.Actor == e.Actor {
-			run.Claim = h.ID
+			if run.Claim == "" {
+				run.Claim = h.ID
+			}
 			h.Status = ClaimFinished
 			holder[e.Task] = nil
 			if p.Outcome == event.OutcomeDone {
@@ -515,13 +525,31 @@ func supersededRun(c *Claim) Run {
 		Summary: "claim lost its race; lease expired without a report", Synthesized: true}
 }
 
-// closedByRun reports whether a real run of the claim's actor, minted
-// after the claim, closes the attempt — the same one-close-per-attempt
-// rule the daemon's finish guard enforces at write time, so guard and
-// synthesis can never disagree about whether a close is still owed.
+// RunCloses reports whether run r closes the attempt under claim c —
+// the one close-matching rule, shared with the daemon's write-side
+// guard (attemptCloseLocked) so guard and synthesis can never disagree
+// about whether a close is still owed. A run whose event named its
+// claim (the additive run.finished claim field, 2026-08-27) closes
+// exactly that claim — a later attempt by the same actor no longer
+// double-books as an earlier lost attempt's close, erasing its
+// superseded trace (D6 clause 3: one close per attempt) — and a
+// synthesized run likewise binds to its claim. A legacy run, minted
+// before the field existed, keeps the original heuristic — same task,
+// same actor, minted after the claim — so stored history replays to
+// the state it always had (T3).
+func RunCloses(r *Run, c *Claim) bool {
+	if r.Synthesized || r.claimFromEvent {
+		return r.Claim == c.ID
+	}
+	return r.Task == c.Task && r.Actor == c.Actor && r.ID > c.ID
+}
+
+// closedByRun reports whether any run in runs closes the attempt under
+// claim c. At its one call site runs holds only real runs — synthesis
+// is deciding whether it still owes a close.
 func closedByRun(runs []Run, c *Claim) bool {
 	for i := range runs {
-		if r := &runs[i]; r.Task == c.Task && r.Actor == c.Actor && r.ID > c.ID {
+		if RunCloses(&runs[i], c) {
 			return true
 		}
 	}

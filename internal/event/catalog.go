@@ -142,10 +142,16 @@ type ClaimReleased struct {
 // 2026-08-06 linkage grill) is the commit(s) on a durable branch that
 // carry this work, if known — the one pointer that outlives squash and
 // rebase merges, where the branch and its reported commits die at
-// merge. Events written before the field existed carry none and replay
-// unchanged.
+// merge. Claim (additive, 2026-08-27 close-by-claim revision — the T3
+// note in 002) is the claim.made event ID of the attempt this run
+// closes: the daemon's finish guard always resolved it, and recording
+// it lets replay match closes by claim identity instead of inferring
+// by task+actor+order. Events written before either field existed
+// carry none and replay unchanged (claim-less runs through the
+// original inference).
 type RunFinished struct {
 	Outcome  string   `json:"outcome"`
+	Claim    string   `json:"claim"`
 	Branch   string   `json:"branch"`
 	PR       string   `json:"pr"`
 	Commits  []string `json:"commits"`

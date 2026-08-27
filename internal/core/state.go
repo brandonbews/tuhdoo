@@ -100,7 +100,7 @@ type Claim struct {
 type Run struct {
 	ID          string // the run.finished event ID, or the claim ID when synthesized
 	Task        string
-	Claim       string
+	Claim       string // the claim whose attempt this run closes: the event's own claim field (2026-08-27), replay's holder inference for legacy events, or the claim itself when synthesized; empty on legacy non-holder runs
 	Actor       string
 	Machine     string
 	Outcome     string
@@ -110,6 +110,14 @@ type Run struct {
 	MergedAs    []string // commit(s) on a durable branch that carry the work, if known
 	Summary     string
 	Synthesized bool
+
+	// claimFromEvent marks a run whose run.finished event itself named
+	// the claim it closes (the additive claim field, 2026-08-27).
+	// RunCloses matches such runs — and synthesized ones — by claim
+	// identity; for legacy runs, where a non-empty Claim is only
+	// replay's holder inference, it keeps the original task+actor+order
+	// heuristic so stored history replays to the state it always had.
+	claimFromEvent bool
 }
 
 // Escalation is an agent-raised question awaiting a human (D5).

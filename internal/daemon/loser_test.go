@@ -570,3 +570,82 @@ func TestRenewOnceKeepsVoidedClaimsTracked(t *testing.T) {
 		t.Fatalf("active lease not renewed (%s -> %s)", before[active], after[active])
 	}
 }
+
+// TestReclaimAfterLostRaceKeepsBothAttemptsOnRecord is the write side
+// of close-by-claim (2026-08-27). A loser whose claim lost the race
+// may legitimately claim the same task again once the winner walks
+// away; the finish then closes the SECOND attempt — the stored
+// run.finished names its claim — and the first, never-reported attempt
+// keeps its own synthesized superseded trace when its lease lapses,
+// instead of being double-booked closed by the later run (D6 clause 3:
+// one close per attempt).
+func TestReclaimAfterLostRaceKeepsBothAttemptsOnRecord(t *testing.T) {
+	d, c := startDaemon(t)
+	const winner, loser = "brandon/win", "brandon/lose"
+	task := createOne(t, c, "brandon", map[string]any{"title": "raced, then handed back"})
+
+	if _, oe := d.opClaimTask(winner, task); oe != nil {
+		t.Fatalf("winner claim: %v", oe)
+	}
+	lost := mintVoidedClaim(t, d, task, loser, time.Hour)
+	// Leases carry second precision (store/lease.go), so put a full
+	// second between the loser's claim and the winner's release: the
+	// release tombstone must read as strictly after the claim instant,
+	// or replay re-adjudicates the contest's past and hands the loser
+	// the original hold.
+	time.Sleep(1200 * time.Millisecond)
+	if _, _, oe := d.opReleaseClaim(winner, task, "pulled away mid-flight"); oe != nil {
+		t.Fatalf("winner release: %v", oe)
+	}
+	h, oe := d.opClaimTask(loser, task)
+	if oe != nil {
+		t.Fatalf("re-claim by the loser: %v", oe)
+	}
+	again := h.Claim.ID
+
+	res, oe := d.opFinishRun(loser, finishRunReq{
+		Task: task, Outcome: event.OutcomeDone, Summary: "second attempt landed",
+	})
+	if oe != nil {
+		t.Fatalf("finish on the re-claim: %v", oe)
+	}
+	if res.Outcome != event.OutcomeDone {
+		t.Fatalf("recorded outcome = %q, want done: the re-claim is a fresh contest", res.Outcome)
+	}
+
+	// The stored event names the claim it closes.
+	runs := runEvents(t, flushedEvents(t, d))[task]
+	if len(runs) != 1 || runs[0].Claim != again {
+		t.Fatalf("stored runs = %+v, want one naming the re-claim %s", runs, again)
+	}
+
+	// The first attempt's report window closes: its trace appears
+	// beside the done run — two closes, one per attempt.
+	if err := d.store.WriteLease(lost, time.Now().Add(-time.Minute)); err != nil {
+		t.Fatalf("lapse the lost claim's lease: %v", err)
+	}
+	if err := d.Refresh(); err != nil {
+		t.Fatal(err)
+	}
+	d.mu.Lock()
+	var done, synth *core.Run
+	for i := range d.state.Runs {
+		r := &d.state.Runs[i]
+		if r.Task != task {
+			continue
+		}
+		if r.Synthesized {
+			synth = r
+		} else {
+			done = r
+		}
+	}
+	d.mu.Unlock()
+	if done == nil || done.Outcome != event.OutcomeDone || done.Claim != again {
+		t.Fatalf("done run = %+v, want it linked to the second attempt %s", done, again)
+	}
+	if synth == nil || synth.Outcome != event.OutcomeSuperseded ||
+		synth.Claim != lost || synth.Branch != "" {
+		t.Fatalf("lost attempt's close = %+v, want a branch-less synthesized superseded run for claim %s", synth, lost)
+	}
+}

@@ -66,6 +66,7 @@ func goldenEvents(t *testing.T) map[string]Event {
 		}},
 		TypeRunFinished: {0x05, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", RunFinished{
 			Outcome:  OutcomeDone,
+			Claim:    "01BX5ZZKBK2HHHHHHHHHHHHHHH",
 			Branch:   "feat/event-model",
 			PR:       "https://example.com/pr/42",
 			Commits:  []string{"a1b2c3d", "e4f5a6b"},
