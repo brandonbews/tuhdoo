@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P005MB1XHP`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-2`
 - **Priority:** none
 - **Labels:** `go` `storage` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
