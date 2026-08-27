@@ -5,13 +5,21 @@ description: An overview of tuhdoo and the reading order for its docs, from adop
 
 # tuhdoo documentation
 
-Steering coding agents with TODO files breaks at fleet scale: parallel agents trample each other's work, sessions die and take their context with them, and nothing records what actually happened. tuhdoo replaces the TODO file with a shared backlog, work queue, and activity ledger, stored on a git orphan branch inside the repo it plans. The plan travels with the code: one repo, one clone, one history. tuhdoo syncs over the remote you already have and needs no server, no vendor, and no accounts.
+These docs are for teams that steer coding agents with tuhdoo, and for the agents themselves. They take you from adopting tuhdoo on a team through day-to-day steering, and they end with how to remove it.
 
-The docs, in reading order:
+## What tuhdoo is
 
-- [`adopting.md`](adopting.md) is the place to start: what bringing tuhdoo to a team looks like. One person initializes it, teammates join, agents connect, and humans steer from a terminal.
-- [`steering.md`](steering.md) covers the human side of running a backlog: capturing ideas, triaging, promoting tasks to prompt quality, shaping the dependency graph, and answering escalations. It closes with a worked example.
-- [`joining.md`](joining.md) walks a new machine through joining a repo that already uses tuhdoo, and gives the repo admin the branch-protection and CI settings to set once.
-- [`agent-protocol.md`](agent-protocol.md) is the instruction text a harness loads for agents: connecting, the twelve tools, the work loop, and escalation.
-- [`recipes/`](recipes/README.md) collects recommended patterns for the code workflow and host settings around the backlog; they are suggestions, never protocol. Start with the [trunk-based PR flow](recipes/trunk-based-pr-flow.md).
-- [`uninstall.md`](uninstall.md) removes tuhdoo from a machine with zero trace, and retires a team's ledger.
+Steering coding agents with TODO files breaks at fleet scale. Parallel agents trample each other's work. Sessions die and take their context with them. Nothing records what actually happened.
+
+tuhdoo replaces the TODO file with a shared backlog and an activity ledger. Both live on the **data branch**: a git orphan branch inside the repo it plans. The plan travels with the code, so one repo means one clone and one history. tuhdoo syncs through the git remote you already have. It needs no server, no vendor, and no accounts.
+
+## Reading order
+
+Read the docs in this order:
+
+1. [Adopting tuhdoo](adopting.md) — start here. One person initializes tuhdoo, teammates join, agents connect, and humans steer from a terminal.
+2. [Steering a backlog](steering.md) — the human side of running a backlog: capture ideas, triage the inbox, promote tasks to prompt quality, shape the dependency graph, and answer escalations. It closes with a worked example.
+3. [Joining an existing tuhdoo repo](joining.md) — how a new machine joins a repo that already uses tuhdoo, plus the branch-protection and continuous integration (CI) settings the repo admin sets once.
+4. [tuhdoo agent protocol](agent-protocol.md) — the instruction text an agent harness loads: connecting, the twelve tools, the work loop, and escalation.
+5. [Workflow recipes](recipes/README.md) — recommended patterns for the code workflow and host settings around the backlog. Recipes are suggestions, never protocol. Start with the [trunk-based pull request (PR) flow](recipes/trunk-based-pr-flow.md).
+6. [Uninstalling tuhdoo](uninstall.md) — how to remove tuhdoo from a machine with zero trace, and how a team retires its ledger.
