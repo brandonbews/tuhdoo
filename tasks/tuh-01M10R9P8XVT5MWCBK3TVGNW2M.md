@@ -2,7 +2,7 @@
 
 `tuh-01M10R9P8XVT5MWCBK3TVGNW2M`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `tui` `go`
 - **Created:** 2026-08-27 04:40 UTC by `brandon`
@@ -36,4 +36,10 @@ Brandon's steering after PR #86 (2026-08-26, structured question answered): the 
 
 ## History
 
-_No activity yet._
+### 2026-08-27 04:45 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-nw2m/theme-derived-dim`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/87>
+- Merged as: `b48c9d6b22882756e0ca239c8735c8893c068e8a`
+
+All acceptance criteria met; squash-merged to main as b48c9d6 (PR #87), make test lint green. col.dim is ANSI 90 (bright-black foreground) on every rung — the theme's own muted gray (gruvbox dark: #928374); the dim ladder entry retired and floor byte-identity for dim deliberately ended (steering 2026-08-26; solarized-slot-8 caveat recorded in the law comment). bgDarkGray gained a rung entry: task-view and CANCELLED bars render fg 250 on bg 238 on 256color TERMs — dark, legible on light themes, one step off the 236 selection tint — floor keeps plain 100. termColors rung overrides now dimRed/orange/bgDarkGray. All dim golden pins updated (TUI, CLI, textinput hint); rung noFaint sweeps green. Daemon redeploy follows this finish_run.
