@@ -175,6 +175,9 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		return &ReplayError{EventID: e.ID, Type: e.Type, V: e.V,
 			Sentinel: ErrMalformedEvent, Reason: fmt.Sprintf(format, args...)}
 	}
+	// Every current catalog type has a subject task, so a subject-less
+	// event can only be garbage; event.New's subject-less support serves
+	// future types, which must be given an apply path when they arrive.
 	if e.Task == "" {
 		return malformed("event has no subject task")
 	}
