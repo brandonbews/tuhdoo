@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P009PAE9QM`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `cli` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -22,3 +22,11 @@ Constraints: error wording follows the existing resolver ambiguity messages; no 
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +cli
+
+### 2026-08-27 08:53 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-e9qm/answer-ambiguity`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/99>
+- Merged as: `bc3d545`
+
+Landed via PR #99 (squash bc3d545). resolveTaskID's ambiguity case now returns a typed ambiguityError (wording unchanged); resolveEscalation propagates exactly that shape via errors.As, so tuhdoo answer with an ambiguous task fragment lists the task candidates per the T7 contract, while not-found still falls through to escalation-ID matching. TestAnswerAmbiguousTaskFragment pins both (shared-ULID-timestamp-prefix trick for deterministic ambiguity; red-green verified). make test lint green. Binary changed: rebuilt and daemon restarted post-finish.
