@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 7 on hold · 7 inbox · 115 done · 30 cancelled
+1 in progress · 0 ready · 0 blocked · 7 on hold · 7 inbox · 115 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `brandon/claude-code-2` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `go` `storage` `audit-finding` |
+_None._
 
 ## Blocked / waiting
 
