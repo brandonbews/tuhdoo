@@ -426,6 +426,63 @@ func TestLeaseMergeTombstoneRules(t *testing.T) {
 	}
 }
 
+// TestMergeReplaySkipsMalformedLeasePaths pins both readers of the
+// lease tree to the one parser (store.LeaseClaimID): lease files at
+// paths no writer could have produced — no .json suffix, nested, or the
+// empty claim ID "leases/.json" — are noise to the store loader AND to
+// merge-time replay. Before the shared parser, replayTreeAt ingested
+// them blindly ("leases/c1" read as a live lease for c1), so a merge
+// could replay a lease set the daemon's own loader would never compute.
+func TestMergeReplaySkipsMalformedLeasePaths(t *testing.T) {
+	a, _ := newPair(t)
+	c1 := tick(t, 2) // its only "leases" sit at malformed paths
+	c2 := tick(t, 4) // has a well-formed lease
+
+	future := testBase.Add(time.Hour)
+	live := []byte(`{"expires":"` + future.Format(time.RFC3339) + `"}`)
+
+	if err := a.store.AppendBatch(store.Batch{Events: []event.Event{
+		evt(t, 1, event.TypeTaskCreated, "brandon", "m-a", "t1", event.TaskCreated{Title: "fix login"}),
+		evt(t, 2, event.TypeClaimMade, "brandon/impl-1", "m-a", "t1", event.ClaimMade{}),
+		evt(t, 3, event.TypeTaskCreated, "brandon", "m-a", "t2", event.TaskCreated{Title: "fix logout"}),
+		evt(t, 4, event.TypeClaimMade, "brandon/impl-2", "m-a", "t2", event.ClaimMade{}),
+	}, Files: map[string][]byte{
+		// c1's lease bytes are valid but live only at paths leasePath
+		// cannot produce; a blind TrimPrefix/TrimSuffix reader would take
+		// the first as a live lease for c1.
+		"leases/" + c1:                  live,
+		"leases/nested/" + c1 + ".json": live,
+		"leases/.json":                  live,
+		// c2's lease is well-formed.
+		"leases/" + c2 + ".json": live,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The store loader's lease set: the well-formed file, nothing else.
+	leases, err := a.store.ReadLeases()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(leases) != 1 || !leases[c2].Equal(future) {
+		t.Fatalf("loader lease set = %v, want only %s at %v", leases, c2, future)
+	}
+
+	// Merge-time replay of the same tree must agree: c1's malformed
+	// leases skipped — claim expired, the missing-lease verdict — and c2
+	// active on its well-formed one.
+	st, err := a.sync.replayTreeAt(head(t, a), testBase.Add(10*time.Minute))
+	if err != nil {
+		t.Fatalf("replayTreeAt: %v", err)
+	}
+	if got := st.Claims[c1].Status; got != core.ClaimExpired {
+		t.Errorf("claim with only malformed lease paths = %s, want %s", got, core.ClaimExpired)
+	}
+	if got := st.Claims[c2].Status; got != core.ClaimActive {
+		t.Errorf("claim with well-formed lease = %s, want %s", got, core.ClaimActive)
+	}
+}
+
 func TestNewerPeerOwnsViews(t *testing.T) {
 	a, b := newPair(t)
 

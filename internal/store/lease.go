@@ -29,11 +29,38 @@ type leaseFile struct {
 	Released bool   `json:"released,omitempty"`
 }
 
+// validClaimID reports whether claimID can name a lease file: non-empty,
+// no path separators, no "..". leasePath and LeaseClaimID share it, so
+// the writer and both readers hold the same idea of a lease path.
+func validClaimID(claimID string) bool {
+	return claimID != "" && !strings.ContainsAny(claimID, "/\\") && !strings.Contains(claimID, "..")
+}
+
 func leasePath(claimID string) (string, error) {
-	if claimID == "" || strings.ContainsAny(claimID, "/\\") || strings.Contains(claimID, "..") {
+	if !validClaimID(claimID) {
 		return "", fmt.Errorf("store: invalid claim id %q", claimID)
 	}
 	return "leases/" + claimID + ".json", nil
+}
+
+// LeaseClaimID parses a lease tree path back to the claim ID it names —
+// the inverse of leasePath. It is the one lease-path parser: the store
+// loader and the sync layer's merge-time replay both go through it, so
+// every reader of a tree computes the same lease set. A path no writer
+// could have produced (wrong prefix, no .json suffix, nested, or an
+// invalid claim ID — "leases/.json" included) reports ok false; readers
+// skip such files, which errs toward "lease lapsed" — replay's existing
+// posture for a missing lease.
+func LeaseClaimID(path string) (string, bool) {
+	claimID, ok := strings.CutPrefix(path, "leases/")
+	if !ok {
+		return "", false
+	}
+	claimID, ok = strings.CutSuffix(claimID, ".json")
+	if !ok || !validClaimID(claimID) {
+		return "", false
+	}
+	return claimID, true
 }
 
 // encodeLease renders lease-file bytes for an expiry (UTC, second
