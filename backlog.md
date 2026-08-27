@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 0 blocked · 7 on hold · 7 inbox · 114 done · 30 cancelled
+1 in progress · 1 ready · 0 blocked · 7 on hold · 7 inbox · 114 done · 30 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) | Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync | — | `brandon/claude-code-2` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) | Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync | — | `go` `daemon` `audit-finding` |
 | [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) | LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs | — | `go` `storage` `audit-finding` |
 
 ## Blocked / waiting
