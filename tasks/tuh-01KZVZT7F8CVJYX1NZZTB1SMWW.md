@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1NZZTB1SMWW`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `core` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -22,3 +22,11 @@ Constraints: stored event bytes never rewritten (T3); additive schema only, with
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go +core
+
+### 2026-08-27 08:18 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-smww/close-by-claim`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/94>
+- Merged as: `eb7f94d`
+
+Landed via PR #94 (squash eb7f94d). run.finished gained an additive claim field (no version bump; 002 T3 revision note dated 2026-08-27); the finish guard resolves which attempt a finish closes and writeRunLocked records it; the one close-matching rule is core.RunCloses, shared by replay synthesis and attemptCloseLocked — claim-linked and synthesized runs match by claim identity, legacy events keep the original task+actor+order heuristic verbatim (fallback scoped by the event via an unexported claimFromEvent marker, so existing ledgers replay to identical state — pinned by a raw-map legacy test). The re-claim scenario now yields two closes per D6 clause 3, verified across all 720 arrival orders plus a daemon end-to-end test. One deliberate write-side divergence documented in the PR body: the superseded coercion keys off the guard-resolved claim, fixing the degenerate self-race shape where an honest active-hold finish was coerced to superseded. make test lint green. Binary changed: rebuilt and daemon restarted post-finish.
