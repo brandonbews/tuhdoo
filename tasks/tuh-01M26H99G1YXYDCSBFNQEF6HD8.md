@@ -2,10 +2,10 @@
 
 `tuh-01M26H99G1YXYDCSBFNQEF6HD8`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `gitx` `store` `daemon` `cli`
-- **Depends on:** [`tuh-1bap`](tuh-01M26H99BZBCHHZX7G98X41BAP.md) (open)
+- **Depends on:** [`tuh-1bap`](tuh-01M26H99BZBCHHZX7G98X41BAP.md) (done)
 - **Created:** 2026-09-10 20:48 UTC by `brandon`
 
 ## Description

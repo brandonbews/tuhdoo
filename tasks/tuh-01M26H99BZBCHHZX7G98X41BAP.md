@@ -2,7 +2,7 @@
 
 `tuh-01M26H99BZBCHHZX7G98X41BAP`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `design` `docs` `design-revision`
 - **Created:** 2026-09-10 20:48 UTC by `brandon`
@@ -39,4 +39,10 @@ Constraints: docs only. Do not un-accept any previously accepted consequence; ad
 
 ## History
 
-_No activity yet._
+### 2026-09-10 23:15 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M26H99BZ/design-live-replica`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/102>
+- Merged as: `2919067dc5d670369d518b5ec4ee0bbae4cd1225`
+
+Landed as PR #102 (squash 2919067). Dated in-place revision notes on 001 (D2, D3, D6 clause 5, D9) and 002 (T2, T4, T5, T6, T7, T8) record every clause of the 2026-09-10 live-replica grill with its accepted consequence; captures tuh-01M11XDA6ST74WD1JWCWEAW1V2, tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1, tuh-01KZWNMJH264W3B3TGNP7FP51R cited where their evidence is used. A code-review pass surfaced factual gaps that the second commit closes (remoteless ref check, index reseed on every head reload, snapshot answers when version differs from since, starting-window per client, fleet cost of lapse commits). Four review findings dispute settled decisions and are listed on the PR for Brandon rather than acted on. Side capture: tuh-01M26JSHKSEQ0MJYBK1NK18X1S (shim stdin test fails under Go 1.27 locally; CI on 1.26 green).
