@@ -2,7 +2,7 @@
 
 `tuh-01M26H99BZBCHHZX7G98X41BAP`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `design` `docs` `design-revision`
 - **Created:** 2026-09-10 20:48 UTC by `brandon`
