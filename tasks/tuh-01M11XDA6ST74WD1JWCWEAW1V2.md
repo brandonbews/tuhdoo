@@ -2,7 +2,7 @@
 
 `tuh-01M11XDA6ST74WD1JWCWEAW1V2`
 
-- **Status:** inbox — untriaged capture
+- **Status:** cancelled
 - **Priority:** none
 - **Labels:** `go` `daemon` `tui`
 - **Created:** 2026-08-27 15:28 UTC by `brandon/claude-code-1`
@@ -19,6 +19,10 @@ Honest accounting: the k62e task description (written at the 2026-08-27 audit tr
 
 Candidate directions for triage (each has design surface — none decided): TUI-side batch hydration (one state fetch per tick instead of N get_tasks); refreshLocked memo (no-op when head unchanged and now is within the same evaluation instant — replay purity untouched, the daemon memoizes the trigger); lease-verdict-only fast path for reads; working-set retirement (tuh-01KZA0VT234XJYVZWT980V7K2Y) bounds N and was predicted to be this pressure's owner. Cross-link: tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1 owns the write-side view-regen half.
 
+Superseded 2026-09-10 (grill with Brandon, the live-replica plan): the mechanism captured here is fixed by design across tuh-01M26H99BZBCHHZX7G98X41BAP (design revision), tuh-01M26H99G1YXYDCSBFNQEF6HD8 (step 1: batch reads, bind-before-load), tuh-01M26H99M5ZYK5NSGDKQT3K0ZX (step 2: store as live replica), tuh-01M26H99QVANVJCXR9FM2Z8Q7X (step 3: versioned state, long-poll snapshot, views follow the version). Cancelled to keep this evidence on the ledger; the new tasks cite this ID.
+
 ## History
 
-_No activity yet._
+### 2026-09-10 20:49 UTC — edit by `brandon`
+
+description edited · status inbox→cancelled

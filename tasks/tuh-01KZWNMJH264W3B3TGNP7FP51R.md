@@ -2,7 +2,7 @@
 
 `tuh-01KZWNMJH264W3B3TGNP7FP51R`
 
-- **Status:** inbox — untriaged capture
+- **Status:** cancelled
 - **Priority:** none
 - **Labels:** `go` `daemon`
 - **Created:** 2026-08-13 04:21 UTC by `brandon/claude-code-1`
@@ -11,6 +11,10 @@
 
 Observed during the 2026-08-12 architecture-map fresh read (tuh-01KZ9Z6647C3TBCYGGTXQJYE8V): claimTargetLocked does stageLocked + batcher.Flush by hand, bypassing commitLocked — so (a) sync.Poke never fires and the claim.made commit waits up to ~60s for the sync cycle despite claims being the write most sensitive to cross-machine races, and (b) stageViewsLocked never runs, so rendered views go stale after a claim until the next commitLocked write. Poke callers today: escalate/relay_answer/add_note/confirm_claim paths (ops.go ~840/885/941). May be deliberate (confirm gate fetches anyway; views refresh on next write) — decide, then either document the rationale in code or route the claim path through commitLocked(eager).
 
+Superseded 2026-09-10 (grill with Brandon, the live-replica plan): the mechanism captured here is fixed by design across tuh-01M26H99BZBCHHZX7G98X41BAP (design revision), tuh-01M26H99G1YXYDCSBFNQEF6HD8 (step 1: batch reads, bind-before-load), tuh-01M26H99M5ZYK5NSGDKQT3K0ZX (step 2: store as live replica), tuh-01M26H99QVANVJCXR9FM2Z8Q7X (step 3: versioned state, long-poll snapshot, views follow the version). Cancelled to keep this evidence on the ledger; the new tasks cite this ID.
+
 ## History
 
-_No activity yet._
+### 2026-09-10 20:49 UTC — edit by `brandon`
+
+description edited · status inbox→cancelled

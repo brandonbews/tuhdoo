@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 3 blocked · 7 on hold · 6 inbox · 116 done · 30 cancelled
+0 in progress · 4 ready · 3 blocked · 7 on hold · 3 inbox · 116 done · 33 cancelled
 
 ## In progress
 
@@ -42,10 +42,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 Untriaged captures — promoting one to open means writing it a real (prompt-quality) description first.
 
 - [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
-- [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
-- [`tuh-hgy1`](tasks/tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1.md) Claim/release writes skip view regen — data-branch markdown never shows in-progress
 - [`tuh-hv8a`](tasks/tuh-01M10ZA2VCJ59WWYZG58RXHV8A.md) Grill: internal-docs tiering — decision records vs living mirrors vs stale artifacts
-- [`tuh-w1v2`](tasks/tuh-01M11XDA6ST74WD1JWCWEAW1V2.md) get_task read-time refresh under TUI per-task polling saturates the daemon; writes starve for minutes
 - [`tuh-s5fw`](tasks/tuh-01M11XDA6ST74WD1JWCY0GS5FW.md) TUI pane grew to 3.4GB RSS overnight; a longer-lived pane sits at 21MB
 
 ## Done
@@ -194,8 +191,11 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-d1vc`](tasks/tuh-01KZVR3YFA5S14VWWXCWP5D1VC.md) Test the escalation flow as a human
 - [`tuh-jh5j`](tasks/tuh-01KZVZT7F8CVJYX1P000JQJH5J.md) T6 doc drift: view stamp documented at views/.meta, lives at .views-meta.json
 - [`tuh-a3a9`](tasks/tuh-01KZVZT7F8CVJYX1P003BNA3A9.md) D9 epoch compaction is on a collision course with the events union merge
+- [`tuh-p51r`](tasks/tuh-01KZWNMJH264W3B3TGNP7FP51R.md) claim_next lands commits but never pokes the syncer and never regenerates views — deliberate or gap?
+- [`tuh-hgy1`](tasks/tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1.md) Claim/release writes skip view regen — data-branch markdown never shows in-progress
 - [`tuh-8yx9`](tasks/tuh-01M0Y9RRTNW66Y0TM0NXJH8YX9.md) placeholder: p0 badge color check
 - [`tuh-4s4r`](tasks/tuh-01M0Y9RRWYPC9GYAJWYWXK4S4R.md) placeholder: p1 badge color check
 - [`tuh-k6vs`](tasks/tuh-01M0Y9RRZ088WXC3WQ4SXAK6VS.md) placeholder: p2 badge color check
 - [`tuh-20sn`](tasks/tuh-01M0Y9RS12CV9HYGZ9H4AT20SN.md) placeholder: p3 badge color check
 - [`tuh-s7mj`](tasks/tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ.md) placeholder: cancelled-row p0 badge check
+- [`tuh-w1v2`](tasks/tuh-01M11XDA6ST74WD1JWCWEAW1V2.md) get_task read-time refresh under TUI per-task polling saturates the daemon; writes starve for minutes

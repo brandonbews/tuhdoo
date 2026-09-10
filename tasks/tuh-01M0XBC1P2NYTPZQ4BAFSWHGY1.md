@@ -2,7 +2,7 @@
 
 `tuh-01M0XBC1P2NYTPZQ4BAFSWHGY1`
 
-- **Status:** inbox — untriaged capture
+- **Status:** cancelled
 - **Priority:** none
 - **Created:** 2026-08-25 20:56 UTC by `brandon/claude-code-2`
 
@@ -20,6 +20,10 @@ Two constraints on any fix (surface at triage; fix shape has design surface — 
 
 Pointers: internal/daemon/ops.go:357 (claimTargetLocked), ops.go:458 (releaseLocked), internal/daemon/daemon.go:435 (commitLocked), daemon.go:460 (stageViewsLocked), internal/views/views.go:191 (In progress section), internal/syncer/syncer.go:24 (60s interval). Renewals correctly skip regen (rendered words don't change); opConfirmClaim renders nothing view-visible either.
 
+Superseded 2026-09-10 (grill with Brandon, the live-replica plan): the mechanism captured here is fixed by design across tuh-01M26H99BZBCHHZX7G98X41BAP (design revision), tuh-01M26H99G1YXYDCSBFNQEF6HD8 (step 1: batch reads, bind-before-load), tuh-01M26H99M5ZYK5NSGDKQT3K0ZX (step 2: store as live replica), tuh-01M26H99QVANVJCXR9FM2Z8Q7X (step 3: versioned state, long-poll snapshot, views follow the version). Cancelled to keep this evidence on the ledger; the new tasks cite this ID.
+
 ## History
 
-_No activity yet._
+### 2026-09-10 20:49 UTC — edit by `brandon`
+
+description edited · status inbox→cancelled
