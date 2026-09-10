@@ -33,6 +33,11 @@ Pointers: internal/core/replay.go (leaseExpiredBy, Input.Now), internal/daemon/d
 
 Constraints: T5 twelve tools unchanged; T7 output contract byte-identical; boring Go (one mutex, one timer, one channel); replay purity untouched; nothing under .github/workflows. Deploy after landing per CLAUDE.md; note that the restart kills live MCP sessions.
 
+
+Added 2026-09-10: one more manual acceptance item, in the PR body. Leave an armed pane open against the new daemon for at least one hour with the ledger active (a drain session running is ideal) and record its RSS at start and end from ps; it must be flat within a few MB. This is the verification for tuh-01M11XDA6ST74WD1JWCY0GS5FW (3.4GB pane overnight), which is triaged as the pile-up this step removes; cite that ID in the PR body with the numbers.
+
 ## History
 
-_No activity yet._
+### 2026-09-10 20:59 UTC — edit by `brandon`
+
+description edited
