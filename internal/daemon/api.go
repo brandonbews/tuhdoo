@@ -415,7 +415,7 @@ type stateResp struct {
 
 // syncJSON is the sync loop's health for status surfaces.
 type syncJSON struct {
-	Mode       string `json:"mode"` // local-only | syncing | error
+	Mode       string `json:"mode"` // starting | local-only | syncing | error
 	Remote     string `json:"remote,omitempty"`
 	LastFetch  string `json:"last_fetch,omitempty"` // RFC3339
 	LastPush   string `json:"last_push,omitempty"`
@@ -448,6 +448,20 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	resp := stateResp{
+		Tasks:           []stateTask{},
+		OpenEscalations: []escalationJSON{},
+		Runs:            []runJSON{},
+	}
+	// Until the first replay lands there is no state to serve: answer
+	// sync mode "starting" with nothing else — the shape the clients'
+	// state loop already retries (T4 startup order, 2026-09-10).
+	if !d.loaded {
+		resp.Sync = syncJSON{Mode: "starting"}
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+	resp.Sync = syncJSONOf(d.sync.Status())
 	// Lease verdicts move with the clock, so replay at the current
 	// instant first (D6: expiry is evaluated at read time) — the status
 	// poll must not render a lapsed lease as a live holder. Degraded
@@ -457,12 +471,6 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 			writeOpError(w, d.writeErrLocked(err))
 			return
 		}
-	}
-	resp := stateResp{
-		Sync:            syncJSONOf(d.sync.Status()),
-		Tasks:           []stateTask{},
-		OpenEscalations: []escalationJSON{},
-		Runs:            []runJSON{},
 	}
 	if d.degraded != nil {
 		resp.Degraded = d.degraded.Error()

@@ -89,7 +89,10 @@ func startDaemonOpts(t *testing.T, opts Options) (*Daemon, *http.Client) {
 
 // startDaemonAt starts a daemon on an existing repository — for tests
 // that wire remotes or run multiple daemons around one bare repo
-// (gate_test.go). Callers own the git setup.
+// (gate_test.go). Callers own the git setup. It returns once the first
+// replay has landed: Run loads the ledger behind the socket (T4
+// startup order), and these tests want a loaded daemon, not a
+// "starting" one.
 func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Client) {
 	t.Helper()
 	d, err := New(root, opts)
@@ -98,6 +101,7 @@ func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Clie
 	}
 	go d.Run()
 	t.Cleanup(func() { d.Shutdown("test cleanup") })
+	waitLoaded(t, d)
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -107,6 +111,26 @@ func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Clie
 		},
 	}
 	return d, client
+}
+
+// waitLoaded blocks until d's first replay has landed, failing the test
+// if the load failed or takes unreasonably long.
+func waitLoaded(t *testing.T, d *Daemon) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		d.mu.Lock()
+		loaded, startErr := d.loaded, d.startErr
+		d.mu.Unlock()
+		if startErr != nil {
+			t.Fatalf("daemon failed its first load: %v", startErr)
+		}
+		if loaded {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("daemon did not finish its first load within 10s")
 }
 
 // do performs one API request. It never touches t, so it is safe from
@@ -1048,6 +1072,10 @@ func TestShutdownFinalSyncPushesPendingCommits(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	t.Cleanup(func() { d.Shutdown("test cleanup") })
+	// The load half of startup, without Run's sync loop.
+	if err := d.load(); err != nil {
+		t.Fatalf("load: %v", err)
+	}
 
 	// Debounced, not eager: the write sits in the batcher, and nothing
 	// has ever pushed — the remote does not even have the branch yet.

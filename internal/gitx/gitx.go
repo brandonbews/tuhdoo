@@ -90,8 +90,28 @@ type Git interface {
 	// ErrRefNotFound.
 	ReadRef(ref string) (oid string, err error)
 
-	// CatFile returns the exact bytes of the blob at oid.
+	// CatFile returns the exact bytes of the blob at oid. It is
+	// CatFiles for one object: the batch format is parsed in exactly
+	// one place.
 	CatFile(oid string) (data []byte, err error)
+
+	// CatFiles returns the exact bytes of every blob named in oids,
+	// keyed by OID, read through one `git cat-file --batch` process
+	// (T2, 2026-09-10: reads are batched — a cold start is one process
+	// for the whole tree, not one per blob). Duplicate OIDs are read
+	// once. An OID the repository lacks is an error naming it, never a
+	// silently absent key (T3's fail-safe posture: a load that cannot
+	// read an object must fail, not skip it); an OID naming a non-blob
+	// is an error too. Empty input spawns nothing and returns an empty
+	// map.
+	CatFiles(oids []string) (map[string][]byte, error)
+
+	// BlobOID returns the object ID git would assign data as a blob —
+	// the hash of "blob <len>\0<bytes>" in the repository's object
+	// format (SHA-1 or SHA-256) — without writing anything. Local OIDs
+	// exist to diff in-memory bytes against a tree (T2, 2026-09-10);
+	// HashObject remains the only way an object is written.
+	BlobOID(data []byte) string
 
 	// LsTree lists every blob reachable from rev (a tree or commit OID,
 	// or a ref) as path → blob OID, recursing into subtrees.

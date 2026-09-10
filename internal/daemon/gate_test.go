@@ -337,6 +337,9 @@ func TestConfirmClaimGateRetryExhaustion(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	t.Cleanup(func() { d.Shutdown("test cleanup") })
+	if err := d.load(); err != nil { // the load half of startup, no sync loop
+		t.Fatalf("load: %v", err)
+	}
 	mustCycle(t, d) // publish the data branch: the bare now has a head to move
 
 	const actor = "brandon/impl-1"

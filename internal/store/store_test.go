@@ -543,16 +543,68 @@ func TestFilesRideBatchesAndReadFile(t *testing.T) {
 	assertNoWorktreeFiles(t, dir)
 }
 
-// countingGit counts CatFile calls, to observe the decode caches: blobs
-// are content-addressed, so each one should be read from git only once.
+// countingGit counts CatFiles calls and the blobs they carry, to observe
+// the decode caches and the batching: blobs are content-addressed, so
+// each one should be read from git only once, and everything one load
+// needs should arrive in one call.
 type countingGit struct {
 	gitx.Git
-	catFiles int
+	calls int // CatFiles calls (one subprocess each)
+	blobs int // OIDs requested across those calls
 }
 
-func (g *countingGit) CatFile(oid string) ([]byte, error) {
-	g.catFiles++
-	return g.Git.CatFile(oid)
+func (g *countingGit) CatFiles(oids []string) (map[string][]byte, error) {
+	g.calls++
+	g.blobs += len(oids)
+	return g.Git.CatFiles(oids)
+}
+
+// One batch per load (T2, 2026-09-10): N never-seen events cost exactly
+// one CatFiles call carrying all N OIDs — one process, not N — and a
+// second load with the caches warm issues none.
+func TestLoadReplayInputBatchesNeverSeenBlobs(t *testing.T) {
+	setGitEnv(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "--quiet", "-b", "main")
+	g, err := gitx.New(dir)
+	if err != nil {
+		t.Fatalf("gitx.New: %v", err)
+	}
+	cg := &countingGit{Git: g}
+	s := New(cg, "", testIdent)
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	const n = 25
+	evs := make([]event.Event, n)
+	for i := range evs {
+		evs[i] = newEvent(t, i)
+	}
+	if err := s.AppendBatch(Batch{Events: evs}); err != nil {
+		t.Fatalf("AppendBatch: %v", err)
+	}
+	if err := s.WriteLease("c1", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("WriteLease: %v", err)
+	}
+
+	events, leases, err := s.LoadReplayInput()
+	if err != nil {
+		t.Fatalf("LoadReplayInput: %v", err)
+	}
+	if len(events) != n || len(leases) != 1 {
+		t.Fatalf("first load = %d events, %d leases; want %d and 1", len(events), len(leases), n)
+	}
+	if cg.calls != 1 || cg.blobs != n+1 {
+		t.Fatalf("first load issued %d CatFiles calls for %d blobs; want exactly 1 call for %d", cg.calls, cg.blobs, n+1)
+	}
+
+	if _, _, err := s.LoadReplayInput(); err != nil {
+		t.Fatalf("second LoadReplayInput: %v", err)
+	}
+	if cg.calls != 1 {
+		t.Fatalf("second load issued %d more CatFiles calls; want 0 — every blob is cached", cg.calls-1)
+	}
+	assertNoWorktreeFiles(t, dir)
 }
 
 // The decode caches mean repeated loads cost no cat-file subprocesses:
@@ -589,8 +641,8 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 	if len(events1) != 3 || len(leases1) != 1 || !leases1["c1"].Equal(exp1) {
 		t.Fatalf("first load = %d events, leases %v; want 3 events, c1 -> %v", len(events1), leases1, exp1)
 	}
-	if cg.catFiles != 4 {
-		t.Errorf("first load read %d blobs, want 4 (3 events + 1 lease)", cg.catFiles)
+	if cg.calls != 1 || cg.blobs != 4 {
+		t.Errorf("first load read %d blobs in %d calls, want 4 (3 events + 1 lease) in 1", cg.blobs, cg.calls)
 	}
 
 	// Second load with nothing changed: zero blob reads, same results.
@@ -598,8 +650,8 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second LoadReplayInput: %v", err)
 	}
-	if cg.catFiles != 4 {
-		t.Errorf("unchanged reload read %d extra blobs, want 0", cg.catFiles-4)
+	if cg.calls != 1 {
+		t.Errorf("unchanged reload issued %d extra CatFiles calls, want 0", cg.calls-1)
 	}
 	if !reflect.DeepEqual(events1, events2) || !reflect.DeepEqual(leases1, leases2) {
 		t.Errorf("cached reload changed results:\nevents %v vs %v\nleases %v vs %v",
@@ -616,8 +668,8 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("post-renewal LoadReplayInput: %v", err)
 	}
-	if cg.catFiles != 5 {
-		t.Errorf("renewal reload read %d extra blobs, want 1", cg.catFiles-4)
+	if cg.calls != 2 || cg.blobs != 5 {
+		t.Errorf("renewal reload read %d extra blobs in %d extra calls, want 1 in 1", cg.blobs-4, cg.calls-1)
 	}
 	if !leases3["c1"].Equal(exp2) {
 		t.Errorf("post-renewal lease = %v, want %v", leases3["c1"], exp2)
@@ -637,8 +689,8 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 	if len(events4) != 4 {
 		t.Errorf("post-append load = %d events, want 4", len(events4))
 	}
-	if cg.catFiles != 6 {
-		t.Errorf("post-append reload read %d extra blobs, want 1", cg.catFiles-5)
+	if cg.calls != 3 || cg.blobs != 6 {
+		t.Errorf("post-append reload read %d extra blobs in %d extra calls, want 1 in 1", cg.blobs-5, cg.calls-2)
 	}
 
 	// Releasing a lease overwrites it with a tombstone blob: one new
@@ -652,9 +704,9 @@ func TestLoadReplayInputCachesDecodes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("post-release LoadReplayInput: %v", err)
 	}
-	if len(leases5) != 1 || !leases5["c1"].Equal(releasedAt) || len(s.leaseByOID) != 1 || cg.catFiles != 7 {
-		t.Errorf("post-release: leases %v, cache %d, blob reads %d; want c1 -> %v, 1, 7",
-			leases5, len(s.leaseByOID), cg.catFiles, releasedAt)
+	if len(leases5) != 1 || !leases5["c1"].Equal(releasedAt) || len(s.leaseByOID) != 1 || cg.blobs != 7 || cg.calls != 4 {
+		t.Errorf("post-release: leases %v, cache %d, blob reads %d in %d calls; want c1 -> %v, 1, 7, 4",
+			leases5, len(s.leaseByOID), cg.blobs, cg.calls, releasedAt)
 	}
 
 	assertNoWorktreeFiles(t, dir)

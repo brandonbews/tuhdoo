@@ -222,9 +222,13 @@ func (s *Store) LoadEvents() ([]event.Event, error) {
 // LoadReplayInput reads everything replay consumes from the current
 // head in one tree walk: events under events/ (path order, which is
 // ULID-date order) and leases under leases/. Only blobs never decoded
-// by this Store are read from git; everything else is served from the
-// content-addressed caches, so the subprocess cost of a load is one
-// rev-parse, one ls-tree, and a cat-file per genuinely new blob.
+// by this Store are read from git — everything else is served from the
+// content-addressed caches — and those are read in one batch (T2,
+// 2026-09-10: one `cat-file --batch` for the whole tree), so the
+// subprocess cost of a load is one rev-parse, one ls-tree, and one
+// cat-file when anything is new; none when nothing is. Rendered views
+// are never read back: only their object IDs pass through here, in the
+// tree listing.
 func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 	head, err := s.git.ReadRef(s.ref)
 	if err != nil {
@@ -237,6 +241,33 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// First pass: which blobs does this load need that the caches lack?
+	var need []string
+	for _, entry := range entries {
+		switch {
+		case strings.HasPrefix(entry.Path, "events/"):
+			if _, ok := s.eventByOID[entry.OID]; !ok {
+				need = append(need, entry.OID)
+			}
+		case strings.HasPrefix(entry.Path, "leases/"):
+			if _, ok := LeaseClaimID(entry.Path); !ok {
+				continue
+			}
+			if _, ok := s.leaseByOID[entry.OID]; !ok {
+				need = append(need, entry.OID)
+			}
+		}
+	}
+	blobs := map[string][]byte{}
+	if len(need) > 0 {
+		blobs, err = s.git.CatFiles(need)
+		if err != nil {
+			return nil, nil, fmt.Errorf("store: load: %w", err)
+		}
+	}
+
+	// Second pass: decode what was fetched, serve the rest from cache.
 	var events []event.Event
 	leases := make(map[string]time.Time)
 	liveLeases := make(map[string]time.Time)
@@ -245,9 +276,9 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 		case strings.HasPrefix(entry.Path, "events/"):
 			e, ok := s.eventByOID[entry.OID]
 			if !ok {
-				data, err := s.git.CatFile(entry.OID)
-				if err != nil {
-					return nil, nil, fmt.Errorf("store: load events: %s: %w", entry.Path, err)
+				data, ok := blobs[entry.OID]
+				if !ok {
+					return nil, nil, fmt.Errorf("store: load events: %s: blob %s not returned by cat-file", entry.Path, entry.OID)
 				}
 				e, err = event.Decode(data)
 				if err != nil {
@@ -264,9 +295,9 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 			}
 			expires, ok := s.leaseByOID[entry.OID]
 			if !ok {
-				data, err := s.git.CatFile(entry.OID)
-				if err != nil {
-					return nil, nil, fmt.Errorf("store: read leases: %s: %w", entry.Path, err)
+				data, ok := blobs[entry.OID]
+				if !ok {
+					return nil, nil, fmt.Errorf("store: read leases: %s: blob %s not returned by cat-file", entry.Path, entry.OID)
 				}
 				expires, err = DecodeLease(data)
 				if err != nil {

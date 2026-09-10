@@ -33,9 +33,26 @@ func opErrf(code int, format string, args ...any) *opError {
 	return &opError{code: code, msg: fmt.Sprintf(format, args...)}
 }
 
-// degradedLocked returns the T3 fail-safe rejection when the daemon is
-// in read-only mode, nil otherwise. Caller holds d.mu.
+// startingLocked returns the retryable rejection every operation answers
+// until the first replay lands (T4 startup order, 2026-09-10: the socket
+// serves before the ledger is loaded), nil once loaded. A 503 so both
+// surfaces read it as "try again shortly", and the word "starting" so
+// clients can tell it from every other refusal. Caller holds d.mu.
+func (d *Daemon) startingLocked() *opError {
+	if !d.loaded {
+		return opErrf(http.StatusServiceUnavailable, "daemon starting: the ledger is still loading; retry in a moment")
+	}
+	return nil
+}
+
+// degradedLocked is the check every write runs first: the startup
+// window's "starting" (above), then the T3 fail-safe rejection when the
+// daemon is in read-only mode. nil when writes may proceed. Caller
+// holds d.mu.
 func (d *Daemon) degradedLocked() *opError {
+	if oe := d.startingLocked(); oe != nil {
+		return oe
+	}
 	if d.degraded != nil {
 		return opErrf(http.StatusServiceUnavailable, "writes rejected (fail-safe read-only): %v", d.degraded)
 	}
@@ -997,6 +1014,9 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if oe := d.startingLocked(); oe != nil {
+		return hydratedTask{}, oe
+	}
 	if d.degraded == nil {
 		if err := d.refreshLocked(now); err != nil {
 			return hydratedTask{}, d.writeErrLocked(err)
@@ -1023,6 +1043,9 @@ func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if oe := d.startingLocked(); oe != nil {
+		return backlogResult{}, oe
+	}
 	if d.degraded == nil {
 		if err := d.refreshLocked(now); err != nil {
 			return backlogResult{}, d.writeErrLocked(err)

@@ -20,9 +20,22 @@ import (
 	"time"
 )
 
-// spawnWait bounds how long we wait for a freshly spawned daemon to
-// come up.
-const spawnWait = 5 * time.Second
+// daemonStartCeiling bounds how long ensureDaemon waits for a freshly
+// spawned daemon's socket to accept connections. The daemon binds its
+// socket before it loads the ledger (T4 startup order, 2026-09-10), so
+// this is a ceiling on process start — generous, because it is never
+// the normal case — not on load time. Its predecessor, a fixed 5 s
+// spawn wait, covered the load too, and a measured 7.2 s cold load
+// could never beat it: every launch after a daemon death failed with
+// "daemon did not come up within 5s".
+const daemonStartCeiling = 30 * time.Second
+
+// spawnExitGrace is how long ensureDaemon keeps looking for a socket
+// after the daemon it spawned has already exited. Two CLIs racing to
+// spawn each start a daemon; the flock loser exits at once, and the
+// winner's socket appears a few milliseconds later — the loser's CLI
+// must find it rather than report a death.
+const spawnExitGrace = 2 * time.Second
 
 // client speaks the daemon's JSON HTTP API over its unix socket.
 type client struct {
@@ -120,23 +133,50 @@ func (c *client) writeResp(method, path, actor string, body, dst any) error {
 }
 
 // ensureDaemon returns a client for the repo's daemon, spawning one
-// when none is serving.
+// when none is serving. A client is returned as soon as the socket
+// accepts; the daemon may still be loading the ledger behind it, and
+// answers "starting" until it is done (fetchState waits that out).
 func ensureDaemon(r *repo) (*client, error) {
 	if sock, ok := liveSocket(r); ok {
 		return newClient(sock), nil
 	}
-	if err := spawnDaemon(r); err != nil {
+	exited, err := spawnDaemon(r)
+	if err != nil {
 		return nil, err
 	}
-	deadline := time.Now().Add(spawnWait)
-	for time.Now().Before(deadline) {
+	return awaitDaemon(r, exited, daemonStartCeiling)
+}
+
+// awaitDaemon polls for the daemon's socket until it accepts — that is
+// the return, however soon it comes — or until ceiling elapses. exited
+// closes when the spawned process is gone: a daemon that died before
+// binding (git too old, a repository it cannot read) fails fast after
+// spawnExitGrace instead of at the ceiling. Either failure names
+// daemon.log, where the daemon wrote its reason.
+func awaitDaemon(r *repo, exited <-chan struct{}, ceiling time.Duration) (*client, error) {
+	logPath := filepath.Join(r.runtimeDir(), "daemon.log")
+	deadline := time.Now().Add(ceiling)
+	var exitDeadline time.Time
+	for {
 		if sock, ok := liveSocket(r); ok {
 			return newClient(sock), nil
 		}
+		if exitDeadline.IsZero() {
+			select {
+			case <-exited:
+				exitDeadline = time.Now().Add(spawnExitGrace)
+			default:
+			}
+		}
+		now := time.Now()
+		if !exitDeadline.IsZero() && now.After(exitDeadline) {
+			return nil, fmt.Errorf("daemon exited without serving; see %s", logPath)
+		}
+		if now.After(deadline) {
+			return nil, fmt.Errorf("daemon did not come up within %v; see %s", ceiling, logPath)
+		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return nil, fmt.Errorf("daemon did not come up within %v; see %s",
-		spawnWait, filepath.Join(r.runtimeDir(), "daemon.log"))
 }
 
 // liveSocket reads daemon.json and proves the daemon is actually
@@ -164,19 +204,21 @@ func liveSocket(r *repo) (string, bool) {
 // spawnDaemon re-execs this binary as `tuhdoo daemon`, detached in its
 // own session with output going to daemon.log, so it outlives the CLI
 // and its terminal. If two CLIs race here, the daemon's flock makes the
-// loser exit quietly and both CLIs find the winner's socket.
-func spawnDaemon(r *repo) error {
+// loser exit quietly and both CLIs find the winner's socket. The
+// returned channel closes when the daemon process exits, which in the
+// normal case is long after this CLI is gone.
+func spawnDaemon(r *repo) (<-chan struct{}, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("locate own binary: %w", err)
+		return nil, fmt.Errorf("locate own binary: %w", err)
 	}
 	if err := os.MkdirAll(r.runtimeDir(), 0o755); err != nil {
-		return fmt.Errorf("create runtime dir: %w", err)
+		return nil, fmt.Errorf("create runtime dir: %w", err)
 	}
 	logf, err := os.OpenFile(filepath.Join(r.runtimeDir(), "daemon.log"),
 		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("open daemon.log: %w", err)
+		return nil, fmt.Errorf("open daemon.log: %w", err)
 	}
 	defer logf.Close()
 
@@ -186,7 +228,12 @@ func spawnDaemon(r *repo) error {
 	cmd.Stderr = logf
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("spawn daemon: %w", err)
+		return nil, fmt.Errorf("spawn daemon: %w", err)
 	}
-	return cmd.Process.Release()
+	exited := make(chan struct{})
+	go func() {
+		_ = cmd.Wait() // reaps the child if it dies while this CLI is alive
+		close(exited)
+	}()
+	return exited, nil
 }
