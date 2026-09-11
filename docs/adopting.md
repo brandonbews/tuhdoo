@@ -63,7 +63,7 @@ tuhdoo coordinates *who works what*. How code gets written and merged stays ordi
 
 Day to day, the human surfaces are a terminal.
 
-**The TUI.** Bare `tuhdoo` opens the interactive terminal user interface (TUI) for steering: answer escalations in place, reprioritize, pause and cancel tasks, and drill into any task's history. It acts as you. `tuhdoo --watch` is the same screen read-only, safe to leave open beside a working agent.
+**The TUI.** Bare `tuhdoo` opens the interactive terminal user interface (TUI) for steering: answer escalations in place, reprioritize, move tasks between ready, on hold, and inbox, cancel tasks, and drill into any task's history. It acts as you. `tuhdoo --watch` is the same screen read-only, safe to leave open beside a working agent.
 
 **The CLI.** The command-line interface (CLI) offers one-shot commands for reads and quick writes, all scriptable:
 

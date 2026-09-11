@@ -103,6 +103,23 @@ func newWatchModel() topModel {
 	return topModel{repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 }
 
+// unclaimed releases t-flak's claim on a model — no holder, situation
+// ready — and rebuilds the rows. A task under a live claim has no
+// priority stop and takes no r/h/i or p (keyboard/priority grill,
+// 2026-09-11), so tests that walk t-flak's full ring — it carries the
+// fixture's richest biography — steer the released task.
+func unclaimed(m topModel) topModel {
+	for i := range m.snap.state.Tasks {
+		if m.snap.state.Tasks[i].ID == "t-flak" {
+			m.snap.state.Tasks[i].Holder, m.snap.state.Tasks[i].Situation = "", "ready"
+		}
+	}
+	m.rows = buildRows(m.snap)
+	return m
+}
+
+func newTopModelUnclaimed(api steeringAPI) topModel { return unclaimed(newTopModel(api)) }
+
 // classify's ready ordering is claim_next's (snapshot.go): most
 // urgent first (P0-highest, 2026-08-21 — lower number wins), and
 // within a priority the creation (ULID) order the state listing
@@ -145,6 +162,8 @@ func newTopModelWithDep(api steeringAPI) topModel {
 type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
+	cleared    []string // clearPriority targets, in order (the picker's -, 2026-09-11)
+	moves      []string // setStatus calls as "id status", in order (r/h/i, 2026-09-11)
 	cancelled  []string
 	captured   []string            // quick-capture titles, in order
 	titles     map[string]string   // task-view title edits
@@ -163,6 +182,13 @@ func newFakeSteering() *fakeSteering {
 	}
 }
 
+// wrote reports whether any write at all reached the fake — the
+// dead-key assertions' one check.
+func (f *fakeSteering) wrote() bool {
+	return len(f.answers)+len(f.priorities)+len(f.cleared)+len(f.moves)+len(f.cancelled)+
+		len(f.captured)+len(f.titles)+len(f.descs)+len(f.labels) > 0
+}
+
 func (f *fakeSteering) answerEscalation(escalation, answer string) error {
 	if f.err != nil {
 		return f.err
@@ -176,6 +202,22 @@ func (f *fakeSteering) setPriority(task string, priority int) error {
 		return f.err
 	}
 	f.priorities[task] = priority
+	return nil
+}
+
+func (f *fakeSteering) clearPriority(task string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.cleared = append(f.cleared, task)
+	return nil
+}
+
+func (f *fakeSteering) setStatus(task, status string) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.moves = append(f.moves, task+" "+status)
 	return nil
 }
 
@@ -271,7 +313,7 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 
 func TestTopViewRendersSeededState(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m.width = 100 // wide enough for the legend and the done tally together
+	m.width = 120 // wide enough for the legend and the done tally together
 	v := m.View()
 	for _, want := range []string{
 		"tuhdoo · local-only",
@@ -280,7 +322,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 		"IN PROGRESS (1)", "investigate the flake", "← brandon/a1",
 		"BLOCKED (0)",
 		"▌ t-lic   !   choose a license", // cursor starts on the task-shaped escalation row
-		"↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit",
+		"↑/↓ (j/k) move · enter open · r ready · h hold · i inbox · p priority · c cancel · n new · tab closed · q quit",
 		"1 done", // the footer bar tally replaced the counts line
 	} {
 		if !strings.Contains(v, want) {
@@ -355,9 +397,12 @@ func TestTopDetailArrowsScroll(t *testing.T) {
 	if m.detailMaxScroll() == 0 {
 		t.Fatal("detail fits in 8 rows; test needs scrollable content")
 	}
+	// Down is j: the same focus move and the same reveal scroll — a
+	// real scroll here, the next stop sits below the short window.
+	mj, _ := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	m, _ = press(t, m, keyOf(tea.KeyDown))
-	if m.detailScroll != 1 {
-		t.Errorf("down scrolled to %d, want 1", m.detailScroll)
+	if m.detailScroll == 0 || m.detailScroll != mj.detailScroll || m.detailFocus != mj.detailFocus {
+		t.Errorf("down scrolled to %d (focus %d), want j's %d (focus %d)", m.detailScroll, m.detailFocus, mj.detailScroll, mj.detailFocus)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyUp), keyOf(tea.KeyUp))
 	if m.detailScroll != 0 {
@@ -502,37 +547,123 @@ func TestTopActionKeysRespectRowKind(t *testing.T) {
 	}
 }
 
-func TestTopPriorityFlow(t *testing.T) {
+// The priority picker (keyboard/priority grill, 2026-09-11): p opens
+// the box, a digit writes that priority at once and closes, - clears
+// through clearPriority and closes, esc closes with no write, and
+// every other key is ignored with the box still open.
+func TestTopPriorityPicker(t *testing.T) {
+	open := func(t *testing.T, fake *fakeSteering) topModel {
+		t.Helper()
+		m := newTopModel(fake)
+		m, _ = press(t, m,
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flor (p1 leads ready)
+			tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+		if m.mode != modePriority {
+			t.Fatalf("mode = %d, want modePriority", m.mode)
+		}
+		return m
+	}
+	land := func(t *testing.T, m topModel, cmd tea.Cmd) {
+		t.Helper()
+		if cmd == nil {
+			t.Fatal("the pick produced no command")
+		}
+		if am := cmd().(actionMsg); am.err != nil {
+			t.Fatalf("action error: %v", am.err)
+		}
+		if m.mode != modeNav || m.status != "updating…" {
+			t.Errorf("after the pick: mode %d status %q, want the list with the in-flight marker", m.mode, m.status)
+		}
+	}
+	// A digit sets and closes.
 	fake := newFakeSteering()
-	m := newTopModel(fake)
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flor (p1 leads ready)
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
-	if m.mode != modePriority {
-		t.Fatalf("mode = %d, want modePriority", m.mode)
+	m, cmd := press(t, open(t, fake), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
+	land(t, m, cmd)
+	if got := fake.priorities["t-flor"]; got != 3 || len(fake.cleared) != 0 {
+		t.Errorf("3: priorities %v cleared %v, want t-flor set to 3 and nothing cleared", fake.priorities, fake.cleared)
 	}
+	// - clears and closes.
+	fake = newFakeSteering()
+	m, cmd = press(t, open(t, fake), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'-'}})
+	land(t, m, cmd)
+	if len(fake.priorities) != 0 || !slices.Equal(fake.cleared, []string{"t-flor"}) {
+		t.Errorf("-: priorities %v cleared %v, want t-flor cleared and nothing set", fake.priorities, fake.cleared)
+	}
+	// Any other key is ignored and the box stays open; esc closes it
+	// with no request.
+	fake = newFakeSteering()
+	m = open(t, fake)
+	for _, k := range []tea.KeyMsg{
+		{Type: tea.KeyRunes, Runes: []rune{'x'}},
+		{Type: tea.KeyRunes, Runes: []rune{'p'}},
+		keyOf(tea.KeyEnter), keyOf(tea.KeyBackspace), keyOf(tea.KeySpace),
+	} {
+		mm, cmd := press(t, m, k)
+		if mm.mode != modePriority || cmd != nil || fake.wrote() {
+			t.Errorf("%q in the picker: mode %d cmd %v wrote %v, want ignored", k.String(), mm.mode, cmd, fake.wrote())
+		}
+	}
+	m, cmd = press(t, m, keyOf(tea.KeyEsc))
+	if m.mode != modeNav || cmd != nil || fake.wrote() || m.status != "" {
+		t.Errorf("esc: mode %d cmd %v wrote %v status %q, want a silent close", m.mode, cmd, fake.wrote(), m.status)
+	}
+}
 
-	// Non-numeric input is rejected and the prompt stays up.
-	m, cmd := press(t, m, append(runes("high"), keyOf(tea.KeyEnter))...)
-	if cmd != nil || m.mode != modePriority {
-		t.Fatalf("bad priority accepted: mode %d cmd %v", m.mode, cmd)
+// The picker's label carries the value as it stands — "now none" for
+// an unprioritized task, "now p12" for one set to 12 elsewhere (the
+// picker offers 0-9, but shows and overwrites any value) — and the
+// hint names the three keys.
+func TestTopPriorityPickerLabel(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 80, 40
+	m = moveTo(t, m, "t-idea")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	mustContain(t, m.View(), "priority t-idea (idea: dark mode) · now none", "0-9 sets · - clears · esc")
+	if strings.Contains(m.View(), "> ") {
+		t.Errorf("the picker rendered a text row; view:\n%s", m.View())
 	}
-	if !strings.Contains(m.inputErr, "integer") || m.status != "" {
-		t.Errorf("inputErr = %q status %q, want the integer complaint on the prompt alone", m.inputErr, m.status)
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	for i := range m.snap.state.Tasks {
+		if m.snap.state.Tasks[i].ID == "t-flor" {
+			m.snap.state.Tasks[i].Priority = pint(12)
+		}
 	}
-	for range "high" {
-		m, _ = press(t, m, keyOf(tea.KeyBackspace))
-	}
+	m = moveTo(t, m, "t-flor")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	mustContain(t, m.View(), "priority t-flor (sweep the floor) · now p12")
+}
 
-	m, cmd = press(t, m, append(runes("7"), keyOf(tea.KeyEnter))...)
-	if cmd == nil {
-		t.Fatal("submit produced no command")
+// p is dead on a closed record and on a task under a live claim, from
+// the list and from the task view alike (the steerable rule); the
+// claimed task's ring skips the priority stop for the same reason.
+func TestTopPriorityPickerDeadOnClosedAndClaimed(t *testing.T) {
+	fake := newFakeSteering()
+	// The in-progress row, and its view.
+	m := moveTo(t, newTopModel(fake), "t-flak")
+	if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}); mm.mode != modeNav || cmd != nil {
+		t.Errorf("p on the in-progress row: mode %d cmd %v, want dead", mm.mode, cmd)
 	}
-	if am := cmd().(actionMsg); am.err != nil {
-		t.Fatalf("action error: %v", am.err)
+	m = openDetail(t, m, "t-flak")
+	if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}); mm.mode != modeDetail || cmd != nil {
+		t.Errorf("p in the in-progress task's view: mode %d cmd %v, want dead", mm.mode, cmd)
 	}
-	if got := fake.priorities["t-flor"]; got != 7 {
-		t.Errorf("priority set to %d, want 7", got)
+	// One j from the title lands on labels: no priority stop.
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, keyOf(tea.KeyEnter))
+	if m.mode != modeEditLabels {
+		t.Errorf("enter one stop below the title of a claimed task: mode %d, want modeEditLabels (no priority stop)", m.mode)
+	}
+	// A done row in Closed, and its view.
+	m, _ = press(t, newClosedModel(fake), keyOf(tea.KeyTab))
+	m = moveTo(t, m, "t-ship")
+	if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}); mm.mode != modeNav || cmd != nil {
+		t.Errorf("p on a done row: mode %d cmd %v, want dead", mm.mode, cmd)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
+	if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}); mm.mode != modeDetail || cmd != nil {
+		t.Errorf("p in a done task's view: mode %d cmd %v, want dead", mm.mode, cmd)
+	}
+	if fake.wrote() {
+		t.Errorf("a dead p still wrote: %+v", fake)
 	}
 }
 
@@ -641,7 +772,7 @@ func TestTopQuitKeys(t *testing.T) {
 // it; this is the one deliberate behavior change).
 func TestWatchModeDisarmed(t *testing.T) {
 	m := newWatchModel()
-	for _, r := range []rune{'a', 'p', 'c', 'i'} {
+	for _, r := range []rune{'a', 'p', 'c', 'i', 'r', 'h', 'n'} {
 		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		if mm.mode != modeNav {
 			t.Errorf("%q in watch mode entered mode %d", r, mm.mode)
@@ -672,12 +803,12 @@ func TestWatchModeDisarmed(t *testing.T) {
 	v := m.View()
 	// The badge reads a dim "watch" since the chrome pass (2026-08-21;
 	// was "watch mode").
-	for _, want := range []string{"watch", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · h history · q quit"} {
+	for _, want := range []string{"watch", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · tab closed · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"as brandon", "enter answer", "c cancel"} {
+	for _, reject := range []string{"as brandon", "enter answer", "r ready", "h hold", "i inbox", "p priority", "c cancel", "n new"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("watch-mode view should not contain %q; view:\n%s", reject, v)
 		}
@@ -712,8 +843,10 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"Repros only under -race.\n\n  (unknown time)  run by brandon/a1 — interrupted",
 		// A plain open focuses the title stop at the top of the view.
 		"▌ t-flak — investigate the flake",
-		// The armed legend: the ring is always live, enter opens editors.
-		"↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit",
+		// The armed legend: the ring is always live, enter opens editors;
+		// t-flak is under a live claim, so only cancel is advertised
+		// beside them (keyboard/priority grill, 2026-09-11).
+		"↑/↓ (j/k) move · enter edit · c cancel · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, v)
@@ -1569,8 +1702,11 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 		t.Fatalf("plain open did not focus the title; view:\n%s", v)
 	}
 	// The footer legend advertises the ring; "enter answer" rides the
-	// NEEDS INPUT bar itself (edit affordance, 2026-08-01).
-	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit") {
+	// NEEDS INPUT bar itself (edit affordance, 2026-08-01). At the
+	// 80-column default the armed legend wraps after p priority
+	// (keyboard/priority grill, 2026-09-11).
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority") ||
+		!strings.Contains(v, "\n c cancel · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
 	}
 	// Three stops down the ring — past priority and labels — is the
@@ -1642,7 +1778,8 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	if !strings.Contains(v, "A (brandon): Use MIT.") {
 		t.Errorf("answer missing from HISTORY after the refresh; view:\n%s", v)
 	}
-	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit") {
+	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority") ||
+		!strings.Contains(v, "\n c cancel · esc back · q quit") {
 		t.Errorf("footer lost the armed ring legend; view:\n%s", v)
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyEnter))
@@ -1679,7 +1816,8 @@ func TestTopDetailInputEscReturnsToDetail(t *testing.T) {
 }
 
 // p in an armed detail reprioritizes the viewed task with the same
-// prompt as the list, returning to the detail after submit.
+// picker as the list, returning to the detail after the pick; - clears
+// from there too.
 func TestTopDetailPriorityFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModelWithDep(fake), "t-lic")
@@ -1687,12 +1825,19 @@ func TestTopDetailPriorityFlow(t *testing.T) {
 	if m.mode != modePriority {
 		t.Fatalf("p in detail: mode %d, want modePriority", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "priority t-lic (choose a license)") {
+	if v := m.View(); !strings.Contains(v, "priority t-lic (choose a license) · now none") {
 		t.Errorf("priority prompt does not name the viewed task; view:\n%s", v)
 	}
-	m, cmd := press(t, m, append(runes("4"), keyOf(tea.KeyEnter))...)
+	m, cmd := press(t, m, runes("4")...)
 	if m.mode != modeDetail || m.detailID != "t-lic" {
-		t.Errorf("submit did not return to detail: mode %d detail %q", m.mode, m.detailID)
+		t.Errorf("the pick did not return to detail: mode %d detail %q", m.mode, m.detailID)
+	}
+	mc, ccmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'-'}})
+	if mc.mode != modeDetail || ccmd == nil {
+		t.Fatalf("clear from the view: mode %d cmd %v, want the detail and a command", mc.mode, ccmd)
+	}
+	if am := ccmd().(actionMsg); am.err != nil || !slices.Equal(fake.cleared, []string{"t-lic"}) {
+		t.Errorf("clear: err %v cleared %v, want t-lic cleared", am.err, fake.cleared)
 	}
 	if cmd == nil {
 		t.Fatal("submit produced no command")
@@ -1873,7 +2018,7 @@ func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
 // escalations the description is three ring stops below the title.
 func TestTopDetailEditDescriptionFlow(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-flak")
+	m := openDetail(t, newTopModelUnclaimed(fake), "t-flak")
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // priority
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // labels
@@ -1940,7 +2085,7 @@ func TestTopDetailEditDescriptionFlow(t *testing.T) {
 // through the same path.
 func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	fake := newFakeSteering()
-	m := openDetail(t, newTopModel(fake), "t-flak")
+	m := openDetail(t, newTopModelUnclaimed(fake), "t-flak")
 	m, cmd := press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
@@ -1992,7 +2137,7 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 // dedup, no case-folding: what was typed is what is stored.
 func TestTopDetailEditLabelsFlow(t *testing.T) {
 	fake := newFakeSteering()
-	m := newTopModel(fake)
+	m := newTopModelUnclaimed(fake)
 	h := m.snap.tasks["t-flak"]
 	h.Task.Labels = []string{"tui", "design"}
 	m.snap.tasks["t-flak"] = h
@@ -2064,7 +2209,7 @@ func TestTopDetailEditLabelsFlow(t *testing.T) {
 // is a real edit — the comparison is order-sensitive.
 func TestTopDetailEditLabelsUnchangedRespacedClearAndEsc(t *testing.T) {
 	fake := newFakeSteering()
-	m := newTopModel(fake)
+	m := newTopModelUnclaimed(fake)
 	h := m.snap.tasks["t-flak"]
 	h.Task.Labels = []string{"tui", "design"}
 	m.snap.tasks["t-flak"] = h
@@ -2128,12 +2273,15 @@ func multiEscSnapshot() *snapshot {
 		Question: "Second question?", RaisedAt: raised}
 	return &snapshot{
 		state: stateResp{
-			// The holder keeps t-two an in-progress task row: with the
+			// An unmet dep keeps t-two a task row (BLOCKED): with the
 			// blocking escalation its single home in Needs Input
 			// (2026-07-31), an unclaimed escalation-blocked task has no
-			// task row to open detail from.
-			Tasks: []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open", Holder: "brandon/a1",
-				Situation: "in_progress", BlockingEscalations: []string{"01E1"}}},
+			// task row to open detail from. A holder would earn the row
+			// too, but a claimed task has no priority stop
+			// (keyboard/priority grill, 2026-09-11) and these tests walk
+			// the full ring.
+			Tasks: []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open",
+				Situation: "blocked", UnmetDeps: []string{"t-dep"}, BlockingEscalations: []string{"01E1"}}},
 			OpenEscalations: []escalationJSON{e1, e2},
 		},
 		tasks: map[string]hydratedTask{
@@ -2395,8 +2543,11 @@ func structuredEscSnapshot() *snapshot {
 	}
 	return &snapshot{
 		state: stateResp{
-			Tasks: []stateTask{{ID: "t-big", Title: "structured ask", Status: "open", Holder: "brandon/a3",
-				Situation: "in_progress", BlockingEscalations: []string{"01E8"}}},
+			// An unmet dep earns the task row (see multiEscSnapshot): a
+			// holder would too, but would drop the priority stop the
+			// focus indices below count.
+			Tasks: []stateTask{{ID: "t-big", Title: "structured ask", Status: "open",
+				Situation: "blocked", UnmetDeps: []string{"t-dep"}, BlockingEscalations: []string{"01E8"}}},
 			OpenEscalations: []escalationJSON{e1, e2},
 		},
 		tasks: map[string]hydratedTask{
@@ -2655,7 +2806,7 @@ func TestTopDetailClickSelectsAndAnswers(t *testing.T) {
 // selects the stop under the pointer, click on the selected stop opens
 // its prefilled editor.
 func TestTopDetailClickFieldStops(t *testing.T) {
-	m := newTopModel(newFakeSteering())
+	m := newTopModelUnclaimed(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	m = mm.(topModel)
 	m = openDetail(t, m, "t-flak")
@@ -2869,7 +3020,7 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 		{"held row", "polish the docs", 4},
 		{"section bar", "READY (2)", -1},
 		{"header bar", "tuhdoo · local-only", -1},
-		{"footer bar", "h history", -1},
+		{"footer bar", "tab closed", -1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -3059,7 +3210,7 @@ func TestTopClickUnderBoxIgnored(t *testing.T) {
 	}
 	// The task view: the title editor open, a click on the priority
 	// stop's line neither moves the focus nor opens its editor.
-	md := openDetail(t, newTopModel(newFakeSteering()), "t-flak")
+	md := openDetail(t, newTopModelUnclaimed(newFakeSteering()), "t-flak")
 	mm, _ = md.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	md = mm.(topModel)
 	py := screenLineOf(t, md, "priority    ")
@@ -3109,15 +3260,16 @@ func TestTopDetailWrapsToWidth(t *testing.T) {
 
 // ---- inbox and held (2026-07-31): quick capture and the shelves ----
 
-// The full capture flow: i opens a single-line input, typing builds the
-// title, enter creates a title-only inbox item through the steering API
-// — no y/n anywhere (capture is reversible via cancel).
+// The full capture flow: n opens a single-line input (keyboard/priority
+// grill, 2026-09-11 — i until then), typing builds the title, enter
+// creates a title-only inbox item through the steering API — no y/n
+// anywhere (capture is reversible via cancel).
 func TestTopQuickCaptureFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	if m.mode != modeCapture {
-		t.Fatalf("i: mode = %d, want modeCapture", m.mode)
+		t.Fatalf("n: mode = %d, want modeCapture", m.mode)
 	}
 	v := m.View()
 	if !strings.Contains(v, "capture") || !strings.Contains(v, "to inbox") {
@@ -3155,7 +3307,7 @@ func TestTopQuickCaptureRejectsEmptyAndEscCancels(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m, cmd := press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}},
 		keyOf(tea.KeyEnter))
 	if cmd != nil || len(fake.captured) != 0 {
 		t.Fatal("empty capture must not produce a write")
@@ -3169,13 +3321,214 @@ func TestTopQuickCaptureRejectsEmptyAndEscCancels(t *testing.T) {
 	}
 }
 
-// Capture is fully absent in watch mode: i is dead (covered in
+// Capture is fully absent in watch mode: n is dead (covered in
 // TestWatchModeDisarmed) and no bar or footer advertises it.
 func TestWatchModeNeverAdvertisesCapture(t *testing.T) {
 	m := newWatchModel()
-	if v := m.View(); strings.Contains(v, "i capture") {
+	if v := m.View(); strings.Contains(v, "n new") || strings.Contains(v, "capture") {
 		t.Errorf("watch mode advertises capture; view:\n%s", v)
 	}
+}
+
+// ---- status moves and the Closed toggle (keyboard/priority grill, 2026-09-11) ----
+
+// moveTable is the r/h/i contract on every kind of row: the setStatus
+// call each key sends ("" for a silent nothing) — a no-op on the
+// status the task already has, dead on a claimed task and a closed
+// record; a blocked task is open, so r is its no-op and h/i move it.
+var moveTable = []struct {
+	name    string
+	model   func(t *testing.T, api steeringAPI) topModel
+	id      string
+	r, h, i string
+}{
+	{"ready", func(t *testing.T, api steeringAPI) topModel { return newTopModel(api) },
+		"t-flor", "", "t-flor held", "t-flor inbox"},
+	{"held", func(t *testing.T, api steeringAPI) topModel { return newTopModel(api) },
+		"t-park", "t-park open", "", "t-park inbox"},
+	{"inbox", func(t *testing.T, api steeringAPI) topModel { return newTopModel(api) },
+		"t-idea", "t-idea open", "t-idea held", ""},
+	{"blocked", func(t *testing.T, api steeringAPI) topModel { return newTopModelWithDep(api) },
+		"t-lic", "", "t-lic held", "t-lic inbox"},
+	{"in-progress", func(t *testing.T, api steeringAPI) topModel { return newTopModel(api) },
+		"t-flak", "", "", ""},
+	{"done in Closed", func(t *testing.T, api steeringAPI) topModel {
+		m, _ := press(t, newClosedModel(api), keyOf(tea.KeyTab))
+		return m
+	}, "t-ship", "", "", ""},
+}
+
+// pressMove presses one status key and checks the fake against the
+// expected call: nothing at all, or exactly that one setStatus with
+// the in-flight marker up and the screen (list or view) unchanged.
+func pressMove(t *testing.T, m topModel, key rune, want string, wantMode int) topModel {
+	t.Helper()
+	fake := m.api.(*fakeSteering)
+	mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
+	if want == "" {
+		if cmd != nil || mm.mode != wantMode || fake.wrote() || mm.status != "" {
+			t.Errorf("%q: cmd %v mode %d wrote %v status %q, want silently nothing", key, cmd, mm.mode, fake.wrote(), mm.status)
+		}
+		return mm
+	}
+	if cmd == nil {
+		t.Fatalf("%q produced no command, want setStatus %q", key, want)
+	}
+	if am := cmd().(actionMsg); am.err != nil {
+		t.Fatalf("%q: action error: %v", key, am.err)
+	}
+	if !slices.Equal(fake.moves, []string{want}) || len(fake.cancelled)+len(fake.priorities) != 0 {
+		t.Errorf("%q: moves %v (cancelled %v priorities %v), want exactly [%s]", key, fake.moves, fake.cancelled, fake.priorities, want)
+	}
+	if mm.mode != wantMode || mm.status != "updating…" {
+		t.Errorf("%q: mode %d status %q, want the same screen with the in-flight marker", key, mm.mode, mm.status)
+	}
+	return mm
+}
+
+// r/h/i on the list rows: one PATCH each, no confirm; a fresh fake per
+// key so every cell of the table is checked alone.
+func TestTopStatusMoveKeysOnRows(t *testing.T) {
+	for _, tt := range moveTable {
+		for key, want := range map[rune]string{'r': tt.r, 'h': tt.h, 'i': tt.i} {
+			t.Run(tt.name+"/"+string(key), func(t *testing.T) {
+				m := moveTo(t, tt.model(t, newFakeSteering()), tt.id)
+				pressMove(t, m, key, want, modeNav)
+			})
+		}
+	}
+}
+
+// The same keys on the viewed task in the task view, with the same
+// rules — the view stays open under the write.
+func TestTopStatusMoveKeysInTaskView(t *testing.T) {
+	for _, tt := range moveTable {
+		for key, want := range map[rune]string{'r': tt.r, 'h': tt.h, 'i': tt.i} {
+			t.Run(tt.name+"/"+string(key), func(t *testing.T) {
+				m := openDetail(t, tt.model(t, newFakeSteering()), tt.id)
+				m = pressMove(t, m, key, want, modeDetail)
+				if m.detailID != tt.id {
+					t.Errorf("view left %s for %q", tt.id, m.detailID)
+				}
+			})
+		}
+	}
+}
+
+// Watch mode keeps every status key dead — list, Closed, and task view.
+func TestWatchModeStatusMoveKeysDead(t *testing.T) {
+	for _, id := range []string{"t-flor", "t-park", "t-idea"} {
+		m := moveTo(t, newWatchModel(), id)
+		for _, key := range []rune{'r', 'h', 'i'} {
+			if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}}); mm.mode != modeNav || cmd != nil || mm.closed {
+				t.Errorf("%q on %s in watch mode: mode %d cmd %v closed %v, want dead", key, id, mm.mode, cmd, mm.closed)
+			}
+		}
+		m, _ = press(t, m, keyOf(tea.KeyEnter))
+		for _, key := range []rune{'r', 'h', 'i'} {
+			if mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}}); mm.mode != modeDetail || cmd != nil {
+				t.Errorf("%q in %s's watch view: mode %d cmd %v, want dead", key, id, mm.mode, cmd)
+			}
+		}
+	}
+}
+
+// n opens capture and i no longer does — i on the escalation row (no
+// task) does nothing, i on a task row is the inbox move — and h on the
+// dashboard never opens Closed: on a task row it is the hold move, on
+// the escalation row nothing.
+func TestTopCaptureIsNAndHNeverOpensClosed(t *testing.T) {
+	fake := newFakeSteering()
+	m := newTopModel(fake) // cursor on the Needs Input row
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	if m.mode != modeCapture {
+		t.Fatalf("n: mode %d, want modeCapture", m.mode)
+	}
+	m, _ = press(t, m, keyOf(tea.KeyEsc))
+	for _, key := range []rune{'i', 'h'} {
+		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
+		if mm.mode != modeNav || mm.closed || cmd != nil || fake.wrote() {
+			t.Errorf("%q on the escalation row: mode %d closed %v cmd %v wrote %v, want nothing", key, mm.mode, mm.closed, cmd, fake.wrote())
+		}
+	}
+	m = moveTo(t, m, "t-flor")
+	mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	if mm.closed || mm.mode != modeNav || cmd == nil {
+		t.Errorf("h on a ready row: closed %v mode %d cmd %v, want the hold move and no Closed", mm.closed, mm.mode, cmd)
+	}
+	if v := mm.View(); strings.Contains(v, "DONE (") {
+		t.Errorf("h opened Closed; view:\n%s", v)
+	}
+}
+
+// tab toggles between the backlog and Closed in both panes; esc from
+// Closed still returns to the backlog.
+func TestTopClosedTogglesOnTab(t *testing.T) {
+	s := closedSnapshot()
+	for name, m := range map[string]topModel{
+		"armed": newClosedModel(newFakeSteering()),
+		"watch": {snap: s, rows: buildRows(s)},
+	} {
+		m, cmd := press(t, m, keyOf(tea.KeyTab))
+		if !m.closed || m.mode != modeNav || cmd != nil || m.rows[0].section != "done" {
+			t.Fatalf("%s: tab: closed %v mode %d cmd %v first row %+v, want the Closed list", name, m.closed, m.mode, cmd, m.rows[0])
+		}
+		mustContain(t, m.View(), "DONE (3)", "CANCELLED (2)", "↑/↓ (j/k) move · enter open · esc back · q quit")
+		m, _ = press(t, m, keyOf(tea.KeyTab))
+		if m.closed || m.rows[0].section != "escalations" {
+			t.Fatalf("%s: second tab: closed %v first row %+v, want the backlog", name, m.closed, m.rows[0])
+		}
+		mustContain(t, m.View(), "READY (2)", "tab closed")
+		m, _ = press(t, m, keyOf(tea.KeyTab), keyOf(tea.KeyEsc))
+		if m.closed {
+			t.Errorf("%s: esc did not leave Closed", name)
+		}
+	}
+}
+
+// The legends, screen by screen (keyboard/priority grill, 2026-09-11):
+// the armed list names every key, watch names no steering key, Closed
+// names only browsing, and the task view advertises what is live on
+// the viewed task — the full set on an open task, c alone under a
+// live claim, nothing on a closed record.
+func TestTopLegendsByScreenAndTask(t *testing.T) {
+	steering := []string{"r ready", "h hold", "i inbox", "p priority", "c cancel", "n new", "enter answer", "enter edit"}
+	reject := func(t *testing.T, name, v string, words ...string) {
+		t.Helper()
+		for _, w := range words {
+			if strings.Contains(v, w) {
+				t.Errorf("%s names %q; view:\n%s", name, w, v)
+			}
+		}
+	}
+	wide := func(m topModel) topModel { m.width, m.height = 120, 40; return m }
+
+	// The list.
+	m := wide(newTopModel(newFakeSteering()))
+	mustContain(t, m.View(), " ↑/↓ (j/k) move · enter open · r ready · h hold · i inbox · p priority · c cancel · n new · tab closed · q quit", "1 done ")
+	w := wide(newWatchModel())
+	mustContain(t, w.View(), " ↑/↓ (j/k) move · enter open · tab closed · q quit")
+	reject(t, "the watch list", w.View(), steering...)
+	// Closed, both panes.
+	for name, c := range map[string]topModel{"armed": m, "watch": w} {
+		c, _ = press(t, c, keyOf(tea.KeyTab))
+		mustContain(t, c.View(), " ↑/↓ (j/k) move · enter open · esc back · q quit")
+		reject(t, name+" Closed", c.View(), append(steering, "tab closed", "done ")...)
+	}
+	// The task view: an open task, a claimed one, a closed one.
+	o := openDetail(t, wide(newTopModel(newFakeSteering())), "t-park")
+	mustContain(t, o.View(), " ↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority · c cancel · esc back · q quit")
+	c := openDetail(t, wide(newTopModel(newFakeSteering())), "t-flak")
+	mustContain(t, c.View(), " ↑/↓ (j/k) move · enter edit · c cancel · esc back · q quit")
+	reject(t, "a claimed task's view", c.View(), "r ready", "h hold", "i inbox", "p priority")
+	d, _ := press(t, wide(newClosedModel(newFakeSteering())), keyOf(tea.KeyTab), keyOf(tea.KeyEnter)) // t-ship, done
+	mustContain(t, d.View(), " ↑/↓ (j/k) move · enter edit · esc back · q quit")
+	reject(t, "a closed task's view", d.View(), "r ready", "h hold", "i inbox", "p priority", "c cancel")
+	// The watch task view: browsing only, and no bar names a steering
+	// key either (the NEEDS INPUT bar keeps its reading toggle).
+	wv, _ := press(t, wide(newWatchModel()), keyOf(tea.KeyEnter)) // t-lic, with its open escalation
+	mustContain(t, wv.View(), " ↑/↓ (j/k) scroll · esc back · q quit", "e context")
+	reject(t, "the watch task view", wv.View(), steering...)
 }
 
 // Shelf rows are ordinary rows: enter opens the biography, c cancels —
@@ -3316,13 +3669,13 @@ func wrapForSearch(v string) string {
 	return strings.Join(strings.Fields(out), " ")
 }
 
-// ---- history mode (history view, 2026-08-02): the done/cancelled shelf ----
+// ---- the Closed list (Closed shelf, 2026-08-02; tab since the keyboard/priority grill, 2026-09-11): the done/cancelled shelf ----
 
-// historySnapshot extends topSnapshot with close metadata and more
+// closedSnapshot extends topSnapshot with close metadata and more
 // terminal tasks: three done and two cancelled, created in one order
 // and closed in another, so reverse-chron-by-close is distinguishable
 // from creation order.
-func historySnapshot() *snapshot {
+func closedSnapshot() *snapshot {
 	s := topSnapshot()
 	day := func(d int) *time.Time {
 		t := time.Date(2026, 7, d, 9, 0, 0, 0, time.UTC)
@@ -3370,23 +3723,23 @@ func historySnapshot() *snapshot {
 	return s
 }
 
-func newHistoryModel(api steeringAPI) topModel {
-	s := historySnapshot()
+func newClosedModel(api steeringAPI) topModel {
+	s := closedSnapshot()
 	return topModel{api: api, actor: "brandon", armed: true, repoName: "tuhdoo", snap: s, rows: buildRows(s)}
 }
 
-// h opens history from the top list of both panes — browsing is
+// tab opens Closed from the top list of both panes — browsing is
 // reading — with DONE then CANCELLED, each newest close first; esc
 // returns to the dashboard.
-func TestTopHistoryOpensFromBothPanes(t *testing.T) {
-	s := historySnapshot()
+func TestTopClosedOpensFromBothPanes(t *testing.T) {
+	s := closedSnapshot()
 	for name, m := range map[string]topModel{
-		"armed": newHistoryModel(newFakeSteering()),
+		"armed": newClosedModel(newFakeSteering()),
 		"watch": {snap: s, rows: buildRows(s)},
 	} {
-		m, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
-		if !m.history || m.mode != modeNav || m.cursor != 0 || cmd != nil {
-			t.Fatalf("%s: h left history %v mode %d cursor %d cmd %v", name, m.history, m.mode, m.cursor, cmd)
+		m, cmd := press(t, m, keyOf(tea.KeyTab))
+		if !m.closed || m.mode != modeNav || m.cursor != 0 || cmd != nil {
+			t.Fatalf("%s: h left Closed %v mode %d cursor %d cmd %v", name, m.closed, m.mode, m.cursor, cmd)
 		}
 		// Reverse-chron within each bar, DONE before CANCELLED — not
 		// creation order (t-chor was created first, closed 07-28).
@@ -3395,7 +3748,7 @@ func TestTopHistoryOpensFromBothPanes(t *testing.T) {
 			{"cancelled", "t-zzzz"}, {"cancelled", "t-drop"},
 		}
 		if len(m.rows) != len(want) {
-			t.Fatalf("%s: %d history rows, want %d: %+v", name, len(m.rows), len(want), m.rows)
+			t.Fatalf("%s: %d Closed rows, want %d: %+v", name, len(m.rows), len(want), m.rows)
 		}
 		for i, w := range want {
 			if m.rows[i].section != w.section || m.rows[i].id() != w.id {
@@ -3420,25 +3773,25 @@ func TestTopHistoryOpensFromBothPanes(t *testing.T) {
 			"↑/↓ (j/k) move · enter open · esc back · q quit",
 		} {
 			if !strings.Contains(v, wantS) {
-				t.Errorf("%s: history view missing %q; view:\n%s", name, wantS, v)
+				t.Errorf("%s: Closed view missing %q; view:\n%s", name, wantS, v)
 			}
 		}
-		// The open queue does not render here, and no steering or
-		// history key is advertised.
+		// The open queue does not render here, and no steering key —
+		// nor the toggle itself — is advertised.
 		for _, reject := range []string{"READY", "NEEDS INPUT", "INBOX", "write the parser",
-			"h history", "p priority", "c cancel", "i capture", "done "} {
+			"tab closed", "r ready", "h hold", "i inbox", "p priority", "c cancel", "n new", "done "} {
 			if strings.Contains(v, reject) {
-				t.Errorf("%s: history view still contains %q; view:\n%s", name, reject, v)
+				t.Errorf("%s: Closed view still contains %q; view:\n%s", name, reject, v)
 			}
 		}
-		// q quits from history.
+		// q quits from Closed.
 		if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}); cmd == nil {
-			t.Errorf("%s: q in history should quit", name)
+			t.Errorf("%s: q in Closed should quit", name)
 		}
 		// esc returns to the dashboard.
 		m, cmd = press(t, m, keyOf(tea.KeyEsc))
-		if m.history || m.mode != modeNav || cmd != nil {
-			t.Fatalf("%s: esc left history %v mode %d", name, m.history, m.mode)
+		if m.closed || m.mode != modeNav || cmd != nil {
+			t.Fatalf("%s: esc left Closed %v mode %d", name, m.closed, m.mode)
 		}
 		if v := m.View(); !strings.Contains(v, "READY (2)") || strings.Contains(v, "CANCELLED") {
 			t.Errorf("%s: esc did not restore the dashboard; view:\n%s", name, v)
@@ -3446,46 +3799,46 @@ func TestTopHistoryOpensFromBothPanes(t *testing.T) {
 	}
 }
 
-// The esc stack: enter on a history row opens the ordinary task view,
-// esc from there returns to the history list — not the dashboard — and
+// The esc stack: enter on a Closed row opens the ordinary task view,
+// esc from there returns to the Closed list — not the dashboard — and
 // a second esc reaches the dashboard. h inside the task view is dead.
-func TestTopHistoryEscStack(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+func TestTopClosedEscStack(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	m = moveTo(t, m, "t-chor")
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || m.detailID != "t-chor" {
-		t.Fatalf("enter on a history row: mode %d detail %q, want the task view of t-chor", m.mode, m.detailID)
+		t.Fatalf("enter on a Closed row: mode %d detail %q, want the task view of t-chor", m.mode, m.detailID)
 	}
 	// h in the task view changes nothing.
-	m, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, cmd := press(t, m, keyOf(tea.KeyTab))
 	if m.mode != modeDetail || cmd != nil {
 		t.Errorf("h in detail: mode %d cmd %v, want modeDetail nil", m.mode, cmd)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	if m.mode != modeNav || !m.history {
-		t.Fatalf("esc from a history-opened detail: mode %d history %v, want the history list", m.mode, m.history)
+	if m.mode != modeNav || !m.closed {
+		t.Fatalf("esc from a Closed-opened detail: mode %d Closed %v, want the Closed list", m.mode, m.closed)
 	}
 	if m.cursor >= len(m.rows) || m.rows[m.cursor].id() != "t-chor" {
-		t.Errorf("history cursor lost across the detail round trip: %d", m.cursor)
+		t.Errorf("Closed cursor lost across the detail round trip: %d", m.cursor)
 	}
 	if v := m.View(); !strings.Contains(v, "DONE (3)") {
-		t.Errorf("history list not restored; view:\n%s", v)
+		t.Errorf("Closed list not restored; view:\n%s", v)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
-	if m.history || m.mode != modeNav {
-		t.Fatalf("second esc: history %v mode %d, want the dashboard", m.history, m.mode)
+	if m.closed || m.mode != modeNav {
+		t.Fatalf("second esc: Closed %v mode %d, want the dashboard", m.closed, m.mode)
 	}
 }
 
-// Enter and click open detail from history exactly like the dashboard:
+// Enter and click open detail from Closed exactly like the dashboard:
 // click selects the row under the pointer, click on the selected row
 // opens its task view.
-func TestTopHistoryEnterAndClickOpenDetail(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
+func TestTopClosedEnterAndClickOpenDetail(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	m = mm.(topModel)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	// enter on the selected top row.
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || m.detailID != "t-ship" {
@@ -3496,7 +3849,7 @@ func TestTopHistoryEnterAndClickOpenDetail(t *testing.T) {
 	y := screenLineOf(t, m, "old chore")
 	m, cmd := mouseTo(t, m, clickAt(0, y))
 	if m.mode != modeNav || m.cursor != 2 || cmd != nil {
-		t.Fatalf("click on unselected history row: mode %d cursor %d, want selection moved", m.mode, m.cursor)
+		t.Fatalf("click on unselected Closed row: mode %d cursor %d, want selection moved", m.mode, m.cursor)
 	}
 	// A section bar stays chrome.
 	m2, _ := mouseTo(t, m, clickAt(0, screenLineOf(t, m, "CANCELLED (2)")))
@@ -3506,17 +3859,17 @@ func TestTopHistoryEnterAndClickOpenDetail(t *testing.T) {
 	// Click the selected row: acts as enter.
 	m, _ = mouseTo(t, m, clickAt(0, y))
 	if m.mode != modeDetail || m.detailID != "t-chor" {
-		t.Fatalf("click on selected history row: mode %d detail %q, want modeDetail t-chor", m.mode, m.detailID)
+		t.Fatalf("click on selected Closed row: mode %d detail %q, want modeDetail t-chor", m.mode, m.detailID)
 	}
 }
 
 // History scrolls exactly like the dashboard: the cursor-following
 // window keeps the selected row visible, j/k and the wheel clamp.
-func TestTopHistoryScrollMatchesDashboard(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
+func TestTopClosedScrollMatchesDashboard(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 8})
 	m = mm.(topModel)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	for i := 0; i < 10; i++ {
 		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	}
@@ -3528,7 +3881,7 @@ func TestTopHistoryScrollMatchesDashboard(t *testing.T) {
 		t.Errorf("cursor row not visible after scrolling; view:\n%s", v)
 	}
 	if strings.Contains(v, "ship the tui") {
-		t.Errorf("top of history should have scrolled off; view:\n%s", v)
+		t.Errorf("top of Closed should have scrolled off; view:\n%s", v)
 	}
 	if n := strings.Count(strings.TrimRight(v, "\n"), "\n") + 1; n > 8 {
 		t.Errorf("frame taller than terminal: %d > 8 lines; view:\n%s", n, v)
@@ -3542,33 +3895,33 @@ func TestTopHistoryScrollMatchesDashboard(t *testing.T) {
 	}
 }
 
-// The history list is read-only in the armed pane too: p, c, and i are
+// The Closed list is read-only in the armed pane too: every steering key is
 // dead on its rows.
-func TestTopHistorySteeringKeysDead(t *testing.T) {
+func TestTopClosedSteeringKeysDead(t *testing.T) {
 	fake := newFakeSteering()
-	m := newHistoryModel(fake)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
-	for _, r := range []rune{'p', 'c', 'i'} {
+	m := newClosedModel(fake)
+	m, _ = press(t, m, keyOf(tea.KeyTab))
+	for _, r := range []rune{'p', 'c', 'n', 'r', 'h', 'i'} {
 		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		if mm.mode != modeNav || cmd != nil {
-			t.Errorf("%q on a history row: mode %d cmd %v, want dead", r, mm.mode, cmd)
+			t.Errorf("%q on a Closed row: mode %d cmd %v, want dead", r, mm.mode, cmd)
 		}
 	}
-	if len(fake.cancelled) != 0 || len(fake.priorities) != 0 || len(fake.captured) != 0 {
-		t.Errorf("history keys still wrote: %+v", fake)
+	if fake.wrote() {
+		t.Errorf("Closed keys still wrote: %+v", fake)
 	}
 }
 
-// A refresh while history is open rebuilds history rows — not the
+// A refresh while Closed is open rebuilds Closed rows — not the
 // dashboard's — and keeps the selection on its row.
-func TestTopHistoryRefreshKeepsRowsAndSelection(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+func TestTopClosedRefreshKeepsRowsAndSelection(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	m = moveTo(t, m, "t-chor")
-	mm, _ := m.Update(snapMsg{snap: historySnapshot()})
+	mm, _ := m.Update(snapMsg{snap: closedSnapshot()})
 	m = mm.(topModel)
-	if !m.history {
-		t.Fatal("refresh knocked the model out of history")
+	if !m.closed {
+		t.Fatal("refresh knocked the model out of Closed")
 	}
 	if r, ok := m.selected(); !ok || r.id() != "t-chor" || r.section != "done" {
 		t.Errorf("selection lost across refresh: %+v", r)
@@ -3583,26 +3936,26 @@ func TestTopHistoryRefreshKeepsRowsAndSelection(t *testing.T) {
 // stop — one j from the title lands on the description.
 func TestTopDetailTerminalTaskSteeringDead(t *testing.T) {
 	fake := newFakeSteering()
-	m := newHistoryModel(fake)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m := newClosedModel(fake)
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // t-ship, done
 	if m.mode != modeDetail || m.detailID != "t-ship" {
 		t.Fatalf("mode %d detail %q, want modeDetail t-ship", m.mode, m.detailID)
 	}
-	for _, r := range []rune{'p', 'c'} {
+	for _, r := range []rune{'p', 'c', 'r', 'h', 'i'} {
 		mm, cmd := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		if mm.mode != modeDetail || cmd != nil {
 			t.Errorf("%q on a terminal task's detail: mode %d cmd %v, want dead", r, mm.mode, cmd)
 		}
 	}
-	if len(fake.cancelled) != 0 || len(fake.priorities) != 0 {
+	if fake.wrote() {
 		t.Errorf("terminal detail still wrote: %+v", fake)
 	}
 	v := m.View()
 	if !strings.Contains(v, " ↑/↓ (j/k) move · enter edit · esc back · q quit") {
 		t.Errorf("terminal detail footer wrong; view:\n%s", v)
 	}
-	for _, reject := range []string{"p priority", "c cancel"} {
+	for _, reject := range []string{"p priority", "c cancel", "r ready", "h hold", "i inbox"} {
 		if strings.Contains(v, reject) {
 			t.Errorf("terminal detail advertises %q; view:\n%s", reject, v)
 		}
@@ -3620,12 +3973,12 @@ func TestTopDetailTerminalTaskSteeringDead(t *testing.T) {
 // unanswered escalation renders in History — the NEEDS INPUT section
 // only serves open work. Both panes render the same lines.
 func TestTopDetailTerminalStatusAndEscalationRecord(t *testing.T) {
-	s := historySnapshot()
+	s := closedSnapshot()
 	for name, m := range map[string]topModel{
-		"armed": newHistoryModel(newFakeSteering()),
+		"armed": newClosedModel(newFakeSteering()),
 		"watch": {snap: s, rows: buildRows(s)},
 	} {
-		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+		m, _ = press(t, m, keyOf(tea.KeyTab))
 		m = moveTo(t, m, "t-drop")
 		m, _ = press(t, m, keyOf(tea.KeyEnter))
 		v := m.View()

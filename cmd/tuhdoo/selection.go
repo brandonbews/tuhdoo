@@ -48,7 +48,7 @@ func selectionBG(ans bgAnswer, term, colorterm string, dark bool) string {
 }
 
 // chromeBG resolves the quiet-chrome bar background — the task view's
-// section bars and the CANCELLED history bar — down the same ladder as
+// section bars and the CANCELLED bar of the Closed shelf — down the same ladder as
 // the selection bar, one register stronger (steering, 2026-08-27:
 // pinned indexed colors read foreign next to the user's theme). An
 // answered query earns a truecolor tint of the actual theme background
