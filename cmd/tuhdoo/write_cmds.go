@@ -142,12 +142,12 @@ func runCreate(args []string) int {
 		item["labels"] = splitList(labels)
 	}
 	if dependsOn != "" {
-		st, err := fetchState(c)
+		snap, err := fetchSnapshot(c)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tuhdoo create:", err)
 			return 1
 		}
-		refs, err := resolveRefs(splitList(dependsOn), st.Tasks)
+		refs, err := resolveRefs(splitList(dependsOn), snap.state.Tasks)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tuhdoo create:", err)
 			return 1
@@ -214,12 +214,12 @@ func runUpdate(args []string) int {
 	if code != 0 {
 		return code
 	}
-	st, err := fetchState(c)
+	snap, err := fetchSnapshot(c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo update:", err)
 		return 1
 	}
-	full, err := resolveTaskID(id, st.Tasks)
+	full, err := resolveTaskID(id, snap.state.Tasks)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo update:", err)
 		return 1
@@ -246,7 +246,7 @@ func runUpdate(args []string) int {
 		body["labels"] = splitList(labels)
 	}
 	if set["depends-on"] {
-		refs, err := resolveRefs(splitList(dependsOn), st.Tasks)
+		refs, err := resolveRefs(splitList(dependsOn), snap.state.Tasks)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "tuhdoo update:", err)
 			return 1
@@ -289,12 +289,12 @@ func runAnswer(args []string) int {
 	if code != 0 {
 		return code
 	}
-	st, err := fetchState(c)
+	snap, err := fetchSnapshot(c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo answer:", err)
 		return 1
 	}
-	esc, err := resolveEscalation(id, st)
+	esc, err := resolveEscalation(id, snap.state)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo answer:", err)
 		return 1

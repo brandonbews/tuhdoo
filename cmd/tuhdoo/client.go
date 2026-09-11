@@ -178,44 +178,37 @@ func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, er
 	}
 }
 
-// awaitLoaded polls /v0/state on an accepting socket until the daemon
-// reports its ledger loaded, bounded by ceiling. A daemon whose first
-// load fails ends itself — socket and discovery file torn down — so a
-// poll that can no longer reach the socket is that death, reported as
-// such rather than as a dead client handed back; any other failed poll
+// awaitLoaded parks one snapshot request on an accepting socket until
+// the daemon reports its ledger loaded, bounded by ceiling: the
+// placeholder is version 0 and the first replay version 1, so
+// GET /v0/snapshot?since=0&wait=<ceiling> is answered the moment the
+// load lands (T4, 2026-09-10) — no polling cadence, no fixed wait. A
+// daemon whose first load fails ends itself — socket and discovery
+// file torn down, parked requests woken with the placeholder on the
+// way out — so a placeholder answered early is re-asked, and a request
+// that can no longer reach the socket is that death, reported as such
+// rather than as a dead client handed back; any other failed request
 // is the daemon's own answer, surfaced as is. Both failures and the
 // ceiling name daemon.log.
 func awaitLoaded(r *repo, c *client, ceiling time.Duration) (*client, error) {
-	st, err := pollState(c, ceiling, func(st stateResp) bool { return st.Loaded })
-	if err != nil {
-		if _, ok := liveSocket(r); !ok {
-			return nil, fmt.Errorf("daemon exited while starting; see %s", r.logPath())
-		}
-		return nil, fmt.Errorf("daemon not answering: %w", err)
-	}
-	if !st.Loaded {
-		return nil, fmt.Errorf("daemon is still loading the ledger after %v; see %s", ceiling, r.logPath())
-	}
-	return c, nil
-}
-
-// pollState reads /v0/state every 50 ms until ready accepts the
-// daemon's answer or ceiling elapses, and returns the last answer
-// either way — the caller applies ready once more to tell the two
-// apart and decide what the ceiling means. The one readiness loop
-// behind awaitLoaded (the daemon's load) and fetchState (the sync
-// loop's first decision); a poll the daemon does not answer is its
-// error, unwrapped, for the caller to name.
-func pollState(c *client, ceiling time.Duration, ready func(stateResp) bool) (stateResp, error) {
 	deadline := time.Now().Add(ceiling)
 	for {
-		var st stateResp
-		if err := c.get("/v0/state", &st); err != nil {
-			return stateResp{}, err
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return nil, fmt.Errorf("daemon is still loading the ledger after %v; see %s", ceiling, r.logPath())
 		}
-		if ready(st) || time.Now().After(deadline) {
-			return st, nil
+		resp, err := readSnapshot(c, 0, remaining)
+		if err != nil {
+			if _, ok := liveSocket(r); !ok {
+				return nil, fmt.Errorf("daemon exited while starting; see %s", r.logPath())
+			}
+			return nil, fmt.Errorf("daemon not answering: %w", err)
 		}
+		if resp.Loaded {
+			return c, nil
+		}
+		// The placeholder before the wait elapsed: a shutdown waking
+		// the parked request. The next request finds the socket gone.
 		time.Sleep(50 * time.Millisecond)
 	}
 }

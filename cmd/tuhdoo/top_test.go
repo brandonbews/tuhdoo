@@ -3614,3 +3614,112 @@ func TestTopDetailTerminalStatusAndEscalationRecord(t *testing.T) {
 		}
 	}
 }
+
+// The poll chain (T4, 2026-09-10) holds exactly one snapshot request
+// at a time: Init asks for the first by message, the guard turns away
+// every further ask while it is in flight, and the answer — a fresh
+// snapshot or the unchanged version — is what issues the next poll,
+// parked on the version last seen.
+func TestTopPollsOneRequestAtATime(t *testing.T) {
+	fresh := topSnapshot()
+	fresh.version = 7
+	var seen []uint64 // the since= of every fetch actually made
+	m := newTopModel(newFakeSteering())
+	m.fetch = func(since uint64) (*snapshot, error) {
+		seen = append(seen, since)
+		return fresh, nil
+	}
+
+	mm, cmd := m.Update(m.Init()())
+	m = mm.(topModel)
+	if cmd == nil || !m.inFlight {
+		t.Fatal("Init's poll request did not start a poll")
+	}
+	// In flight: a retry timer firing or an action landing asks for a
+	// refresh and gets none.
+	for _, again := range []tea.Msg{pollMsg{}, actionMsg{}} {
+		mm, extra := m.Update(again)
+		m = mm.(topModel)
+		if extra != nil {
+			t.Fatalf("%T while a poll is in flight issued a second request", again)
+		}
+	}
+	if len(seen) != 0 {
+		t.Fatalf("fetch ran %d times before the command did", len(seen))
+	}
+
+	// The answer lands: one fetch was made, at since=0, and the next
+	// poll goes out parked on the version the answer carried.
+	mm, next := m.Update(cmd())
+	m = mm.(topModel)
+	if !slices.Equal(seen, []uint64{0}) {
+		t.Fatalf("fetches so far = %v, want exactly one at since=0", seen)
+	}
+	if m.version != 7 || m.snap != fresh || next == nil || !m.inFlight {
+		t.Fatalf("after the answer: version %d snap installed %v next poll %v in flight %v; want 7, true, non-nil, true",
+			m.version, m.snap == fresh, next != nil, m.inFlight)
+	}
+	next()
+	if !slices.Equal(seen, []uint64{0, 7}) {
+		t.Fatalf("fetches = %v, want the second parked on version 7", seen)
+	}
+
+	// The wait elapsing answers the unchanged version: nothing is
+	// re-rendered and the poll simply goes out again at that version.
+	m.snap = nil // provable: an unchanged answer installs nothing
+	mm, next = m.Update(snapMsg{snap: &snapshot{version: 7, unchanged: true}})
+	m = mm.(topModel)
+	if m.snap != nil || m.version != 7 || next == nil {
+		t.Fatalf("unchanged answer: snap %v version %d next %v; want no install, version 7, a re-poll", m.snap, m.version, next != nil)
+	}
+	next()
+	if !slices.Equal(seen, []uint64{0, 7, 7}) {
+		t.Fatalf("fetches = %v, want the re-poll at the same version", seen)
+	}
+}
+
+// A failed poll renders the unreachable line over the kept board and
+// schedules a retry on a backoff — 1 s, doubling, capped at 5 s —
+// that the next answer resets; the retry's ask starts the poll again.
+func TestTopRetriesFailedPollsWithBackoff(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	boom := errors.New("dial unix .git/tuhdoo/daemon.sock: connection refused")
+	var got []time.Duration
+	for range 5 {
+		mm, cmd := m.Update(snapMsg{err: boom})
+		m = mm.(topModel)
+		if cmd == nil {
+			t.Fatal("a failed poll scheduled no retry")
+		}
+		if m.inFlight {
+			t.Fatal("a failed poll left the request marked in flight")
+		}
+		got = append(got, m.backoff)
+	}
+	want := []time.Duration{time.Second, 2 * time.Second, 4 * time.Second, 5 * time.Second, 5 * time.Second}
+	if !slices.Equal(got, want) {
+		t.Fatalf("backoff after successive failures = %v, want %v", got, want)
+	}
+	if v := m.View(); !strings.Contains(v, "daemon unreachable") || !strings.Contains(v, "(retrying)") || m.snap == nil {
+		t.Fatalf("failure not rendered as retrying over the kept board; view:\n%s", v)
+	}
+
+	// The retry timer's ask starts the poll again.
+	mm, cmd := m.Update(pollMsg{})
+	m = mm.(topModel)
+	if cmd == nil || !m.inFlight {
+		t.Fatal("the retry's poll request did not start a poll")
+	}
+	// An answer clears the line and resets the backoff, so the next
+	// failure waits 1 s again.
+	mm, _ = m.Update(snapMsg{snap: topSnapshot()})
+	m = mm.(topModel)
+	if m.err != nil || m.backoff != 0 {
+		t.Fatalf("after an answer: err %v backoff %v; want nil, 0", m.err, m.backoff)
+	}
+	mm, _ = m.Update(snapMsg{err: boom})
+	m = mm.(topModel)
+	if m.backoff != time.Second {
+		t.Fatalf("backoff after a fresh failure = %v, want 1s", m.backoff)
+	}
+}

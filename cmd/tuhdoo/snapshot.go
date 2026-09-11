@@ -17,53 +17,110 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
-// fetchState reads /v0/state, briefly waiting out two startup shapes:
-// the placeholder a daemon serves until its first replay lands (loaded
-// false — T4 startup order, 2026-09-10; ensureDaemon already waited
-// this out once, but a daemon restarting under a long-lived screen
-// serves it again), and the sync loop's "starting" mode on a freshly
-// loaded daemon whose first cycle (milliseconds) has not yet decided
-// local-only vs syncing. At the budget an undecided sync mode is
+// readSnapshot is one GET /v0/snapshot?since=N&wait=D, decoded as
+// served: the placeholder, the unchanged answer, and the full
+// snapshot all come back here for fetchSnapshotSince to sort out.
+func readSnapshot(c *client, since uint64, wait time.Duration) (snapshotResp, error) {
+	var resp snapshotResp
+	err := c.get(fmt.Sprintf("/v0/snapshot?since=%d&wait=%s", since, wait), &resp)
+	return resp, err
+}
+
+// startupBudget bounds how long a read waits out a daemon's startup
+// shapes before reporting them: the placeholder served until the
+// first replay lands, and the sync loop's undecided first mode.
+const startupBudget = 3 * time.Second
+
+// snapshot is one consistent picture of daemon state at one version:
+// the listing (daemon-wide facts and one row per task) and every task
+// fully hydrated — one request (T4, 2026-09-10), never a hydration per
+// task. version is what the next long poll asks about; unchanged
+// marks the wait-elapsed answer, which carries nothing to render.
+type snapshot struct {
+	version   uint64
+	unchanged bool
+	state     stateResp
+	tasks     map[string]hydratedTask
+}
+
+// fetchSnapshot reads the current snapshot at once: the one-shot
+// commands' read, and the TUI's on-demand refresh.
+func fetchSnapshot(c *client) (*snapshot, error) {
+	return fetchSnapshotSince(c, 0, 0)
+}
+
+// fetchSnapshotSince reads the snapshot, parking up to wait while the
+// daemon is still at version since (the TUI's long poll; wait 0
+// answers at once). Two startup shapes are waited out within
+// startupBudget: the placeholder a daemon serves until its first
+// replay lands (loaded false — T4 startup order; ensureDaemon already
+// waited this out once, but a daemon restarting under a long-lived
+// screen serves it again) by parking on since=0 through the load, and
+// the sync loop's "starting" mode on a freshly loaded daemon whose
+// first cycle (milliseconds) has not yet decided local-only vs
+// syncing — that decision bumps no version, so it is re-read at once
+// on a short cadence. At the budget an undecided sync mode is
 // returned as is; a placeholder never is — it is an error, so a
 // screen polling through a daemon restart shows "retrying" rather
 // than installing an empty board.
-func fetchState(c *client) (stateResp, error) {
-	st, err := pollState(c, 3*time.Second, func(st stateResp) bool {
-		return st.Loaded && st.Sync.Mode != "starting"
-	})
-	if err != nil {
-		return st, err
-	}
-	if !st.Loaded {
-		return stateResp{}, errors.New("daemon is still loading the ledger; try again in a moment")
-	}
-	return st, nil
-}
-
-// snapshot is one consistent-enough picture of daemon state: /v0/state
-// plus a hydration of every task. /v0/state alone cannot say *why* a
-// task is blocked (it carries no dependency edges) nor show answered
-// escalations, so we hydrate; N+1 reads over a local unix socket are
-// cheap at v0 volumes.
-type snapshot struct {
-	state stateResp
-	tasks map[string]hydratedTask
-}
-
-func fetchSnapshot(c *client) (*snapshot, error) {
-	st, err := fetchState(c)
+func fetchSnapshotSince(c *client, since uint64, wait time.Duration) (*snapshot, error) {
+	resp, err := readSnapshot(c, since, wait)
 	if err != nil {
 		return nil, err
 	}
-	s := &snapshot{state: st, tasks: make(map[string]hydratedTask, len(st.Tasks))}
-	for _, t := range st.Tasks {
-		var h hydratedTask
-		if err := c.get("/v0/tasks/"+t.ID, &h); err != nil {
+	if resp.Unchanged {
+		return &snapshot{version: resp.Version, unchanged: true}, nil
+	}
+	deadline := time.Now().Add(startupBudget)
+	for !resp.Loaded {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return nil, errors.New("daemon is still loading the ledger; try again in a moment")
+		}
+		if resp, err = readSnapshot(c, 0, remaining); err != nil {
 			return nil, err
 		}
-		s.tasks[t.ID] = h
 	}
-	return s, nil
+	for resp.Sync.Mode == "starting" && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+		if resp, err = readSnapshot(c, resp.Version, 0); err != nil {
+			return nil, err
+		}
+	}
+	return snapshotOf(resp), nil
+}
+
+// snapshotOf splits a served snapshot into the listing the render
+// code walks and the hydrations it looks up by ID.
+func snapshotOf(resp snapshotResp) *snapshot {
+	s := &snapshot{
+		version: resp.Version,
+		state: stateResp{
+			Degraded:        resp.Degraded,
+			Sync:            resp.Sync,
+			Tasks:           make([]stateTask, 0, len(resp.Tasks)),
+			OpenEscalations: resp.OpenEscalations,
+			Runs:            resp.Runs,
+		},
+		tasks: make(map[string]hydratedTask, len(resp.Tasks)),
+	}
+	for _, t := range resp.Tasks {
+		s.state.Tasks = append(s.state.Tasks, listingRow(t))
+		s.tasks[t.Task.ID] = t.hydratedTask
+	}
+	return s
+}
+
+// listingRow lifts one snapshot entry's listing row: the task's
+// headline fields beside the daemon's verdicts.
+func listingRow(t snapshotTask) stateTask {
+	return stateTask{
+		ID: t.Task.ID, Title: t.Task.Title, Status: t.Task.Status,
+		Priority: t.Task.Priority, Labels: t.Task.Labels, Holder: t.Holder,
+		Situation: t.Situation, UnmetDeps: t.UnmetDeps, BlockingEscalations: t.BlockingEscalations,
+		CancelledDeps: t.CancelledDeps, Cyclic: t.Cyclic,
+		ClosedAt: t.Task.ClosedAt, ClosedBy: t.Task.ClosedBy,
+	}
 }
 
 // buckets partitions tasks exactly like internal/views' classify: every

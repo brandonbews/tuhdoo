@@ -21,20 +21,32 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// refreshTop performs one poll cycle by hand: run fetchCmd, feed the
-// snapshot through Update.
+// refreshTop performs one poll by hand: read the current snapshot at
+// once (no parking — the test is the only thing that changes state)
+// and feed it through Update the way the long poll would.
 func refreshTop(t *testing.T, m topModel) topModel {
 	t.Helper()
-	msg := fetchCmd(m.c)()
-	sm, ok := msg.(snapMsg)
-	if !ok {
-		t.Fatalf("fetchCmd produced %T", msg)
+	s, err := fetchSnapshot(m.c)
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
 	}
-	if sm.err != nil {
-		t.Fatalf("fetch: %v", sm.err)
-	}
-	mm, _ := m.Update(sm)
+	mm, _ := m.Update(snapMsg{snap: s})
 	return mm.(topModel)
+}
+
+// daemonTask reads one task's hydration back from the daemon, through
+// the snapshot — the one read there is (T4, 2026-09-10).
+func daemonTask(t *testing.T, c *client, id string) hydratedTask {
+	t.Helper()
+	s, err := fetchSnapshot(c)
+	if err != nil {
+		t.Fatalf("fetch snapshot: %v", err)
+	}
+	h, ok := s.tasks[id]
+	if !ok {
+		t.Fatalf("task %s not in the snapshot", id)
+	}
+	return h
 }
 
 // moveTo walks the cursor to the row with the given id using j/k, as a
@@ -200,10 +212,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 
 	// The edits are daemon state now, and the next poll re-renders the
 	// still-open task view with the new content.
-	var edited hydratedTask
-	if err := c.get("/v0/tasks/"+wrong, &edited); err != nil {
-		t.Fatalf("get %s: %v", wrong, err)
-	}
+	edited := daemonTask(t, c, wrong)
 	if edited.Task.Title != "right idea" || edited.Task.Description != "Line one.\nLine two." {
 		t.Fatalf("edited task = %q / %q, want the new title and description",
 			edited.Task.Title, edited.Task.Description)
@@ -222,11 +231,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	m = act(t, m, cmd)
 
-	var h hydratedTask
-	if err := c.get("/v0/tasks/"+wrong, &h); err != nil {
-		t.Fatalf("get %s: %v", wrong, err)
-	}
-	if h.Task.Status != "cancelled" {
+	if h := daemonTask(t, c, wrong); h.Task.Status != "cancelled" {
 		t.Fatalf("status = %q, want cancelled", h.Task.Status)
 	}
 

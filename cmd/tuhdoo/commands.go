@@ -67,7 +67,7 @@ once per clone: git config tuhdoo.principal <name>`)
 		return code
 	}
 	// Prove the daemon answers before declaring success.
-	st, err := fetchState(c)
+	snap, err := fetchSnapshot(c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo init: daemon not answering:", err)
 		return 1
@@ -78,8 +78,8 @@ once per clone: git config tuhdoo.principal <name>`)
 		return 1
 	}
 
-	sync := syncLine(st.Sync)
-	if st.Sync.Mode == "local-only" {
+	sync := syncLine(snap.state.Sync)
+	if snap.state.Sync.Mode == "local-only" {
 		sync = "local-only — no git remote is configured. That is a normal state:\n" +
 			"               everything works locally; add a remote later and the\n" +
 			"               daemon will publish the branch automatically."

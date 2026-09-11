@@ -1,7 +1,8 @@
 package main
 
 // The interactive TUI (002 T7, revised by Cycle 4): the single live
-// human surface. Reads poll the daemon on a tick; the steering writes
+// human surface. Reads arrive from one long poll on the daemon's
+// snapshot (see the polling section below); the steering writes
 // (answer an escalation, reprioritize, cancel, capture, edit
 // title/description/labels) go through the daemon HTTP API only,
 // stamped with the acting human principal.
@@ -39,11 +40,29 @@ func wrapTo(s string, width int) string {
 	return ansi.Hardwrap(ansi.Wordwrap(s, width, ""), width, true)
 }
 
-// ---- polling: state arrives by tick, never by keypress ----
+// ---- polling: state arrives from one long poll, never by keypress ----
+//
+// The screen holds exactly one snapshot request at a time (T4,
+// 2026-09-10): a long poll parked on the version last rendered, which
+// the daemon answers the moment its state moves — a write, a merge, a
+// lease lapsing — or, after pollWait, with the unchanged version, and
+// the next poll goes out with whatever came back. There is no tick:
+// every poll is the continuation of the one before it, and the guard
+// in startPoll keeps a refresh asked for elsewhere (an action landing,
+// a retry timer firing) from ever putting a second request in flight.
+// A failed poll is shown and retried on a backoff (1 s, doubling to
+// retryCap), reset by the next answer.
 
-const tuiRefresh = 2 * time.Second
+// pollWait is how long one poll parks on an unchanged version before
+// the daemon answers with the version alone and the screen re-polls.
+const pollWait = 30 * time.Second
 
-type tickMsg time.Time
+// retryCap bounds the backoff between failed polls.
+const retryCap = 5 * time.Second
+
+// pollMsg asks for the next poll: Init's first, and every retry
+// timer's. Ignored while a poll is in flight.
+type pollMsg struct{}
 
 // snapMsg carries one poll result; err is shown and retried, never fatal.
 type snapMsg struct {
@@ -51,15 +70,38 @@ type snapMsg struct {
 	err  error
 }
 
-func tickCmd() tea.Cmd {
-	return tea.Tick(tuiRefresh, func(t time.Time) tea.Msg { return tickMsg(t) })
+// nextBackoff is the delay after one more failed poll: 1 s on the
+// first failure, doubling, capped at retryCap.
+func nextBackoff(prev time.Duration) time.Duration {
+	if prev == 0 {
+		return time.Second
+	}
+	return min(2*prev, retryCap)
 }
 
-func fetchCmd(c *client) tea.Cmd {
+// startPoll issues the next long poll unless one is already in
+// flight — the one place a snapshot request is made. Tests inject
+// fetch; the real one parks on the daemon.
+func (m *topModel) startPoll() tea.Cmd {
+	if m.inFlight {
+		return nil
+	}
+	m.inFlight = true
+	fetch := m.fetch
+	if fetch == nil {
+		c := m.c
+		fetch = func(since uint64) (*snapshot, error) { return fetchSnapshotSince(c, since, pollWait) }
+	}
+	since := m.version
 	return func() tea.Msg {
-		s, err := fetchSnapshot(c)
+		s, err := fetch(since)
 		return snapMsg{snap: s, err: err}
 	}
+}
+
+// retryCmd schedules the next poll after a failure.
+func retryCmd(after time.Duration) tea.Cmd {
+	return tea.Tick(after, func(time.Time) tea.Msg { return pollMsg{} })
 }
 
 // steeringAPI is the full set of writes top can perform. An interface
@@ -274,6 +316,16 @@ type topModel struct {
 	cursor  int
 	history bool // history mode (2026-08-02): the list shows the done/cancelled shelf
 
+	// The poll chain (see startPoll): fetch is the injectable long
+	// poll (nil: the client's), version the snapshot version last
+	// rendered — what the next poll parks on — inFlight the one-request
+	// guard, and backoff the delay the last failure scheduled (0 once
+	// an answer lands).
+	fetch    func(since uint64) (*snapshot, error)
+	version  uint64
+	inFlight bool
+	backoff  time.Duration
+
 	mode    int
 	back    int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
 	input   textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
@@ -293,8 +345,11 @@ type topModel struct {
 	height      int // terminal rows; 0 renders all
 }
 
+// Init asks for the first poll by message rather than issuing it
+// here: Init cannot record anything on the model, and the in-flight
+// guard must see every request, the first included.
 func (m topModel) Init() tea.Cmd {
-	return tea.Batch(fetchCmd(m.c), tickCmd())
+	return func() tea.Msg { return pollMsg{} }
 }
 
 func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -312,11 +367,18 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		return m, nil
-	case tickMsg:
-		return m, tea.Batch(fetchCmd(m.c), tickCmd())
+	case pollMsg:
+		return m, m.startPoll()
 	case snapMsg:
+		m.inFlight = false
 		m.err = msg.err
-		if msg.snap != nil {
+		if msg.err != nil {
+			m.backoff = nextBackoff(m.backoff)
+			return m, retryCmd(m.backoff)
+		}
+		m.backoff = 0
+		if msg.snap != nil && !msg.snap.unchanged {
+			m.version = msg.snap.version
 			// Keep the selection on the same row across refreshes; a row
 			// that vanished (answered, cancelled, claimed…) drops the
 			// cursor to the top.
@@ -334,20 +396,23 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		return m, nil
+		// An unchanged answer re-polls at the same version; a fresh
+		// one at the version it carried.
+		return m, m.startPoll()
 	case actionMsg:
 		if msg.err != nil {
 			m.status = "error: " + msg.err.Error()
 		} else {
 			// Success clears the in-flight marker and says nothing more
-			// (feedback only, 2026-08-21): the refresh below putting the
+			// (feedback only, 2026-08-21): the refresh putting the
 			// effect on screen is the confirmation. Accepted: a capture
 			// lands below the fold — trusted anyway.
 			m.status = ""
 		}
-		// Refresh immediately so the action's effect is on screen before
-		// the next tick.
-		return m, fetchCmd(m.c)
+		// The action's effect reaches the screen through the parked
+		// poll, which its version bump wakes at once; only a screen
+		// sitting in a retry backoff has no poll to wake, and starts one.
+		return m, m.startPoll()
 	}
 	return m, nil
 }
@@ -1443,7 +1508,8 @@ const syncStaleAfter = 2 * time.Minute
 // relAge renders a stale fetch's age compactly ("8m", "3h", "2d") —
 // the one relative time the TUI shows: the stamp discipline
 // (render.go) exists because relative times rot the moment they are
-// written, and a live screen redrawing every 2s cannot rot.
+// written, and a live screen redrawn on every state change (and at
+// least every pollWait) cannot rot.
 func relAge(d time.Duration) string {
 	switch {
 	case d < time.Hour:
@@ -1488,7 +1554,8 @@ func syncSegs(col colors, s syncJSON, now time.Time) []seg {
 // status strip, blank separator). One function feeds both View and the
 // mouse hit test, so the body's first screen row is counted off the
 // same bytes that get drawn. The time.Now here is the render loop's
-// one clock read: the 2s tick redraws keep a stale age current.
+// one clock read: the redraw on every poll answer — at least every
+// pollWait — keeps a stale age current within its minute granularity.
 func (m topModel) listHead(width int) string {
 	col := m.col
 	sync := []seg{{col.dim, "..."}}
