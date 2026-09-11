@@ -102,7 +102,13 @@ func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Clie
 	go d.Run()
 	t.Cleanup(func() { d.Shutdown("test cleanup") })
 	waitLoaded(t, d)
-	client := &http.Client{
+	return d, socketClient(d)
+}
+
+// socketClient is an HTTP client that dials d's unix socket for every
+// request; the URL host is a placeholder.
+func socketClient(d *Daemon) *http.Client {
+	return &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 				var nd net.Dialer
@@ -110,7 +116,6 @@ func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Clie
 			},
 		},
 	}
-	return d, client
 }
 
 // loadOnly runs the load half of startup — what Run's start goroutine

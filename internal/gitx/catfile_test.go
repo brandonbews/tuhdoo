@@ -30,16 +30,9 @@ func hashObjectViaGit(t *testing.T, dir string, data []byte) string {
 // skipping the test when the local git cannot.
 func newSHA256Repo(t *testing.T) *CLI {
 	t.Helper()
-	setGitEnv(t)
-	dir := t.TempDir()
-	cmd := exec.Command("git", "init", "--quiet", "-b", "main", "--object-format=sha256")
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Skipf("this git cannot create a sha256 repository (git init --object-format=sha256: %v: %s)", err, strings.TrimSpace(string(out)))
-	}
-	g, err := New(dir)
+	g, err := newRepoWith(t, "--object-format=sha256")
 	if err != nil {
-		t.Fatalf("New: %v", err)
+		t.Skipf("this git cannot create a sha256 repository (%v)", err)
 	}
 	return g
 }

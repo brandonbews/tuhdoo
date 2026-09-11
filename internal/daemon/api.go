@@ -471,15 +471,12 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.Loaded = true
 	resp.Sync = syncJSONOf(d.sync.Status())
-	// Lease verdicts move with the clock, so replay at the current
-	// instant first (D6: expiry is evaluated at read time) — the status
-	// poll must not render a lapsed lease as a live holder. Degraded
-	// skips the refresh: the last good state keeps serving reads.
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			writeOpError(w, d.writeErrLocked(err))
-			return
-		}
+	// Past the placeholder, the same read gate as every hydrating read:
+	// replay at the current instant (the status poll must not render a
+	// lapsed lease as a live holder), skipped when degraded.
+	if oe := d.readGateLocked(now); oe != nil {
+		writeOpError(w, oe)
+		return
 	}
 	if d.degraded != nil {
 		resp.Degraded = d.degraded.Error()

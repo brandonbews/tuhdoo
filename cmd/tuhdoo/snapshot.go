@@ -28,23 +28,16 @@ import (
 // screen polling through a daemon restart shows "retrying" rather
 // than installing an empty board.
 func fetchState(c *client) (stateResp, error) {
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		var st stateResp
-		if err := c.get("/v0/state", &st); err != nil {
-			return st, err
-		}
-		if st.Loaded && st.Sync.Mode != "starting" {
-			return st, nil
-		}
-		if time.Now().After(deadline) {
-			if !st.Loaded {
-				return stateResp{}, errors.New("daemon is still loading the ledger; try again in a moment")
-			}
-			return st, nil
-		}
-		time.Sleep(50 * time.Millisecond)
+	st, err := pollState(c, 3*time.Second, func(st stateResp) bool {
+		return st.Loaded && st.Sync.Mode != "starting"
+	})
+	if err != nil {
+		return st, err
 	}
+	if !st.Loaded {
+		return stateResp{}, errors.New("daemon is still loading the ledger; try again in a moment")
+	}
+	return st, nil
 }
 
 // snapshot is one consistent-enough picture of daemon state: /v0/state

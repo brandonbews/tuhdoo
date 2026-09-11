@@ -53,6 +53,18 @@ func (r *repo) runtimeDir() string {
 	return filepath.Join(r.gitDir, "tuhdoo")
 }
 
+// logPath is daemon.log under runtimeDir: where a spawned daemon's
+// output goes, and what every startup failure points the user at.
+func (r *repo) logPath() string {
+	return filepath.Join(r.runtimeDir(), "daemon.log")
+}
+
+// discoveryPath is daemon.json under runtimeDir: the discovery file a
+// serving daemon writes, which liveSocket reads to find its socket.
+func (r *repo) discoveryPath() string {
+	return filepath.Join(r.runtimeDir(), "daemon.json")
+}
+
 // headShort returns the data branch head OID in short form.
 func (r *repo) headShort() (string, error) {
 	out, err := gitOutput(r.root, "rev-parse", "--short", store.DefaultRef)

@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -160,7 +159,6 @@ func ensureDaemon(r *repo) (*client, error) {
 // it cannot read) and fails at once rather than at the ceiling. Either
 // failure names daemon.log, where the daemon wrote its reason.
 func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, error) {
-	logPath := filepath.Join(r.runtimeDir(), "daemon.log")
 	deadline := time.Now().Add(ceiling)
 	for {
 		if sock, ok := liveSocket(r); ok {
@@ -169,12 +167,12 @@ func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, er
 		select {
 		case code := <-exited:
 			if code != exitAlreadyRunning {
-				return nil, fmt.Errorf("daemon exited without serving; see %s", logPath)
+				return nil, fmt.Errorf("daemon exited without serving; see %s", r.logPath())
 			}
 		default:
 		}
 		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("daemon did not come up within %v; see %s", ceiling, logPath)
+			return nil, fmt.Errorf("daemon did not come up within %v; see %s", ceiling, r.logPath())
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -188,21 +186,35 @@ func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, er
 // is the daemon's own answer, surfaced as is. Both failures and the
 // ceiling name daemon.log.
 func awaitLoaded(r *repo, c *client, ceiling time.Duration) (*client, error) {
-	logPath := filepath.Join(r.runtimeDir(), "daemon.log")
+	st, err := pollState(c, ceiling, func(st stateResp) bool { return st.Loaded })
+	if err != nil {
+		if _, ok := liveSocket(r); !ok {
+			return nil, fmt.Errorf("daemon exited while starting; see %s", r.logPath())
+		}
+		return nil, fmt.Errorf("daemon not answering: %w", err)
+	}
+	if !st.Loaded {
+		return nil, fmt.Errorf("daemon is still loading the ledger after %v; see %s", ceiling, r.logPath())
+	}
+	return c, nil
+}
+
+// pollState reads /v0/state every 50 ms until ready accepts the
+// daemon's answer or ceiling elapses, and returns the last answer
+// either way — the caller applies ready once more to tell the two
+// apart and decide what the ceiling means. The one readiness loop
+// behind awaitLoaded (the daemon's load) and fetchState (the sync
+// loop's first decision); a poll the daemon does not answer is its
+// error, unwrapped, for the caller to name.
+func pollState(c *client, ceiling time.Duration, ready func(stateResp) bool) (stateResp, error) {
 	deadline := time.Now().Add(ceiling)
 	for {
 		var st stateResp
 		if err := c.get("/v0/state", &st); err != nil {
-			if _, ok := liveSocket(r); !ok {
-				return nil, fmt.Errorf("daemon exited while starting; see %s", logPath)
-			}
-			return nil, fmt.Errorf("daemon not answering: %w", err)
+			return stateResp{}, err
 		}
-		if st.Loaded {
-			return c, nil
-		}
-		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("daemon is still loading the ledger after %v; see %s", ceiling, logPath)
+		if ready(st) || time.Now().After(deadline) {
+			return st, nil
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -212,7 +224,7 @@ func awaitLoaded(r *repo, c *client, ceiling time.Duration) (*client, error) {
 // serving by dialing its socket — a stale file from a crash fails the
 // dial and we spawn fresh.
 func liveSocket(r *repo) (string, bool) {
-	b, err := os.ReadFile(filepath.Join(r.runtimeDir(), "daemon.json"))
+	b, err := os.ReadFile(r.discoveryPath())
 	if err != nil {
 		return "", false
 	}
@@ -245,8 +257,7 @@ func spawnDaemon(r *repo) (<-chan int, error) {
 	if err := os.MkdirAll(r.runtimeDir(), 0o755); err != nil {
 		return nil, fmt.Errorf("create runtime dir: %w", err)
 	}
-	logf, err := os.OpenFile(filepath.Join(r.runtimeDir(), "daemon.log"),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	logf, err := os.OpenFile(r.logPath(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("open daemon.log: %w", err)
 	}

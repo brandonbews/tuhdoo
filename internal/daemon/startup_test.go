@@ -13,7 +13,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -48,17 +47,6 @@ type brokenGit struct{ gitx.Git }
 
 func (brokenGit) LsTree(string) ([]gitx.TreeEntry, error) {
 	return nil, errors.New("simulated: object store unreadable")
-}
-
-func socketClient(d *Daemon) *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				var nd net.Dialer
-				return nd.DialContext(ctx, "unix", d.SocketPath())
-			},
-		},
-	}
 }
 
 func TestServesStartingUntilFirstReplay(t *testing.T) {

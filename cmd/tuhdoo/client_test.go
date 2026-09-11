@@ -48,7 +48,7 @@ func bindFakeDaemon(r *repo) (net.Listener, error) {
 		return nil, err
 	}
 	disc, _ := json.Marshal(map[string]any{"pid": os.Getpid(), "socket": sock})
-	if err := os.WriteFile(filepath.Join(r.runtimeDir(), "daemon.json"), disc, 0o644); err != nil {
+	if err := os.WriteFile(r.discoveryPath(), disc, 0o644); err != nil {
 		ln.Close()
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func serveFakeDaemon(t *testing.T, r *repo, state func() stateResp) (stop func()
 	go srv.Serve(ln)
 	stop = func() {
 		srv.Close()
-		os.Remove(filepath.Join(r.runtimeDir(), "daemon.json"))
+		os.Remove(r.discoveryPath())
 	}
 	t.Cleanup(stop)
 	return stop
@@ -144,7 +144,7 @@ func TestAwaitDaemonCeilingNamesDaemonLog(t *testing.T) {
 	if time.Since(start) < ceiling {
 		t.Fatalf("gave up before the ceiling: %v < %v", time.Since(start), ceiling)
 	}
-	logPath := filepath.Join(r.runtimeDir(), "daemon.log")
+	logPath := r.logPath()
 	if !strings.Contains(err.Error(), logPath) || !strings.Contains(err.Error(), ceiling.String()) {
 		t.Fatalf("ceiling error %q should name the ceiling and %s", err, logPath)
 	}
@@ -163,7 +163,7 @@ func TestAwaitDaemonFailsFastWhenTheDaemonExits(t *testing.T) {
 	if elapsed > time.Second {
 		t.Fatalf("took %v to notice the exit; want at once", elapsed)
 	}
-	if !strings.Contains(err.Error(), "exited") || !strings.Contains(err.Error(), filepath.Join(r.runtimeDir(), "daemon.log")) {
+	if !strings.Contains(err.Error(), "exited") || !strings.Contains(err.Error(), r.logPath()) {
 		t.Fatalf("exit error %q should say the daemon exited and name daemon.log", err)
 	}
 }
@@ -257,7 +257,7 @@ func TestAwaitLoadedCeilingNamesDaemonLog(t *testing.T) {
 	if time.Since(start) < ceiling {
 		t.Fatalf("gave up before the ceiling: %v < %v", time.Since(start), ceiling)
 	}
-	logPath := filepath.Join(r.runtimeDir(), "daemon.log")
+	logPath := r.logPath()
 	if !strings.Contains(err.Error(), "loading") || !strings.Contains(err.Error(), logPath) {
 		t.Fatalf("ceiling error %q should say the daemon is still loading and name %s", err, logPath)
 	}
@@ -292,7 +292,7 @@ func TestAwaitLoadedReportsADaemonThatDiedLoading(t *testing.T) {
 	if time.Since(start) > 5*time.Second {
 		t.Fatalf("took %v to notice the death; want at once", time.Since(start))
 	}
-	if !strings.Contains(err.Error(), "exited while starting") || !strings.Contains(err.Error(), filepath.Join(r.runtimeDir(), "daemon.log")) {
+	if !strings.Contains(err.Error(), "exited while starting") || !strings.Contains(err.Error(), r.logPath()) {
 		t.Fatalf("death error %q should say the daemon exited while starting and name daemon.log", err)
 	}
 }

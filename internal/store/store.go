@@ -45,9 +45,9 @@ type Store struct {
 	// bytes, they never edit in place).
 	eventByOID map[string]event.Event
 	// leaseByOID holds decoded lease files. Leases are mutable — every
-	// renewal writes a new blob — so this cache is rebuilt on each load
-	// to hold only the OIDs currently in the tree, and cannot grow with
-	// renewal churn.
+	// renewal writes a new blob — so the reader prunes this cache on
+	// each load to the OIDs currently in the tree, and it cannot grow
+	// with renewal churn.
 	leaseByOID map[string]time.Time
 }
 
@@ -245,19 +245,6 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("store: load: %w", err)
 	}
-	// Keep only the lease blobs still in the tree; superseded renewals
-	// and deleted leases fall out of the cache here. (Events are
-	// immutable and their cache only grows.)
-	live := make(map[string]time.Time, len(leases))
-	for _, entry := range entries {
-		if !strings.HasPrefix(entry.Path, "leases/") {
-			continue
-		}
-		if expires, ok := s.leaseByOID[entry.OID]; ok {
-			live[entry.OID] = expires
-		}
-	}
-	s.leaseByOID = live
 	return events, leases, nil
 }
 
@@ -269,23 +256,39 @@ func (s *Store) LoadReplayInput() ([]event.Event, map[string]time.Time, error) {
 // paths no writer produces) is skipped — reads through git in one
 // batch only the blobs the caches lack (T2, 2026-09-10), decodes them
 // into the caches, and returns the events in entry order plus the
-// leases keyed by claim id. The caches belong to the caller: the store
-// passes its long-lived content-addressed ones, a one-off replay passes
-// empty maps. A blob git cannot produce fails the whole read (CatFiles
-// answers every OID it was asked for or errors), never a skipped entry.
+// leases keyed by claim id. The caches belong to the caller — the
+// store passes its long-lived content-addressed ones, a one-off replay
+// passes empty maps — and this function owns their upkeep: it adds
+// what it decodes, and once the read succeeds it deletes every lease
+// entry whose OID is no longer in the tree (superseded renewals,
+// released leases), so the lease cache holds live OIDs only; the event
+// cache only grows, as events do. A blob git cannot produce fails the
+// whole read (CatFiles answers every OID it was asked for or errors),
+// never a skipped entry.
 func ReplayInputFromTree(g gitx.Git, tree []gitx.TreeEntry, eventByOID map[string]event.Event, leaseByOID map[string]time.Time) ([]event.Event, map[string]time.Time, error) {
-	// First pass: which blobs does this read need that the caches lack?
+	// Classify once: the entries replay consumes, and which of their
+	// blobs the caches lack.
+	type replayEntry struct {
+		gitx.TreeEntry
+		claimID string // set for a lease; "" for an event
+	}
+	var live []replayEntry
 	var need []string
+	liveLease := make(map[string]bool) // lease OIDs in the tree
 	for _, entry := range tree {
 		switch {
 		case strings.HasPrefix(entry.Path, "events/"):
+			live = append(live, replayEntry{TreeEntry: entry})
 			if _, ok := eventByOID[entry.OID]; !ok {
 				need = append(need, entry.OID)
 			}
 		case strings.HasPrefix(entry.Path, "leases/"):
-			if _, ok := LeaseClaimID(entry.Path); !ok {
+			claimID, ok := LeaseClaimID(entry.Path)
+			if !ok {
 				continue
 			}
+			live = append(live, replayEntry{TreeEntry: entry, claimID: claimID})
+			liveLease[entry.OID] = true
 			if _, ok := leaseByOID[entry.OID]; !ok {
 				need = append(need, entry.OID)
 			}
@@ -300,12 +303,11 @@ func ReplayInputFromTree(g gitx.Git, tree []gitx.TreeEntry, eventByOID map[strin
 		}
 	}
 
-	// Second pass: decode what was fetched, serve the rest from cache.
+	// Decode what was fetched, serve the rest from cache.
 	var events []event.Event
 	leases := make(map[string]time.Time)
-	for _, entry := range tree {
-		switch {
-		case strings.HasPrefix(entry.Path, "events/"):
+	for _, entry := range live {
+		if entry.claimID == "" {
 			e, ok := eventByOID[entry.OID]
 			if !ok {
 				var err error
@@ -316,22 +318,22 @@ func ReplayInputFromTree(g gitx.Git, tree []gitx.TreeEntry, eventByOID map[strin
 				eventByOID[entry.OID] = e
 			}
 			events = append(events, e)
-
-		case strings.HasPrefix(entry.Path, "leases/"):
-			claimID, ok := LeaseClaimID(entry.Path)
-			if !ok {
-				continue
+			continue
+		}
+		expires, ok := leaseByOID[entry.OID]
+		if !ok {
+			var err error
+			expires, err = DecodeLease(blobs[entry.OID])
+			if err != nil {
+				return nil, nil, fmt.Errorf("%s: %w", entry.Path, err)
 			}
-			expires, ok := leaseByOID[entry.OID]
-			if !ok {
-				var err error
-				expires, err = DecodeLease(blobs[entry.OID])
-				if err != nil {
-					return nil, nil, fmt.Errorf("%s: %w", entry.Path, err)
-				}
-				leaseByOID[entry.OID] = expires
-			}
-			leases[claimID] = expires
+			leaseByOID[entry.OID] = expires
+		}
+		leases[entry.claimID] = expires
+	}
+	for oid := range leaseByOID {
+		if !liveLease[oid] {
+			delete(leaseByOID, oid)
 		}
 	}
 	return events, leases, nil

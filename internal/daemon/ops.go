@@ -60,6 +60,25 @@ func (d *Daemon) degradedLocked() *opError {
 	return nil
 }
 
+// readGateLocked is the read gate for the operations that hydrate
+// state: the startup window first (startingLocked: nothing has been
+// replayed yet), then a replay at the current instant so lease
+// verdicts move with the clock (D6: expiry is evaluated at read time
+// — a stale expiry must not hydrate a lapsed claim as live or hide a
+// ready task). Degraded skips the refresh: the last good state keeps
+// serving reads. nil when the read may proceed. Caller holds d.mu.
+func (d *Daemon) readGateLocked(now time.Time) *opError {
+	if oe := d.startingLocked(); oe != nil {
+		return oe
+	}
+	if d.degraded == nil {
+		if err := d.refreshLocked(now); err != nil {
+			return d.writeErrLocked(err)
+		}
+	}
+	return nil
+}
+
 // writeErrLocked maps a failed write/refresh: 503 when the failure put
 // us in fail-safe mode, 500 otherwise. Caller holds d.mu.
 func (d *Daemon) writeErrLocked(err error) *opError {
@@ -1015,13 +1034,8 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if oe := d.startingLocked(); oe != nil {
+	if oe := d.readGateLocked(now); oe != nil {
 		return hydratedTask{}, oe
-	}
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			return hydratedTask{}, d.writeErrLocked(err)
-		}
 	}
 	if _, ok := d.state.Tasks[id]; !ok {
 		return hydratedTask{}, opErrf(http.StatusNotFound, "unknown task %s", id)
@@ -1044,13 +1058,8 @@ func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if oe := d.startingLocked(); oe != nil {
+	if oe := d.readGateLocked(now); oe != nil {
 		return backlogResult{}, oe
-	}
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			return backlogResult{}, d.writeErrLocked(err)
-		}
 	}
 	res := backlogResult{Ready: []taskJSON{}, Inbox: []taskJSON{}, Held: []taskJSON{}}
 	for _, t := range d.state.ReadyTasks() {
