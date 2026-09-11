@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 0 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
+0 in progress · 5 ready · 2 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
 
 ## In progress
 
@@ -11,13 +11,17 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) | Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick | 1 | `go` `core` `daemon` `views` `tui` `cli` |
+| [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) | Priority is clearable: task.updated v4, clear on the API, MCP, and CLI | 1 | `go` `event` `core` `daemon` `mcp` `cli` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | 2 | `go` `audit-finding` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 
 ## Blocked / waiting
 
-_None._
+| ID | Task | Priority | Waiting on |
+|---|---|---:|---|
+| [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) | Prompt overlay: every TUI prompt renders in a centered box over the screen | 1 | depends on [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) |
+| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | depends on [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md); depends on [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) |
 
 ## On hold
 
