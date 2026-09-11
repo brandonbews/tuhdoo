@@ -3,7 +3,7 @@
 `tuh-01KZVZT7F8CVJYX1P00BRPGMTX`
 
 - **Status:** open — ready
-- **Priority:** 2
+- **Priority:** none
 - **Labels:** `go` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
 
@@ -28,3 +28,7 @@ retitled · description edited · status inbox→open · labels +go
 ### 2026-09-11 17:47 UTC — edit by `brandon`
 
 priority none→2
+
+### 2026-09-11 21:51 UTC — edit by `brandon`
+
+priority 2→none
