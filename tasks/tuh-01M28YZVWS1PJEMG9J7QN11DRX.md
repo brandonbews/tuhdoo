@@ -2,7 +2,7 @@
 
 `tuh-01M28YZVWS1PJEMG9J7QN11DRX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-2`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `go` `event` `core` `daemon` `mcp` `cli`
 - **Created:** 2026-09-11 19:26 UTC by `brandon/claude-code-1`
@@ -39,3 +39,11 @@ Constraints: stored event bytes never rewritten (T3); no new MCP tool (T5); bori
 lease expired without a finish or release
 
 _Synthesized by replay, not recorded by the agent._
+
+### 2026-09-11 21:51 UTC — run by `brandon/claude-code-2` — done
+
+- Branch: `tuh-01M28YZVWS1PJEMG9J7QN11DRX/clearable-priority`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/106>
+- Merged as: `2fb8fb4588e28da6730badf4e8525279f54495eb`
+
+Landed as PR #106 (squash 2fb8fb4). task.updated is v4: priority is tri-state on the wire (absent = unchanged, explicit null = clear, number = set) via event.PriorityChange, a value type with omitzero (SetPriority/ClearPriority constructors); v3→v4 upcaster dropNullPriority deletes a null priority key in memory. Replay clears on null and records "priority 2→none" (bare-number format, matching priorityLabel's existing "none→2"; the task text's "p2→none" spelling was not adopted). PATCH /v0/tasks/{id} and MCP update_task take clear_priority (both with priority = 400); CLI `tuhdoo update <id> --priority none`. docs/steering.md mentions --priority none; 002 T3 carries the v4 revision note. Tests: event goldens for all five shapes, core tri-state table + v5 fail-safe, daemon TestClearPriority + TestMCPUpdateTaskClearPriority, CLI TestCreateUpdateAnswer extended. Manual item (clear the accidental p2 on tuh-01KZVZT7F8CVJYX1P00BRPGMTX after deploy) is done right after this finish and pasted into the PR body. The earlier interrupted run on this task was an empty claim whose MCP session was killed by the PR #105 deploy restart; no work was lost.

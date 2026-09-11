@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 4 ready · 1 blocked · 7 on hold · 5 inbox · 121 done · 33 cancelled
+0 in progress · 4 ready · 1 blocked · 7 on hold · 5 inbox · 122 done · 33 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) | Priority is clearable: task.updated v4, clear on the API, MCP, and CLI | 1 | `brandon/claude-code-2` |
+_None._
 
 ## Ready
 
@@ -21,7 +19,7 @@
 
 | ID | Task | Priority | Waiting on |
 |---|---|---:|---|
-| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | depends on [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md); depends on [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) |
+| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | depends on [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) |
 
 ## On hold
 
@@ -169,6 +167,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-6hd8`](tasks/tuh-01M26H99G1YXYDCSBFNQEF6HD8.md) Read fast, start fast: batch blob reads, Go-side object IDs, bind-before-load
 - [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed
 - [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick
+- [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) Priority is clearable: task.updated v4, clear on the API, MCP, and CLI
 - [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 
 ## Cancelled
