@@ -2,9 +2,12 @@
 //
 // tuhdoo's data branch is never checked out (design doc 002, T2): every
 // method works on git's object database and refs directly, via plumbing
-// commands. The interface deliberately has no checkout, worktree, or
-// index operations, so code built on it cannot touch the user's working
-// tree even by accident.
+// commands. The interface deliberately has no checkout or worktree
+// operations, so code built on it cannot touch the user's working tree
+// even by accident. The only index it touches is tuhdoo's own private
+// one (T2, 2026-09-10: `<git-dir>/tuhdoo/index`, selected per
+// subprocess through GIT_INDEX_FILE) — the user's index is never read
+// or written, and a private index is not a worktree.
 package gitx
 
 import (
@@ -120,6 +123,32 @@ type Git interface {
 	// LsTree lists every blob reachable from rev (a tree or commit OID,
 	// or a ref) as path → blob OID, recursing into subtrees.
 	LsTree(rev string) ([]TreeEntry, error)
+
+	// ReadTree seeds the private index with the contents of tree (a
+	// tree or commit OID), replacing whatever the index held — a
+	// missing index file is created, a garbage one overwritten, and a
+	// stale index.lock cleared first (the daemon's flock proves no
+	// other process writes this index, so a lock file is a leftover of
+	// a killed git). T2, 2026-09-10: the index mirrors the parent tree
+	// of the next commit, so callers reseed at every load and after
+	// every reload of the head from git; a tree built from an index
+	// not reseeded after a reload silently drops the other side's
+	// files.
+	ReadTree(tree string) error
+
+	// UpdateIndex applies entries to the private index in one
+	// `update-index --index-info` process: an entry with an OID adds or
+	// replaces the regular blob (mode 100644) at its path; an entry
+	// with an empty OID removes the path (a no-op when absent — the
+	// mode-0 line D9 compaction will use). Paths are validated exactly
+	// as MkTree validates them. Empty entries spawn nothing.
+	UpdateIndex(entries []TreeEntry) error
+
+	// WriteTree writes the private index out as a tree object and
+	// returns its OID. A missing index file is an error, never the
+	// empty tree git would otherwise silently produce: the index must
+	// have been seeded by ReadTree in this process.
+	WriteTree() (oid string, err error)
 
 	// Fetch fetches refspec from remote. A refspec naming a ref the
 	// remote lacks returns an error matching ErrRemoteRefMissing.

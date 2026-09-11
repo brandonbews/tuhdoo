@@ -355,7 +355,7 @@ func TestConfirmClaimGateRetryExhaustion(t *testing.T) {
 		t.Fatalf("gitx.New: %v", err)
 	}
 	moving := &movingRemoteGit{Git: g, t: t, bare: bare}
-	d.sync = syncer.New(moving, syncer.Options{
+	d.sync = syncer.New(moving, d.store, syncer.Options{
 		Interval: time.Hour,
 		Ident:    testIdent,
 		OnMerged: func() {

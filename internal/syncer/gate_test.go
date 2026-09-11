@@ -199,7 +199,7 @@ func TestGateHeadRemoteless(t *testing.T) {
 	if err := st.Init(); err != nil {
 		t.Fatal(err)
 	}
-	solo := New(g, Options{})
+	solo := New(g, st, Options{})
 	if _, _, err := solo.GateHead(); !errors.Is(err, gitx.ErrNoRemote) {
 		t.Fatalf("GateHead without a remote = %v, want ErrNoRemote (the caller owns the T2 remoteless path)", err)
 	}

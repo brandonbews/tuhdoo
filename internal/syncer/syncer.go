@@ -1,7 +1,11 @@
 // Package syncer is the background sync loop (002 T2/T8, 001 D2): fetch
 // the remote data branch, merge divergence at the application level,
 // push. It is the network half of tuhdoo's convergence story; the local
-// half is the daemon's serialized writer.
+// half is the daemon's serialized writer. The syncer never moves the
+// local ref itself (T2, 2026-09-10: the store is the single mover): a
+// fast-forward and a union merge both land through the store, so the
+// daemon's replica and the ref advance together, and its replays read
+// decoded events and leases from the store's cache by OID.
 package syncer
 
 import (
@@ -45,7 +49,7 @@ type Options struct {
 	Remote   string        // remote name; empty means "origin"
 	Interval time.Duration // fetch cadence; <= 0 means DefaultInterval
 	Ident    gitx.Identity // merge-commit identity
-	OnMerged func()        // called after the local ref moves (daemon refresh)
+	OnMerged func()        // called after the local head moves (daemon refresh)
 	Log      *log.Logger
 	Now      func() time.Time // test hook; nil means time.Now
 }
@@ -53,6 +57,7 @@ type Options struct {
 // Syncer runs the loop for one repository.
 type Syncer struct {
 	git      gitx.Git
+	store    *store.Store
 	ref      string
 	remote   string
 	interval time.Duration
@@ -73,7 +78,10 @@ type Syncer struct {
 	replay     *core.Replayer
 }
 
-func New(g gitx.Git, opts Options) *Syncer {
+// New returns a Syncer over g that commits through st. The ref it
+// syncs is st's data branch; opts.Ref must name the same one (empty
+// means store.DefaultRef, as for the store).
+func New(g gitx.Git, st *store.Store, opts Options) *Syncer {
 	if opts.Ref == "" {
 		opts.Ref = store.DefaultRef
 	}
@@ -88,6 +96,7 @@ func New(g gitx.Git, opts Options) *Syncer {
 	}
 	return &Syncer{
 		git:      g,
+		store:    st,
 		ref:      opts.Ref,
 		remote:   opts.Remote,
 		interval: opts.Interval,
@@ -181,9 +190,14 @@ func (s *Syncer) cycleAndRecord() {
 	s.status.LastError = ""
 }
 
-// Cycle runs one fetch → merge → push pass. Exported for tests and for
-// a future `tuhdoo sync` command.
+// Cycle runs one ref check → fetch → merge → push pass. Exported for
+// tests and for a future `tuhdoo sync` command. The ref check runs
+// first, remote or not: a remoteless daemon must notice a `branch -f`
+// within a cycle just as a syncing one does (001 D2, 2026-09-10).
 func (s *Syncer) Cycle() error {
+	if err := s.noticeExternalMove(); err != nil {
+		return err
+	}
 	if _, err := s.git.RemoteURL(s.remote); err != nil {
 		if errors.Is(err, gitx.ErrNoRemote) {
 			s.setMode("local-only")
@@ -198,10 +212,7 @@ func (s *Syncer) Cycle() error {
 			return err
 		}
 
-		local, err := s.git.ReadRef(s.ref)
-		if err != nil {
-			return fmt.Errorf("syncer: %w", err)
-		}
+		local := s.store.Head()
 
 		if remoteHead != "" && remoteHead != local {
 			advanced, err := s.reconcile(local, remoteHead)
@@ -209,10 +220,7 @@ func (s *Syncer) Cycle() error {
 				return err
 			}
 			if advanced {
-				local, err = s.git.ReadRef(s.ref)
-				if err != nil {
-					return fmt.Errorf("syncer: %w", err)
-				}
+				local = s.store.Head()
 			}
 		}
 
@@ -237,6 +245,36 @@ func (s *Syncer) Cycle() error {
 	return fmt.Errorf("syncer: remote %s kept moving for %d attempts", s.remote, maxCycleRetries)
 }
 
+// noticeExternalMove is the one place the ref is compared against git
+// outside the store's own commit path (001 D2, 2026-09-10, accepted):
+// one rev-parse per cycle. The store moves the ref and its replica
+// together, so a ref that differs from the replica's head was moved
+// from outside — a manual fetch into it, a `branch -f` — and the
+// replica reloads from git (which reseeds the private index) and the
+// daemon refreshes. A store that has not loaded yet simply loads. A
+// commit landing between the two reads makes the ref look moved for
+// one cycle; the reload is then a no-op that costs three processes.
+func (s *Syncer) noticeExternalMove() error {
+	head := s.store.Head()
+	ref, err := s.git.ReadRef(s.ref)
+	if err != nil {
+		return fmt.Errorf("syncer: %w", err)
+	}
+	if ref == head {
+		return nil
+	}
+	if head != "" {
+		s.logf("sync: %s moved outside the daemon (%s -> %s); reloading", s.ref, head, ref)
+	}
+	if err := s.store.Load(); err != nil {
+		return fmt.Errorf("syncer: reload after external move: %w", err)
+	}
+	if head != "" && s.onMerged != nil {
+		s.onMerged()
+	}
+	return nil
+}
+
 // fetch updates TrackingRef and returns the remote head, or "" when the
 // remote has no data branch yet (first push still pending).
 func (s *Syncer) fetch() (string, error) {
@@ -256,10 +294,11 @@ func (s *Syncer) fetch() (string, error) {
 	return oid, nil
 }
 
-// reconcile brings remote work into the local ref: fast-forward when
-// possible, app-level merge when divergent. Returns whether the local
-// ref moved. A CAS loss (the daemon committed mid-reconcile) is not an
-// error — the next cycle attempt re-reads and tries again.
+// reconcile brings remote work into the local ref through the store:
+// fast-forward when possible, app-level merge when divergent. Returns
+// whether the local head moved. A lost compare-and-swap (the ref moved
+// from outside mid-reconcile) is not an error — the store has reloaded,
+// and the next cycle attempt re-reads and tries again.
 func (s *Syncer) reconcile(local, remote string) (bool, error) {
 	theirsBehind, err := s.git.IsAncestor(remote, local)
 	if err != nil {
@@ -273,23 +312,22 @@ func (s *Syncer) reconcile(local, remote string) (bool, error) {
 		return false, err
 	}
 
-	target := remote
-	if !weBehind {
-		// True divergence: build the app-level merge commit.
-		target, err = s.merge(local, remote)
-		if err != nil {
-			return false, err
-		}
-		s.bumpMerges()
+	if weBehind {
+		err = s.store.FastForward(local, remote)
+	} else {
+		// True divergence: the app-level merge, committed through the
+		// store with both heads as parents.
+		err = s.merge(remote)
 	}
-
-	err = s.git.UpdateRef(s.ref, target, local)
 	if err != nil {
 		if errors.Is(err, gitx.ErrRefCASFailed) {
 			s.logf("sync: local ref moved during reconcile; retrying next pass")
 			return false, nil
 		}
 		return false, fmt.Errorf("syncer: %w", err)
+	}
+	if !weBehind {
+		s.bumpMerges()
 	}
 	if s.onMerged != nil {
 		s.onMerged()

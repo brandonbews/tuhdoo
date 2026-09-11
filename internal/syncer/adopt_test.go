@@ -84,14 +84,16 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	sya := New(ga, Options{Ident: ident("seeder")})
+	sya := New(ga, sta, Options{Ident: ident("seeder")})
 	if err := sya.Cycle(); err != nil {
 		t.Fatalf("seed cycle: %v", err)
 	}
 
-	// The joiner: fresh repo, remote configured, no local data branch.
+	// The joiner: fresh repo, remote configured, no local data branch,
+	// a store that has nothing to load yet.
 	bDir, gb := mkRepo(t, "joiner", bare)
-	syb := New(gb, Options{Ident: ident("joiner")})
+	stb := store.New(gb, "", ident("joiner"))
+	syb := New(gb, stb, Options{Ident: ident("joiner")})
 	syb.AdoptRemoteBranch()
 
 	remoteHead := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef))
@@ -104,7 +106,6 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	}
 
 	// Init after adoption must be the no-op arm, not a second root.
-	stb := store.New(gb, "", ident("joiner"))
 	if err := stb.Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -149,14 +150,14 @@ func TestAdoptRemoteBranchFallsBackToMinting(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir, g := mkRepo(t, "solo", tc.remote(t))
-			sy := New(g, Options{Ident: ident("solo")})
+			st := store.New(g, "", ident("solo"))
+			sy := New(g, st, Options{Ident: ident("solo")})
 			sy.AdoptRemoteBranch()
 
 			// Nothing adopted; Init mints exactly as without adoption.
 			if _, err := g.ReadRef(store.DefaultRef); !errors.Is(err, gitx.ErrRefNotFound) {
 				t.Fatalf("ref after failed adoption: err = %v, want ErrRefNotFound", err)
 			}
-			st := store.New(g, "", ident("solo"))
 			if err := st.Init(); err != nil {
 				t.Fatalf("init after fallback: %v", err)
 			}
