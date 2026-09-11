@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 4 ready · 2 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
+1 in progress · 5 ready · 2 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
 
 ## In progress
 
@@ -16,6 +16,7 @@
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | 2 | `go` `audit-finding` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
+| [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) | Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X) | — | `probe` |
 
 ## Blocked / waiting
 
