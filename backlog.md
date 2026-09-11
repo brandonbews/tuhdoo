@@ -1,26 +1,23 @@
 # Backlog
 
-1 in progress · 3 ready · 1 blocked · 7 on hold · 5 inbox · 118 done · 33 cancelled
+0 in progress · 4 ready · 0 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) | The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) | Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick | 1 | `go` `core` `daemon` `views` `tui` `cli` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
 
 ## Blocked / waiting
 
-| ID | Task | Priority | Waiting on |
-|---|---|---:|---|
-| [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) | Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick | 1 | depends on [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) |
+_None._
 
 ## On hold
 
@@ -166,6 +163,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-dtsq`](tasks/tuh-01M10T2RN08T5WQMB43XXVDTSQ.md) User-facing copy rewrite: ISO 24495-1 backbone + Google dev-doc style (README, docs, npm, site)
 - [`tuh-1bap`](tasks/tuh-01M26H99BZBCHHZX7G98X41BAP.md) Design revision: the daemon is the live replica; git is touched only when the ledger changes (D2, D3/T6, D6, D9, T2, T4)
 - [`tuh-6hd8`](tasks/tuh-01M26H99G1YXYDCSBFNQEF6HD8.md) Read fast, start fast: batch blob reads, Go-side object IDs, bind-before-load
+- [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed
 
 ## Cancelled
 

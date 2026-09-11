@@ -2,10 +2,10 @@
 
 `tuh-01M26H99QVANVJCXR9FM2Z8Q7X`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `core` `daemon` `views` `tui` `cli`
-- **Depends on:** [`tuh-k0zx`](tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) (open)
+- **Depends on:** [`tuh-k0zx`](tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) (done)
 - **Created:** 2026-09-10 20:48 UTC by `brandon`
 
 ## Description
