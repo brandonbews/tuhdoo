@@ -48,12 +48,20 @@ func (r *Replayer) RegisterUpcaster(typ string, from int, fn Upcaster) {
 // more urgent) cannot be renumbered mechanically on an unbounded
 // scale, so live nonzero priorities are hand-corrected by ordinary
 // task.updated events at migration instead (the 2026-08-21 flip plan).
+// task.updated v3→v4 (2026-09-11, clearable priority): v4 makes the
+// priority key tri-state — absent = unchanged, explicit null = clear,
+// number = set — where v3 spent null on "unchanged". The lift deletes
+// a v3 null priority key so it reads as v4 absent (unchanged, exactly
+// what it meant); numbers and every other byte carry through. The
+// ladder composes: a v2 zero becomes a v3 null becomes v4 absent, so a
+// v2 "reset to default" still replays as not-an-edit.
 func registerCatalogUpcasters(r *Replayer) {
 	identity := func(data json.RawMessage) (json.RawMessage, error) { return data, nil }
 	r.RegisterUpcaster(event.TypeTaskCreated, 1, identity)
 	r.RegisterUpcaster(event.TypeTaskUpdated, 1, identity)
 	r.RegisterUpcaster(event.TypeTaskCreated, 2, zeroPriorityToNull)
 	r.RegisterUpcaster(event.TypeTaskUpdated, 2, zeroPriorityToNull)
+	r.RegisterUpcaster(event.TypeTaskUpdated, 3, dropNullPriority)
 }
 
 // zeroPriorityToNull rewrites a payload's "priority": 0 to null, in
@@ -75,6 +83,28 @@ func zeroPriorityToNull(data json.RawMessage) (json.RawMessage, error) {
 		return data, nil
 	}
 	doc["priority"] = json.RawMessage("null")
+	return json.Marshal(doc)
+}
+
+// dropNullPriority deletes a payload's "priority": null key, in memory
+// only, leaving every other field byte-for-byte alone. A number stays.
+func dropNullPriority(data json.RawMessage) (json.RawMessage, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, err
+	}
+	raw, ok := doc["priority"]
+	if !ok {
+		return data, nil
+	}
+	var p *int
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return nil, err
+	}
+	if p != nil {
+		return data, nil
+	}
+	delete(doc, "priority")
 	return json.Marshal(doc)
 }
 

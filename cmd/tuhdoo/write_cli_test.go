@@ -96,6 +96,28 @@ func TestCreateUpdateAnswer(t *testing.T) {
 		t.Errorf("labels not fully replaced:\n%s", out)
 	}
 
+	// --priority none clears a set priority (2026-09-11: the CLI half
+	// of clearable priority — it travels as clear_priority; the
+	// numeric form still travels as priority).
+	out, code = runCLI(t, repo, "update", parser, "--priority", "none")
+	if code != 0 {
+		t.Fatalf("update --priority none exit %d; output:\n%s", code, out)
+	}
+	out, _ = runCLI(t, repo, "task", parser)
+	mustContain(t, out, "priority    none", "priority 2→none")
+	out, code = runCLI(t, repo, "update", parser, "--priority", "3")
+	if code != 0 {
+		t.Fatalf("update --priority 3 exit %d; output:\n%s", code, out)
+	}
+	out, _ = runCLI(t, repo, "task", parser)
+	mustContain(t, out, "priority    3", "priority none→3")
+	// Anything but an integer or "none" is refused before any request.
+	out, code = runCLI(t, repo, "update", parser, "--priority", "high")
+	if code == 0 {
+		t.Fatalf("update --priority high exited 0; output:\n%s", out)
+	}
+	mustContain(t, out, "--priority wants an integer or none")
+
 	// update --status is the curation path (done/cancelled). One
 	// vocabulary since the status-vocabulary revision (2026-08-01):
 	// the flag word is the stored word, and the "archived" input alias
@@ -129,7 +151,10 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	if code == 0 {
 		t.Fatalf("field-less update exited 0; output:\n%s", out)
 	}
-	mustContain(t, out, "usage: tuhdoo update")
+	mustContain(t, out, "usage: tuhdoo update", "--priority none")
+	if strings.Contains(out, "cannot") {
+		t.Fatalf("usage still claims priority cannot be cleared:\n%s", out)
+	}
 
 	// The daemon's validation reaches the user: bad status is loud.
 	out, code = runCLI(t, repo, "update", parser, "--status", "bogus")

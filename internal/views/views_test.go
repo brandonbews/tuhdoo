@@ -194,7 +194,7 @@ func goldenInput(t *testing.T) core.Input {
 		// membership deltas on both list fields.
 		evt(t, 27, event.TypeTaskUpdated, "brandon", "t-web", event.TaskUpdated{
 			Title:     ptr("Browser UI spike (kanban)"),
-			Priority:  ptr(1),
+			Priority:  event.SetPriority(1),
 			Labels:    ptr([]string{"v2", "web"}),
 			DependsOn: ptr([]string{"t-core"}),
 		}),

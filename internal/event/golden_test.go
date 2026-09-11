@@ -2,6 +2,7 @@ package event
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -55,7 +56,7 @@ func goldenEvents(t *testing.T) map[string]Event {
 		}},
 		TypeTaskUpdated: {0x02, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", TaskUpdated{
 			Status:   str("held"),
-			Priority: num(1),
+			Priority: SetPriority(1),
 		}},
 		TypeClaimMade: {0x03, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", ClaimMade{}},
 		TypeClaimConfirmed: {0x09, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", ClaimConfirmed{
@@ -150,6 +151,107 @@ func TestGoldenRoundTrip(t *testing.T) {
 		}
 		if !bytes.Equal(stored, again) {
 			t.Errorf("%s: decode→encode changed bytes\n got: %s\nwant: %s", typ, again, stored)
+		}
+	}
+}
+
+// task.updated's priority is tri-state since v4 (2026-09-11): absent =
+// unchanged, null = clear, number = set. The fixtures below pin all
+// three states on the wire — absent must stay absent, which a plain
+// *int cannot do — and the v3 fixtures (null meant unchanged; a number
+// set) prove old bytes survive the struct untouched. Unlike
+// TestGoldenRoundTrip, which never looks inside Data, these round-trip
+// the payload THROUGH the typed struct: decode → TaskUpdated →
+// re-marshal → canonical encode must reproduce the stored bytes.
+func TestTaskUpdatedPriorityGolden(t *testing.T) {
+	const task = "t-01BX5ZZKBKACTAV9WEVGEMMVRY"
+	fixtures := []struct {
+		name    string
+		payload *TaskUpdated // nil: a stored-bytes-only fixture, never regenerated
+	}{
+		{"v4-set", &TaskUpdated{Status: str("held"), Priority: SetPriority(1)}},
+		{"v4-clear", &TaskUpdated{Status: str("held"), Priority: ClearPriority()}},
+		{"v4-unchanged", &TaskUpdated{Status: str("held")}},
+		{"v3-set", nil},
+		{"v3-null", nil},
+	}
+	for _, f := range fixtures {
+		t.Run(f.name, func(t *testing.T) {
+			path := goldenPath(TypeTaskUpdated + "." + f.name)
+			if f.payload != nil {
+				e, err := New(fixedID(t, goldenTime, 0x02), TypeTaskUpdated, Versions[TypeTaskUpdated],
+					"brandon/impl-2", "m-3f9a", task, *f.payload)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Encode(e)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if *update {
+					if err := os.WriteFile(path, got, 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+				want, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("read golden (run with -update to create): %v", err)
+				}
+				if !bytes.Equal(got, want) {
+					t.Errorf("encoded bytes differ from golden\n got: %s\nwant: %s", got, want)
+				}
+			}
+			stored, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			e, err := Decode(stored)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var p TaskUpdated
+			if err := json.Unmarshal(e.Data, &p); err != nil {
+				t.Fatalf("payload: %v", err)
+			}
+			again, err := New(e.ID, e.Type, e.V, e.Actor, e.Machine, e.Task, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := Encode(again)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(stored, got) {
+				t.Errorf("decode → struct → encode changed bytes\n got: %s\nwant: %s", got, stored)
+			}
+		})
+	}
+}
+
+// The three wire states decode to three distinct Go values, and the
+// v3 null (unchanged) is NOT the same value as v4 absent: the
+// distinction is the upcaster's job (internal/core), not the codec's.
+func TestPriorityChangeDecode(t *testing.T) {
+	tests := []struct {
+		in   string
+		want PriorityChange
+	}{
+		{`{}`, PriorityChange{}},
+		{`{"priority":null}`, ClearPriority()},
+		{`{"priority":2}`, SetPriority(2)},
+	}
+	for _, tt := range tests {
+		var p TaskUpdated
+		if err := json.Unmarshal([]byte(tt.in), &p); err != nil {
+			t.Fatalf("%s: %v", tt.in, err)
+		}
+		if p.Priority.Present != tt.want.Present ||
+			(p.Priority.Value == nil) != (tt.want.Value == nil) ||
+			(p.Priority.Value != nil && *p.Priority.Value != *tt.want.Value) {
+			t.Errorf("%s: priority = %+v, want %+v", tt.in, p.Priority, tt.want)
+		}
+		if p.Unknown != nil {
+			t.Errorf("%s: unknown = %v, want none", tt.in, p.Unknown)
 		}
 	}
 }

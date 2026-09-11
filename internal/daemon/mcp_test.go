@@ -514,6 +514,36 @@ func TestMCPCurationUpdates(t *testing.T) {
 	}
 }
 
+// clear_priority is an update_task field, not a tool (T5: still twelve,
+// pinned by TestMCPFullLoop above): true clears a set priority back
+// to unprioritized, and pairing it with priority is a tool error.
+func TestMCPUpdateTaskClearPriority(t *testing.T) {
+	d, _ := startDaemon(t)
+	cs := mcpConnect(t, d, "brandon/impl-1", nil)
+
+	var created createTasksResult
+	mustToolOK(t, cs, "create_task", map[string]any{
+		"tasks": []map[string]any{{"title": "accidental p2", "priority": 2}},
+	}, &created)
+	id := created.IDs[0]
+
+	res := callTool(t, cs, "update_task", map[string]any{"task": id, "priority": 1, "clear_priority": true})
+	if !res.IsError || !strings.Contains(contentText(res), "clear_priority") {
+		t.Fatalf("both-set = isError %v %q, want a tool error naming clear_priority", res.IsError, contentText(res))
+	}
+
+	var updated taskJSON
+	mustToolOK(t, cs, "update_task", map[string]any{"task": id, "clear_priority": true}, &updated)
+	if updated.Priority != nil {
+		t.Fatalf("priority after clear = %d, want none", *updated.Priority)
+	}
+	var h hydratedTask
+	mustToolOK(t, cs, "get_task", map[string]any{"task": id}, &h)
+	if h.Task.Priority != nil {
+		t.Fatalf("get_task priority = %d, want none", *h.Task.Priority)
+	}
+}
+
 // relay_answer (T5, 2026-07-30 revision): an agent records an
 // out-of-band answer; the event's actor is the agent, the payload
 // attributes the answer to the session's root principal, and the task

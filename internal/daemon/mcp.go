@@ -403,13 +403,16 @@ type createTasksResult struct {
 }
 
 type updateTaskInput struct {
-	Task        string    `json:"task" jsonschema:"the task ID to update"`
-	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
-	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
-	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
-	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. A set priority cannot be cleared back to unprioritized"`
-	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
-	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
+	Task        string  `json:"task" jsonschema:"the task ID to update"`
+	Title       *string `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
+	Description *string `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
+	Status      *string `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
+	Priority    *int    `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. To clear a set priority back to unprioritized, send clear_priority instead"`
+	// clear_priority is a field, not a tool (T5: the count stays
+	// twelve — the same precedent as the status field, 2026-07-31).
+	ClearPriority bool      `json:"clear_priority,omitempty" jsonschema:"true clears a set priority back to unprioritized (the task then sorts after every prioritized one); cannot be combined with priority"`
+	Labels        *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
+	DependsOn     *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }
 
 // ---- tool registration ----
@@ -624,7 +627,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in updateTaskInput) (*mcp.CallToolResult, taskJSON, error) {
 		t, oe := d.opUpdateTask(s.principal(), in.Task, updateTaskReq{
 			Title: in.Title, Description: in.Description, Status: in.Status,
-			Priority: in.Priority, Labels: in.Labels, DependsOn: in.DependsOn,
+			Priority: in.Priority, ClearPriority: in.ClearPriority,
+			Labels: in.Labels, DependsOn: in.DependsOn,
 		})
 		if oe != nil {
 			return nil, taskJSON{}, oe
