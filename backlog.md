@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 125 done · 35 cancelled
+0 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 126 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -145,6 +143,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) Police escalation.answered task mismatch as malformed, matching claim.confirmed
 - [`tuh-kkdt`](tasks/tuh-01KZVZT7F8CVJYX1NZZWMSKKDT.md) Pin replay edges: holder's late finish counts as done; reconcile the subject-less-event stance
 - [`tuh-1xhp`](tasks/tuh-01KZVZT7F8CVJYX1P005MB1XHP.md) One lease-path parser: store loader and merge-time replay must compute the same lease set
+- [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) Batcher: log background flush failures at failure time
 - [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding
 - [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) tuhdoo answer: surface ambiguous task fragments as candidate lists
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync

@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P0090K9FDB`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `storage` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -26,3 +26,11 @@ retitled · description edited · status inbox→open · labels +go +storage
 ### 2026-08-27 15:11 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status open→open · labels edited
+
+### 2026-09-11 23:43 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01KZVZT7F8CVJYX1P0090K9FDB/batcher-log-flush-failures`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/110>
+- Merged as: `1513cd7`
+
+Landed as PR #110 (squash 1513cd7 on main). Batcher.background now logs a failed timer flush at failure time (store: background flush failed, N events and M files still pending: cause) through Log, falling back to the standard logger, so no silent path remains; pending work is retained for retry as before. LastError deleted (its only reader was a smoke assertion). TestBatcherBackgroundFlushFailureIsLogged forces the failure on an uninitialized store, checks the log line, then proves Flush lands the retained event after Init. Deploy follows this finish.
