@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -206,21 +208,29 @@ func TestMCPShimExitsWhenDaemonDies(t *testing.T) {
 // parks on a bare digit mid-number, and the next well-formed line —
 // arbitrarily much later — both terminates the number and becomes the
 // "trailing data", so the session dies on a line that replays cleanly.
+// The byte count is what stdin had delivered to the decoder when it
+// died — at least the junk plus the byte that condemned it, never more
+// than was written; how much of the well-formed line the decoder had
+// pulled by then is its read buffering (64-byte first reads under Go
+// 1.27's v2-backed encoding/json), not the contract.
 func TestMCPShimStdinDeathNamesStreamAndBytes(t *testing.T) {
 	initLine := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"harness","version":"0"}}}` + "\n"
 	cases := []struct {
 		name   string
 		writes []string // written in order, a beat apart
+		least  int      // bytes the decoder must have pulled to die
 		tail   string   // must appear in the %q-quoted stdin excerpt
 	}{
 		{
 			name:   "dormant digit then well-formed line",
 			writes: []string{"7", initLine},
+			least:  2, // the digit and the `{` that condemned it
 			tail:   `"7{\"jsonrpc\"`,
 		},
 		{
 			name:   "digit-led junk in one chunk",
 			writes: []string{"2026/07/31 01:31:00 stray log line\n"},
+			least:  35, // one read: the whole chunk
 			tail:   `"2026/07/31`,
 		},
 	}
@@ -270,9 +280,15 @@ func TestMCPShimStdinDeathNamesStreamAndBytes(t *testing.T) {
 			mustContain(t, stderr.String(),
 				"invalid trailing data",
 				"harness stdin, not the daemon bridge",
-				fmt.Sprintf("delivered %d bytes", total),
 				tc.tail,
 			)
+			m := regexp.MustCompile(`delivered (\d+) bytes`).FindStringSubmatch(stderr.String())
+			if m == nil {
+				t.Fatalf("death message names no byte count; stderr:\n%s", stderr.String())
+			}
+			if n, _ := strconv.Atoi(m[1]); n < tc.least || n > total {
+				t.Fatalf("delivered %d bytes; want between %d (the bytes that killed it) and %d (everything written)", n, tc.least, total)
+			}
 		})
 	}
 }

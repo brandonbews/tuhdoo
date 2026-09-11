@@ -259,7 +259,7 @@ func (d *Daemon) renewOnce(s *mcpSession) {
 	if len(claims) == 0 {
 		return
 	}
-	now := time.Now()
+	now := d.now()
 	var stale []string
 
 	d.mu.Lock()
@@ -290,7 +290,10 @@ func (d *Daemon) renewOnce(s *mcpSession) {
 		}
 	}
 	if renewed {
-		if err := d.refreshLocked(now); err != nil {
+		// The leases moved: replay and bump (the memo's validUntil
+		// moved with them). Renewed views are byte-identical — the
+		// render carries no expiry — so the bump stages nothing.
+		if err := d.replayLocked(now); err != nil {
 			d.log.Printf("daemon: mcp: refresh after renewal: %v", err)
 		}
 	}

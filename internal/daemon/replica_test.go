@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"io"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -137,9 +136,9 @@ func newCountedRepo(t *testing.T) (string, *countingGit) {
 	return root, newCountingGit(real)
 }
 
-// Every GET handler and every MCP read tool issues zero git calls once
-// the daemon is loaded: the state snapshot, a task hydration, the
-// backlog tool, and the task tool are all answered from the replica.
+// The snapshot endpoint and every MCP read tool issue zero git calls
+// once the daemon is loaded: the snapshot, the backlog tool, and the
+// task tool are all answered from the replica.
 func TestReadsSpawnNoGitOnceLoaded(t *testing.T) {
 	root, cg := newCountedRepo(t)
 	d, c := startDaemonAt(t, root, Options{
@@ -166,15 +165,9 @@ func TestReadsSpawnNoGitOnceLoaded(t *testing.T) {
 	before := cg.total()
 
 	for i := 0; i < 3; i++ {
-		var st stateResp
-		unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-		if !st.Loaded || len(st.Tasks) != 1 {
-			t.Fatalf("state = loaded %v, %d tasks; want loaded with 1 task", st.Loaded, len(st.Tasks))
-		}
-		var h hydratedTask
-		unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK), &h)
-		if h.Task.ID != id {
-			t.Fatalf("GET task = %+v, want %s", h.Task, id)
+		snap := snapshotNow(t, c)
+		if !snap.Loaded || len(snap.Tasks) != 1 || snap.Tasks[0].Task.ID != id {
+			t.Fatalf("snapshot = loaded %v, tasks %+v; want loaded with the one task %s", snap.Loaded, snap.Tasks, id)
 		}
 		var backlog backlogResult
 		mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)

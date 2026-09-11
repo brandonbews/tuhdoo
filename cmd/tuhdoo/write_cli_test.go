@@ -5,6 +5,7 @@ package main
 // cli_test.go — real binary, real repo, real auto-spawned daemon.
 
 import (
+	"encoding/json"
 	"os/exec"
 	"strings"
 	"testing"
@@ -107,10 +108,20 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	mustContain(t, out, "1 cancelled")
 	out, _ = runCLI(t, repo, "task", docs)
 	mustContain(t, out, "status      cancelled")
-	// The machine surface agrees: the API JSON says cancelled.
+	// The machine surface agrees: the snapshot's entry says cancelled.
 	hc := apiClient(t, repo)
-	if got := string(api(t, hc, "GET", "/v0/tasks/"+docs, "", nil)); !strings.Contains(got, `"status":"cancelled"`) {
-		t.Errorf("API status vocabulary changed; body:\n%s", got)
+	var snap snapshotResp
+	if err := json.Unmarshal(api(t, hc, "GET", "/v0/snapshot", "", nil), &snap); err != nil {
+		t.Fatalf("decode snapshot: %v", err)
+	}
+	var got string
+	for _, st := range snap.Tasks {
+		if st.Task.ID == docs {
+			got = st.Task.Status
+		}
+	}
+	if got != "cancelled" {
+		t.Errorf("API status vocabulary changed: task %s status %q, want cancelled", docs, got)
 	}
 
 	// update with no field flags is an error, not a silent no-op.

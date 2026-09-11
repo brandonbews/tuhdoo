@@ -267,6 +267,25 @@ func copyTree(tree map[string]string) map[string]string {
 	return out
 }
 
+// Changed returns the subset of files whose bytes are not already at
+// their path in the head tree — the object-ID diff of T2 (2026-09-10)
+// without writing anything. The daemon runs every re-render through it
+// (T6: views are staged only when their bytes change), so an unchanged
+// page costs a hash in memory and nothing else. Every file is hashed;
+// no git is spawned. Empty before the first load (nothing is known to
+// be unchanged).
+func (s *Store) Changed(files map[string][]byte) map[string][]byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string][]byte)
+	for path, data := range files {
+		if s.tree[path] != s.git.BlobOID(data) {
+			out[path] = data
+		}
+	}
+	return out
+}
+
 // WriteBlobs computes each file's object ID in memory and writes only
 // the blobs whose OID is not already at that path in against — the
 // object-ID diff of T2 (2026-09-10): a rendered view or a lease whose

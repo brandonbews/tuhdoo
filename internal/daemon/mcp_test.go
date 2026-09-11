@@ -711,7 +711,12 @@ func TestMCPConnectionDropExpiresLease(t *testing.T) {
 // with a short TTL, only auto-renewal can keep the claim active past
 // several expiry windows (T5: no heartbeat tool).
 func TestMCPSessionAutoRenewsLease(t *testing.T) {
-	const ttl = time.Second
+	// Lease expiries are stored at second precision (truncated), so a
+	// renewal at t stores floor(t+ttl): with ttl 1s a renewal can land
+	// a stored expiry a millisecond ahead of the lease transition timer
+	// and lapse before the next tick. 2s keeps every renewal (every
+	// ttl/3) at least a third of a second inside the stored expiry.
+	const ttl = 2 * time.Second
 	d, hc := startDaemonOpts(t, Options{
 		Quiet:        50 * time.Millisecond,
 		LeaseTTL:     ttl,

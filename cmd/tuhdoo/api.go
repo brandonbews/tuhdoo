@@ -78,7 +78,8 @@ type updateJSON struct {
 	Fields []string `json:"fields"`
 }
 
-// hydratedTask is GET /v0/tasks/{id}: one task with everything attached.
+// hydratedTask is one task with everything attached — the shape each
+// snapshot entry embeds (and get_task serves), decoded losslessly.
 type hydratedTask struct {
 	Task        taskJSON         `json:"task"`
 	Claim       *claimJSON       `json:"claim"`
@@ -88,6 +89,11 @@ type hydratedTask struct {
 	Updates     []updateJSON     `json:"updates"`
 }
 
+// stateTask is one task's listing row — what the render code sorts,
+// buckets, and prints — lifted from a snapshot entry by listingRow
+// (snapshot.go). Not a wire shape of its own since the snapshot
+// (T4, 2026-09-10): the entry carries the task and the verdicts side
+// by side, and the row is the verdicts plus the task's headline.
 type stateTask struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title"`
@@ -126,15 +132,49 @@ type syncJSON struct {
 	Merges     int    `json:"merges"`
 }
 
-// stateResp is GET /v0/state. Tasks arrive in creation (ULID) order.
-// Loaded is false only on the placeholder a daemon serves until its
-// first replay lands (T4 startup order, 2026-09-10); ensureDaemon and
-// fetchState absorb that, so no command ever sees the placeholder.
+// stateResp is the snapshot's listing half: the daemon-wide facts plus
+// one row per task, in creation (ULID) order. It was GET /v0/state's
+// body until the snapshot replaced that endpoint (T4, 2026-09-10);
+// now snapshotOf (snapshot.go) assembles it from a snapshotResp so the
+// render code keeps one listing shape.
 type stateResp struct {
+	Degraded        string
+	Sync            syncJSON
+	Tasks           []stateTask
+	OpenEscalations []escalationJSON
+	Runs            []runJSON
+}
+
+// snapshotTask is one entry of GET /v0/snapshot: the hydrated task
+// with its keys flattened alongside the listing's per-task verdicts
+// (holder, situation, the blocker lists, the loud annotations) — the
+// daemon's verdicts, never re-derived here.
+type snapshotTask struct {
+	hydratedTask
+	Holder              string   `json:"holder"`
+	Situation           string   `json:"situation"`
+	UnmetDeps           []string `json:"unmet_deps"`
+	BlockingEscalations []string `json:"blocking_escalations"`
+	CancelledDeps       []string `json:"cancelled_deps"`
+	Cyclic              bool     `json:"cyclic"`
+}
+
+// snapshotResp is GET /v0/snapshot?since=N&wait=D (T4, 2026-09-10):
+// the whole replica at one version, every task fully hydrated. The
+// daemon answers at once when its version differs from N — differs,
+// not exceeds: a restarted daemon counts from 1 again — and otherwise
+// parks until a bump or the wait elapses. Unchanged is true only on
+// the wait-elapsed answer, which carries the version alone. Loaded is
+// false only on the placeholder served until the first replay lands
+// (version 0, sync mode "starting"); the first replay is version 1,
+// so a request parked on since=0 wakes the moment the load lands.
+type snapshotResp struct {
+	Version         uint64           `json:"version"`
+	Unchanged       bool             `json:"unchanged"`
 	Loaded          bool             `json:"loaded"`
 	Degraded        string           `json:"degraded"`
 	Sync            syncJSON         `json:"sync"`
-	Tasks           []stateTask      `json:"tasks"`
+	Tasks           []snapshotTask   `json:"tasks"`
 	OpenEscalations []escalationJSON `json:"open_escalations"`
 	Runs            []runJSON        `json:"runs"`
 }

@@ -501,15 +501,17 @@ func TestAppendBatchRequiresInit(t *testing.T) {
 	}
 }
 
-// Files staged with AddFiles ride the next commit alongside events —
+// Files staged with SetFiles ride the next commit alongside events —
 // the mechanism views (T6) travel on — and ReadFile reads them back.
+// A later SetFiles replaces the earlier staging wholesale: the fresh
+// render wins, and a page the fresh render did not stage is dropped.
 func TestFilesRideBatchesAndReadFile(t *testing.T) {
 	s, dir := newStore(t)
 	b := NewBatcher(s, 50*time.Millisecond)
 
 	b.Add(newEvent(t, 0))
-	b.AddFiles(map[string][]byte{"backlog.md": []byte("stale")})
-	b.AddFiles(map[string][]byte{"backlog.md": []byte("fresh"), "README.md": []byte("hello")})
+	b.SetFiles(map[string][]byte{"backlog.md": []byte("stale"), "escalations.md": []byte("dropped")})
+	b.SetFiles(map[string][]byte{"backlog.md": []byte("fresh"), "README.md": []byte("hello")})
 	before := commitCount(t, dir)
 	if err := b.Flush(); err != nil {
 		t.Fatalf("Flush: %v", err)
@@ -527,6 +529,9 @@ func TestFilesRideBatchesAndReadFile(t *testing.T) {
 	}
 	if got, err := s.ReadFile("README.md"); err != nil || string(got) != "hello" {
 		t.Errorf("README.md = %q, %v; want %q, nil", got, err, "hello")
+	}
+	if got, err := s.ReadFile("escalations.md"); err != nil || got != nil {
+		t.Errorf("escalations.md = %q, %v; want absent (a later SetFiles replaces the staging)", got, err)
 	}
 	if got, err := s.ReadFile("absent.md"); err != nil || got != nil {
 		t.Errorf("ReadFile(absent) = %q, %v; want nil, nil", got, err)

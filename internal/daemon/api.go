@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,10 +19,19 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/syncer"
 )
 
+// The read side is one endpoint (T4, 2026-09-10): GET /v0/snapshot, a
+// versioned long poll carrying every task fully hydrated. /v0/state
+// and GET /v0/tasks/{id} are gone with the per-task hydration loop
+// they served.
 func (d *Daemon) handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v0/snapshot", d.handleSnapshot)
+	// The deleted reads answer 404 by name: the mux alone would answer
+	// GET /v0/tasks/{id} with 405 (PATCH still lives there), and a
+	// pre-revision client deserves to hear where the read went.
+	mux.HandleFunc("GET /v0/state", handleGone)
+	mux.HandleFunc("GET /v0/tasks/{id}", handleGone)
 	mux.HandleFunc("POST /v0/tasks", d.handleCreateTasks)
-	mux.HandleFunc("GET /v0/tasks/{id}", d.handleGetTask)
 	mux.HandleFunc("PATCH /v0/tasks/{id}", d.handleUpdateTask)
 	mux.HandleFunc("POST /v0/claims", d.handleClaim)
 	mux.HandleFunc("POST /v0/claims/renew", d.handleRenewClaim)
@@ -30,11 +40,15 @@ func (d *Daemon) handler() http.Handler {
 	mux.HandleFunc("POST /v0/escalations", d.handleEscalate)
 	mux.HandleFunc("POST /v0/escalations/answer", d.handleAnswerEscalation)
 	mux.HandleFunc("POST /v0/notes", d.handleAddNote)
-	mux.HandleFunc("GET /v0/state", d.handleState)
 	// The MCP endpoint (T4): GET, POST, and DELETE all route to the one
 	// streamable handler.
 	mux.Handle("/mcp", d.mcpHandler())
 	return mux
+}
+
+// handleGone is the 404 for the read endpoints the snapshot replaced.
+func handleGone(w http.ResponseWriter, r *http.Request) {
+	httpError(w, http.StatusNotFound, "%s %s is gone: every read is GET /v0/snapshot (?since=N&wait=30s)", r.Method, r.URL.Path)
 }
 
 // ---- response shapes ----
@@ -368,22 +382,16 @@ func (d *Daemon) handleAddNote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, body)
 }
 
-func (d *Daemon) handleGetTask(w http.ResponseWriter, r *http.Request) {
-	h, oe := d.opGetTask(r.PathValue("id"))
-	if oe != nil {
-		writeOpError(w, oe)
-		return
-	}
-	writeJSON(w, http.StatusOK, h)
-}
-
-type stateTask struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Status   string   `json:"status"`
-	Priority *int     `json:"priority"`
-	Labels   []string `json:"labels"`
-	Holder   string   `json:"holder,omitempty"` // actor of the active claim
+// snapshotTask is one task in the snapshot: the hydration get_task
+// serves, field for field (the embedding flattens hydratedTask's keys
+// into this object — a snapshot entry decodes into a hydratedTask
+// losslessly), plus the per-task verdicts the old state listing
+// carried so no client re-derives them.
+type snapshotTask struct {
+	hydratedTask
+	// Holder is the actor of the active claim (also claim.actor; kept
+	// as the listing's one-word answer).
+	Holder string `json:"holder,omitempty"`
 	// One classifier (2026-08-03): core's verdict rides the wire so no
 	// client re-derives it. Situation is always present — ready /
 	// in_progress / blocked for open tasks, the status word for the
@@ -399,24 +407,154 @@ type stateTask struct {
 	// still just blocked; clients render the why, never re-derive it.
 	CancelledDeps []string `json:"cancelled_deps,omitempty"`
 	Cyclic        bool     `json:"cyclic,omitempty"`
-	// Close metadata (history view, 2026-08-02): the TUI's history rows
-	// sort and stamp off the state listing, so it rides here too.
-	ClosedAt *time.Time `json:"closed_at,omitempty"`
-	ClosedBy string     `json:"closed_by,omitempty"`
 }
 
-type stateResp struct {
-	// Loaded is true on every answer carrying state, false only on the
-	// placeholder served until the first replay lands (T4 startup
-	// order, 2026-09-10). Clients absorb readiness by this field alone —
-	// the placeholder keeps sync mode "starting" and empty arrays, but
-	// so can a freshly loaded daemon whose sync loop has not run yet.
+// snapshotResp is GET /v0/snapshot (T4, 2026-09-10): the whole replica
+// at one version. Version is the daemon's state version; a client
+// loops with the version it last saw as ?since=. Unchanged is true
+// only on the answer to a wait that elapsed with no bump — then the
+// version is the one the client already holds and nothing else is
+// carried. Loaded is false only on the placeholder served until the
+// first replay lands (startup order): sync mode "starting", empty
+// arrays, version 0 — the first replay is version 1, so a request
+// parked on since=0 wakes the moment the load lands.
+type snapshotResp struct {
+	Version         uint64           `json:"version"`
+	Unchanged       bool             `json:"unchanged,omitempty"`
 	Loaded          bool             `json:"loaded"`
 	Degraded        string           `json:"degraded,omitempty"` // fail-safe message when read-only
 	Sync            syncJSON         `json:"sync"`
-	Tasks           []stateTask      `json:"tasks"`
+	Tasks           []snapshotTask   `json:"tasks"`
 	OpenEscalations []escalationJSON `json:"open_escalations"`
 	Runs            []runJSON        `json:"runs"`
+}
+
+// unchangedResp is the wait-elapsed answer: the version alone.
+type unchangedResp struct {
+	Version   uint64 `json:"version"`
+	Unchanged bool   `json:"unchanged"`
+}
+
+// maxSnapshotWait caps ?wait=: a parked request holds a connection
+// and a handler goroutine, and a client that wants to keep waiting
+// re-polls with the version it was handed.
+const maxSnapshotWait = 60 * time.Second
+
+// handleSnapshot is the one read endpoint. ?since=N is the version the
+// client holds (0 or absent: none); ?wait= is how long to park when
+// the daemon is still at that version (0 or absent: answer at once).
+// The answer is immediate when the version differs from N — differs,
+// not exceeds: a daemon restarted by a deploy counts from 1 again, and
+// a pane holding an older, larger version is answered at once rather
+// than parked (T4). Otherwise the request parks on the broadcast
+// channel until a bump — a staged write, a merge, a lease lapsing —
+// or the wait elapses, which answers the unchanged version so the
+// client re-polls. Shutdown wakes every parked request before the
+// server drains.
+func (d *Daemon) handleSnapshot(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	var since uint64
+	if s := q.Get("since"); s != "" {
+		v, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			httpError(w, http.StatusBadRequest, "bad since %q: want a non-negative integer", s)
+			return
+		}
+		since = v
+	}
+	var wait time.Duration
+	if s := q.Get("wait"); s != "" {
+		v, err := time.ParseDuration(s)
+		if err != nil || v < 0 {
+			httpError(w, http.StatusBadRequest, "bad wait %q: want a non-negative duration such as 30s", s)
+			return
+		}
+		wait = min(v, maxSnapshotWait)
+	}
+	var timeout <-chan time.Time
+	if wait > 0 {
+		t := time.NewTimer(wait)
+		defer t.Stop()
+		timeout = t.C
+	}
+	timedOut := false
+	for {
+		d.mu.Lock()
+		// The same read gate as every hydrating read: a memo aged past
+		// its next lease transition replays once before answering, so
+		// a lapsed lease is never served as live. Skipped until loaded
+		// (nothing to replay) and when degraded (the last good state
+		// keeps serving reads).
+		if d.loaded && d.degraded == nil {
+			if err := d.freshenLocked(d.now()); err != nil {
+				oe := d.writeErrLocked(err)
+				d.mu.Unlock()
+				writeOpError(w, oe)
+				return
+			}
+		}
+		if d.stateVersion != since || d.stopping || wait == 0 {
+			resp := d.snapshotLocked()
+			d.mu.Unlock()
+			writeJSON(w, http.StatusOK, resp)
+			return
+		}
+		if timedOut {
+			v := d.stateVersion
+			d.mu.Unlock()
+			writeJSON(w, http.StatusOK, unchangedResp{Version: v, Unchanged: true})
+			return
+		}
+		changed := d.changed
+		d.mu.Unlock()
+		select {
+		case <-changed:
+		case <-timeout:
+			// Re-check under the mutex before answering: a bump that
+			// landed between the timer and the lock must not be lost.
+			timedOut = true
+		case <-r.Context().Done():
+			return
+		}
+	}
+}
+
+// snapshotLocked assembles the snapshot at the current version. Caller
+// holds d.mu.
+func (d *Daemon) snapshotLocked() snapshotResp {
+	resp := snapshotResp{
+		Version:         d.stateVersion,
+		Tasks:           []snapshotTask{},
+		OpenEscalations: []escalationJSON{},
+		Runs:            []runJSON{},
+	}
+	if !d.loaded {
+		resp.Sync = syncJSON{Mode: "starting"}
+		return resp
+	}
+	resp.Loaded = true
+	resp.Sync = syncJSONOf(d.sync.Status())
+	if d.degraded != nil {
+		resp.Degraded = d.degraded.Error()
+	}
+	for _, id := range d.state.TaskOrder {
+		st := snapshotTask{hydratedTask: d.hydrateLocked(id)}
+		st.Situation = d.state.Situation(id)
+		b := d.state.Blockage(id)
+		st.UnmetDeps, st.BlockingEscalations = b.UnmetDeps, b.BlockingEscalations
+		st.CancelledDeps, st.Cyclic = b.CancelledDeps, b.Cyclic
+		if st.Claim != nil {
+			st.Holder = st.Claim.Actor
+		}
+		resp.Tasks = append(resp.Tasks, st)
+	}
+	for _, e := range d.state.OpenEscalations() {
+		resp.OpenEscalations = append(resp.OpenEscalations, escalationJSONOf(e))
+	}
+	for i := range d.state.Runs {
+		resp.Runs = append(resp.Runs, runJSONOf(&d.state.Runs[i]))
+	}
+	return resp
 }
 
 // syncJSON is the sync loop's health for status surfaces.
@@ -448,63 +586,6 @@ func syncJSONOf(st syncer.Status) syncJSON {
 		out.LastPush = st.LastPush.UTC().Format(time.RFC3339)
 	}
 	return out
-}
-
-func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
-	now := time.Now()
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	resp := stateResp{
-		Tasks:           []stateTask{},
-		OpenEscalations: []escalationJSON{},
-		Runs:            []runJSON{},
-	}
-	// Until the first replay lands there is no state to serve. The one
-	// starting predicate (startingLocked) is a 503 for every operation;
-	// this handler alone translates it into a 200 placeholder — sync
-	// mode "starting", loaded false, nothing else — the shape the
-	// clients' state loop retries (T4 startup order, 2026-09-10).
-	if d.startingLocked() != nil {
-		resp.Sync = syncJSON{Mode: "starting"}
-		writeJSON(w, http.StatusOK, resp)
-		return
-	}
-	resp.Loaded = true
-	resp.Sync = syncJSONOf(d.sync.Status())
-	// Past the placeholder, the same read gate as every hydrating read:
-	// replay at the current instant (the status poll must not render a
-	// lapsed lease as a live holder), skipped when degraded.
-	if oe := d.readGateLocked(now); oe != nil {
-		writeOpError(w, oe)
-		return
-	}
-	if d.degraded != nil {
-		resp.Degraded = d.degraded.Error()
-	}
-	for _, id := range d.state.TaskOrder {
-		t := d.state.Tasks[id]
-		st := stateTask{ID: t.ID, Title: t.Title, Status: t.Status, Priority: t.Priority, Labels: t.Labels}
-		st.Situation = d.state.Situation(id)
-		b := d.state.Blockage(id)
-		st.UnmetDeps, st.BlockingEscalations = b.UnmetDeps, b.BlockingEscalations
-		st.CancelledDeps, st.Cyclic = b.CancelledDeps, b.Cyclic
-		if c := d.state.ActiveClaim(id); c != nil {
-			st.Holder = c.Actor
-		}
-		if !t.ClosedAt.IsZero() {
-			closed := t.ClosedAt
-			st.ClosedAt = &closed
-			st.ClosedBy = t.ClosedBy
-		}
-		resp.Tasks = append(resp.Tasks, st)
-	}
-	for _, e := range d.state.OpenEscalations() {
-		resp.OpenEscalations = append(resp.OpenEscalations, escalationJSONOf(e))
-	}
-	for i := range d.state.Runs {
-		resp.Runs = append(resp.Runs, runJSONOf(&d.state.Runs[i]))
-	}
-	writeJSON(w, http.StatusOK, resp)
 }
 
 // ---- shared helpers ----

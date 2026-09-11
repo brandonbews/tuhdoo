@@ -89,6 +89,19 @@ type Options struct {
 	// wrapping the real git (a load held open, a remote that moves).
 	// Unexported on purpose — production always runs the real thing.
 	git gitx.Git
+	// now and afterFunc, when set, stand in for time.Now and
+	// time.AfterFunc: the clock every lease verdict and the one
+	// transition timer read. Test hooks, so a lease lapsing at T can be
+	// observed at exactly T instead of after a real wait.
+	now       func() time.Time
+	afterFunc func(time.Duration, func()) timer
+}
+
+// timer is the slice of *time.Timer the transition timer uses, so a
+// test can stand in a fake that fires on demand.
+type timer interface {
+	Stop() bool
+	Reset(time.Duration) bool
 }
 
 // discovery is the daemon.json contents: how CLIs and shims find the
@@ -114,12 +127,40 @@ type Daemon struct {
 	batcher *store.Batcher
 	replay  *core.Replayer
 	sync    *syncer.Syncer
+	// now is the daemon's clock (Options.now, or time.Now); afterFunc
+	// makes the transition timer (Options.afterFunc, or time.AfterFunc).
+	now       func() time.Time
+	afterFunc func(time.Duration, func()) timer
+	// poke asks the sync loop for an immediate pass (d.sync.Poke); a
+	// seam, so a test can count the pokes eager commits owe (T8).
+	poke func()
 
 	// mu serializes every write and guards all fields below. Reads take
 	// it too — boring wins over a RWMutex at v0 volumes.
 	mu     sync.Mutex
 	state  *core.State
 	leases map[string]time.Time
+	// The versioned replica (001 D2/D3, 002 T4, 2026-09-10). version
+	// counts state changes: it moves on every replay — a staged write,
+	// a merge, a lease transition, the first load — and a read at an
+	// unchanged version is answered from state as memoized. validUntil
+	// is the instant the memo stops being right on its own: the next
+	// lease expiry (core.NextTransition), zero when no live lease can
+	// lapse. A read arriving past it replays once before answering;
+	// the transition timer, armed to it and re-armed on every bump,
+	// replays at that instant so parked snapshot requests wake without
+	// a read. changed is the broadcast: closed and replaced on every
+	// bump, so a parked request waits on the channel it took under mu
+	// and wakes when that channel closes. replays counts replays, the
+	// evidence for the memo tests.
+	stateVersion uint64
+	validUntil   time.Time
+	changed      chan struct{}
+	transition   timer
+	replays      int
+	// viewsGuardLogged keeps the "newer stamp" refusal to one log line:
+	// it would otherwise repeat on every bump.
+	viewsGuardLogged bool
 	// loaded flips true once the first replay has landed (T4 startup
 	// order, 2026-09-10: the socket is bound and daemon.json written
 	// before the ledger is loaded). Until then every read answers sync
@@ -233,6 +274,14 @@ func New(root string, opts Options) (*Daemon, error) {
 		}
 	}
 	st := store.New(g, opts.Ref, ident)
+	now := opts.now
+	if now == nil {
+		now = time.Now
+	}
+	afterFunc := opts.afterFunc
+	if afterFunc == nil {
+		afterFunc = func(dur time.Duration, f func()) timer { return time.AfterFunc(dur, f) }
+	}
 
 	d := &Daemon{
 		root:         root,
@@ -245,6 +294,9 @@ func New(root string, opts Options) (*Daemon, error) {
 		store:        st,
 		batcher:      store.NewBatcher(st, opts.Quiet),
 		replay:       core.NewReplayer(),
+		now:          now,
+		afterFunc:    afterFunc,
+		changed:      make(chan struct{}),
 		lockFile:     lockFile,
 		entropy:      ulid.Monotonic(rand.Reader, 0),
 		agentSeq:     make(map[string]int),
@@ -263,6 +315,7 @@ func New(root string, opts Options) (*Daemon, error) {
 		},
 		Log: logger,
 	})
+	d.poke = d.sync.Poke
 	d.state = emptyState()
 
 	sock, err := socketPath(dir, os.TempDir())
@@ -285,7 +338,7 @@ func New(root string, opts Options) (*Daemon, error) {
 	disc, err := json.Marshal(discovery{
 		PID:     os.Getpid(),
 		Socket:  sock,
-		Started: time.Now().UTC().Format(time.RFC3339),
+		Started: now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
 		ln.Close()
@@ -387,7 +440,9 @@ func (d *Daemon) load() error {
 	}
 	d.log.Printf("daemon: load: replica at %s in %s", d.store.Head(), time.Since(loadStart).Round(10*time.Microsecond))
 	d.mu.Lock()
-	err := d.refreshLocked(time.Now())
+	// The first replay is the first version bump (0 → 1): a snapshot
+	// request parked on version 0 during the load wakes here.
+	err := d.replayLocked(d.now())
 	if err == nil || isFailSafe(err) {
 		d.loaded = true
 	}
@@ -408,12 +463,18 @@ func (d *Daemon) load() error {
 // own fetch timeout bounds the wait) — so Run must have been called;
 // when the load did not land (it failed, or the daemon is going down
 // before it finished), nothing was staged and the sync loop never ran,
-// so the flush and final sync are skipped.
+// so the flush and final sync are skipped. Every parked snapshot
+// request is woken first (T4: shutdown must wake every parked request
+// before the HTTP server drains, or the drain waits on them).
 func (d *Daemon) Shutdown(reason string) {
 	d.shutdownOnce.Do(func() {
 		d.log.Printf("daemon: exiting: %s", reason)
 		d.mu.Lock()
 		d.stopping = true
+		if d.transition != nil {
+			d.transition.Stop()
+		}
+		d.wakeLocked()
 		d.mu.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
@@ -449,32 +510,32 @@ func (d *Daemon) cleanup() {
 // SocketPath returns the bound unix socket path.
 func (d *Daemon) SocketPath() string { return d.sockPath }
 
-// Refresh recomputes cached state from the store's replica. The sync
-// loop calls this after every head move it causes or notices (wired
-// via OnMerged in New).
+// Refresh recomputes cached state from the store's replica and bumps
+// the state version. The sync loop calls this after every head move it
+// causes or notices (wired via OnMerged in New): a merge is a version
+// bump exactly like a local write (002 T2, 2026-09-10).
 func (d *Daemon) Refresh() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return d.refreshLocked(time.Now())
+	return d.replayLocked(d.now())
 }
 
 // slowRefresh is the refresh duration above which a timing line is
 // always logged, whether or not the event count moved.
 const slowRefresh = 250 * time.Millisecond
 
-// refreshLocked takes the replay input from the store's replica and
-// replays. It spawns no git (001 D2, 2026-09-10: reads never spawn
-// git): the store's head tree and decode caches are complete after
-// every load and commit, so the "load" here is a walk of the in-memory
-// tree. On a fail-safe replay error the daemon degrades: the last good
-// state keeps serving reads and every write path starts rejecting.
-//
-// Full replay per refresh is a measured, deliberate keep: replay of the
-// 50-event dogfood log costs ~1ms and the pure core benchmarks linearly
-// (BenchmarkReplay in internal/core). The memoized replica with a
-// state version is the next step of the live-replica plan; until then
-// the timing lines below are the evidence stream.
-func (d *Daemon) refreshLocked(now time.Time) error {
+// replayLocked takes the replay input from the store's replica,
+// replays at now, installs the result as the memoized state, and bumps
+// the version — every caller is a state change: a staged write, a
+// merge, a lease transition, the first load. It spawns no git (001 D2,
+// 2026-09-10: reads never spawn git): the store's head tree and decode
+// caches are complete after every load and commit, so the "load" here
+// is a walk of the in-memory tree. On a fail-safe replay error the
+// daemon degrades: the last good state keeps serving reads and every
+// write path starts rejecting — and that is a version bump too, since
+// the snapshot's degraded field just changed. Caller holds d.mu.
+func (d *Daemon) replayLocked(now time.Time) error {
+	d.replays++
 	loadStart := time.Now()
 	events, leases, err := d.store.ReplayInput()
 	if err != nil {
@@ -497,13 +558,18 @@ func (d *Daemon) refreshLocked(now time.Time) error {
 	replayDur := time.Since(replayStart)
 	if err != nil {
 		if isFailSafe(err) {
+			wasDegraded := d.degraded != nil
 			d.degraded = err
+			if !wasDegraded {
+				d.bumpLocked(now)
+			}
 		}
 		return err
 	}
 	d.degraded = nil
 	d.state = st
 	d.leases = leases
+	d.validUntil, _ = core.NextTransition(transitionLeases(st, leases), now)
 
 	// One timing line per change in branch event count (≈ one per landed
 	// commit), plus any refresh slow enough to worry about. This is the
@@ -514,7 +580,101 @@ func (d *Daemon) refreshLocked(now time.Time) error {
 			len(events), len(d.written), len(leases),
 			loadDur.Round(10*time.Microsecond), replayDur.Round(10*time.Microsecond))
 	}
+	d.bumpLocked(now)
 	return nil
+}
+
+// transitionLeases narrows the lease map to the leases whose lapse
+// would change replayed state: those of claims that are active (the
+// holder expires, the task returns to the pool) or voided (the loser's
+// unreported attempt closes as superseded). A finished or released
+// claim's lease lapsing changes nothing, so it must not wake anyone.
+func transitionLeases(st *core.State, leases map[string]time.Time) map[string]time.Time {
+	out := make(map[string]time.Time)
+	for id, c := range st.Claims {
+		if c.Status != core.ClaimActive && c.Status != core.ClaimVoided {
+			continue
+		}
+		if exp, ok := leases[id]; ok {
+			out[id] = exp
+		}
+	}
+	return out
+}
+
+// freshenLocked replays only when the memo has aged past validUntil —
+// a lease has lapsed since the last replay and nothing re-evaluated it
+// yet (the transition timer runs on the same clock, but a machine
+// waking from sleep can arrive here first). Otherwise the memo stands:
+// this is the read gate's whole cost at an unchanged version. Caller
+// holds d.mu.
+func (d *Daemon) freshenLocked(now time.Time) error {
+	if d.validUntil.IsZero() || now.Before(d.validUntil) {
+		return nil
+	}
+	return d.replayLocked(now)
+}
+
+// bumpLocked is the one place the state version moves: increment,
+// wake every parked snapshot request, re-render the views against the
+// new state (T6: views follow the version), and re-arm the transition
+// timer to the memo's new validUntil. Caller holds d.mu.
+func (d *Daemon) bumpLocked(now time.Time) {
+	d.stateVersion++
+	d.wakeLocked()
+	d.renderViewsLocked()
+	d.armLocked(now)
+}
+
+// wakeLocked closes the broadcast channel and replaces it: every
+// request parked on the old channel returns. Shutdown calls it without
+// a bump, so parked requests answer with the unchanged version and the
+// client re-polls into a closed socket instead of hanging the drain.
+// Caller holds d.mu.
+func (d *Daemon) wakeLocked() {
+	close(d.changed)
+	d.changed = make(chan struct{})
+}
+
+// armLocked points the transition timer at validUntil, or stops it
+// when no live lease can lapse. Caller holds d.mu.
+func (d *Daemon) armLocked(now time.Time) {
+	if d.validUntil.IsZero() {
+		if d.transition != nil {
+			d.transition.Stop()
+		}
+		return
+	}
+	dur := d.validUntil.Sub(now)
+	if dur < 0 {
+		dur = 0
+	}
+	if d.transition == nil {
+		d.transition = d.afterFunc(dur, d.onTransition)
+		return
+	}
+	d.transition.Reset(dur)
+}
+
+// onTransition is the timer callback: a lease is due to lapse. A
+// replay at the current instant moves the verdict, bumps the version
+// (waking parked requests, re-rendering views — a lapse is a view-only
+// commit, 001 D9), and re-arms for the next lapse. Fired early (clock
+// skew, or a fake clock that has not advanced), it re-arms and waits.
+func (d *Daemon) onTransition() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.stopping || !d.loaded || d.degraded != nil || d.validUntil.IsZero() {
+		return
+	}
+	now := d.now()
+	if now.Before(d.validUntil) {
+		d.armLocked(now)
+		return
+	}
+	if err := d.replayLocked(now); err != nil {
+		d.log.Printf("daemon: lease transition replay: %v", err)
+	}
 }
 
 // trimOverlay drops overlay events that have landed on the branch: once
@@ -547,53 +707,64 @@ func (d *Daemon) stageLocked(evs ...event.Event) {
 	}
 }
 
-// commitLocked stages events, flushes immediately when eager (claim and
-// escalation writes, T8 — everything else rides the debounce), and
-// refreshes cached state. Caller holds d.mu.
+// commitLocked stages events, replays (the version bump stages the
+// views these events produce, so they ride the same batch — an eager
+// commit carries its own views), and flushes immediately when eager
+// (claim and escalation writes, T8 — everything else rides the
+// debounce). A fail-safe replay must not strand the events themselves,
+// so the flush runs regardless. Caller holds d.mu.
 func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 	d.stageLocked(evs...)
-	// Refresh before flushing so the views staged below render the state
-	// these events produce; a fail-safe refresh skips views but must not
-	// strand the events themselves.
-	refreshErr := d.refreshLocked(time.Now())
-	if refreshErr == nil {
-		d.stageViewsLocked()
-	}
+	replayErr := d.replayLocked(d.now())
 	if eager {
 		if err := d.batcher.Flush(); err != nil {
 			return fmt.Errorf("daemon: flush: %w", err)
 		}
 		// Eager writes deserve eager wire time too (T8): ask the sync
 		// loop for an immediate pass.
-		d.sync.Poke()
+		d.poke()
 	}
-	return refreshErr
+	return replayErr
 }
 
-// stageViewsLocked renders the four views from current replayed state
-// and stages them to ride the next batch commit (T6: views land
-// alongside their events). Highest version wins (B8): views stamped by
-// a newer generator are never overwritten — events still flow, and the
-// newer peer keeps regenerating. Caller holds d.mu.
-func (d *Daemon) stageViewsLocked() {
+// renderViewsLocked renders the views from the memoized state and
+// stages the ones whose bytes differ from the head tree, to ride the
+// next batch commit (T6, 2026-09-10: views are a projection of the
+// versioned state, rendered on every bump, staged only when they
+// change). It runs from bumpLocked, never from a write path — staging
+// is no longer a call a write path can forget. Highest version wins
+// (B8): views stamped by a newer generator are never overwritten —
+// events still flow, and the newer peer keeps regenerating. Degraded,
+// there is no trustworthy state to render. Caller holds d.mu.
+func (d *Daemon) renderViewsLocked() {
+	if d.degraded != nil || d.state == nil {
+		return
+	}
 	meta, err := d.store.ReadFile(views.MetaPath)
 	if err != nil {
 		d.log.Printf("daemon: views: reading stamp: %v", err)
 		return
 	}
 	if !views.CanWrite(meta) {
-		d.log.Printf("daemon: views stamped by a newer tuhdoo (format %d > %d); writing events only",
-			views.Format(meta), views.FormatVersion)
+		if !d.viewsGuardLogged {
+			d.viewsGuardLogged = true
+			d.log.Printf("daemon: views stamped by a newer tuhdoo (format %d > %d); writing events only",
+				views.Format(meta), views.FormatVersion)
+		}
+		// Anything staged before the newer stamp arrived must not land
+		// on top of it.
+		d.batcher.SetFiles(nil)
 		return
 	}
-	d.batcher.AddFiles(views.Render(d.state))
+	d.viewsGuardLogged = false
+	d.batcher.SetFiles(d.store.Changed(views.Render(d.state)))
 }
 
 // newEventLocked mints an event at the daemon layer (core stays pure):
 // ULID from the monotonic entropy, machine from machine-id, actor from
 // the request. Caller holds d.mu.
 func (d *Daemon) newEventLocked(typ, actor, task string, payload any) (event.Event, error) {
-	id, err := event.NewID(time.Now(), d.entropy)
+	id, err := event.NewID(d.now(), d.entropy)
 	if err != nil {
 		return event.Event{}, err
 	}

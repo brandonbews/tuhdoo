@@ -54,25 +54,41 @@ func (b *Batcher) Add(e event.Event) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.pending = append(b.pending, e)
+	b.armLocked()
+}
+
+// SetFiles replaces the file blobs (views, T6) staged to ride the next
+// commit, event or timer driven. Replaces, not merges: the daemon
+// stages the full diff of a fresh render against the head tree on
+// every state-version bump (T6, 2026-09-10), so whatever was staged
+// before is stale by construction — a page rendered before a merge
+// landed would otherwise ride a later commit and overwrite the merged
+// one. An empty set clears the staging (the guard refusing to write
+// under a newer peer's stamp). Files restart the quiet timer exactly
+// as events do (D9): a lease lapsing changes the views with no event
+// to carry them — the view-only commit ("0 events, N files") rides the
+// same quiet period.
+func (b *Batcher) SetFiles(files map[string][]byte) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(files) == 0 {
+		b.files = nil
+		return
+	}
+	b.files = make(map[string][]byte, len(files))
+	for path, data := range files {
+		b.files[path] = data
+	}
+	b.armLocked()
+}
+
+// armLocked starts or restarts the quiet-interval timer. Caller holds
+// b.mu.
+func (b *Batcher) armLocked() {
 	if b.timer == nil {
 		b.timer = time.AfterFunc(b.quiet, b.background)
 	} else {
 		b.timer.Reset(b.quiet)
-	}
-}
-
-// AddFiles stages file blobs (views, T6) to ride the next commit, event
-// or timer driven. Later stagings of the same path win, so the batch
-// always carries the freshest render. Files never restart the quiet
-// timer — they accompany events, they don't cause commits of their own.
-func (b *Batcher) AddFiles(files map[string][]byte) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if b.files == nil {
-		b.files = make(map[string][]byte, len(files))
-	}
-	for path, data := range files {
-		b.files[path] = data
 	}
 }
 

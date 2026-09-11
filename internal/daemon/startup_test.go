@@ -77,16 +77,15 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 	t.Cleanup(letLoadFinish)
 	c := socketClient(d)
 
-	// The socket accepts and /v0/state answers the placeholder — loaded
-	// false, sync mode "starting", no tasks — while the load is held
-	// open.
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	if st.Loaded || st.Sync.Mode != "starting" {
-		t.Fatalf("state during load: loaded %v, sync mode %q; want the placeholder (false, starting)", st.Loaded, st.Sync.Mode)
+	// The socket accepts and the snapshot answers the placeholder —
+	// loaded false, sync mode "starting", version 0, no tasks — while
+	// the load is held open.
+	st := snapshotNow(t, c)
+	if st.Loaded || st.Sync.Mode != "starting" || st.Version != 0 {
+		t.Fatalf("snapshot during load: loaded %v, sync mode %q, version %d; want the placeholder (false, starting, 0)", st.Loaded, st.Sync.Mode, st.Version)
 	}
 	if len(st.Tasks) != 0 || st.Degraded != "" {
-		t.Fatalf("state during load carries tasks/degraded: %+v", st)
+		t.Fatalf("snapshot during load carries tasks/degraded: %+v", st)
 	}
 
 	// A write in the window: 503, body naming starting.
@@ -98,12 +97,8 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 		t.Fatalf("write during load: status %d body %s; want 503 naming starting", status, body)
 	}
 	// A hydration read too: there is no state to hydrate from.
-	status, body, err = do(c, "GET", "/v0/tasks/tuh-nothing", "", nil)
-	if err != nil {
-		t.Fatalf("get task: %v", err)
-	}
-	if status != http.StatusServiceUnavailable || !strings.Contains(string(body), "starting") {
-		t.Fatalf("task read during load: status %d body %s; want 503 naming starting", status, body)
+	if _, oe := d.opGetTask("tuh-nothing"); oe == nil || oe.code != http.StatusServiceUnavailable || !strings.Contains(oe.msg, "starting") {
+		t.Fatalf("task read during load: %v; want 503 naming starting", oe)
 	}
 
 	// MCP: session setup needs no state and succeeds inside the window
@@ -127,17 +122,17 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 	waitLoaded(t, d)
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
+		st = snapshotNow(t, c)
 		if st.Sync.Mode != "starting" || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if !st.Loaded || st.Sync.Mode != "local-only" {
-		t.Fatalf("state after load: loaded %v, sync mode %q; want true, local-only", st.Loaded, st.Sync.Mode)
+	if !st.Loaded || st.Sync.Mode != "local-only" || st.Version == 0 {
+		t.Fatalf("snapshot after load: loaded %v, sync mode %q, version %d; want true, local-only, >0", st.Loaded, st.Sync.Mode, st.Version)
 	}
 	id := createOne(t, c, "brandon", map[string]any{"title": "right on time"})
-	mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK)
+	snapshotTaskOf(t, c, id)
 	var backlog backlogResult
 	mustToolOK(t, cs, "get_backlog", map[string]any{}, &backlog)
 	if len(backlog.Ready) != 1 || backlog.Ready[0].ID != id {
