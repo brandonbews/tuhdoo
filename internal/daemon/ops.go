@@ -33,11 +33,48 @@ func opErrf(code int, format string, args ...any) *opError {
 	return &opError{code: code, msg: fmt.Sprintf(format, args...)}
 }
 
-// degradedLocked returns the T3 fail-safe rejection when the daemon is
-// in read-only mode, nil otherwise. Caller holds d.mu.
+// startingLocked returns the retryable rejection every operation answers
+// until the first replay lands (T4 startup order, 2026-09-10: the socket
+// serves before the ledger is loaded), nil once loaded. A 503 so both
+// surfaces read it as "try again shortly", and the word "starting" so
+// clients can tell it from every other refusal. Caller holds d.mu.
+func (d *Daemon) startingLocked() *opError {
+	if !d.loaded {
+		return opErrf(http.StatusServiceUnavailable, "daemon starting: the ledger is still loading; retry in a moment")
+	}
+	return nil
+}
+
+// degradedLocked is the write gate: every write runs it first, and it
+// refuses in two cases, checked in this order — the startup window
+// (startingLocked, above: nothing has been replayed yet), then the T3
+// fail-safe read-only mode (the last replay could not be trusted). nil
+// when writes may proceed. Caller holds d.mu.
 func (d *Daemon) degradedLocked() *opError {
+	if oe := d.startingLocked(); oe != nil {
+		return oe
+	}
 	if d.degraded != nil {
 		return opErrf(http.StatusServiceUnavailable, "writes rejected (fail-safe read-only): %v", d.degraded)
+	}
+	return nil
+}
+
+// readGateLocked is the read gate for the operations that hydrate
+// state: the startup window first (startingLocked: nothing has been
+// replayed yet), then a replay at the current instant so lease
+// verdicts move with the clock (D6: expiry is evaluated at read time
+// — a stale expiry must not hydrate a lapsed claim as live or hide a
+// ready task). Degraded skips the refresh: the last good state keeps
+// serving reads. nil when the read may proceed. Caller holds d.mu.
+func (d *Daemon) readGateLocked(now time.Time) *opError {
+	if oe := d.startingLocked(); oe != nil {
+		return oe
+	}
+	if d.degraded == nil {
+		if err := d.refreshLocked(now); err != nil {
+			return d.writeErrLocked(err)
+		}
 	}
 	return nil
 }
@@ -997,10 +1034,8 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			return hydratedTask{}, d.writeErrLocked(err)
-		}
+	if oe := d.readGateLocked(now); oe != nil {
+		return hydratedTask{}, oe
 	}
 	if _, ok := d.state.Tasks[id]; !ok {
 		return hydratedTask{}, opErrf(http.StatusNotFound, "unknown task %s", id)
@@ -1023,10 +1058,8 @@ func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			return backlogResult{}, d.writeErrLocked(err)
-		}
+	if oe := d.readGateLocked(now); oe != nil {
+		return backlogResult{}, oe
 	}
 	res := backlogResult{Ready: []taskJSON{}, Inbox: []taskJSON{}, Held: []taskJSON{}}
 	for _, t := range d.state.ReadyTasks() {

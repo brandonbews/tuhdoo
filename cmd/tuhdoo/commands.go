@@ -34,10 +34,12 @@ func connect() (*repo, *client, int) {
 // ---- init ----
 
 // runInit is idempotent repo setup. The data branch is created by the
-// daemon's startup path (daemon.New runs store.Init before it binds the
-// socket), so "spawn the daemon, then confirm the branch exists" is the
-// whole job — the simplest honest path, and it means the first command
-// a user ever runs brings everything up.
+// daemon's startup path (store.Init runs inside the daemon's first
+// load, behind the socket — T4 startup order, 2026-09-10 — and
+// ensureDaemon returns only once that load has landed), so "spawn the
+// daemon, then confirm the branch exists" is the whole job — the
+// simplest honest path, and it means the first command a user ever
+// runs brings everything up.
 //
 // init takes no flags and no arguments; anything passed is rejected
 // loudly rather than silently ignored. --as in particular gets its own

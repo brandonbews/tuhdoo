@@ -1,10 +1,16 @@
 package gitx
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -20,6 +26,10 @@ const minGitMajor, minGitMinor = 2, 40
 // the user's full auth setup (SSH agents, credential helpers) for free.
 type CLI struct {
 	dir string
+	// format is the repository's object format, "sha1" or "sha256",
+	// detected once by New (`rev-parse --show-object-format`) so
+	// BlobOID hashes the way this repository's git does.
+	format string
 }
 
 var _ Git = (*CLI)(nil)
@@ -41,10 +51,32 @@ func New(dir string) (*CLI, error) {
 		return nil, fmt.Errorf("gitx: git %d.%d or newer is required, found %d.%d — please upgrade git",
 			minGitMajor, minGitMinor, major, minor)
 	}
-	if _, _, err := g.run(nil, nil, "rev-parse", "--git-dir"); err != nil {
+	// One rev-parse proves dir is a repository and reports its object
+	// format: each flag prints one line, in flag order.
+	out, _, err = g.run(nil, nil, "rev-parse", "--git-dir", "--show-object-format")
+	if err != nil {
 		return nil, fmt.Errorf("gitx: %s is not a git repository: %w", dir, err)
 	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 {
+		return nil, fmt.Errorf("gitx: detect object format: rev-parse printed %q, want a git dir and a format", out)
+	}
+	g.format = strings.TrimSpace(lines[1])
+	if _, err := newObjectHash(g.format); err != nil {
+		return nil, fmt.Errorf("gitx: %w", err)
+	}
 	return g, nil
+}
+
+// newObjectHash returns a fresh hash for a git object format name.
+func newObjectHash(format string) (hash.Hash, error) {
+	switch format {
+	case "sha1":
+		return sha1.New(), nil
+	case "sha256":
+		return sha256.New(), nil
+	}
+	return nil, fmt.Errorf("unsupported object format %q (want sha1 or sha256)", format)
 }
 
 func gitVersionOK(major, minor int) bool {
@@ -110,6 +142,25 @@ func (g *CLI) HashObject(data []byte) (string, error) {
 		return "", fmt.Errorf("gitx: %w", err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// BlobOID computes, in memory, the ID `git hash-object` would print for
+// data: the object format's hash over the header "blob <len>\0" followed
+// by the bytes. Nothing is written — see HashObject for that.
+func (g *CLI) BlobOID(data []byte) string {
+	return blobOID(g.format, data)
+}
+
+// blobOID is BlobOID for an explicit object format name. The format was
+// validated by New, so an unknown name here is a programming error.
+func blobOID(format string, data []byte) string {
+	h, err := newObjectHash(format)
+	if err != nil {
+		panic("gitx: " + err.Error())
+	}
+	fmt.Fprintf(h, "blob %d\x00", len(data))
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (g *CLI) MkTree(entries []TreeEntry) (string, error) {
@@ -243,11 +294,105 @@ func (g *CLI) ReadRef(ref string) (string, error) {
 }
 
 func (g *CLI) CatFile(oid string) ([]byte, error) {
-	out, _, err := g.run(nil, nil, "cat-file", "blob", oid)
+	blobs, err := g.CatFiles([]string{oid})
+	if err != nil {
+		return nil, err
+	}
+	return blobs[oid], nil
+}
+
+// CatFiles reads every requested blob through one `git cat-file --batch`
+// process: the deduplicated OIDs go in on stdin, one per line, and the
+// records come back on stdout as "<oid> <type> <size>\n<bytes>\n" — or
+// "<oid> missing\n" for an object the repository lacks, which is an
+// error here, never a skipped blob. The whole output is collected
+// first and then parsed by parseCatFileBatch; git exits on its own
+// once stdin is consumed, so there is no pipe to manage.
+func (g *CLI) CatFiles(oids []string) (map[string][]byte, error) {
+	unique := dedupe(oids)
+	if len(unique) == 0 {
+		return map[string][]byte{}, nil
+	}
+	var input bytes.Buffer
+	for _, oid := range unique {
+		input.WriteString(oid)
+		input.WriteByte('\n')
+	}
+	out, _, err := g.run(input.Bytes(), nil, "cat-file", "--batch")
 	if err != nil {
 		return nil, fmt.Errorf("gitx: %w", err)
 	}
-	return out, nil
+	blobs, err := parseCatFileBatch(out, unique)
+	if err != nil {
+		return nil, fmt.Errorf("gitx: cat-file --batch: %w", err)
+	}
+	return blobs, nil
+}
+
+// dedupe returns oids without repeats, first occurrence order kept, so
+// the batch input has one line per object and the output one record.
+func dedupe(oids []string) []string {
+	seen := make(map[string]bool, len(oids))
+	var out []string
+	for _, oid := range oids {
+		if seen[oid] {
+			continue
+		}
+		seen[oid] = true
+		out = append(out, oid)
+	}
+	return out
+}
+
+// parseCatFileBatch decodes `cat-file --batch` output for the objects
+// requested, in request order — git answers in input order, one record
+// per line of input. Bodies are read by their declared size (io.ReadFull)
+// rather than by line, so a blob may hold newlines, NULs, or bytes that
+// look like a header; an empty blob is a zero-byte body. Every record's
+// object name must match the request it answers: a drift between the
+// two would attribute bytes to the wrong OID, which is worse than
+// failing.
+func parseCatFileBatch(out []byte, oids []string) (map[string][]byte, error) {
+	r := bufio.NewReader(bytes.NewReader(out))
+	blobs := make(map[string][]byte, len(oids))
+	for _, want := range oids {
+		header, err := r.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("no record for %s: output ended early", want)
+		}
+		fields := strings.Fields(header)
+		if len(fields) == 2 && fields[1] == "missing" {
+			return nil, fmt.Errorf("object %s missing from the repository", fields[0])
+		}
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("cannot parse record header %q (expected it for %s)", strings.TrimSuffix(header, "\n"), want)
+		}
+		got, typ := fields[0], fields[1]
+		if got != want {
+			return nil, fmt.Errorf("record for %s arrived where %s was expected", got, want)
+		}
+		if typ != "blob" {
+			return nil, fmt.Errorf("object %s is a %s, not a blob", got, typ)
+		}
+		size, err := strconv.Atoi(fields[2])
+		if err != nil || size < 0 {
+			return nil, fmt.Errorf("record for %s declares size %q", got, fields[2])
+		}
+		body := make([]byte, size)
+		if _, err := io.ReadFull(r, body); err != nil {
+			return nil, fmt.Errorf("blob %s: declared %d bytes, output ended early", got, size)
+		}
+		// Each body is followed by exactly one newline that is not part
+		// of the blob.
+		if nl, err := r.ReadByte(); err != nil || nl != '\n' {
+			return nil, fmt.Errorf("blob %s: record not newline-terminated after %d bytes", got, size)
+		}
+		blobs[got] = body
+	}
+	if rest, _ := r.Peek(1); len(rest) != 0 {
+		return nil, fmt.Errorf("unexpected output after the last of %d records", len(oids))
+	}
+	return blobs, nil
 }
 
 func (g *CLI) LsTree(rev string) ([]TreeEntry, error) {

@@ -323,38 +323,19 @@ func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
 
 // replayTreeAt is replayTree with an explicit instant, for callers that
 // need the verdict to be a pure function of the tree (confirmGuard).
+// The tree is read by the store's reader — the one place that
+// classifies paths and batches the blob reads (T2, 2026-09-10) — so
+// this replay and the store's head load compute the same lease set by
+// construction; views are never read back. The decode caches here are
+// throwaway: sharing the store's is the next task.
 func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.State, error) {
-	var events []event.Event
-	leases := make(map[string]time.Time)
+	entries := make([]gitx.TreeEntry, 0, len(tree))
 	for path, oid := range tree {
-		switch {
-		case strings.HasPrefix(path, "events/"):
-			data, err := s.git.CatFile(oid)
-			if err != nil {
-				return nil, err
-			}
-			e, err := event.Decode(data)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", path, err)
-			}
-			events = append(events, e)
-		case strings.HasPrefix(path, "leases/"):
-			claimID, ok := store.LeaseClaimID(path)
-			if !ok {
-				// A path no writer produces; skipping matches the store
-				// loader, so both readers compute the same lease set.
-				continue
-			}
-			data, err := s.git.CatFile(oid)
-			if err != nil {
-				return nil, err
-			}
-			expires, err := store.DecodeLease(data)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", path, err)
-			}
-			leases[claimID] = expires
-		}
+		entries = append(entries, gitx.TreeEntry{Path: path, OID: oid})
+	}
+	events, leases, err := store.ReplayInputFromTree(s.git, entries, map[string]event.Event{}, map[string]time.Time{})
+	if err != nil {
+		return nil, err
 	}
 	return s.replay.Replay(core.Input{Events: events, Leases: leases, Now: now})
 }

@@ -5,6 +5,7 @@ package main
 // blocked-with-reason / done / cancelled.
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -16,21 +17,27 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
-// fetchState reads /v0/state, briefly waiting out the sync loop's
-// "starting" mode: a freshly auto-spawned daemon can answer before its
-// first sync cycle (milliseconds) has decided local-only vs syncing.
+// fetchState reads /v0/state, briefly waiting out two startup shapes:
+// the placeholder a daemon serves until its first replay lands (loaded
+// false — T4 startup order, 2026-09-10; ensureDaemon already waited
+// this out once, but a daemon restarting under a long-lived screen
+// serves it again), and the sync loop's "starting" mode on a freshly
+// loaded daemon whose first cycle (milliseconds) has not yet decided
+// local-only vs syncing. At the budget an undecided sync mode is
+// returned as is; a placeholder never is — it is an error, so a
+// screen polling through a daemon restart shows "retrying" rather
+// than installing an empty board.
 func fetchState(c *client) (stateResp, error) {
-	var st stateResp
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		if err := c.get("/v0/state", &st); err != nil {
-			return st, err
-		}
-		if st.Sync.Mode != "starting" || time.Now().After(deadline) {
-			return st, nil
-		}
-		time.Sleep(50 * time.Millisecond)
+	st, err := pollState(c, 3*time.Second, func(st stateResp) bool {
+		return st.Loaded && st.Sync.Mode != "starting"
+	})
+	if err != nil {
+		return st, err
 	}
+	if !st.Loaded {
+		return stateResp{}, errors.New("daemon is still loading the ledger; try again in a moment")
+	}
+	return st, nil
 }
 
 // snapshot is one consistent-enough picture of daemon state: /v0/state

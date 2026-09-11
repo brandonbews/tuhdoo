@@ -6,6 +6,7 @@ package gitx
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -44,14 +45,32 @@ func runGit(t *testing.T, dir string, args ...string) string {
 
 func newRepo(t *testing.T) *CLI {
 	t.Helper()
+	g, err := newRepoWith(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return g
+}
+
+// newRepoWith is newRepo with extra `git init` arguments. The init's
+// failure is returned rather than fatal, so a caller asking for an
+// option this git may lack can skip instead (newSHA256Repo); opening
+// the initialized repository is fatal as ever.
+func newRepoWith(t *testing.T, initArgs ...string) (*CLI, error) {
+	t.Helper()
 	setGitEnv(t)
 	dir := t.TempDir()
-	runGit(t, dir, "init", "--quiet", "-b", "main")
+	args := append([]string{"init", "--quiet", "-b", "main"}, initArgs...)
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("git %v: %v\n%s", args, err, out)
+	}
 	g, err := New(dir)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	return g
+	return g, nil
 }
 
 func newBareRemote(t *testing.T) string {

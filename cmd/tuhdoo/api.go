@@ -127,7 +127,11 @@ type syncJSON struct {
 }
 
 // stateResp is GET /v0/state. Tasks arrive in creation (ULID) order.
+// Loaded is false only on the placeholder a daemon serves until its
+// first replay lands (T4 startup order, 2026-09-10); ensureDaemon and
+// fetchState absorb that, so no command ever sees the placeholder.
 type stateResp struct {
+	Loaded          bool             `json:"loaded"`
 	Degraded        string           `json:"degraded"`
 	Sync            syncJSON         `json:"sync"`
 	Tasks           []stateTask      `json:"tasks"`

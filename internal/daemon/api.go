@@ -406,6 +406,12 @@ type stateTask struct {
 }
 
 type stateResp struct {
+	// Loaded is true on every answer carrying state, false only on the
+	// placeholder served until the first replay lands (T4 startup
+	// order, 2026-09-10). Clients absorb readiness by this field alone —
+	// the placeholder keeps sync mode "starting" and empty arrays, but
+	// so can a freshly loaded daemon whose sync loop has not run yet.
+	Loaded          bool             `json:"loaded"`
 	Degraded        string           `json:"degraded,omitempty"` // fail-safe message when read-only
 	Sync            syncJSON         `json:"sync"`
 	Tasks           []stateTask      `json:"tasks"`
@@ -415,7 +421,7 @@ type stateResp struct {
 
 // syncJSON is the sync loop's health for status surfaces.
 type syncJSON struct {
-	Mode       string `json:"mode"` // local-only | syncing | error
+	Mode       string `json:"mode"` // starting | local-only | syncing | error
 	Remote     string `json:"remote,omitempty"`
 	LastFetch  string `json:"last_fetch,omitempty"` // RFC3339
 	LastPush   string `json:"last_push,omitempty"`
@@ -448,21 +454,29 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	// Lease verdicts move with the clock, so replay at the current
-	// instant first (D6: expiry is evaluated at read time) — the status
-	// poll must not render a lapsed lease as a live holder. Degraded
-	// skips the refresh: the last good state keeps serving reads.
-	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
-			writeOpError(w, d.writeErrLocked(err))
-			return
-		}
-	}
 	resp := stateResp{
-		Sync:            syncJSONOf(d.sync.Status()),
 		Tasks:           []stateTask{},
 		OpenEscalations: []escalationJSON{},
 		Runs:            []runJSON{},
+	}
+	// Until the first replay lands there is no state to serve. The one
+	// starting predicate (startingLocked) is a 503 for every operation;
+	// this handler alone translates it into a 200 placeholder — sync
+	// mode "starting", loaded false, nothing else — the shape the
+	// clients' state loop retries (T4 startup order, 2026-09-10).
+	if d.startingLocked() != nil {
+		resp.Sync = syncJSON{Mode: "starting"}
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+	resp.Loaded = true
+	resp.Sync = syncJSONOf(d.sync.Status())
+	// Past the placeholder, the same read gate as every hydrating read:
+	// replay at the current instant (the status poll must not render a
+	// lapsed lease as a live holder), skipped when degraded.
+	if oe := d.readGateLocked(now); oe != nil {
+		writeOpError(w, oe)
+		return
 	}
 	if d.degraded != nil {
 		resp.Degraded = d.degraded.Error()

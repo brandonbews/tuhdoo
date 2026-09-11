@@ -15,14 +15,22 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 	"time"
 )
 
-// spawnWait bounds how long we wait for a freshly spawned daemon to
-// come up.
-const spawnWait = 5 * time.Second
+// daemonStartCeiling bounds each phase of ensureDaemon's wait: first
+// for a freshly spawned daemon's socket to accept connections, then for
+// the daemon to report its ledger loaded. The daemon binds its socket
+// before it loads the ledger (T4 startup order, 2026-09-10), so the
+// first phase is a ceiling on process start — generous, because it is
+// never the normal case — and the second on the load itself (a
+// measured 7.2 s cold start; the ceiling leaves room for a bigger
+// ledger and a slower disk). Its predecessor, a fixed 5 s spawn wait,
+// covered both phases together, and the cold load alone could never
+// beat it: every launch after a daemon death failed with "daemon did
+// not come up within 5s".
+const daemonStartCeiling = 30 * time.Second
 
 // client speaks the daemon's JSON HTTP API over its unix socket.
 type client struct {
@@ -120,30 +128,103 @@ func (c *client) writeResp(method, path, actor string, body, dst any) error {
 }
 
 // ensureDaemon returns a client for the repo's daemon, spawning one
-// when none is serving.
+// when none is serving. It returns only once the daemon reports its
+// ledger loaded: the daemon serves before it loads (T4 startup order,
+// 2026-09-10) and answers a placeholder until the first replay lands,
+// and readiness is absorbed here, once, rather than by every caller —
+// whichever way the socket was found, the loaded phase follows.
 func ensureDaemon(r *repo) (*client, error) {
+	var c *client
 	if sock, ok := liveSocket(r); ok {
-		return newClient(sock), nil
+		c = newClient(sock)
+	} else {
+		exited, err := spawnDaemon(r)
+		if err != nil {
+			return nil, err
+		}
+		c, err = awaitDaemon(r, exited, daemonStartCeiling)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if err := spawnDaemon(r); err != nil {
-		return nil, err
-	}
-	deadline := time.Now().Add(spawnWait)
-	for time.Now().Before(deadline) {
+	return awaitLoaded(r, c, daemonStartCeiling)
+}
+
+// awaitDaemon polls for the daemon's socket until it accepts — that is
+// the return, however soon it comes — or until ceiling elapses. exited
+// delivers the spawned process's exit status when it is gone. An exit
+// with exitAlreadyRunning is the flock loser of two CLIs racing to
+// spawn: the winner's socket is coming, so the poll goes on. Any other
+// exit is a daemon that died before binding (git too old, a repository
+// it cannot read) and fails at once rather than at the ceiling. Either
+// failure names daemon.log, where the daemon wrote its reason.
+func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, error) {
+	deadline := time.Now().Add(ceiling)
+	for {
 		if sock, ok := liveSocket(r); ok {
 			return newClient(sock), nil
 		}
+		select {
+		case code := <-exited:
+			if code != exitAlreadyRunning {
+				return nil, fmt.Errorf("daemon exited without serving; see %s", r.logPath())
+			}
+		default:
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("daemon did not come up within %v; see %s", ceiling, r.logPath())
+		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return nil, fmt.Errorf("daemon did not come up within %v; see %s",
-		spawnWait, filepath.Join(r.runtimeDir(), "daemon.log"))
+}
+
+// awaitLoaded polls /v0/state on an accepting socket until the daemon
+// reports its ledger loaded, bounded by ceiling. A daemon whose first
+// load fails ends itself — socket and discovery file torn down — so a
+// poll that can no longer reach the socket is that death, reported as
+// such rather than as a dead client handed back; any other failed poll
+// is the daemon's own answer, surfaced as is. Both failures and the
+// ceiling name daemon.log.
+func awaitLoaded(r *repo, c *client, ceiling time.Duration) (*client, error) {
+	st, err := pollState(c, ceiling, func(st stateResp) bool { return st.Loaded })
+	if err != nil {
+		if _, ok := liveSocket(r); !ok {
+			return nil, fmt.Errorf("daemon exited while starting; see %s", r.logPath())
+		}
+		return nil, fmt.Errorf("daemon not answering: %w", err)
+	}
+	if !st.Loaded {
+		return nil, fmt.Errorf("daemon is still loading the ledger after %v; see %s", ceiling, r.logPath())
+	}
+	return c, nil
+}
+
+// pollState reads /v0/state every 50 ms until ready accepts the
+// daemon's answer or ceiling elapses, and returns the last answer
+// either way — the caller applies ready once more to tell the two
+// apart and decide what the ceiling means. The one readiness loop
+// behind awaitLoaded (the daemon's load) and fetchState (the sync
+// loop's first decision); a poll the daemon does not answer is its
+// error, unwrapped, for the caller to name.
+func pollState(c *client, ceiling time.Duration, ready func(stateResp) bool) (stateResp, error) {
+	deadline := time.Now().Add(ceiling)
+	for {
+		var st stateResp
+		if err := c.get("/v0/state", &st); err != nil {
+			return stateResp{}, err
+		}
+		if ready(st) || time.Now().After(deadline) {
+			return st, nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 // liveSocket reads daemon.json and proves the daemon is actually
 // serving by dialing its socket — a stale file from a crash fails the
 // dial and we spawn fresh.
 func liveSocket(r *repo) (string, bool) {
-	b, err := os.ReadFile(filepath.Join(r.runtimeDir(), "daemon.json"))
+	b, err := os.ReadFile(r.discoveryPath())
 	if err != nil {
 		return "", false
 	}
@@ -164,19 +245,21 @@ func liveSocket(r *repo) (string, bool) {
 // spawnDaemon re-execs this binary as `tuhdoo daemon`, detached in its
 // own session with output going to daemon.log, so it outlives the CLI
 // and its terminal. If two CLIs race here, the daemon's flock makes the
-// loser exit quietly and both CLIs find the winner's socket.
-func spawnDaemon(r *repo) error {
+// loser exit quietly (with exitAlreadyRunning) and both CLIs find the
+// winner's socket. The returned channel delivers the daemon's exit
+// status if it exits while this CLI is alive — in the normal case it
+// never does.
+func spawnDaemon(r *repo) (<-chan int, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("locate own binary: %w", err)
+		return nil, fmt.Errorf("locate own binary: %w", err)
 	}
 	if err := os.MkdirAll(r.runtimeDir(), 0o755); err != nil {
-		return fmt.Errorf("create runtime dir: %w", err)
+		return nil, fmt.Errorf("create runtime dir: %w", err)
 	}
-	logf, err := os.OpenFile(filepath.Join(r.runtimeDir(), "daemon.log"),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	logf, err := os.OpenFile(r.logPath(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		return fmt.Errorf("open daemon.log: %w", err)
+		return nil, fmt.Errorf("open daemon.log: %w", err)
 	}
 	defer logf.Close()
 
@@ -186,7 +269,16 @@ func spawnDaemon(r *repo) error {
 	cmd.Stderr = logf
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("spawn daemon: %w", err)
+		return nil, fmt.Errorf("spawn daemon: %w", err)
 	}
-	return cmd.Process.Release()
+	exited := make(chan int, 1)
+	go func() {
+		_ = cmd.Wait() // reaps the child if it dies while this CLI is alive
+		code := -1     // killed by a signal, or the wait itself failed
+		if cmd.ProcessState != nil {
+			code = cmd.ProcessState.ExitCode()
+		}
+		exited <- code
+	}()
+	return exited, nil
 }

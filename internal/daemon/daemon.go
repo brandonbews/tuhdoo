@@ -68,6 +68,12 @@ func socketPath(dir, tmpDir string) (string, error) {
 // change is the actor stamped on the events themselves.
 var defaultIdent = gitx.Identity{Name: "tuhdoo daemon", Email: "daemon@tuhdoo.invalid"}
 
+// ErrAlreadyRunning is New's failure when the repository's single-
+// instance lock is held by a live daemon (errors.Is matches it through
+// the wrapping). The CLI that spawned this process reads it as "the
+// flock loser: the winner's socket is coming", not as a death.
+var ErrAlreadyRunning = errors.New("daemon: another daemon is already running for this repo")
+
 // Options tune a Daemon. The zero value is production defaults.
 type Options struct {
 	Ref          string        // data branch ref; empty means store.DefaultRef
@@ -78,6 +84,11 @@ type Options struct {
 	MCPKeepAlive time.Duration // MCP session ping interval; <= 0 means DefaultMCPKeepAlive
 	Version      string        // binary version reported to MCP clients; empty means "dev"
 	Log          *log.Logger   // nil means stderr
+
+	// git, when set, stands in for gitx.New(root): a test hook for
+	// wrapping the real git (a load held open, a remote that moves).
+	// Unexported on purpose — production always runs the real thing.
+	git gitx.Git
 }
 
 // discovery is the daemon.json contents: how CLIs and shims find the
@@ -109,6 +120,19 @@ type Daemon struct {
 	mu     sync.Mutex
 	state  *core.State
 	leases map[string]time.Time
+	// loaded flips true once the first replay has landed (T4 startup
+	// order, 2026-09-10: the socket is bound and daemon.json written
+	// before the ledger is loaded). Until then every read answers sync
+	// mode "starting" and every write a retryable 503 — the daemon
+	// promises nothing it has not yet replayed.
+	loaded bool
+	// stopping is set the moment Shutdown begins, so the load half of
+	// startup never starts the sync loop into a daemon that is already
+	// tearing down.
+	stopping bool
+	// startErr is why the first load failed; Run returns it so the
+	// process exits non-zero with the reason already in daemon.log.
+	startErr error
 	// degraded is non-nil after a fail-safe replay error (T3): reads
 	// keep serving the last good state, writes are rejected with 503.
 	degraded error
@@ -141,12 +165,19 @@ type Daemon struct {
 
 	shutdownOnce sync.Once
 	cleanupOnce  sync.Once
-	done         chan struct{}
+	// loadDone closes when the first load has finished, either way —
+	// Shutdown joins it, so the daemon is never torn down under a
+	// running adopt, init, or replay.
+	loadDone chan struct{}
+	done     chan struct{}
 }
 
 // New prepares a daemon for the git repository rooted at root: acquires
 // the single-instance lock, loads (or mints) the machine id, opens the
-// store, computes initial state, and binds the socket. Run serves it.
+// store, binds the socket, and writes daemon.json. Run serves it and
+// loads the ledger — in that order (T4, 2026-09-10: lock, socket,
+// discovery file, then load), so a client finds the socket while a
+// cold load is still running instead of timing out on it.
 func New(root string, opts Options) (*Daemon, error) {
 	logger := opts.Log
 	if logger == nil {
@@ -194,9 +225,12 @@ func New(root string, opts Options) (*Daemon, error) {
 		return nil, err
 	}
 
-	g, err := gitx.New(root)
-	if err != nil {
-		return nil, fmt.Errorf("daemon: %w", err)
+	g := opts.git
+	if g == nil {
+		g, err = gitx.New(root)
+		if err != nil {
+			return nil, fmt.Errorf("daemon: %w", err)
+		}
 	}
 	st := store.New(g, opts.Ref, ident)
 
@@ -214,6 +248,7 @@ func New(root string, opts Options) (*Daemon, error) {
 		lockFile:     lockFile,
 		entropy:      ulid.Monotonic(rand.Reader, 0),
 		agentSeq:     make(map[string]int),
+		loadDone:     make(chan struct{}),
 		done:         make(chan struct{}),
 	}
 	d.sync = syncer.New(g, syncer.Options{
@@ -227,27 +262,7 @@ func New(root string, opts Options) (*Daemon, error) {
 		},
 		Log: logger,
 	})
-
-	// Clone-join before Init: a fresh clone whose remote already carries
-	// the data branch adopts that history instead of minting a second
-	// orphan root. Best-effort — on any failure (no remote, unreachable,
-	// branch absent) Init mints exactly as before, and the app-level
-	// union merge remains the correctness backstop for two-root histories.
-	d.sync.AdoptRemoteBranch()
-	if err := st.Init(); err != nil {
-		return nil, fmt.Errorf("daemon: %w", err)
-	}
-
 	d.state = emptyState()
-
-	if err := d.Refresh(); err != nil {
-		if !isFailSafe(err) {
-			return nil, fmt.Errorf("daemon: initial load: %w", err)
-		}
-		// T3 fail-safe: start anyway, serving reads of the last
-		// comprehensible state (here: empty) with writes rejected.
-		logger.Printf("daemon: starting in fail-safe read-only mode: %v", err)
-	}
 
 	sock, err := socketPath(dir, os.TempDir())
 	if err != nil {
@@ -286,10 +301,15 @@ func New(root string, opts Options) (*Daemon, error) {
 }
 
 // Run serves the API until Shutdown is called; it returns after cleanup
-// completes. Every exit path logs its reason.
+// completes. Serving starts first and the ledger loads behind it (T4
+// startup order): until the first replay lands, reads answer sync mode
+// "starting" and writes a retryable 503. A first load that fails ends
+// the daemon — socket and discovery file torn down, the reason logged,
+// the error returned — so no client can loop on "starting" forever.
+// Every exit path logs its reason.
 func (d *Daemon) Run() error {
 	d.log.Printf("daemon: pid %d serving %s", os.Getpid(), d.sockPath)
-	go d.sync.Run()
+	go d.start()
 	err := d.srv.Serve(d.ln)
 	if !errors.Is(err, http.ErrServerClosed) {
 		d.log.Printf("daemon: exiting: listener failed: %v", err)
@@ -297,25 +317,112 @@ func (d *Daemon) Run() error {
 		return err
 	}
 	<-d.done // wait for Shutdown's cleanup
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.startErr
+}
+
+// start is the load half of startup, run in the background once the
+// socket is serving: load the ledger, then run the sync loop for the
+// life of the daemon. A first load that fails ends the daemon through
+// the ordinary Shutdown — the reason is logged here, outside any
+// once, so it is never skipped — and Run returns it.
+func (d *Daemon) start() {
+	d.mu.Lock()
+	stopping := d.stopping
+	d.mu.Unlock()
+	if stopping {
+		// Shutdown began before the load could start: there is nothing
+		// to load for, and Shutdown is waiting on loadDone.
+		close(d.loadDone)
+		return
+	}
+	err := d.load()
+	d.mu.Lock()
+	d.startErr = err
+	d.mu.Unlock()
+	close(d.loadDone)
+	if err != nil {
+		d.log.Printf("daemon: initial load failed: %v", err)
+		d.Shutdown("initial load failed")
+		return
+	}
+	d.mu.Lock()
+	stopping = d.stopping
+	d.mu.Unlock()
+	if stopping {
+		return // Shutdown began during the load; it owns the final sync
+	}
+	d.sync.Run()
+}
+
+// load brings the ledger into memory for the first time: adopt a
+// remote data branch if one exists, mint the branch if none does, and
+// replay. The first replay is installed and the daemon marked loaded
+// under one critical section, so a request parked on d.mu during the
+// load is answered with state, never with the placeholder after the
+// state was installed. Loaded covers the T3 fail-safe case too — the
+// daemon then serves reads of the last comprehensible state (here:
+// empty) with writes rejected; any other failure is returned for
+// start to end the daemon with. The long part of startup — the
+// adopt's fetch and the init — runs outside the mutex; only the
+// batched read and replay (tens of milliseconds) hold it.
+func (d *Daemon) load() error {
+	// Clone-join before Init: a fresh clone whose remote already carries
+	// the data branch adopts that history instead of minting a second
+	// orphan root. Best-effort — on any failure (no remote, unreachable,
+	// branch absent) Init mints exactly as before, and the app-level
+	// union merge remains the correctness backstop for two-root histories.
+	d.sync.AdoptRemoteBranch()
+	if err := d.store.Init(); err != nil {
+		return fmt.Errorf("daemon: %w", err)
+	}
+	d.mu.Lock()
+	err := d.refreshLocked(time.Now())
+	if err == nil || isFailSafe(err) {
+		d.loaded = true
+	}
+	d.mu.Unlock()
+	if err != nil && !isFailSafe(err) {
+		return fmt.Errorf("daemon: initial load: %w", err)
+	}
+	if err != nil {
+		d.log.Printf("daemon: starting in fail-safe read-only mode: %v", err)
+	}
 	return nil
 }
 
-// Shutdown stops serving, flushes pending events, and removes the
-// socket and discovery file. Safe to call more than once.
+// Shutdown stops serving, joins the first load, flushes pending events,
+// runs a final sync, and removes the socket and discovery file. Safe to
+// call more than once. It waits for the load Run started — a daemon is
+// never torn down under a running adopt, init, or replay (the adopt's
+// own fetch timeout bounds the wait) — so Run must have been called;
+// when the load did not land (it failed, or the daemon is going down
+// before it finished), nothing was staged and the sync loop never ran,
+// so the flush and final sync are skipped.
 func (d *Daemon) Shutdown(reason string) {
 	d.shutdownOnce.Do(func() {
 		d.log.Printf("daemon: exiting: %s", reason)
+		d.mu.Lock()
+		d.stopping = true
+		d.mu.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_ = d.srv.Shutdown(ctx)
-		if err := d.batcher.Flush(); err != nil {
-			d.log.Printf("daemon: final flush failed, events lost: %v", err)
-		}
-		d.sync.Stop()
-		// Best-effort final push so a laptop closing its lid doesn't
-		// strand the last few commits locally.
-		if err := d.sync.Cycle(); err != nil {
-			d.log.Printf("daemon: final sync: %v", err)
+		<-d.loadDone
+		d.mu.Lock()
+		loaded := d.loaded
+		d.mu.Unlock()
+		if loaded {
+			if err := d.batcher.Flush(); err != nil {
+				d.log.Printf("daemon: final flush failed, events lost: %v", err)
+			}
+			d.sync.Stop()
+			// Best-effort final push so a laptop closing its lid doesn't
+			// strand the last few commits locally.
+			if err := d.sync.Cycle(); err != nil {
+				d.log.Printf("daemon: final sync: %v", err)
+			}
 		}
 		d.cleanup()
 		close(d.done)
@@ -534,7 +641,7 @@ func acquireLock(dir string) (*os.File, error) {
 	}
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		f.Close()
-		return nil, fmt.Errorf("daemon: another daemon is already running for this repo (%s); lock %s is held", livePID(dir), path)
+		return nil, fmt.Errorf("%w (%s); lock %s is held", ErrAlreadyRunning, livePID(dir), path)
 	}
 	return f, nil
 }
