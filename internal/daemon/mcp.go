@@ -19,7 +19,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/brandonbews/tuhdoo/internal/core"
-	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
 // mcpInstructions orients a fresh agent (T5: the D1 loop in minimum
@@ -537,14 +536,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 			"and summary are kept as the salvage record, and the result says so.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in finishRunInput) (*mcp.CallToolResult, finishRunResult, error) {
 		// Agents report their own verdicts only; "interrupted" and
-		// "superseded" are daemon-synthesized (T5) and rejected here
-		// even though the shared op accepts them for the HTTP surface.
-		switch in.Outcome {
-		case event.OutcomeDone, event.OutcomeFailed, event.OutcomeAbandoned, event.OutcomeBlocked:
-		default:
-			return nil, finishRunResult{}, opErrf(http.StatusBadRequest,
-				"invalid outcome %q: agents report done, failed, abandoned, or blocked", in.Outcome)
-		}
+		// "superseded" are daemon-synthesized (T5). The op rejects them
+		// for every caller (2026-09-11), so no narrowing here.
 		res, oe := d.opFinishRun(s.principal(), finishRunReq{
 			Task: in.Task, Outcome: in.Outcome, Branch: in.Branch,
 			PR: in.PR, Commits: in.Commits, MergedAs: in.MergedAs, Summary: in.Summary,

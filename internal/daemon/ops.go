@@ -440,36 +440,6 @@ func (d *Daemon) claimTargetLocked(actor string, target *core.Task, now time.Tim
 	return h, nil
 }
 
-func (d *Daemon) opRenewClaim(actor, taskID string) (claimID string, expires time.Time, oe *opError) {
-	if taskID == "" {
-		return "", time.Time{}, opErrf(http.StatusBadRequest, "%q is required", "task")
-	}
-	now := d.now()
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if oe := d.degradedLocked(); oe != nil {
-		return "", time.Time{}, oe
-	}
-	if err := d.freshenLocked(now); err != nil {
-		return "", time.Time{}, d.writeErrLocked(err)
-	}
-	c, oe := d.holderClaimLocked(taskID, actor)
-	if oe != nil {
-		return "", time.Time{}, oe
-	}
-	expires = now.Add(d.leaseTTL)
-	if err := d.store.WriteLease(c.ID, expires); err != nil {
-		return "", time.Time{}, opErrf(http.StatusInternalServerError, "write lease: %v", err)
-	}
-	// The lease moved: replay (and bump — the memo's validUntil just
-	// moved with it). The rendered views do not carry the expiry, so
-	// the bump stages nothing.
-	if err := d.replayLocked(now); err != nil {
-		return "", time.Time{}, d.writeErrLocked(err)
-	}
-	return c.ID, expires, nil
-}
-
 // opReleaseClaim ends the actor's hold voluntarily. Two shapes succeed:
 // the live holder releasing (the task returns to the pool), and — since
 // 2026-08-04 (D6 clause 3) — a provisionally-voided claimant standing
@@ -574,12 +544,13 @@ type finishRunResult struct {
 	Message string `json:"message,omitempty" jsonschema:"the referee's statement when the recorded outcome is not the reported one; empty when the run recorded exactly as reported"`
 }
 
-// opFinishRun records a run. It accepts every catalog outcome — the
-// MCP layer narrows to the agent-reported set before calling (T5:
-// interrupted and superseded are daemon-only verdicts). The finish
-// guard enforces that the actor has an attempt of their own to close;
-// the two checks compose — the MCP filter runs first, then this op
-// guards both surfaces.
+// opFinishRun records a run. The outcome must be one a caller can
+// report — done, failed, abandoned, or blocked; interrupted and
+// superseded are daemon-synthesized verdicts (T5) and are rejected
+// here for every caller (op-layer refereeing, 2026-09-11: the MCP tool
+// and the HTTP portal both meet D6 at this op, so neither surface
+// narrows on its own). The finish guard then enforces that the actor
+// has an attempt of their own to close.
 //
 // The op is also the referee of how the attempt ended (D6, 2026-08-04):
 // a finish on an attempt that lost its claim race is coerced to outcome
@@ -592,10 +563,11 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 		return finishRunResult{}, opErrf(http.StatusBadRequest, "%q is required", "task")
 	}
 	switch req.Outcome {
-	case event.OutcomeDone, event.OutcomeFailed, event.OutcomeAbandoned,
-		event.OutcomeBlocked, event.OutcomeInterrupted, event.OutcomeSuperseded:
+	case event.OutcomeDone, event.OutcomeFailed, event.OutcomeAbandoned, event.OutcomeBlocked:
 	default:
-		return finishRunResult{}, opErrf(http.StatusBadRequest, "invalid outcome %q", req.Outcome)
+		return finishRunResult{}, opErrf(http.StatusBadRequest,
+			"invalid outcome %q: reported outcomes are done, failed, abandoned, or blocked "+
+				"(interrupted and superseded are daemon-synthesized)", req.Outcome)
 	}
 
 	now := d.now()
@@ -1225,22 +1197,6 @@ func (d *Daemon) openEscalationRowsLocked() []openEscalationJSON {
 			Blocking: e.Blocking, RaisedAt: e.RaisedAt})
 	}
 	return rows
-}
-
-// holderClaimLocked resolves the active claim on taskID and enforces
-// that actor holds it. Caller holds d.mu with freshly replayed state.
-func (d *Daemon) holderClaimLocked(taskID, actor string) (*core.Claim, *opError) {
-	if _, ok := d.state.Tasks[taskID]; !ok {
-		return nil, opErrf(http.StatusNotFound, "unknown task %s", taskID)
-	}
-	c := d.state.ActiveClaim(taskID)
-	if c == nil {
-		return nil, opErrf(http.StatusConflict, "no active claim on task %s", taskID)
-	}
-	if c.Actor != actor {
-		return nil, opErrf(http.StatusForbidden, "claim on task %s is held by %s, not %s", taskID, c.Actor, actor)
-	}
-	return c, nil
 }
 
 // latestClaim returns actor's most recent claim on taskID, or nil —

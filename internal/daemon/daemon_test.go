@@ -723,8 +723,8 @@ func TestEscalateAndNoteUnknownTask(t *testing.T) {
 }
 
 // The claim lifecycle over the API — claim_next hydrates and leases,
-// renewal extends, holder checks bite, release returns the task to the
-// pool.
+// holder checks bite, release returns the task to the pool. (Renewal
+// has no request shape on any layer: it is the session's tick, T8.)
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 
@@ -744,27 +744,8 @@ func TestClaimLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadLeases: %v", err)
 	}
-	orig, ok := leases[h.Claim.ID]
-	if !ok {
+	if _, ok := leases[h.Claim.ID]; !ok {
 		t.Fatalf("no lease written for claim %s", h.Claim.ID)
-	}
-
-	// Renewal by a non-holder is forbidden.
-	mustDo(t, c, "POST", "/v0/claims/renew", "brandon/a2", map[string]any{"task": high}, http.StatusForbidden)
-
-	// Renewal by the holder extends the lease. Lease expiry is stored
-	// at second precision, so cross a second boundary to observe it.
-	time.Sleep(1100 * time.Millisecond)
-	var renewed struct {
-		Claim   string    `json:"claim"`
-		Expires time.Time `json:"expires"`
-	}
-	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims/renew", "brandon/a1", map[string]any{"task": high}, http.StatusOK), &renewed)
-	if renewed.Claim != h.Claim.ID {
-		t.Fatalf("renewed claim %s, want %s", renewed.Claim, h.Claim.ID)
-	}
-	if !renewed.Expires.After(orig) {
-		t.Fatalf("renewed expiry %v is not after original %v", renewed.Expires, orig)
 	}
 
 	// Another actor's claim_next gets the other task.
@@ -793,6 +774,58 @@ func TestClaimLifecycle(t *testing.T) {
 	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", "brandon/a3", map[string]any{"task": high}, http.StatusOK), &h3)
 	if h3.Claim == nil || h3.Claim.Actor != "brandon/a3" {
 		t.Fatalf("reclaim after release: claim = %+v, want brandon/a3", h3.Claim)
+	}
+}
+
+// finish_run over the HTTP portal: a real claim then a finish lands
+// the run with the reported outcome (done is refereed — remoteless,
+// the gate's local arm confirms the claim first), and the outcome set
+// is narrowed at the op layer for every caller (2026-09-11): the
+// daemon-synthesized verdicts, interrupted and superseded, are
+// rejected from HTTP exactly as from the MCP tool, with nothing
+// written.
+func TestFinishRunOverHTTP(t *testing.T) {
+	d, c := startDaemon(t)
+	const actor = "brandon/a1"
+	task := createOne(t, c, "brandon", map[string]any{"title": "finish me"})
+
+	var h hydratedTask
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/claims", actor, map[string]any{"task": task}, http.StatusOK), &h)
+	if h.Claim == nil || h.Claim.Actor != actor {
+		t.Fatalf("claim = %+v, want an active claim by %s", h.Claim, actor)
+	}
+
+	// Synthesized outcomes are rejected before anything is judged or
+	// written — the claim stays held, no run lands.
+	for _, outcome := range []string{event.OutcomeInterrupted, event.OutcomeSuperseded} {
+		status, body, err := do(c, "POST", "/v0/runs", actor, map[string]any{"task": task, "outcome": outcome})
+		if err != nil || status != http.StatusBadRequest {
+			t.Fatalf("finish_run(%s) over HTTP: status %d, err %v; body: %s", outcome, status, err, body)
+		}
+		for _, want := range []string{"invalid outcome", outcome, "daemon-synthesized"} {
+			if !strings.Contains(string(body), want) {
+				t.Fatalf("finish_run(%s) error should say %q: %s", outcome, want, body)
+			}
+		}
+	}
+	if runs := runEvents(t, flushedEvents(t, d))[task]; len(runs) != 0 {
+		t.Fatalf("rejected finishes wrote %d run(s): %+v", len(runs), runs)
+	}
+
+	// The happy path: the run records exactly as reported.
+	var res finishRunResult
+	unmarshalInto(t, mustDo(t, c, "POST", "/v0/runs", actor, map[string]any{
+		"task": task, "outcome": event.OutcomeDone, "branch": "tuh-x/finish-me", "summary": "shipped",
+	}, http.StatusOK), &res)
+	if res.Outcome != event.OutcomeDone || res.Message != "" || res.ID == "" {
+		t.Fatalf("finish_run(done) = %+v, want outcome done with no referee message", res)
+	}
+	runs := runEvents(t, flushedEvents(t, d))[task]
+	if len(runs) != 1 {
+		t.Fatalf("%d run(s) on the ledger, want exactly the reported one: %+v", len(runs), runs)
+	}
+	if r := runs[0]; r.Outcome != event.OutcomeDone || r.Claim != h.Claim.ID || r.Branch != "tuh-x/finish-me" || r.Summary != "shipped" {
+		t.Fatalf("recorded run = %+v, want outcome done closing claim %s with the reported links", r, h.Claim.ID)
 	}
 }
 
@@ -1471,16 +1504,19 @@ func TestFinishRunGuard(t *testing.T) {
 			wantSynth: 1,
 		},
 		{
-			name: "race loser with a voided claim records superseded while the winner holds",
+			// superseded is the referee's verdict, never a report: the op
+			// rejects it for every caller (2026-09-11), before any judgment
+			// — a loser records superseded by reporting what it did (the
+			// coercion cases below), not by naming the verdict.
+			name: "race loser reporting superseded is rejected: synthesized outcomes are never reported",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
 				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
 			},
-			actor:       "brandon/a2",
-			outcome:     event.OutcomeSuperseded,
-			wantOK:      true,
-			wantOutcome: event.OutcomeSuperseded,
-			wantRuns:    1,
+			actor:    "brandon/a2",
+			outcome:  event.OutcomeSuperseded,
+			wantCode: http.StatusBadRequest,
+			wantErr:  "daemon-synthesized",
 		},
 		{
 			name: "race loser reporting done is coerced to superseded (D6)",
