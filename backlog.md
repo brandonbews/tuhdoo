@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 3 ready · 0 blocked · 7 on hold · 3 inbox · 123 done · 35 cancelled
+0 in progress · 3 ready · 0 blocked · 7 on hold · 3 inbox · 124 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -166,6 +164,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick
 - [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) Priority is clearable: task.updated v4, clear on the API, MCP, and CLI
 - [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) Prompt overlay: every TUI prompt renders in a centered box over the screen
+- [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear
 - [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 
 ## Cancelled

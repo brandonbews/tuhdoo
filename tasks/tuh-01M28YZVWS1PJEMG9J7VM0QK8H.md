@@ -2,7 +2,7 @@
 
 `tuh-01M28YZVWS1PJEMG9J7VM0QK8H`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `go` `tui` `design-revision` `docs`
 - **Depends on:** [`tuh-1drx`](tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) (done), [`tuh-tsv0`](tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) (done)
@@ -35,4 +35,10 @@ Constraints: boring Go; no new colors; the one-shot CLI output is untouched (T7 
 
 ## History
 
-_No activity yet._
+### 2026-09-11 23:28 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M28YZVWS1PJEMG9J7VM0QK8H/tui-keymap-rework`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/108>
+- Merged as: `d4b7659`
+
+Landed as PR #108 (squash d4b7659 on main). r/h/i set open/held/inbox on the selected row and the viewed task (one PATCH, no confirm; no-op on current status; dead on closed records and live claims). n is quick capture. tab toggles the Closed shelf (renamed from history everywhere) in armed and watch. p is a picker in the prompt box: 0-9 sets, - sends clear_priority, esc closes; the text-input priority mode is deleted. Dashboard bars carry no key hints; legendLine now wraps at item boundaries (it truncated before), so the armed list legend is two lines at 80 columns. Judgment calls worth a glance: p is also dead on in-progress tasks in the task view's ring stop and legend; task-view bars keep their enter answer / e context hints. 002 T7 revised in place (i→n, no-promotion-key sentence withdrawn, new dated paragraph); the task's "history view" pointer into 002 did not exist, so the Closed-on-tab note lives in the new paragraph. docs/adopting.md updated. Deploy (rebuild + daemon restart) follows this finish.
