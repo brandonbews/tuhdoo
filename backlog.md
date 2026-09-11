@@ -11,9 +11,9 @@ _None._
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
 | [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) | Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick | 1 | `go` `core` `daemon` `views` `tui` `cli` |
+| [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | 2 | `go` `audit-finding` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
-| [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
 
 ## Blocked / waiting
 

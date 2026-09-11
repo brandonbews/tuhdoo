@@ -3,7 +3,7 @@
 `tuh-01KZVZT7F8CVJYX1P00BRPGMTX`
 
 - **Status:** open — ready
-- **Priority:** none
+- **Priority:** 2
 - **Labels:** `go` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
 
@@ -24,3 +24,7 @@ Constraints: keep the harness single-binary and boring; LeaseTTL plumbing must n
 ### 2026-08-27 15:22 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status inbox→open · labels +go
+
+### 2026-09-11 17:47 UTC — edit by `brandon`
+
+priority none→2
