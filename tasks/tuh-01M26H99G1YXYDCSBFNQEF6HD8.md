@@ -2,7 +2,7 @@
 
 `tuh-01M26H99G1YXYDCSBFNQEF6HD8`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `go` `gitx` `store` `daemon` `cli`
 - **Depends on:** [`tuh-1bap`](tuh-01M26H99BZBCHHZX7G98X41BAP.md) (done)
@@ -32,4 +32,10 @@ Constraints: boring Go (a bufio scanner over one subprocess, plain loops); repla
 
 ## History
 
-_No activity yet._
+### 2026-09-11 01:27 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M26H99G1/read-fast-start-fast`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/103>
+- Merged as: `d3c5f4de2f40f7e3a589aa44e861e91a904975b6`
+
+Landed as PR #103 (squash d3c5f4d). gitx.CatFiles over one cat-file --batch (CatFile wraps it; missing/short/wrong-OID records are hard errors), gitx.BlobOID with the object format detected once in New, store.ReplayInputFromTree as the single classify/batch/decode reader used by the store and syncer.replayTreeAt, daemon binds socket + writes daemon.json before loading (reads answer the starting placeholder with loaded:false, other reads/writes a retryable 503; a failed first load ends the daemon; Shutdown joins the load; Syncer.Run decides started-vs-stopped under its mutex), client ensureDaemon waits for the socket then for loaded:true under a 30s ceiling naming daemon.log (flock loser exits with code 3 so the CLI keeps polling). Measured on a clone of this ledger: cold load 7.36s -> 35ms, first status succeeds. A high-effort code review's 15 findings were fixed in commits 2-3; the review's fan-out is very token-heavy (~300K+ per run). Not done here, deferred to the next task by its spec: the syncer's other per-blob reads (oneSidedConfirmations etc.) and cache sharing with the store. Deploy of the new binary follows this finish.
