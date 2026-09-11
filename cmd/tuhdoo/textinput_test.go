@@ -209,101 +209,73 @@ func TestTextInputRows(t *testing.T) {
 	}
 }
 
-// The box at 80 columns, plain colors: header bar geometry, the cursor
-// glyph mid-string, and the hint on its own line — byte-exact.
+// The rows at the 80-column box's inner width (72), plain colors: the
+// cursor glyph mid-string on the one row, row 0 as the cursor row —
+// the label and hint are the prompt box's lines now (overlay.go).
 func TestTextInputViewSingleLinePlain(t *testing.T) {
 	in := inputAt(t, "id|ea", false)
-	got := in.view(colors{}, "capture (to inbox)", "captures", 80)
-	want := strings.Join([]string{
-		" capture (to inbox)" + strings.Repeat(" ", 61),
-		"> id█ea",
-		"  enter captures · esc cancels",
-		"",
-	}, "\n")
-	if got != want {
-		t.Errorf("single-line box diverged.\ngot:\n%s\nwant:\n%s", got, want)
+	got, cr := in.view(72)
+	if len(got) != 1 || got[0] != "> id█ea" || cr != 0 {
+		t.Errorf("single-line view = %q (cursor row %d), want [\"> id█ea\"] row 0", got, cr)
 	}
 }
 
-// Single-line mode scrolls a window instead of wrapping: the box stays
-// three lines tall, the cursor stays visible, and no line exceeds the
-// width — at the tail and back at the head.
+// Single-line mode scrolls a window instead of wrapping: exactly one
+// row whatever is typed, the cursor stays visible, and no row exceeds
+// the inner width — at the tail and back at the head.
 func TestTextInputViewSingleLineScrolls(t *testing.T) {
 	in := inputAt(t, "abcdefghij|", false)
-	v := in.view(colors{}, "x", "submits", 10)
-	lines := strings.Split(strings.TrimRight(v, "\n"), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("box is %d lines, want 3:\n%s", len(lines), v)
+	lines, _ := in.view(10)
+	if len(lines) != 1 {
+		t.Fatalf("single-line view is %d rows, want 1: %q", len(lines), lines)
 	}
-	if lines[1] != "> efghij█" {
-		t.Errorf("scrolled input line = %q, want %q", lines[1], "> efghij█")
+	if lines[0] != "> efghij█" {
+		t.Errorf("scrolled row = %q, want %q", lines[0], "> efghij█")
 	}
-	for _, l := range lines {
-		if n := len([]rune(l)); n > 10 {
-			t.Errorf("line is %d runes wide (>10): %q", n, l)
-		}
+	if n := len([]rune(lines[0])); n > 10 {
+		t.Errorf("row is %d runes wide (>10): %q", n, lines[0])
 	}
 	in = applyKeys(in, 10, keyOf(tea.KeyHome))
-	lines = strings.Split(strings.TrimRight(in.view(colors{}, "x", "submits", 10), "\n"), "\n")
-	if lines[1] != "> █abcdef" {
-		t.Errorf("home-scrolled input line = %q, want %q", lines[1], "> █abcdef")
+	lines, _ = in.view(10)
+	if lines[0] != "> █abcdef" {
+		t.Errorf("home-scrolled row = %q, want %q", lines[0], "> █abcdef")
 	}
 }
 
-// Multi-line at a narrow width: logical lines render whole, the hint
-// line shows the ctrl+s submit chord (ellipsized to the width), and
-// nothing exceeds the width.
+// Multi-line at a narrow width: logical lines render whole, one row
+// each, the cursor row reported, and nothing exceeds the width.
 func TestTextInputViewMultilinePlain(t *testing.T) {
 	in := inputAt(t, "one two three\nfour|", true)
-	got := in.view(colors{}, "edit", "saves", 20)
-	want := strings.Join([]string{
-		" edit" + strings.Repeat(" ", 15),
-		"> one two three",
-		"> four█",
-		"  ctrl+s saves · en…",
-		"",
-	}, "\n")
-	if got != want {
-		t.Errorf("multi-line box diverged.\ngot:\n%s\nwant:\n%s", got, want)
+	got, cr := in.view(20)
+	want := []string{"> one two three", "> four█"}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") || cr != 1 {
+		t.Errorf("multi-line view = %q (cursor row %d), want %q row 1", got, cr, want)
+	}
+	for _, l := range got {
+		if n := len([]rune(l)); n > 20 {
+			t.Errorf("row is %d runes wide (>20): %q", n, l)
+		}
 	}
 }
 
-// Hard wrapping at the box width: rows break exactly where up/down
+// Hard wrapping at the inner width: rows break exactly where up/down
 // walk, the glyph lands on the wrapped row, and a cursor sitting on a
 // soft-wrap boundary renders at the start of the following row.
 func TestTextInputViewMultilineWraps(t *testing.T) {
-	in := inputAt(t, "aa|aabb", true) // width 7 → wrap width 4
-	v := in.view(colors{}, "e", "saves", 7)
-	lines := strings.Split(strings.TrimRight(v, "\n"), "\n")
-	if lines[1] != "> aa█aa" || lines[2] != "> bb" {
-		t.Errorf("wrapped rows wrong: %q", lines)
+	in := inputAt(t, "aa|aabb", true) // inner 7 → wrap width 4
+	lines, cr := in.view(7)
+	if lines[0] != "> aa█aa" || lines[1] != "> bb" || cr != 0 {
+		t.Errorf("wrapped rows wrong: %q (cursor row %d)", lines, cr)
 	}
 	for _, l := range lines {
 		if n := len([]rune(l)); n > 7 {
-			t.Errorf("line is %d runes wide (>7): %q", n, l)
+			t.Errorf("row is %d runes wide (>7): %q", n, l)
 		}
 	}
 	in = inputAt(t, "aaaa|bb", true)
-	lines = strings.Split(strings.TrimRight(in.view(colors{}, "e", "saves", 7), "\n"), "\n")
-	if lines[1] != "> aaaa" || lines[2] != "> █bb" {
-		t.Errorf("boundary cursor rows wrong: %q", lines)
-	}
-}
-
-// Styled rendering: one style wraps the whole padded header bar, the
-// hint is dim, and the input line itself carries no styling (the
-// glyph is the cursor).
-func TestTextInputViewStyled(t *testing.T) {
-	in := inputAt(t, "hi|", false)
-	v := in.view(ansiColors, "answer · Q?", "submits", 40)
-	for _, want := range []string{
-		"\x1b[7m\x1b[1m answer · Q?" + strings.Repeat(" ", 28) + "\x1b[0m\n",
-		"\n> hi█\n",
-		"  \x1b[90menter submits · esc cancels\x1b[0m\n",
-	} {
-		if !strings.Contains(v, want) {
-			t.Errorf("styled box missing %q; got:\n%q", want, v)
-		}
+	lines, cr = in.view(7)
+	if lines[0] != "> aaaa" || lines[1] != "> █bb" || cr != 1 {
+		t.Errorf("boundary cursor rows wrong: %q (cursor row %d)", lines, cr)
 	}
 }
 
@@ -431,24 +403,23 @@ func TestTopInputHintFixedWhileTyping(t *testing.T) {
 	}
 }
 
-// The capture box in the full frame at 80 columns, plain colors:
-// byte-exact footer geometry (golden for the fixed-hint rendering).
+// The capture box in the full frame at 80 columns, plain colors
+// (prompt overlay, 2026-09-11 — regenerated: the box is centered over
+// the list now, no longer the footer's slot): the list behind is
+// byte-identical to its no-prompt render outside the box, and the box
+// carries label, the typed row with the cursor glyph, and the hint.
 func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
+	before := m.View()
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
 	m, _ = press(t, m, runes("idea")...)
 	v := m.View()
-	// The pinned frame's bottom row is unterminated (no trailing
-	// newline): the hint line is the view's last byte.
-	want := strings.Join([]string{
-		" capture (to inbox)" + strings.Repeat(" ", 61),
+	assertOverlay(t, before, v, plainBox(
+		"capture (to inbox)",
 		"> idea█",
-		"  enter captures · esc cancels",
-	}, "\n")
-	if !strings.HasSuffix(v, want) {
-		t.Errorf("capture box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
-	}
+		"enter captures · esc cancels",
+	), 80, 40)
 	if strings.Contains(v, "\x1b") {
 		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
 	}
@@ -475,8 +446,10 @@ func TestTopInputMultilineEnterAndCtrlS(t *testing.T) {
 	if !strings.Contains(v, "ctrl+s captures · enter newline · esc cancels") {
 		t.Errorf("multi-line hint missing the submit chord; view:\n%s", v)
 	}
-	if !strings.Contains(v, "> line one\n> line two█") {
-		t.Errorf("multi-line box not rendering both lines; view:\n%s", v)
+	for _, want := range []string{"> line one", "> line two█"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("multi-line box missing row %q; view:\n%s", want, v)
+		}
 	}
 	m, cmd = press(t, m, keyOf(tea.KeyCtrlS))
 	if cmd == nil {
@@ -513,31 +486,30 @@ func TestEditInput(t *testing.T) {
 	}
 }
 
-// The title editor's box in the full detail frame at 80 columns, plain
-// colors: prefilled buffer, cursor at the end, single-line hint —
-// byte-exact footer geometry.
+// The title editor's box over the detail frame at 80 columns, plain
+// colors (prompt overlay, 2026-09-11 — regenerated): prefilled row,
+// cursor at the end, single-line hint; the task view behind unchanged.
 func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-flak")
+	before := m.View()
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // the plain open leaves the title focused
 	v := m.View()
-	want := strings.Join([]string{
-		" title t-flak" + strings.Repeat(" ", 67),
+	assertOverlay(t, before, v, plainBox(
+		"title t-flak",
 		"> investigate the flake█",
-		"  enter saves · esc cancels",
-	}, "\n")
-	if !strings.HasSuffix(v, want) {
-		t.Errorf("title box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
-	}
+		"enter saves · esc cancels",
+	), 80, 40)
 	if strings.Contains(v, "\x1b") {
 		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
 	}
 }
 
-// The description editor's box in the full detail frame at 80 columns,
-// plain colors: the multi-line prefill renders one gutter line per
-// logical line, cursor on the last, ctrl+s hint fixed below.
+// The description editor's box over the detail frame at 80 columns,
+// plain colors (prompt overlay, 2026-09-11 — regenerated): the
+// multi-line prefill renders one gutter row per logical line, cursor
+// on the last, the ctrl+s hint fixed below; a six-line box.
 func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
@@ -545,25 +517,24 @@ func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 	m, _ = press(t, m, // walk the ring past priority and labels to the description
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-		keyOf(tea.KeyEnter))
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	before := m.View()
+	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	v := m.View()
-	want := strings.Join([]string{
-		" description t-flak (investigate the flake)" + strings.Repeat(" ", 37),
+	assertOverlay(t, before, v, plainBox(
+		"description t-flak (investigate the flake)",
 		"> The parser test flakes on CI.",
 		"> Find out why.█",
-		"  ctrl+s saves · enter newline · esc cancels",
-	}, "\n")
-	if !strings.HasSuffix(v, want) {
-		t.Errorf("description box footer diverged.\ngot:\n%s\nwant suffix:\n%s", v, want)
-	}
+		"ctrl+s saves · enter newline · esc cancels",
+	), 80, 40)
 	if strings.Contains(v, "\x1b") {
 		t.Errorf("plain render leaked ANSI escapes:\n%q", v)
 	}
 }
 
-// The input box rides the detail footer without overflowing the
-// terminal: the body window shrinks by the box's extra lines.
+// The prompt box never overflows a short terminal: at 80x10 the frame
+// stays ten lines and the box (capped at 60%) still carries label, the
+// typed row, and the hint.
 func TestTopDetailInputBoxFitsHeight(t *testing.T) {
 	m := openDetail(t, newTopModelWithDep(newFakeSteering()), "t-lic")
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 10})

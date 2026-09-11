@@ -463,8 +463,10 @@ func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 	if cmd != nil {
 		t.Error("empty answer still submitted")
 	}
-	if m.mode != modeAnswer || !strings.Contains(m.status, "empty") {
-		t.Errorf("empty answer: mode %d status %q", m.mode, m.status)
+	// The rejection is the prompt box's own (prompt overlay, 2026-09-11):
+	// the status strip behind stays clear.
+	if m.mode != modeAnswer || !strings.Contains(m.inputErr, "empty") || m.status != "" {
+		t.Errorf("empty answer: mode %d inputErr %q status %q", m.mode, m.inputErr, m.status)
 	}
 	m, _ = press(t, m, keyOf(tea.KeyEsc))
 	if m.mode != modeDetail {
@@ -515,8 +517,8 @@ func TestTopPriorityFlow(t *testing.T) {
 	if cmd != nil || m.mode != modePriority {
 		t.Fatalf("bad priority accepted: mode %d cmd %v", m.mode, cmd)
 	}
-	if !strings.Contains(m.status, "integer") {
-		t.Errorf("status = %q, want integer complaint", m.status)
+	if !strings.Contains(m.inputErr, "integer") || m.status != "" {
+		t.Errorf("inputErr = %q status %q, want the integer complaint on the prompt alone", m.inputErr, m.status)
 	}
 	for range "high" {
 		m, _ = press(t, m, keyOf(tea.KeyBackspace))
@@ -1713,7 +1715,7 @@ func TestTopDetailCancelFlow(t *testing.T) {
 	if m.mode != modeConfirmCancel {
 		t.Fatalf("c in detail: mode %d, want modeConfirmCancel", m.mode)
 	}
-	if v := m.View(); !strings.Contains(v, "cancel t-lic (choose a license)? y/n") {
+	if v := m.View(); !strings.Contains(v, "cancel t-lic (choose a license)?") || !strings.Contains(v, "y/n") {
 		t.Errorf("confirm prompt does not name the viewed task; view:\n%s", v)
 	}
 	// n backs out to the detail without a call.
@@ -1855,8 +1857,8 @@ func TestTopDetailEditTitleUnchangedEmptyAndEsc(t *testing.T) {
 		keyOf(tea.KeyEnter),
 		keyOf(tea.KeyCtrlU), // cursor at end: kills the whole title
 		keyOf(tea.KeyEnter))
-	if cmd != nil || m.mode != modeEditTitle || m.status != "title cannot be empty" {
-		t.Fatalf("empty title: mode %d status %q cmd %v, want in-place rejection", m.mode, m.status, cmd)
+	if cmd != nil || m.mode != modeEditTitle || m.inputErr != "title cannot be empty" || m.status != "" {
+		t.Fatalf("empty title: mode %d inputErr %q status %q cmd %v, want in-place rejection", m.mode, m.inputErr, m.status, cmd)
 	}
 	// esc abandons the edit without a write.
 	m, _ = press(t, m, append(runes("junk"), keyOf(tea.KeyEsc))...)
@@ -3032,6 +3034,43 @@ func TestTopClickIgnoredDuringInput(t *testing.T) {
 	}
 }
 
+// A click on a row under an open prompt box is dead (prompt overlay,
+// 2026-09-11): the box hides the row but the screen behind still
+// renders it, and rowAt/detailStopAt are never consulted while an
+// input mode is live — so the cursor, the mode, and the focus stay
+// put, from the list and from the task view alike.
+func TestTopClickUnderBoxIgnored(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	m = mm.(topModel)
+	m, _ = press(t, m, keyOf(tea.KeyDown)) // t-flor
+	y := screenLineOf(t, m, "t-park")
+	if i := m.rowAt(y); i < 0 || i == m.cursor {
+		t.Fatalf("sanity: row %d maps to %d (cursor %d); a click there should select t-park with no prompt open", y, i, m.cursor)
+	}
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	if line := strings.Split(m.View(), "\n")[y]; !strings.Contains(line, "│") {
+		t.Fatalf("row %d is not under the box: %q", y, line)
+	}
+	m, cmd := mouseTo(t, m, clickAt(10, y), clickAt(10, y), wheelMsg(tea.MouseButtonWheelDown))
+	if m.mode != modePriority || m.cursor != 1 || cmd != nil {
+		t.Errorf("click under the box: mode %d cursor %d cmd %v, want the priority prompt on t-flor untouched",
+			m.mode, m.cursor, cmd)
+	}
+	// The task view: the title editor open, a click on the priority
+	// stop's line neither moves the focus nor opens its editor.
+	md := openDetail(t, newTopModel(newFakeSteering()), "t-flak")
+	mm, _ = md.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
+	md = mm.(topModel)
+	py := screenLineOf(t, md, "priority    ")
+	md, _ = press(t, md, keyOf(tea.KeyEnter)) // the focused title's editor
+	md, cmd = mouseTo(t, md, clickAt(4, py), clickAt(4, py))
+	if md.mode != modeEditTitle || md.detailFocus != 0 || cmd != nil {
+		t.Errorf("click in the task view under a prompt: mode %d focus %d cmd %v, want the title editor untouched",
+			md.mode, md.detailFocus, cmd)
+	}
+}
+
 // Clicks before the first snapshot, or while the daemon is unreachable,
 // hit nothing and never panic.
 func TestTopClickBeforeSnapshotIsInert(t *testing.T) {
@@ -3121,8 +3160,8 @@ func TestTopQuickCaptureRejectsEmptyAndEscCancels(t *testing.T) {
 	if cmd != nil || len(fake.captured) != 0 {
 		t.Fatal("empty capture must not produce a write")
 	}
-	if m.mode != modeCapture || m.status != "title cannot be empty" {
-		t.Fatalf("mode %d status %q, want in-place rejection", m.mode, m.status)
+	if m.mode != modeCapture || m.inputErr != "title cannot be empty" || m.status != "" {
+		t.Fatalf("mode %d inputErr %q status %q, want in-place rejection", m.mode, m.inputErr, m.status)
 	}
 	m, _ = press(t, m, append(runes("half a thou"), keyOf(tea.KeyEsc))...)
 	if m.mode != modeNav || len(fake.captured) != 0 {
