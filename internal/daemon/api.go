@@ -34,7 +34,6 @@ func (d *Daemon) handler() http.Handler {
 	mux.HandleFunc("POST /v0/tasks", d.handleCreateTasks)
 	mux.HandleFunc("PATCH /v0/tasks/{id}", d.handleUpdateTask)
 	mux.HandleFunc("POST /v0/claims", d.handleClaim)
-	mux.HandleFunc("POST /v0/claims/renew", d.handleRenewClaim)
 	mux.HandleFunc("DELETE /v0/claims", d.handleReleaseClaim)
 	mux.HandleFunc("POST /v0/runs", d.handleFinishRun)
 	mux.HandleFunc("POST /v0/escalations", d.handleEscalate)
@@ -252,28 +251,6 @@ func (d *Daemon) handleClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, *h)
-}
-
-func (d *Daemon) handleRenewClaim(w http.ResponseWriter, r *http.Request) {
-	actor, ok := requireActor(w, r)
-	if !ok {
-		return
-	}
-	var req struct {
-		Task string `json:"task"`
-	}
-	if !decodeJSON(w, r, &req) {
-		return
-	}
-	claim, expires, oe := d.opRenewClaim(actor, req.Task)
-	if oe != nil {
-		writeOpError(w, oe)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"claim":   claim,
-		"expires": expires.UTC().Truncate(time.Second),
-	})
 }
 
 func (d *Daemon) handleReleaseClaim(w http.ResponseWriter, r *http.Request) {

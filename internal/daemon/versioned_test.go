@@ -461,7 +461,7 @@ func TestViewsFollowTheVersion(t *testing.T) {
 
 	// Claim: the eager commit itself carries the re-rendered views,
 	// and the syncer is poked.
-	claimVia(t, c, "brandon/a1", task)
+	held := claimVia(t, c, "brandon/a1", task)
 	if got := pokesSoFar(); got != 1 {
 		t.Fatalf("claim poked the syncer %d times, want 1", got)
 	}
@@ -477,11 +477,15 @@ func TestViewsFollowTheVersion(t *testing.T) {
 		t.Fatalf("task page after the claim does not show the holder:\n%s", page)
 	}
 
-	// Three renewals stage zero files: the render carries no expiry,
-	// so nothing differs from the tree — a flush after them is a no-op.
+	// Three renewal ticks stage zero files: the render carries no
+	// expiry, so nothing differs from the tree — a flush after them is
+	// a no-op. Renewal is the holding session's tick (T8), so the test
+	// plays the session.
+	s := &mcpSession{actor: "brandon/a1", stop: make(chan struct{}), claims: make(map[string]string)}
+	s.track(task, held.Claim.ID)
 	for i := 0; i < 3; i++ {
 		clock.advance(time.Minute)
-		mustDo(t, c, "POST", "/v0/claims/renew", "brandon/a1", map[string]any{"task": task}, http.StatusOK)
+		d.renewOnce(s)
 	}
 	head := d.store.Head()
 	if err := d.batcher.Flush(); err != nil {

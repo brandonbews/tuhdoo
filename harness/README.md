@@ -210,8 +210,10 @@ D6 — the daemon now referees every finish, coercing a lost attempt's report
 to `superseded` with its links kept, and replay synthesizes a branch-less
 `superseded` close for a loser that never reports. The harness no longer
 plays the losing daemon's part: `POST /v0/runs` is not called at all, and
-every outcome it checks was written through the public tools. The original
-text is kept below as the record of what was found.)* D6 clause 2
+every outcome it checks was written through the public tools. Since
+2026-09-11 the op layer rejects daemon-synthesized outcomes from every
+caller, the HTTP portal included — `002` T5. The original text is kept
+below as the record of what was found.)* D6 clause 2
 said "the losing daemon tells its agent to stand down; half-done work is
 recorded as a Run with outcome `superseded` (branch name included)". Replay
 voided the loser's claim (`internal/core/replay.go`, the D6 winner rule) and
