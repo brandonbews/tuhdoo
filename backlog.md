@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 4 ready · 0 blocked · 7 on hold · 3 inbox · 123 done · 35 cancelled
+1 in progress · 3 ready · 0 blocked · 7 on hold · 3 inbox · 123 done · 35 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | `go` `tui` `design-revision` `docs` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
