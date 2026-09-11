@@ -24,18 +24,23 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/gitx"
 )
 
-// gatedGit wraps the real git and holds every LsTree — the call every
-// load makes — until release is closed, so a test can look at the
-// daemon while its first replay is still in flight and decide exactly
-// when the load lands.
+// gatedGit wraps the real git and holds every ReadRef until release is
+// closed, so a test can look at the daemon while its first load is
+// still in flight and decide exactly when it lands. ReadRef is the
+// load's first git call — AdoptRemoteBranch's, made outside d.mu —
+// which is what makes the gate safe: the load parks there holding no
+// lock, so a request that reaches the mutex meanwhile is answered
+// (with the placeholder), never deadlocked. Gating a call made under
+// d.mu (LsTree, inside refreshLocked) would park the load holding the
+// mutex, and the first request to want it would hang the test.
 type gatedGit struct {
 	gitx.Git
 	release chan struct{}
 }
 
-func (g *gatedGit) LsTree(rev string) ([]gitx.TreeEntry, error) {
+func (g *gatedGit) ReadRef(ref string) (string, error) {
 	<-g.release
-	return g.Git.LsTree(rev)
+	return g.Git.ReadRef(ref)
 }
 
 // brokenGit fails every LsTree: a first load the daemon cannot complete.
@@ -67,7 +72,6 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	letLoadFinish := func() { releaseOnce.Do(func() { close(release) }) }
-	t.Cleanup(letLoadFinish)
 
 	d, err := New(root, Options{
 		Quiet: 50 * time.Millisecond,
@@ -78,15 +82,20 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	go d.Run()
+	// Cleanups run last-registered first: Shutdown joins the load, so
+	// the gate must be released before it — and before any Fatalf
+	// below, so a failed assertion cannot hang the test on the gate.
 	t.Cleanup(func() { d.Shutdown("test cleanup") })
+	t.Cleanup(letLoadFinish)
 	c := socketClient(d)
 
-	// The socket accepts and /v0/state answers "starting" with no
-	// tasks while the load is held open.
+	// The socket accepts and /v0/state answers the placeholder — loaded
+	// false, sync mode "starting", no tasks — while the load is held
+	// open.
 	var st stateResp
 	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	if st.Sync.Mode != "starting" {
-		t.Fatalf("state during load: sync mode %q, want starting", st.Sync.Mode)
+	if st.Loaded || st.Sync.Mode != "starting" {
+		t.Fatalf("state during load: loaded %v, sync mode %q; want the placeholder (false, starting)", st.Loaded, st.Sync.Mode)
 	}
 	if len(st.Tasks) != 0 || st.Degraded != "" {
 		t.Fatalf("state during load carries tasks/degraded: %+v", st)
@@ -136,8 +145,8 @@ func TestServesStartingUntilFirstReplay(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if st.Sync.Mode != "local-only" {
-		t.Fatalf("state after load: sync mode %q, want local-only", st.Sync.Mode)
+	if !st.Loaded || st.Sync.Mode != "local-only" {
+		t.Fatalf("state after load: loaded %v, sync mode %q; want true, local-only", st.Loaded, st.Sync.Mode)
 	}
 	id := createOne(t, c, "brandon", map[string]any{"title": "right on time"})
 	mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK)
@@ -190,5 +199,6 @@ func TestFailedFirstLoadEndsTheDaemon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("successor New after a failed load: %v", err)
 	}
+	go d2.Run() // Shutdown joins the load Run starts
 	d2.Shutdown("test cleanup")
 }

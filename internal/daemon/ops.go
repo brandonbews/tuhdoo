@@ -45,10 +45,11 @@ func (d *Daemon) startingLocked() *opError {
 	return nil
 }
 
-// degradedLocked is the check every write runs first: the startup
-// window's "starting" (above), then the T3 fail-safe rejection when the
-// daemon is in read-only mode. nil when writes may proceed. Caller
-// holds d.mu.
+// degradedLocked is the write gate: every write runs it first, and it
+// refuses in two cases, checked in this order — the startup window
+// (startingLocked, above: nothing has been replayed yet), then the T3
+// fail-safe read-only mode (the last replay could not be trusted). nil
+// when writes may proceed. Caller holds d.mu.
 func (d *Daemon) degradedLocked() *opError {
 	if oe := d.startingLocked(); oe != nil {
 		return oe

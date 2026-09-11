@@ -108,9 +108,19 @@ func (s *Syncer) logf(format string, args ...any) {
 	}
 }
 
-// Run loops until Stop. Blocking; callers put it in a goroutine.
+// Run loops until Stop. Blocking; callers put it in a goroutine. Started
+// or stopped is decided under the mutex: a Run that begins after Stop
+// returns at once, before any cycle and without marking itself started,
+// so Stop never waits on a loop that will not run — and never misses one
+// that will.
 func (s *Syncer) Run() {
 	s.mu.Lock()
+	select {
+	case <-s.stop:
+		s.mu.Unlock()
+		return
+	default:
+	}
 	s.started = true
 	s.mu.Unlock()
 	defer close(s.done)
@@ -137,11 +147,11 @@ func (s *Syncer) Poke() {
 
 // Stop ends the loop and waits for it to finish. Safe to call more than
 // once, and safe when Run was never started (a daemon shut down before
-// Run — nothing to wait for; if Run starts afterwards it sees the closed
-// stop channel and exits after one cycle).
+// Run — nothing to wait for; a Run that begins afterwards sees the
+// closed stop channel and exits before any cycle).
 func (s *Syncer) Stop() {
-	s.stopOnce.Do(func() { close(s.stop) })
 	s.mu.Lock()
+	s.stopOnce.Do(func() { close(s.stop) })
 	started := s.started
 	s.mu.Unlock()
 	if started {

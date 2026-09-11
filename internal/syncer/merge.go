@@ -323,61 +323,19 @@ func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
 
 // replayTreeAt is replayTree with an explicit instant, for callers that
 // need the verdict to be a pure function of the tree (confirmGuard).
-// The event and lease blobs are read in one batch (T2, 2026-09-10);
-// views are never read back.
+// The tree is read by the store's reader — the one place that
+// classifies paths and batches the blob reads (T2, 2026-09-10) — so
+// this replay and the store's head load compute the same lease set by
+// construction; views are never read back. The decode caches here are
+// throwaway: sharing the store's is the next task.
 func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.State, error) {
-	var eventPaths, leasePaths, oids []string
+	entries := make([]gitx.TreeEntry, 0, len(tree))
 	for path, oid := range tree {
-		switch {
-		case strings.HasPrefix(path, "events/"):
-			eventPaths = append(eventPaths, path)
-			oids = append(oids, oid)
-		case strings.HasPrefix(path, "leases/"):
-			if _, ok := store.LeaseClaimID(path); !ok {
-				// A path no writer produces; skipping matches the store
-				// loader, so both readers compute the same lease set.
-				continue
-			}
-			leasePaths = append(leasePaths, path)
-			oids = append(oids, oid)
-		}
+		entries = append(entries, gitx.TreeEntry{Path: path, OID: oid})
 	}
-	blobs, err := s.git.CatFiles(oids)
+	events, leases, err := store.ReplayInputFromTree(s.git, entries, map[string]event.Event{}, map[string]time.Time{})
 	if err != nil {
 		return nil, err
-	}
-	blobAt := func(path string) ([]byte, error) {
-		data, ok := blobs[tree[path]]
-		if !ok {
-			return nil, fmt.Errorf("%s: blob %s not returned by cat-file", path, tree[path])
-		}
-		return data, nil
-	}
-
-	events := make([]event.Event, 0, len(eventPaths))
-	for _, path := range eventPaths {
-		data, err := blobAt(path)
-		if err != nil {
-			return nil, err
-		}
-		e, err := event.Decode(data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		events = append(events, e)
-	}
-	leases := make(map[string]time.Time, len(leasePaths))
-	for _, path := range leasePaths {
-		data, err := blobAt(path)
-		if err != nil {
-			return nil, err
-		}
-		expires, err := store.DecodeLease(data)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		claimID, _ := store.LeaseClaimID(path)
-		leases[claimID] = expires
 	}
 	return s.replay.Replay(core.Input{Events: events, Leases: leases, Now: now})
 }

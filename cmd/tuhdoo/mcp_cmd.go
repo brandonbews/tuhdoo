@@ -91,16 +91,6 @@ func runMCP(args []string) int {
 		fmt.Fprintln(os.Stderr, "tuhdoo mcp:", err)
 		return 1
 	}
-	// A freshly spawned daemon serves before its ledger is loaded (T4
-	// startup order, 2026-09-10) and answers "starting" until then.
-	// Wait that out the way the CLI does before bridging, so the
-	// harness's first tool call lands on a loaded daemon; the wait is
-	// bounded, and a daemon still loading past it is bridged anyway —
-	// its tools answer with a retryable error until it is done.
-	if _, err := fetchState(c); err != nil {
-		fmt.Fprintln(os.Stderr, "tuhdoo mcp: daemon not answering:", err)
-		return 1
-	}
 
 	if err := bridgeMCP(c.socket, override, human); err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo mcp:", err)

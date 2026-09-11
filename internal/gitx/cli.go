@@ -51,14 +51,17 @@ func New(dir string) (*CLI, error) {
 		return nil, fmt.Errorf("gitx: git %d.%d or newer is required, found %d.%d — please upgrade git",
 			minGitMajor, minGitMinor, major, minor)
 	}
-	if _, _, err := g.run(nil, nil, "rev-parse", "--git-dir"); err != nil {
+	// One rev-parse proves dir is a repository and reports its object
+	// format: each flag prints one line, in flag order.
+	out, _, err = g.run(nil, nil, "rev-parse", "--git-dir", "--show-object-format")
+	if err != nil {
 		return nil, fmt.Errorf("gitx: %s is not a git repository: %w", dir, err)
 	}
-	out, _, err = g.run(nil, nil, "rev-parse", "--show-object-format")
-	if err != nil {
-		return nil, fmt.Errorf("gitx: detect object format: %w", err)
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 {
+		return nil, fmt.Errorf("gitx: detect object format: rev-parse printed %q, want a git dir and a format", out)
 	}
-	g.format = strings.TrimSpace(string(out))
+	g.format = strings.TrimSpace(lines[1])
 	if _, err := newObjectHash(g.format); err != nil {
 		return nil, fmt.Errorf("gitx: %w", err)
 	}

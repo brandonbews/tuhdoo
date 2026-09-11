@@ -90,20 +90,24 @@ type Git interface {
 	// ErrRefNotFound.
 	ReadRef(ref string) (oid string, err error)
 
-	// CatFile returns the exact bytes of the blob at oid. It is
-	// CatFiles for one object: the batch format is parsed in exactly
-	// one place.
+	// CatFile returns the exact bytes of the blob at oid — a full hex
+	// object name exactly as git prints it (a tree listing, a ref
+	// read), never an abbreviation or a ref. It is CatFiles for one
+	// object: the batch format is parsed in exactly one place.
 	CatFile(oid string) (data []byte, err error)
 
 	// CatFiles returns the exact bytes of every blob named in oids,
 	// keyed by OID, read through one `git cat-file --batch` process
 	// (T2, 2026-09-10: reads are batched — a cold start is one process
-	// for the whole tree, not one per blob). Duplicate OIDs are read
-	// once. An OID the repository lacks is an error naming it, never a
-	// silently absent key (T3's fail-safe posture: a load that cannot
-	// read an object must fail, not skip it); an OID naming a non-blob
-	// is an error too. Empty input spawns nothing and returns an empty
-	// map.
+	// for the whole tree, not one per blob). Each oid is a full hex
+	// object name exactly as git prints it: the batch parser matches
+	// git's answer records to the requests by name, so an abbreviated
+	// or ref-form name would be answered under a different string and
+	// fail the read. Duplicate OIDs are read once. An OID the
+	// repository lacks is an error naming it, never a silently absent
+	// key (T3's fail-safe posture: a load that cannot read an object
+	// must fail, not skip it); an OID naming a non-blob is an error
+	// too. Empty input spawns nothing and returns an empty map.
 	CatFiles(oids []string) (map[string][]byte, error)
 
 	// BlobOID returns the object ID git would assign data as a blob —

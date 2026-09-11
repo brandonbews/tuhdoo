@@ -406,6 +406,12 @@ type stateTask struct {
 }
 
 type stateResp struct {
+	// Loaded is true on every answer carrying state, false only on the
+	// placeholder served until the first replay lands (T4 startup
+	// order, 2026-09-10). Clients absorb readiness by this field alone —
+	// the placeholder keeps sync mode "starting" and empty arrays, but
+	// so can a freshly loaded daemon whose sync loop has not run yet.
+	Loaded          bool             `json:"loaded"`
 	Degraded        string           `json:"degraded,omitempty"` // fail-safe message when read-only
 	Sync            syncJSON         `json:"sync"`
 	Tasks           []stateTask      `json:"tasks"`
@@ -453,14 +459,17 @@ func (d *Daemon) handleState(w http.ResponseWriter, r *http.Request) {
 		OpenEscalations: []escalationJSON{},
 		Runs:            []runJSON{},
 	}
-	// Until the first replay lands there is no state to serve: answer
-	// sync mode "starting" with nothing else — the shape the clients'
-	// state loop already retries (T4 startup order, 2026-09-10).
-	if !d.loaded {
+	// Until the first replay lands there is no state to serve. The one
+	// starting predicate (startingLocked) is a 503 for every operation;
+	// this handler alone translates it into a 200 placeholder — sync
+	// mode "starting", loaded false, nothing else — the shape the
+	// clients' state loop retries (T4 startup order, 2026-09-10).
+	if d.startingLocked() != nil {
 		resp.Sync = syncJSON{Mode: "starting"}
 		writeJSON(w, http.StatusOK, resp)
 		return
 	}
+	resp.Loaded = true
 	resp.Sync = syncJSONOf(d.sync.Status())
 	// Lease verdicts move with the clock, so replay at the current
 	// instant first (D6: expiry is evaluated at read time) — the status
