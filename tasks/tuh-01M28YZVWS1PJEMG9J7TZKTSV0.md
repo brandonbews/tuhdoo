@@ -2,7 +2,7 @@
 
 `tuh-01M28YZVWS1PJEMG9J7TZKTSV0`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `go` `tui`
 - **Depends on:** [`tuh-8q7x`](tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) (done)
@@ -33,4 +33,10 @@ Constraints: boring Go, pure compositor with table tests (T1); no lipgloss or bu
 
 ## History
 
-_No activity yet._
+### 2026-09-11 22:13 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M28YZVWS1PJEMG9J7TZKTSV0/prompt-overlay`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/107>
+- Merged as: `5262aa5f27895b80745e9fcff512532b74100f99`
+
+Landed as PR #107 (squash 5262aa5). New cmd/tuhdoo/overlay.go: pure ANSI-aware overlay() compositor (cut at the box's left edge with a reset, tail re-emits skipped escapes), promptFrame/promptCap geometry (min(80, cols−4) wide, ≤60% of rows, borderless below 20×6), promptBox renderer in the 16-color palette. View() = exact no-prompt screen + composited box; footer legend always visible; submit validation errors live in a new inputErr field and render red on the box's hint line; updateMouse ignores clicks in every input mode; the description editor scrolls inside the box to keep the cursor visible. 002 T7 carries the revision note. Tests: overlay/promptBox table tests, TestTopGoldenPromptOverlay (nine prompts from list and task view, base byte-identical outside the box, esc restores the no-prompt frame), styled variant, scroll-in-box golden, small-terminal fallbacks, click-under-box ignored. No-prompt and one-shot goldens unchanged. Deployed right after this finish. Unblocks the keymap rework task (the TUI priority picker lands there).

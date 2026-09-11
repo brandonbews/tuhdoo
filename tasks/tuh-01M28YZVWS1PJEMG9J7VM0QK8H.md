@@ -2,10 +2,10 @@
 
 `tuh-01M28YZVWS1PJEMG9J7VM0QK8H`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `tui` `design-revision` `docs`
-- **Depends on:** [`tuh-1drx`](tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) (done), [`tuh-tsv0`](tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) (open)
+- **Depends on:** [`tuh-1drx`](tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) (done), [`tuh-tsv0`](tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) (done)
 - **Created:** 2026-09-11 19:26 UTC by `brandon/claude-code-1`
 
 ## Description

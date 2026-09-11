@@ -1,26 +1,23 @@
 # Backlog
 
-1 in progress · 3 ready · 1 blocked · 7 on hold · 5 inbox · 122 done · 33 cancelled
+0 in progress · 4 ready · 0 blocked · 7 on hold · 5 inbox · 123 done · 33 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) | Prompt overlay: every TUI prompt renders in a centered box over the screen | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | `go` `tui` `design-revision` `docs` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
 
 ## Blocked / waiting
 
-| ID | Task | Priority | Waiting on |
-|---|---|---:|---|
-| [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) | TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear | 1 | depends on [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) |
+_None._
 
 ## On hold
 
@@ -169,6 +166,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed
 - [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick
 - [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) Priority is clearable: task.updated v4, clear on the API, MCP, and CLI
+- [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) Prompt overlay: every TUI prompt renders in a centered box over the screen
 - [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 
 ## Cancelled
