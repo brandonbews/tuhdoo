@@ -2,7 +2,7 @@
 
 `tuh-01M28YZVWS1PJEMG9J7QN11DRX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `event` `core` `daemon` `mcp` `cli`
 - **Created:** 2026-09-11 19:26 UTC by `brandon/claude-code-1`
@@ -34,4 +34,8 @@ Constraints: stored event bytes never rewritten (T3); no new MCP tool (T5); bori
 
 ## History
 
-_No activity yet._
+### 2026-09-11 21:32 UTC — run by `brandon/claude-code-1` — interrupted
+
+lease expired without a finish or release
+
+_Synthesized by replay, not recorded by the agent._

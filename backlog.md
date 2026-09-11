@@ -1,17 +1,16 @@
 # Backlog
 
-1 in progress · 4 ready · 1 blocked · 7 on hold · 5 inbox · 121 done · 33 cancelled
+0 in progress · 5 ready · 1 blocked · 7 on hold · 5 inbox · 121 done · 33 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) | Priority is clearable: task.updated v4, clear on the API, MCP, and CLI | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
+| [`tuh-1drx`](tasks/tuh-01M28YZVWS1PJEMG9J7QN11DRX.md) | Priority is clearable: task.updated v4, clear on the API, MCP, and CLI | 1 | `go` `event` `core` `daemon` `mcp` `cli` |
 | [`tuh-tsv0`](tasks/tuh-01M28YZVWS1PJEMG9J7TZKTSV0.md) | Prompt overlay: every TUI prompt renders in a centered box over the screen | 1 | `go` `tui` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | 2 | `go` `audit-finding` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
