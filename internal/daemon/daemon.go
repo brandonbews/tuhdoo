@@ -360,7 +360,8 @@ func (d *Daemon) start() {
 // load brings the ledger into memory for the first time: adopt a
 // remote data branch if one exists, mint the branch if none does, load
 // the store's replica (head, tree, every event and lease blob in one
-// batch, and the private index reseeded — T2), and replay. The first
+// batch — T2; the private index is reseeded by the first commit), and
+// replay. The first
 // replay is installed and the daemon marked loaded under one critical
 // section, so a request parked on d.mu during the load is answered
 // with state, never with the placeholder after the state was

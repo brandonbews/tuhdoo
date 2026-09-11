@@ -108,7 +108,7 @@ The network half of convergence: a background loop (60s default, pokeable) that 
 
 - Files: `syncer.go` (`Run`/`Poke`/`Stop`/`Status`, `Cycle`), `merge.go` (per-area merge rules: events same-path-different-content is fatal, leases resolved tombstone-beats-plain then expiry then OID tiebreak, views highest-format-wins), `gate.go` (`GateHead`/`GatePush` — landing `claim.confirmed` through the remote's ref CAS), `adopt.go` (clone-join at startup).
 - Key types: `Syncer`, `Options`, `Status` (mode local-only/syncing/error, collision and merge counters).
-- Invariants owned: merges are pure functions of the two trees (frozen-clock replay), so both peers produce byte-identical merge commits; never force-push; CAS losses and missing remotes are states, not errors; nothing lands locally before the remote accepts a gate push.
+- Invariants owned: merges are pure functions of the two trees (frozen-clock replay), so both peers produce the identical merged tree — the commit objects differ (each peer lists its own head as first parent, under its own identity and timestamps), and converge by fast-forward, not by being equal; never force-push; CAS losses and missing remotes are states, not errors; nothing lands locally before the remote accepts a gate push.
 
 ### internal/daemon — governed by T4 topology, T5 surface
 

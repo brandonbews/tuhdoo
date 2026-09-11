@@ -62,7 +62,11 @@ func (s *Syncer) AdoptRemoteBranch() {
 	err = s.store.FastForward("", head)
 	if err != nil {
 		if !errors.Is(err, gitx.ErrRefCASFailed) {
-			s.logf("adopt: setting %s: %v; minting a fresh root", s.ref, err)
+			// The ref was created (the must-not-exist CAS won) and the
+			// load of the adopted branch failed after it: the branch
+			// exists, so Init will not mint, and the daemon's own load
+			// reports whatever is wrong with it.
+			s.logf("adopt: adopted %s but reload failed: %v", head, err)
 		}
 		return
 	}

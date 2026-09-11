@@ -45,6 +45,13 @@ var _ Git = (*CLI)(nil)
 // with a clear message when git is missing, older than the supported
 // floor, or dir is not a repository.
 func New(dir string) (*CLI, error) {
+	// Absolute from the start: the git dir is joined onto dir below,
+	// and the private index path derived from it must not depend on
+	// the process's working directory at the time of the call.
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("gitx: resolving %s: %w", dir, err)
+	}
 	g := &CLI{dir: dir}
 	out, _, err := g.run(nil, nil, "version")
 	if err != nil {
@@ -130,6 +137,16 @@ func (g *CLI) UpdateIndex(entries []TreeEntry) error {
 	if err := validateTreePaths(entries); err != nil {
 		return fmt.Errorf("gitx: update-index: %w", err)
 	}
+	// Checked before git runs, empty entries included: update-index
+	// creates a missing index file as empty and says nothing, and the
+	// write-tree that follows would then commit a tree holding only
+	// this batch's paths. The caller reseeds on this error.
+	if _, err := os.Stat(g.indexPath()); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("gitx: update-index: %w (%s)", ErrIndexMissing, g.indexPath())
+		}
+		return fmt.Errorf("gitx: update-index: private index: %w", err)
+	}
 	if len(entries) == 0 {
 		return nil
 	}
@@ -154,9 +171,12 @@ func (g *CLI) UpdateIndex(entries []TreeEntry) error {
 func (g *CLI) WriteTree() (string, error) {
 	// git writes the empty tree for an index file that does not exist;
 	// for a commit that would mean silently dropping every file the
-	// branch holds. The index is seeded by ReadTree before any commit,
-	// so its absence here means something removed it underneath us.
+	// branch holds. UpdateIndex checked the same thing a moment ago;
+	// this second look catches an index removed between the two.
 	if _, err := os.Stat(g.indexPath()); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("gitx: write-tree: private index unusable (reseed with ReadTree): %w", ErrIndexMissing)
+		}
 		return "", fmt.Errorf("gitx: write-tree: private index unusable (reseed with ReadTree): %w", err)
 	}
 	out, _, err := g.run(nil, g.indexEnv(), "write-tree")

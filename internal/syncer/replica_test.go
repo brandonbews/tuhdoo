@@ -57,6 +57,63 @@ func (w *watchingGit) requested() []string {
 	return out
 }
 
+// externalCommit advances the data branch behind the store's back with
+// raw plumbing through g — hash-object, mktree, commit-tree, update-ref
+// — the way a foreign process (a `branch -f`, another machine's
+// daemon) moves the ref: no Store, so the private index is untouched
+// by the mover. Returns the new head.
+func externalCommit(t *testing.T, g gitx.Git, events ...event.Event) string {
+	t.Helper()
+	head, err := g.ReadRef(store.DefaultRef)
+	if err != nil {
+		t.Fatalf("externalCommit: %v", err)
+	}
+	tree, err := gitx.LsTreeMap(g, head)
+	if err != nil {
+		t.Fatalf("externalCommit: %v", err)
+	}
+	for _, e := range events {
+		path, err := event.Path(e.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := event.Encode(e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		oid, err := g.HashObject(data)
+		if err != nil {
+			t.Fatalf("externalCommit: %v", err)
+		}
+		tree[path] = oid
+	}
+	treeOID, err := gitx.MkTreeFromMap(g, tree)
+	if err != nil {
+		t.Fatalf("externalCommit: %v", err)
+	}
+	commit, err := g.CommitTree(treeOID, []string{head}, ident("outsider"), "moved from outside\n")
+	if err != nil {
+		t.Fatalf("externalCommit: %v", err)
+	}
+	if err := g.UpdateRef(store.DefaultRef, commit, head); err != nil {
+		t.Fatalf("externalCommit: %v", err)
+	}
+	return commit
+}
+
+// rawPaths is `git ls-tree -r --name-only` of rev, read by git directly.
+func rawPaths(t *testing.T, dir, rev string) map[string]bool {
+	t.Helper()
+	out := runGit(t, dir, "ls-tree", "-r", "--name-only", "--full-tree", rev)
+	paths := make(map[string]bool)
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line != "" {
+			paths[line] = true
+		}
+	}
+	return paths
+}
+
 // newWatchedPair is newPair with peer A's git wrapped twice: the
 // store's copy records what it reads, the syncer's copy refuses to
 // move the ref. Returned as (a, b, storeGit, syncGit).
@@ -241,10 +298,13 @@ func TestMergeReplayFetchesOnlyUnseenBlobs(t *testing.T) {
 }
 
 // The cycle's ref check runs before the remote check: a remoteless
-// daemon whose ref was moved from outside (a second writer on the same
+// daemon whose ref was moved from outside (a raw commit on the same
 // repository, a `branch -f`) reloads its replica within one cycle and
-// tells the daemon (OnMerged). A ref the store itself moved is not
-// mistaken for an external move.
+// tells the daemon (OnMerged), and its next commit reseeds the private
+// index from the moved head so the mover's files ride along. A ref the
+// store itself moved is not mistaken for an external move. The mover
+// is raw plumbing on purpose: a second Store as the mover would reseed
+// the shared index with its own commit and mask a missing reseed.
 func TestCycleNoticesExternalMoveWithoutRemote(t *testing.T) {
 	dir, g := mkRepo(t, "solo", "")
 	st := store.New(g, "", ident("solo"))
@@ -269,13 +329,10 @@ func TestCycleNoticesExternalMoveWithoutRemote(t *testing.T) {
 	}
 
 	// Another writer moves the ref behind the replica's back.
-	other := store.New(g, "", ident("other"))
-	if err := other.AppendBatch(store.Batch{Events: []event.Event{
-		evt(t, 2, event.TypeTaskCreated, "sarah", "m-b", "t2", event.TaskCreated{Title: "theirs"}),
-	}}); err != nil {
-		t.Fatal(err)
+	ref := externalCommit(t, g, evt(t, 2, event.TypeTaskCreated, "sarah", "m-b", "t2", event.TaskCreated{Title: "theirs"}))
+	if got := strings.TrimSpace(runGit(t, dir, "rev-parse", store.DefaultRef)); got != ref {
+		t.Fatalf("setup: ref at %s, want the external commit %s", got, ref)
 	}
-	ref := strings.TrimSpace(runGit(t, dir, "rev-parse", store.DefaultRef))
 	if st.Head() == ref {
 		t.Fatal("setup: the replica should not know about the external move yet")
 	}
@@ -292,20 +349,22 @@ func TestCycleNoticesExternalMoveWithoutRemote(t *testing.T) {
 	if err != nil || len(events) != 2 {
 		t.Fatalf("events after reload = %d, %v; want both writers' events", len(events), err)
 	}
-	// The reload reseeded the index: the replica's next commit carries
-	// the other writer's file, not just its own.
+	// The replica's next commit reseeds the index from the moved head:
+	// it carries the other writer's file, not just its own — checked
+	// by raw ls-tree of the resulting head.
 	if err := st.AppendBatch(store.Batch{Events: []event.Event{
 		evt(t, 3, event.TypeNoteAdded, "brandon", "m-a", "t1", event.NoteAdded{Text: "after"}),
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	tree, err := treeMap(g, store.DefaultRef)
-	if err != nil {
-		t.Fatal(err)
+	after := strings.TrimSpace(runGit(t, dir, "rev-parse", store.DefaultRef))
+	if parents := strings.Fields(runGit(t, dir, "log", "-1", "--format=%P", after)); len(parents) != 1 || parents[0] != ref {
+		t.Fatalf("commit after the reload has parents %v, want the moved head %s", parents, ref)
 	}
+	paths := rawPaths(t, dir, after)
 	for _, n := range []int{1, 2, 3} {
-		if _, ok := tree[eventPath(t, n)]; !ok {
-			t.Fatalf("committed tree after the reload lacks event %d: %v", n, tree)
+		if !paths[eventPath(t, n)] {
+			t.Fatalf("committed tree after the reload lacks event %d: %v", n, paths)
 		}
 	}
 }

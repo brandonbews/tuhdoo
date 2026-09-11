@@ -192,11 +192,14 @@ func TestReadsSpawnNoGitOnceLoaded(t *testing.T) {
 	}
 }
 
-// A ref moved from outside the daemon — here a second writer on the
-// same repository, the shape of a `branch -f` or a manual fetch — is
-// noticed by the next sync cycle with no remote configured: the store
-// reloads (reseeding its index) and the daemon's state reflects the
-// moved ref.
+// A ref moved from outside the daemon — here a raw-plumbing commit on
+// the same repository, the shape of a `branch -f` or a manual fetch —
+// is noticed by the next sync cycle with no remote configured: the
+// store reloads, the daemon's state reflects the moved ref, and the
+// daemon's next commit reseeds its private index from the moved head
+// so the foreign file rides along. The mover is raw plumbing on
+// purpose: a second Store as the mover would reseed the shared index
+// with its own commit and mask a missing reseed.
 func TestSyncCycleNoticesExternalRefMove(t *testing.T) {
 	root, cg := newCountedRepo(t)
 	d, err := New(root, Options{Quiet: 50 * time.Millisecond, Log: log.New(io.Discard, "", 0), git: cg})
@@ -217,12 +220,12 @@ func TestSyncCycleNoticesExternalRefMove(t *testing.T) {
 		t.Fatalf("cycle: %v", err)
 	}
 
-	// Another writer advances the branch behind the daemon's back.
+	// Another writer advances the branch behind the daemon's back with
+	// raw plumbing through a fresh CLI: no Store, no index.
 	real, err := gitx.New(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	other := store.New(real, "", testIdent)
 	eid, err := event.NewID(time.Now(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -232,10 +235,39 @@ func TestSyncCycleNoticesExternalRefMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := other.AppendBatch(store.Batch{Events: []event.Event{foreign}}); err != nil {
-		t.Fatalf("external AppendBatch: %v", err)
+	foreignPath, err := event.Path(foreign.ID)
+	if err != nil {
+		t.Fatal(err)
 	}
-	ref := strings.TrimSpace(runGit(t, root, "rev-parse", "refs/heads/tuhdoo"))
+	foreignBytes, err := event.Encode(foreign)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := real.ReadRef(store.DefaultRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree, err := gitx.LsTreeMap(real, before)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tree[foreignPath], err = real.HashObject(foreignBytes); err != nil {
+		t.Fatal(err)
+	}
+	treeOID, err := gitx.MkTreeFromMap(real, tree)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, err := real.CommitTree(treeOID, []string{before}, testIdent, "moved from outside\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := real.UpdateRef(store.DefaultRef, ref, before); err != nil {
+		t.Fatalf("external update-ref: %v", err)
+	}
+	if got := strings.TrimSpace(runGit(t, root, "rev-parse", "refs/heads/tuhdoo")); got != ref {
+		t.Fatalf("setup: ref at %s, want the external commit %s", got, ref)
+	}
 	if d.store.Head() == ref {
 		t.Fatal("setup: the daemon's replica must not yet know the moved ref")
 	}
@@ -260,12 +292,27 @@ func TestSyncCycleNoticesExternalRefMove(t *testing.T) {
 		t.Fatalf("daemon state after the cycle: foreign task known %v, own task known %v; want both", known, mine)
 	}
 	// The daemon's next write commits on the moved head with the
-	// foreign event still in the tree — the reload reseeded the index.
+	// foreign event still in the tree — the commit reseeded the index
+	// from the moved head. Checked by raw ls-tree of the resulting
+	// head, not through the replica.
 	if _, _, oe := d.opCreateTasks("brandon", []createTaskItem{{Title: "after"}}); oe != nil {
 		t.Fatalf("create after reload: %v", oe)
 	}
 	if err := d.batcher.Flush(); err != nil {
 		t.Fatalf("flush: %v", err)
+	}
+	after := strings.TrimSpace(runGit(t, root, "rev-parse", "refs/heads/tuhdoo"))
+	if parents := strings.Fields(runGit(t, root, "log", "-1", "--format=%P", after)); len(parents) != 1 || parents[0] != ref {
+		t.Fatalf("commit after the reload has parents %v, want the moved head %s", parents, ref)
+	}
+	var eventPaths []string
+	for _, line := range strings.Split(strings.TrimSpace(runGit(t, root, "ls-tree", "-r", "--name-only", "--full-tree", after)), "\n") {
+		if strings.HasPrefix(line, "events/") {
+			eventPaths = append(eventPaths, line)
+		}
+	}
+	if len(eventPaths) != 3 || !strings.Contains(strings.Join(eventPaths, " "), foreignPath) {
+		t.Fatalf("committed tree after the write holds events %v, want 3 including the foreign %s", eventPaths, foreignPath)
 	}
 	events, err := d.store.LoadEvents()
 	if err != nil {

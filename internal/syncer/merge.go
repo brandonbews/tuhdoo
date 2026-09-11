@@ -49,8 +49,10 @@ func (s *Syncer) merge(remote string) error {
 	if err != nil {
 		return err
 	}
-	// Our side is the replica's tree: no ls-tree of our own head.
-	ourTree := s.store.Tree()
+	// Our side is the replica's head and tree, taken together: the
+	// head anchors the commit below, so a merge computed against this
+	// tree can only land on this head.
+	ourHead, ourTree := s.store.HeadAndTree()
 
 	merged, err := s.mergeTrees(ourTree, theirTree)
 	if err != nil {
@@ -59,8 +61,10 @@ func (s *Syncer) merge(remote string) error {
 
 	// The store commits the union as changes against our tree, with
 	// the remote head as the second parent; it moves the ref and the
-	// replica together (T2: single mover).
-	_, err = s.store.Commit(treeChanges(ourTree, merged), []string{remote}, "tuhdoo: merge\n")
+	// replica together (T2: single mover). A head that moved since —
+	// a local batch, an external move — refuses the commit with
+	// ErrRefCASFailed, and the caller's next pass merges afresh.
+	_, err = s.store.Commit(ourHead, treeChanges(ourTree, merged), []string{remote}, "tuhdoo: merge\n")
 	if err != nil {
 		return fmt.Errorf("merge: %w", err)
 	}
@@ -375,13 +379,9 @@ func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.Stat
 }
 
 func treeMap(g gitx.Git, rev string) (map[string]string, error) {
-	entries, err := g.LsTree(rev)
+	m, err := gitx.LsTreeMap(g, rev)
 	if err != nil {
 		return nil, fmt.Errorf("syncer: %w", err)
-	}
-	m := make(map[string]string, len(entries))
-	for _, e := range entries {
-		m[e.Path] = e.OID
 	}
 	return m, nil
 }

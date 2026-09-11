@@ -7,6 +7,7 @@ package gitx
 // untouched after every operation.
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -184,8 +185,8 @@ func TestReadTreeRecoversAndReplaces(t *testing.T) {
 // empty tree — the one answer that would drop every file on the branch.
 func TestWriteTreeRefusesMissingIndex(t *testing.T) {
 	g := newRepo(t)
-	if _, err := g.WriteTree(); err == nil || !strings.Contains(err.Error(), "reseed") {
-		t.Fatalf("WriteTree with no index = %v, want a refusal telling the caller to reseed", err)
+	if _, err := g.WriteTree(); err == nil || !strings.Contains(err.Error(), "reseed") || !errors.Is(err, ErrIndexMissing) {
+		t.Fatalf("WriteTree with no index = %v, want ErrIndexMissing telling the caller to reseed", err)
 	}
 	commit := writeCommit(t, g, map[string][]byte{"a": []byte("1")}, "a\n")
 	if err := g.ReadTree(commit); err != nil {
@@ -194,9 +195,61 @@ func TestWriteTreeRefusesMissingIndex(t *testing.T) {
 	if err := os.Remove(g.indexPath()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.WriteTree(); err == nil {
-		t.Fatal("WriteTree after the index vanished succeeded; want an error, not the empty tree")
+	if _, err := g.WriteTree(); !errors.Is(err, ErrIndexMissing) {
+		t.Fatalf("WriteTree after the index vanished = %v; want ErrIndexMissing, not the empty tree", err)
 	}
+}
+
+// UpdateIndex refuses a missing index before anything runs — git would
+// create it empty and say nothing, and the write-tree after it would
+// hold only this batch's paths — with an error matching
+// ErrIndexMissing, empty entries included. The file stays absent: the
+// caller reseeds with ReadTree, which is the only way it is created.
+func TestUpdateIndexRefusesMissingIndex(t *testing.T) {
+	g := newRepo(t)
+	oid, err := g.HashObject([]byte("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := g.UpdateIndex([]TreeEntry{{Path: "a", OID: oid}}); !errors.Is(err, ErrIndexMissing) {
+		t.Fatalf("UpdateIndex with no index = %v, want ErrIndexMissing", err)
+	}
+	if err := g.UpdateIndex(nil); !errors.Is(err, ErrIndexMissing) {
+		t.Fatalf("UpdateIndex(nil) with no index = %v, want ErrIndexMissing", err)
+	}
+	if _, err := os.Stat(g.indexPath()); !os.IsNotExist(err) {
+		t.Fatalf("a refused UpdateIndex left an index at %s (stat err %v)", g.indexPath(), err)
+	}
+
+	// Seeded, used, then removed underneath: refused again, and the
+	// reseed makes it usable.
+	commit := writeCommit(t, g, map[string][]byte{"a": []byte("1")}, "a\n")
+	if err := g.ReadTree(commit); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.UpdateIndex([]TreeEntry{{Path: "b", OID: oid}}); err != nil {
+		t.Fatalf("UpdateIndex on a seeded index: %v", err)
+	}
+	if err := os.Remove(g.indexPath()); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.UpdateIndex([]TreeEntry{{Path: "c", OID: oid}}); !errors.Is(err, ErrIndexMissing) {
+		t.Fatalf("UpdateIndex after the index vanished = %v, want ErrIndexMissing", err)
+	}
+	if err := g.ReadTree(commit); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.UpdateIndex([]TreeEntry{{Path: "c", OID: oid}}); err != nil {
+		t.Fatalf("UpdateIndex after the reseed: %v", err)
+	}
+	tree, err := g.WriteTree()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := lsTreeMap(t, g, tree); len(got) != 2 || got["a"] == "" || got["c"] != oid {
+		t.Fatalf("tree after reseed and update = %v, want a and c", got)
+	}
+	assertUserIndexUntouched(t, g)
 }
 
 // UpdateIndex validates paths exactly as MkTree does.
@@ -257,5 +310,38 @@ func TestIndexPathUnderGitDir(t *testing.T) {
 	}
 	if !filepath.IsAbs(g.gitDir) {
 		t.Fatalf("gitDir %q is not absolute", g.gitDir)
+	}
+}
+
+// New absolutizes a relative dir before anything is joined onto it: a
+// CLI opened as New("repo") from the parent directory names the same
+// absolute git dir and index path as one opened on the absolute path,
+// however the process's working directory moves afterwards.
+func TestNewAbsolutizesRelativeDir(t *testing.T) {
+	g := newRepo(t)
+	parent, base := filepath.Split(g.dir)
+	t.Chdir(parent)
+	rel, err := New(base)
+	if err != nil {
+		t.Fatalf("New(%q) from %s: %v", base, parent, err)
+	}
+	if !filepath.IsAbs(rel.dir) || !filepath.IsAbs(rel.gitDir) {
+		t.Fatalf("New(%q) kept relative paths: dir %q, gitDir %q", base, rel.dir, rel.gitDir)
+	}
+	// Temp directories may sit behind a symlink (macOS /var → /private/var):
+	// compare resolved git dirs.
+	got, err := filepath.EvalSymlinks(rel.gitDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(g.gitDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("New(%q) resolved the git dir to %s, want the absolute %s", base, got, want)
+	}
+	if rel.indexPath() != filepath.Join(rel.gitDir, "tuhdoo", "index") {
+		t.Fatalf("indexPath = %s, want <git-dir>/tuhdoo/index under %s", rel.indexPath(), rel.gitDir)
 	}
 }

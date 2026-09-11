@@ -250,8 +250,9 @@ func (s *Syncer) Cycle() error {
 // one rev-parse per cycle. The store moves the ref and its replica
 // together, so a ref that differs from the replica's head was moved
 // from outside — a manual fetch into it, a `branch -f` — and the
-// replica reloads from git (which reseeds the private index) and the
-// daemon refreshes. A store that has not loaded yet simply loads. A
+// replica reloads from git (its next commit reseeds the private index
+// from the moved head) and the daemon refreshes. A store that has not
+// loaded yet simply loads. A
 // commit landing between the two reads makes the ref look moved for
 // one cycle; the reload is then a no-op that costs three processes.
 func (s *Syncer) noticeExternalMove() error {

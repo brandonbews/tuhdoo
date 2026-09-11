@@ -11,7 +11,10 @@
 // merge, a fast-forward — goes through Commit or FastForward, so the
 // replica and the ref advance together. Every write is one commit
 // built from plumbing objects through the private index; the working
-// tree is untouched by construction.
+// tree is untouched by construction. The index belongs to the
+// committing path alone: a load never touches it, and the first
+// commit after any reload (or after a failed commit) reseeds it from
+// the head before building on it.
 package store
 
 import (
@@ -30,8 +33,8 @@ import (
 // checked out.
 const DefaultRef = "refs/heads/tuhdoo"
 
-// maxCASRetries bounds Commit's retry loop when the ref moves under
-// it. The daemon is the only local writer and the syncer commits
+// maxCASRetries bounds AppendBatch's retry loop when the ref moves
+// under it. The daemon is the only local writer and the syncer commits
 // through the same Store, so a lost compare-and-swap means the ref was
 // moved from outside; more than a handful of consecutive losses means
 // something is wrong enough to surface.
@@ -72,6 +75,15 @@ type Store struct {
 	// tree is the head commit's tree: path → blob OID for every file
 	// on the branch. The private index (T2) mirrors it at every commit.
 	tree map[string]string
+	// indexStale is true whenever the private index is not known to
+	// hold exactly tree: at construction, after every load or reload
+	// (a load never touches the index — a read-only Load beside a
+	// running daemon must not rewrite the daemon's index), and after
+	// any commit attempt that failed past UpdateIndex (the index may
+	// hold that attempt's entries). The next commit reseeds from the
+	// head first (ReadTree, which also clears a stale index.lock) and
+	// only then builds on it.
+	indexStale bool
 
 	// The decode caches are content-addressed — the bytes behind an
 	// OID can never change — so a cached decode never goes stale.
@@ -99,6 +111,7 @@ func New(g gitx.Git, ref string, ident gitx.Identity) *Store {
 		git:        g,
 		ref:        ref,
 		ident:      ident,
+		indexStale: true,
 		eventByOID: make(map[string]event.Event),
 		leaseByOID: make(map[string]LeaseState),
 		fileByOID:  make(map[string][]byte),
@@ -152,13 +165,16 @@ func (s *Store) Init() error {
 	return nil
 }
 
-// Load reads the head and its tree from git and reseeds the private
-// index from it: one rev-parse, one ls-tree, one read-tree, plus one
-// batched cat-file for whichever event and lease blobs the caches
-// lack (none, on a warm reload). It is the cold start and the reload
-// path — a lost compare-and-swap inside Commit, an external move of
-// the ref noticed by the sync cycle — and the only reader of the ref
-// outside those two.
+// Load reads the head and its tree from git: one rev-parse, one
+// ls-tree, plus one batched cat-file for whichever event and lease
+// blobs the caches lack (none, on a warm reload). It is the cold start
+// and the reload path — a lost compare-and-swap inside a commit, an
+// external move of the ref noticed by the sync cycle — and the only
+// reader of the ref outside those two. It never touches the private
+// index: a Load may run in a process that only reads (a harness
+// beside a running daemon), and the index is the committing daemon's.
+// The head it installs marks the index stale, so this Store's next
+// commit reseeds before building.
 func (s *Store) Load() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -167,29 +183,23 @@ func (s *Store) Load() error {
 
 // loadLocked is Load with s.mu held. The caches are filled before the
 // head is installed, so a load that fails leaves the previous replica
-// serving; the index is reseeded last, from the head just installed.
+// serving.
 func (s *Store) loadLocked() error {
 	head, err := s.git.ReadRef(s.ref)
 	if err != nil {
 		return fmt.Errorf("store: load %s (run Init first?): %w", s.ref, err)
 	}
-	entries, err := s.git.LsTree(head)
+	tree, err := gitx.LsTreeMap(s.git, head)
 	if err != nil {
 		return fmt.Errorf("store: load: %w", err)
-	}
-	tree := make(map[string]string, len(entries))
-	for _, e := range entries {
-		tree[e.Path] = e.OID
 	}
 	if _, _, err := s.replayInputLocked(tree); err != nil {
 		return fmt.Errorf("store: load: %w", err)
 	}
-	// Reseed before installing: a head whose index cannot be seeded is
-	// a head this Store must not commit on.
-	if err := s.git.ReadTree(head); err != nil {
-		return fmt.Errorf("store: load: reseed private index: %w", err)
-	}
 	s.installHeadLocked(head, tree)
+	// Whatever the index held, it was seeded from some other head (or
+	// by some other process, or never): the next commit reseeds.
+	s.indexStale = true
 	return nil
 }
 
@@ -203,7 +213,8 @@ func (s *Store) ensureLoadedLocked() error {
 
 // installHeadLocked makes head/tree the replica's head and prunes the
 // mutable-blob caches to what the new tree references. Caller holds
-// s.mu; the index has been reseeded from (or built exactly as) tree.
+// s.mu and owns indexStale: a commit that built the index into exactly
+// tree leaves it false; a load sets it true.
 func (s *Store) installHeadLocked(head string, tree map[string]string) {
 	s.head = head
 	s.tree = tree
@@ -293,75 +304,122 @@ func (s *Store) WriteBlobs(files map[string][]byte, against map[string]string) (
 	return out, nil
 }
 
-// Commit is the one path that advances the data ref. changes is path →
-// blob OID, or "" to delete the path; the new tree is the head tree
-// with changes applied, built through the private index from only the
-// paths that actually differ from the head tree, then written as a
-// commit whose first parent is the head and whose remaining parents
-// are extraParents (the syncer's merge passes the remote head), and
-// the ref is moved by compare-and-swap from the head the replica
-// holds. On success head and tree are replaced in memory and the new
-// commit's OID returned. A lost compare-and-swap — the ref moved from
-// outside this Store — reloads head, tree, caches, and index from git,
-// reapplies the same changes on the new head, and retries, bounded by
-// maxCASRetries; exhaustion is an error. The first parent is implicit
-// on purpose: it is the compare-and-swap anchor, and it is the Store's
-// to know.
-func (s *Store) Commit(changes map[string]string, extraParents []string, message string) (string, error) {
+// Commit is the one path that advances the data ref. base is the head
+// the caller computed changes against — the anchor, exactly as
+// FastForward's from: if the replica's head is no longer base (a local
+// batch landed since the caller looked), the commit is refused before
+// git is touched with an error matching gitx.ErrRefCASFailed. changes
+// is path → blob OID, or "" to delete the path; the new tree is the
+// head tree with changes applied, built through the private index from
+// only the paths that actually differ from the head tree, then written
+// as a commit whose first parent is the head and whose remaining
+// parents are extraParents (the syncer's merge passes the remote
+// head), and the ref is moved by compare-and-swap from base. On
+// success head and tree are replaced in memory and the new commit's
+// OID returned. A lost compare-and-swap at the ref — moved from
+// outside this Store — reloads head, tree, and caches from git and
+// returns an error matching gitx.ErrRefCASFailed: Commit itself never
+// retries, because changes were computed against base and a merge
+// recomputed against the new head is a different merge (the syncer
+// simply runs its next pass). AppendBatch, whose events and leases are
+// valid against any head, owns the retry loop.
+func (s *Store) Commit(base string, changes map[string]string, extraParents []string, message string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.ensureLoadedLocked(); err != nil {
 		return "", fmt.Errorf("store: commit: %w", err)
 	}
+	if s.head != base {
+		return "", fmt.Errorf("store: commit on %s: replica head is %s: %w", base, s.head, gitx.ErrRefCASFailed)
+	}
 	return s.commitLocked(changes, extraParents, message)
 }
 
-// commitLocked is Commit with s.mu held and the Store loaded.
+// commitLocked is one commit attempt on the replica's head, with s.mu
+// held and the Store loaded. It validates changes against the head
+// tree before any git runs, reseeds the private index from the head
+// when it is stale (ReadTree: the one place a leftover index.lock is
+// cleared — the committing daemon holds the flock), feeds the index
+// the diff, writes the tree and the commit, and moves the ref by
+// compare-and-swap from the head. An index that turns out to be
+// missing at UpdateIndex is reseeded and the attempt retried once.
+// Any failure after the index was touched marks it stale, so no later
+// commit builds on entries from a commit that never landed; a lost
+// compare-and-swap additionally reloads the replica from the ref's
+// new position and returns an error matching gitx.ErrRefCASFailed.
 func (s *Store) commitLocked(changes map[string]string, extraParents []string, message string) (string, error) {
-	for attempt := 0; ; attempt++ {
-		tree, entries := applyChanges(s.tree, changes)
-		if err := s.git.UpdateIndex(entries); err != nil {
-			return "", fmt.Errorf("store: commit: %w", err)
-		}
-		treeOID, err := s.git.WriteTree()
-		if err != nil {
-			return "", fmt.Errorf("store: commit: %w", err)
-		}
-		parents := append([]string{s.head}, extraParents...)
-		commit, err := s.git.CommitTree(treeOID, parents, s.ident, message)
-		if err != nil {
-			return "", fmt.Errorf("store: commit: %w", err)
-		}
-
-		err = s.git.UpdateRef(s.ref, commit, s.head)
-		if err == nil {
-			// The index now holds exactly tree: it was seeded from the
-			// old head and fed the diff to the new one.
-			s.installHeadLocked(commit, tree)
-			return commit, nil
-		}
-		if !errors.Is(err, gitx.ErrRefCASFailed) {
-			return "", fmt.Errorf("store: commit: %w", err)
-		}
-		if attempt+1 >= maxCASRetries {
-			return "", fmt.Errorf("store: commit: ref %s kept moving after %d attempts: %w",
-				s.ref, maxCASRetries, err)
-		}
-		// The ref moved from outside: rebuild on whatever it points at
-		// now. The reload reseeds the index from the new head, which is
-		// what makes retrying on it safe.
-		if err := s.loadLocked(); err != nil {
-			return "", fmt.Errorf("store: commit: after lost compare-and-swap: %w", err)
-		}
+	tree, entries, err := applyChanges(s.tree, changes)
+	if err != nil {
+		return "", fmt.Errorf("store: commit: %w", err)
 	}
+	reseeded := false
+	for {
+		if s.indexStale {
+			if err := s.git.ReadTree(s.head); err != nil {
+				return "", fmt.Errorf("store: commit: reseed private index: %w", err)
+			}
+			s.indexStale = false
+		}
+		err := s.git.UpdateIndex(entries)
+		if err == nil {
+			break
+		}
+		s.indexStale = true
+		if errors.Is(err, gitx.ErrIndexMissing) && !reseeded {
+			reseeded = true
+			continue
+		}
+		return "", fmt.Errorf("store: commit: %w", err)
+	}
+	treeOID, err := s.git.WriteTree()
+	if err != nil {
+		s.indexStale = true
+		return "", fmt.Errorf("store: commit: %w", err)
+	}
+	parents := append([]string{s.head}, extraParents...)
+	commit, err := s.git.CommitTree(treeOID, parents, s.ident, message)
+	if err != nil {
+		s.indexStale = true
+		return "", fmt.Errorf("store: commit: %w", err)
+	}
+
+	err = s.git.UpdateRef(s.ref, commit, s.head)
+	if err == nil {
+		// The index now holds exactly tree: it was seeded from the old
+		// head and fed the diff to the new one.
+		s.installHeadLocked(commit, tree)
+		return commit, nil
+	}
+	s.indexStale = true
+	if !errors.Is(err, gitx.ErrRefCASFailed) {
+		return "", fmt.Errorf("store: commit: %w", err)
+	}
+	// The ref moved from outside: the replica follows it, so the
+	// caller's retry (or the syncer's next pass) starts from the truth.
+	// A reload that fails is not a compare-and-swap loss to retry on —
+	// the replica is now behind a ref it cannot read — so it is
+	// reported as itself.
+	if lerr := s.loadLocked(); lerr != nil {
+		return "", fmt.Errorf("store: commit: after lost compare-and-swap (%v), reload failed: %w", err, lerr)
+	}
+	return "", fmt.Errorf("store: commit: %w", err)
 }
 
 // applyChanges returns base with changes applied, and the index
 // entries that turn base into it: only paths whose OID differs (adds,
 // replacements) or that base holds and changes deletes. Pure.
-func applyChanges(base, changes map[string]string) (map[string]string, []gitx.TreeEntry) {
+//
+// It refuses a change set whose result is not a tree: a blob at a
+// path that is a directory of another path in the result ("events"
+// beside "events/a"), or under a path that holds a blob ("views/t/x"
+// under a blob "views/t"). `update-index --index-info` would accept
+// either and silently drop the entries that stand in the way — a blob
+// at "events" wipes every event — so the check runs here, against the
+// resulting tree, before any git does.
+func applyChanges(base, changes map[string]string) (map[string]string, []gitx.TreeEntry, error) {
 	tree := copyTree(base)
 	var entries []gitx.TreeEntry
+	var added []string
 	for path, oid := range changes {
 		if oid == "" {
 			if _, present := base[path]; present {
@@ -370,6 +428,7 @@ func applyChanges(base, changes map[string]string) (map[string]string, []gitx.Tr
 			}
 			continue
 		}
+		added = append(added, path)
 		if base[path] == oid {
 			continue
 		}
@@ -377,12 +436,59 @@ func applyChanges(base, changes map[string]string) (map[string]string, []gitx.Tr
 		entries = append(entries, gitx.TreeEntry{Path: path, OID: oid})
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
-	return tree, entries
+	sort.Strings(added)
+	if err := checkTreeShape(tree, added); err != nil {
+		return nil, nil, err
+	}
+	return tree, entries, nil
+}
+
+// checkTreeShape reports the first file-versus-directory conflict an
+// added path has with the rest of tree: every directory on the way to
+// an added blob must not itself hold a blob, and no added blob may sit
+// where another path needs a directory. base trees come from git or
+// from a previous check, so only the added paths can be at fault.
+func checkTreeShape(tree map[string]string, added []string) error {
+	if len(added) == 0 {
+		return nil
+	}
+	// Every directory the tree needs, each with the lexically first
+	// path that needs it (so the error names the same path every time).
+	dirs := make(map[string]string)
+	for path := range tree {
+		for dir := parentDir(path); dir != ""; dir = parentDir(dir) {
+			if prev, seen := dirs[dir]; !seen || path < prev {
+				dirs[dir] = path
+			}
+		}
+	}
+	for _, path := range added {
+		if under, needed := dirs[path]; needed {
+			return fmt.Errorf("blob at %q conflicts with %q, which needs it as a directory", path, under)
+		}
+		for dir := parentDir(path); dir != ""; dir = parentDir(dir) {
+			if tree[dir] != "" {
+				return fmt.Errorf("blob at %q conflicts with the blob at %q on its path", path, dir)
+			}
+		}
+	}
+	return nil
+}
+
+// parentDir is the directory part of a slash-separated path, or ""
+// for a top-level path.
+func parentDir(path string) string {
+	i := strings.LastIndex(path, "/")
+	if i < 0 {
+		return ""
+	}
+	return path[:i]
 }
 
 // FastForward moves the ref from the head the caller saw, from, to
 // newHead by compare-and-swap, then reloads the replica from git so
-// head, tree, caches, and index all reflect the adopted commit. from
+// head, tree, and caches all reflect the adopted commit (the index is
+// left to the next commit, which reseeds from it). from
 // is the caller's anchor on purpose — the syncer decided newHead was a
 // descendant of the head it read, and a local commit landing since
 // makes that decision stale: the replica then already holds a newer
@@ -423,8 +529,18 @@ func (s *Store) moveRefLocked(newHead, old string) error {
 // AppendBatch commits b to the data branch as exactly one commit: the
 // head tree plus b's changes, parented on the head. Blobs are written
 // only for events and files whose bytes are not already at their path
-// (WriteBlobs); the decoded forms go into the caches before the commit
-// so the next ReplayInput needs no git. An empty batch is a no-op.
+// (WriteBlobs); the decoded forms go into the caches once the commit
+// lands, so the next ReplayInput needs no git. An empty batch is a
+// no-op.
+//
+// A lost compare-and-swap — the ref moved from outside this Store —
+// has reloaded the replica; AppendBatch then retries on the new head,
+// bounded by maxCASRetries (exhaustion is an error), with the batch
+// cut down to its events and leases: those are valid against any
+// head, but the rendered files were computed against a state the
+// reload has superseded, and landing them now could overwrite pages a
+// newer generator stamped on the moved head (T6: highest stamp wins).
+// The daemon's next refresh re-renders from the merged state.
 func (s *Store) AppendBatch(b Batch) error {
 	if b.empty() {
 		return nil
@@ -449,21 +565,12 @@ func (s *Store) AppendBatch(b Batch) error {
 		files[path] = data
 		eventAt[path] = e
 	}
+	// Decode the leases up front, the way a load would: a lease file
+	// that does not decode is the caller's bug, caught here rather
+	// than at the next load — and before anything is written.
+	leaseAt := make(map[string]LeaseState) // path → state, for the cache
 	for path, data := range b.Files {
 		files[path] = data
-	}
-
-	changes, err := s.WriteBlobs(files, s.tree)
-	if err != nil {
-		return fmt.Errorf("store: append: %w", err)
-	}
-	// Cache what was just written the way a load would decode it. A
-	// lease file that does not decode is the caller's bug, caught here
-	// rather than at the next load.
-	for path, e := range eventAt {
-		s.eventByOID[changes[path]] = e
-	}
-	for path, data := range b.Files {
 		if _, ok := LeaseClaimID(path); !ok {
 			continue
 		}
@@ -471,15 +578,47 @@ func (s *Store) AppendBatch(b Batch) error {
 		if err != nil {
 			return fmt.Errorf("store: append %s: %w", path, err)
 		}
-		s.leaseByOID[changes[path]] = LeaseState{Expires: expires, Released: released}
+		leaseAt[path] = LeaseState{Expires: expires, Released: released}
 	}
 
 	msg := fmt.Sprintf("tuhdoo: %d events, %d files\n", len(b.Events), len(b.Files))
-	_, err = s.commitLocked(changes, nil, msg)
-	if err != nil {
-		return fmt.Errorf("store: append: %w", err)
+	for attempt := 0; ; attempt++ {
+		changes, err := s.WriteBlobs(files, s.tree)
+		if err != nil {
+			return fmt.Errorf("store: append: %w", err)
+		}
+		_, err = s.commitLocked(changes, nil, msg)
+		if err == nil {
+			// Cache after the fact, not before: the reload behind a
+			// lost compare-and-swap prunes the lease cache to a tree
+			// that does not hold this batch yet.
+			for path, e := range eventAt {
+				s.eventByOID[changes[path]] = e
+			}
+			for path, st := range leaseAt {
+				s.leaseByOID[changes[path]] = st
+			}
+			return nil
+		}
+		if !errors.Is(err, gitx.ErrRefCASFailed) {
+			return fmt.Errorf("store: append: %w", err)
+		}
+		if attempt+1 >= maxCASRetries {
+			return fmt.Errorf("store: append: ref %s kept moving after %d attempts: %w",
+				s.ref, maxCASRetries, err)
+		}
+		// Retry with events and leases only (see above); the blob OIDs
+		// are recomputed against the reloaded tree.
+		for path := range files {
+			if _, isEvent := eventAt[path]; isEvent {
+				continue
+			}
+			if _, isLease := leaseAt[path]; isLease {
+				continue
+			}
+			delete(files, path)
+		}
 	}
-	return nil
 }
 
 // ReadFile returns the blob at path in the head tree, or nil when the
@@ -516,12 +655,12 @@ func (s *Store) blobLocked(oid string) ([]byte, error) {
 	if data, ok := s.fileByOID[oid]; ok {
 		return data, nil
 	}
-	blobs, err := s.git.CatFiles([]string{oid})
+	data, err := s.git.CatFile(oid)
 	if err != nil {
 		return nil, err
 	}
-	s.fileByOID[oid] = blobs[oid]
-	return blobs[oid], nil
+	s.fileByOID[oid] = data
+	return data, nil
 }
 
 // LoadEvents returns every event at the head, in path order (which is
