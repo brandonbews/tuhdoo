@@ -8,11 +8,13 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -209,9 +211,6 @@ func TestBatcherDebounceCombinesCommits(t *testing.T) {
 	waitFor(t, "debounced flush", func() bool {
 		return len(treePaths(t, s, "events/")) == n
 	})
-	if err := b.LastError(); err != nil {
-		t.Fatalf("LastError after flush: %v", err)
-	}
 
 	// Strictly fewer commits than events: root + flush commits < root + n.
 	if got := commitCount(t, dir); got-1 >= n {
@@ -499,6 +498,69 @@ func TestAppendBatchRequiresInit(t *testing.T) {
 	if !errors.Is(err, gitx.ErrRefNotFound) {
 		t.Fatalf("AppendBatch without Init: err = %v, want ErrRefNotFound", err)
 	}
+}
+
+// A timer-driven flush that fails is logged at failure time and keeps
+// its events pending: nobody is waiting on the timer's error, so the
+// log line is the only place the failure can surface (Go-sweep audit
+// finding, 2026-08-27). Forcing the failure: a store whose branch was
+// never initialized refuses every append.
+func TestBatcherBackgroundFlushFailureIsLogged(t *testing.T) {
+	setGitEnv(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "--quiet", "-b", "main")
+	g, err := gitx.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(g, "", testIdent)
+
+	var logged syncBuffer
+	b := NewBatcher(s, 20*time.Millisecond)
+	b.Log = log.New(&logged, "", 0)
+	e := newEvent(t, 0)
+	b.Add(e)
+
+	waitFor(t, "background flush failure log line", func() bool {
+		return strings.Contains(logged.String(), "store: background flush failed, 1 events and 0 files still pending")
+	})
+	if !strings.Contains(logged.String(), gitx.ErrRefNotFound.Error()) {
+		t.Errorf("log line does not name the cause:\n%s", logged.String())
+	}
+
+	// The event stayed pending: once the branch exists, a Flush lands it.
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := b.Flush(); err != nil {
+		t.Fatalf("Flush after Init: %v", err)
+	}
+	path, err := event.Path(e.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := treePaths(t, s, "events/")[path]; !ok {
+		t.Errorf("event %s was dropped by the failed background flush; want it retried by Flush", e.ID)
+	}
+}
+
+// syncBuffer is a bytes.Buffer safe to share between the timer
+// goroutine's log writes and the test's reads.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }
 
 // Files staged with SetFiles ride the next commit alongside events —

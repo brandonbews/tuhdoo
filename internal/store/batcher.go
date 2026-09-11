@@ -18,9 +18,13 @@ const DefaultQuiet = 2 * time.Second
 // Batcher only supplies the mechanism.
 //
 // Error reporting: a background (timer-driven) flush that fails keeps
-// its events pending and records the error; LastError returns it until a
-// later flush attempt succeeds. Callers wanting synchronous errors use
-// Flush, which returns them directly.
+// its events and files pending for the next attempt and logs the error
+// at failure time — through Log when set, the standard logger
+// otherwise — so a failed timer flush is never silent (Go-sweep audit
+// finding, decided 2026-08-27: the earlier LastError accessor had no
+// reader on the failure path, and a failure surfaced only if a later
+// synchronous Flush happened to run). Callers wanting synchronous
+// errors use Flush, which returns them directly.
 //
 // One mutex guards everything; the only concurrency is the time.Timer's
 // callback, which takes the same mutex. AppendBatch runs while holding
@@ -37,7 +41,6 @@ type Batcher struct {
 	pending []event.Event
 	files   map[string][]byte
 	timer   *time.Timer
-	lastErr error
 }
 
 // NewBatcher returns a Batcher committing through s. quiet <= 0 means
@@ -93,8 +96,7 @@ func (b *Batcher) armLocked() {
 }
 
 // Flush commits everything pending now and returns the result. With
-// nothing pending it does nothing and returns nil (it does not clear a
-// recorded background error).
+// nothing pending it does nothing and returns nil.
 func (b *Batcher) Flush() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -104,25 +106,31 @@ func (b *Batcher) Flush() error {
 	return b.flushLocked()
 }
 
-// LastError returns the most recent background flush failure, or nil.
-// It is cleared by the next flush attempt that succeeds (the failed
-// events stay pending, so a later flush retries them).
-func (b *Batcher) LastError() error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.lastErr
-}
-
-// background is the timer callback.
+// background is the timer callback. Nobody is waiting on its error, so
+// a failure is logged here, at failure time, with what stays pending
+// (in memory only — lost if the process dies before a later flush
+// succeeds). The timer is not re-armed: the next Add or SetFiles arms
+// it, and Flush retries on demand.
 func (b *Batcher) background() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.flushLocked()
+	if err := b.flushLocked(); err != nil {
+		b.logf("store: background flush failed, %d events and %d files still pending: %v",
+			len(b.pending), len(b.files), err)
+	}
 }
 
-// flushLocked commits pending events; the caller holds b.mu. On failure
-// the events remain pending for a later retry and the error is recorded
-// for LastError.
+// logf writes through Log when set and the standard logger otherwise.
+func (b *Batcher) logf(format string, args ...any) {
+	if b.Log != nil {
+		b.Log.Printf(format, args...)
+		return
+	}
+	log.Printf(format, args...)
+}
+
+// flushLocked commits pending events and files; the caller holds b.mu.
+// On failure everything remains pending for a later retry.
 func (b *Batcher) flushLocked() error {
 	if len(b.pending) == 0 && len(b.files) == 0 {
 		return nil
@@ -137,6 +145,5 @@ func (b *Batcher) flushLocked() error {
 		b.pending = nil
 		b.files = nil
 	}
-	b.lastErr = err
 	return err
 }
