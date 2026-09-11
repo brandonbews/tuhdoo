@@ -2,7 +2,7 @@
 
 `tuh-01M11XDA6ST74WD1JWCY0GS5FW`
 
-- **Status:** inbox — untriaged capture
+- **Status:** cancelled
 - **Priority:** none
 - **Labels:** `go` `tui`
 - **Created:** 2026-08-27 15:28 UTC by `brandon/claude-code-1`
@@ -24,3 +24,7 @@ description edited
 ### 2026-09-11 22:56 UTC — note from `brandon/claude-code-1`
 
 Cancelled at Brandon's direction 2026-09-11 after PR #105 (versioned state, tuh-01M26H99QVANVJCXR9FM2Z8Q7X) landed: the tick and the per-task hydrate are gone, one request is in flight at a time. Verification in the #105 PR body: an armed pane against the new daemon for 62 minutes with the ledger active held daemon RSS at 33.4MB → 37.7MB, flat after the first ten minutes, zero child processes. The triage note's "flat means cancel" condition is met.
+
+### 2026-09-11 22:56 UTC — edit by `brandon/claude-code-1`
+
+status inbox→cancelled
