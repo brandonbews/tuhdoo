@@ -72,7 +72,7 @@ func (d *Daemon) readGateLocked(now time.Time) *opError {
 		return oe
 	}
 	if d.degraded == nil {
-		if err := d.refreshLocked(now); err != nil {
+		if err := d.freshenLocked(now); err != nil {
 			return d.writeErrLocked(err)
 		}
 	}
@@ -198,7 +198,7 @@ func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []stri
 
 	ids = make([]string, len(items))
 	for i := range items {
-		u, err := event.NewID(time.Now(), d.entropy)
+		u, err := event.NewID(d.now(), d.entropy)
 		if err != nil {
 			return nil, nil, opErrf(http.StatusInternalServerError, "%v", err)
 		}
@@ -304,7 +304,7 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 // opClaimTask claims one specific task (T5 claim_task, the
 // human-directed path).
 func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
@@ -312,7 +312,7 @@ func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
 	}
 	// Claims are the one path where a stale lease verdict changes the
 	// outcome, so re-replay at the current instant before deciding.
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return hydratedTask{}, d.writeErrLocked(err)
 	}
 
@@ -349,13 +349,13 @@ func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
 // with a nil error means no ready task matched — a normal outcome, not
 // a failure; each surface renders it in its own idiom.
 func (d *Daemon) opClaimNext(actor string, labels []string) (*hydratedTask, *opError) {
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
 		return nil, oe
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return nil, d.writeErrLocked(err)
 	}
 
@@ -386,26 +386,30 @@ const claimWarning = "Before merging anything from this work, call confirm_claim
 	"violation (agent protocol, step 5). If the verdict is lost: stand down, close any PR you opened, " +
 	"and record your attempt with finish_run."
 
-// claimTargetLocked stamps the claim event, flushes it eagerly, writes
-// the lease, and hydrates. Caller holds d.mu with freshly replayed
-// state and a Ready target.
+// claimTargetLocked writes the lease, stamps the claim event, commits
+// it eagerly with its views, pokes the syncer, and hydrates. Caller
+// holds d.mu with freshly replayed state and a Ready target.
+//
+// The lease lands first, in its own commit: the replay that stages
+// the views must see the claim with its lease, or it would render the
+// holder as already expired. A lease with no claim yet is inert (a
+// crash between the two commits leaves an orphan file replay never
+// looks up); a claim whose lease failed to land would read as expired
+// and return the task to the pool — self-healing, not corrupting.
+// Then the claim event goes through commitLocked, eager (T8: claims
+// race across machines, so the commit must not sit in the debounce
+// window) — one replay, one version bump, the views staged by that
+// bump riding the claim's own commit (T6), and the syncer poked for
+// eager wire time (D9 clause 1, made literal 2026-09-10).
 func (d *Daemon) claimTargetLocked(actor string, target *core.Task, now time.Time) (hydratedTask, *opError) {
 	ev, err := d.newEventLocked(event.TypeClaimMade, actor, target.ID, event.ClaimMade{})
 	if err != nil {
 		return hydratedTask{}, opErrf(http.StatusInternalServerError, "%v", err)
 	}
-	// Eager (T8): claims race across machines, so the commit must not
-	// sit in the debounce window. The lease lands in its own commit; if
-	// it failed to land, replay would treat the claim as expired and
-	// return the task to the pool — self-healing, not corrupting.
-	d.stageLocked(ev)
-	if err := d.batcher.Flush(); err != nil {
-		return hydratedTask{}, d.writeErrLocked(err)
-	}
 	if err := d.store.WriteLease(ev.ID, now.Add(d.leaseTTL)); err != nil {
 		return hydratedTask{}, opErrf(http.StatusInternalServerError, "write lease: %v", err)
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.commitLocked(true, ev); err != nil {
 		return hydratedTask{}, d.writeErrLocked(err)
 	}
 	h := d.hydrateLocked(target.ID)
@@ -417,13 +421,13 @@ func (d *Daemon) opRenewClaim(actor, taskID string) (claimID string, expires tim
 	if taskID == "" {
 		return "", time.Time{}, opErrf(http.StatusBadRequest, "%q is required", "task")
 	}
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
 		return "", time.Time{}, oe
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return "", time.Time{}, d.writeErrLocked(err)
 	}
 	c, oe := d.holderClaimLocked(taskID, actor)
@@ -434,7 +438,10 @@ func (d *Daemon) opRenewClaim(actor, taskID string) (claimID string, expires tim
 	if err := d.store.WriteLease(c.ID, expires); err != nil {
 		return "", time.Time{}, opErrf(http.StatusInternalServerError, "write lease: %v", err)
 	}
-	if err := d.refreshLocked(now); err != nil {
+	// The lease moved: replay (and bump — the memo's validUntil just
+	// moved with it). The rendered views do not carry the expiry, so
+	// the bump stages nothing.
+	if err := d.replayLocked(now); err != nil {
 		return "", time.Time{}, d.writeErrLocked(err)
 	}
 	return c.ID, expires, nil
@@ -457,13 +464,13 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 	if reason == "" {
 		return "", "", opErrf(http.StatusBadRequest, "%q is required", "reason")
 	}
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.degradedLocked(); oe != nil {
 		return "", "", oe
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return "", "", d.writeErrLocked(err)
 	}
 	if _, ok := d.state.Tasks[taskID]; !ok {
@@ -488,23 +495,23 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 }
 
 // releaseLocked is the shared write sequence of both opReleaseClaim
-// arms: claim.released event, stage, eager flush, lease tombstone,
-// refresh. Eager because a release returns the task to the pool, and
-// peers racing to claim should see that as fast as a claim itself
-// (T8). Caller holds d.mu.
+// arms: lease tombstone, then the claim.released event through an
+// eager commit — one replay and version bump, whose views (the task
+// back under ready, or the loser's attempt closed as superseded) ride
+// the release's own commit. Tombstone first for the same reason the
+// claim writes its lease first: the replay that renders must see both.
+// Eager because a release returns the task to the pool, and peers
+// racing to claim should see that as fast as a claim itself (T8); the
+// commit pokes the syncer like a claim's. Caller holds d.mu.
 func (d *Daemon) releaseLocked(actor, taskID, reason, claimID string, now time.Time) *opError {
 	ev, err := d.newEventLocked(event.TypeClaimReleased, actor, taskID, event.ClaimReleased{Reason: reason})
 	if err != nil {
 		return opErrf(http.StatusInternalServerError, "%v", err)
 	}
-	d.stageLocked(ev)
-	if err := d.batcher.Flush(); err != nil {
-		return d.writeErrLocked(err)
-	}
 	if err := d.store.ReleaseLease(claimID, now); err != nil {
 		return opErrf(http.StatusInternalServerError, "release lease: %v", err)
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.commitLocked(true, ev); err != nil {
 		return d.writeErrLocked(err)
 	}
 	return nil
@@ -568,7 +575,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 		return finishRunResult{}, opErrf(http.StatusBadRequest, "invalid outcome %q", req.Outcome)
 	}
 
-	now := time.Now()
+	now := d.now()
 
 	// Local pass. Holdership moves with the clock (a lease may have
 	// lapsed since the last refresh), so re-replay at the current instant
@@ -576,7 +583,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 	d.mu.Lock()
 	oe := d.degradedLocked()
 	if oe == nil {
-		if err := d.refreshLocked(now); err != nil {
+		if err := d.freshenLocked(now); err != nil {
 			oe = d.writeErrLocked(err)
 		}
 	}
@@ -639,7 +646,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 	if oe := d.degradedLocked(); oe != nil {
 		return finishRunResult{}, oe
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return finishRunResult{}, d.writeErrLocked(err)
 	}
 	// Re-guard: the world may have moved while the gate was out.
@@ -780,7 +787,7 @@ func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opEr
 	if taskID == "" {
 		return confirmClaimResult{}, opErrf(http.StatusBadRequest, "%q is required", "task")
 	}
-	now := time.Now()
+	now := d.now()
 
 	// Local pass first: caller mistakes, idempotent re-confirms, and
 	// already-final losses all answer without a network round-trip.
@@ -788,7 +795,7 @@ func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opEr
 	d.mu.Lock()
 	oe := d.degradedLocked()
 	if oe == nil {
-		if err := d.refreshLocked(now); err != nil {
+		if err := d.freshenLocked(now); err != nil {
 			oe = d.writeErrLocked(err)
 		}
 	}
@@ -866,7 +873,7 @@ func (d *Daemon) confirmLocally(actor, taskID string, now time.Time) (confirmCla
 	if oe := d.degradedLocked(); oe != nil {
 		return confirmClaimResult{}, oe
 	}
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.freshenLocked(now); err != nil {
 		return confirmClaimResult{}, d.writeErrLocked(err)
 	}
 	res, claimID, oe := judgeConfirm(d.state, taskID, actor)
@@ -889,13 +896,16 @@ func (d *Daemon) confirmLocally(actor, taskID string, now time.Time) (confirmCla
 	return confirmedResult(claimID, taskID), nil
 }
 
-// refreshAfterGate folds a gate outcome into the cached state. Failures
-// are logged, never returned: the verdict is already settled on the
-// branch, and the next refresh converges.
+// refreshAfterGate folds a gate outcome into the cached state: the
+// gate moved the local head through the store (a confirmation landed,
+// or the remote's verdict was adopted), so this is a replay and a
+// version bump, never a memo hit. Failures are logged, never returned:
+// the verdict is already settled on the branch, and the next refresh
+// converges.
 func (d *Daemon) refreshAfterGate(now time.Time) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if err := d.refreshLocked(now); err != nil {
+	if err := d.replayLocked(now); err != nil {
 		d.log.Printf("daemon: refresh after confirmation gate: %v", err)
 	}
 }
@@ -1031,7 +1041,7 @@ func (d *Daemon) opAddNote(actor, task, text string) (id, warning string, oe *op
 // first (D6: expiry is evaluated at read time) — a stale expiry must
 // not hydrate a lapsed claim as live.
 func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.readGateLocked(now); oe != nil {
@@ -1055,7 +1065,7 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 // by name: in_progress, blocked, done, cancelled, escalations. Empty
 // or omitted, the result carries exactly the three arrays above.
 func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
-	now := time.Now()
+	now := d.now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if oe := d.readGateLocked(now); oe != nil {

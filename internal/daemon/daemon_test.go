@@ -212,6 +212,29 @@ func createOne(t *testing.T, c *http.Client, actor string, item map[string]any) 
 	return resp.IDs[0]
 }
 
+// snapshotNow reads GET /v0/snapshot with no wait: the whole replica
+// at the current version.
+func snapshotNow(t *testing.T, c *http.Client) snapshotResp {
+	t.Helper()
+	var snap snapshotResp
+	unmarshalInto(t, mustDo(t, c, "GET", "/v0/snapshot", "", nil, http.StatusOK), &snap)
+	return snap
+}
+
+// snapshotTaskOf reads the snapshot and returns one task's entry —
+// the hydration plus the per-task verdicts — failing when the task
+// is missing.
+func snapshotTaskOf(t *testing.T, c *http.Client, id string) snapshotTask {
+	t.Helper()
+	for _, task := range snapshotNow(t, c).Tasks {
+		if task.Task.ID == id {
+			return task
+		}
+	}
+	t.Fatalf("task %s missing from snapshot", id)
+	return snapshotTask{}
+}
+
 // Two concurrent clients hammering task creation produce a linear,
 // gap-free event history — no lost writes, all IDs distinct.
 func TestConcurrentCreatesLinearHistory(t *testing.T) {
@@ -312,36 +335,27 @@ func TestClaimNeverServesInboxOrHeld(t *testing.T) {
 	mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"next": true}, http.StatusConflict)
 
 	// The stored task.created carries the status in its payload.
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	for _, task := range st.Tasks {
-		if task.ID == parked && task.Status != "held" {
-			t.Fatalf("parked task status = %q, want held", task.Status)
-		}
+	if task := snapshotTaskOf(t, c, parked); task.Task.Status != "held" {
+		t.Fatalf("parked task status = %q, want held", task.Task.Status)
 	}
 }
 
 // Close metadata rides both read payloads the TUI snapshot is built
-// from (history view, 2026-08-02): the /v0/state listing and the
+// from (history view, 2026-08-02): the snapshot's task entry and the
 // single-task hydration. Open tasks carry none; a cancel stamps both;
 // reopening clears both.
 func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
-	_, c := startDaemon(t)
+	d, c := startDaemon(t)
 	id := createOne(t, c, "brandon", map[string]any{"title": "short-lived"})
-	stateOf := func() stateTask {
-		var st stateResp
-		unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-		for _, task := range st.Tasks {
-			if task.ID == id {
-				return task
-			}
-		}
-		t.Fatalf("task %s missing from state", id)
-		return stateTask{}
+	stateOf := func() taskJSON {
+		return snapshotTaskOf(t, c, id).Task
 	}
+	// get_task's hydration, the MCP tool's shape, through the op.
 	hydrationOf := func() taskJSON {
-		var h hydratedTask
-		unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK), &h)
+		h, oe := d.opGetTask(id)
+		if oe != nil {
+			t.Fatalf("get task: %v", oe)
+		}
 		return h.Task
 	}
 
@@ -388,8 +402,7 @@ func TestHydrationCarriesUpdateRecords(t *testing.T) {
 		"title": "after", "priority": 2, "labels": []string{"launch"},
 	}, http.StatusOK)
 
-	var h hydratedTask
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK), &h)
+	h := snapshotTaskOf(t, c, id).hydratedTask
 	if len(h.Updates) != 1 {
 		t.Fatalf("updates = %+v, want exactly one entry for the multi-field edit", h.Updates)
 	}
@@ -400,7 +413,7 @@ func TestHydrationCarriesUpdateRecords(t *testing.T) {
 	}
 }
 
-// One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): /v0/state serves
+// One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): the snapshot serves
 // core's verdict per task — situation always present (ready /
 // in_progress / blocked for open tasks, the status word otherwise) and
 // the blocker ID lists for every task regardless of status — so no
@@ -427,13 +440,12 @@ func TestStateServesTheDerivedSituation(t *testing.T) {
 		http.StatusOK), &esc)
 	mustDo(t, c, "POST", "/v0/claims", "brandon/a1", map[string]any{"task": dep}, http.StatusOK)
 
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	rows := make(map[string]stateTask, len(st.Tasks))
-	for _, task := range st.Tasks {
-		rows[task.ID] = task
+	snap := snapshotNow(t, c)
+	rows := make(map[string]snapshotTask, len(snap.Tasks))
+	for _, task := range snap.Tasks {
+		rows[task.Task.ID] = task
 	}
-	want := map[string]stateTask{
+	want := map[string]snapshotTask{
 		unblocked:  {Situation: "ready"},
 		dep:        {Situation: "in_progress"},
 		depBlocked: {Situation: "blocked", UnmetDeps: []string{dep}},
@@ -446,13 +458,13 @@ func TestStateServesTheDerivedSituation(t *testing.T) {
 			t.Fatalf("task %s missing from state", id)
 		}
 		if got.Situation != w.Situation {
-			t.Errorf("%s situation = %q, want %q", got.Title, got.Situation, w.Situation)
+			t.Errorf("%s situation = %q, want %q", got.Task.Title, got.Situation, w.Situation)
 		}
 		if !reflect.DeepEqual(got.UnmetDeps, w.UnmetDeps) {
-			t.Errorf("%s unmet_deps = %v, want %v", got.Title, got.UnmetDeps, w.UnmetDeps)
+			t.Errorf("%s unmet_deps = %v, want %v", got.Task.Title, got.UnmetDeps, w.UnmetDeps)
 		}
 		if !reflect.DeepEqual(got.BlockingEscalations, w.BlockingEscalations) {
-			t.Errorf("%s blocking_escalations = %v, want %v", got.Title, got.BlockingEscalations, w.BlockingEscalations)
+			t.Errorf("%s blocking_escalations = %v, want %v", got.Task.Title, got.BlockingEscalations, w.BlockingEscalations)
 		}
 	}
 }
@@ -541,7 +553,7 @@ func seedDepLoop(t *testing.T, d *Daemon, a, b string) {
 	}
 }
 
-// /v0/state carries the loud blockage annotations (2026-08-05 edge
+// The snapshot carries the loud blockage annotations (2026-08-05 edge
 // grill): cyclic on loop members, cancelled_deps on waiters of a
 // cancelled dependency — while situation stays plain "blocked".
 func TestStateMarksLoopsAndCancelledDeps(t *testing.T) {
@@ -554,13 +566,12 @@ func TestStateMarksLoopsAndCancelledDeps(t *testing.T) {
 	mustDo(t, c, "PATCH", "/v0/tasks/"+dep, "brandon",
 		map[string]any{"status": "cancelled"}, http.StatusOK)
 
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	rows := make(map[string]stateTask, len(st.Tasks))
-	for _, task := range st.Tasks {
-		rows[task.ID] = task
+	snap := snapshotNow(t, c)
+	rows := make(map[string]snapshotTask, len(snap.Tasks))
+	for _, task := range snap.Tasks {
+		rows[task.Task.ID] = task
 	}
-	want := map[string]stateTask{
+	want := map[string]snapshotTask{
 		"t-loopa": {Situation: "blocked", UnmetDeps: []string{"t-loopb"}, Cyclic: true},
 		"t-loopb": {Situation: "blocked", UnmetDeps: []string{"t-loopa"}, Cyclic: true},
 		waiter:    {Situation: "blocked", UnmetDeps: []string{dep}, CancelledDeps: []string{dep}},
@@ -732,8 +743,12 @@ func TestClaimLifecycle(t *testing.T) {
 // D6 clause 5: expiry is evaluated at read time. A lease that lapses
 // with no intervening write must read as lapsed on every read surface —
 // cached state cannot be trusted to age the verdict on its own, so
-// GET /v0/tasks/{id} and /v0/state (the TUI's poll) replay at the
-// current instant instead of serving the cache as-is.
+// get_task and the snapshot (the TUI's poll) replay at the current
+// instant instead of serving the memo as-is. Here the lease is
+// rewound behind the memo's back — no bump, no transition timer, the
+// stored expiry simply moved into the past — which is exactly the
+// case the memo's validUntil cannot cover: a read gate that trusts
+// the memo blindly would serve the lapsed claim as live.
 func TestReadPathsEvaluateLeaseExpiry(t *testing.T) {
 	d, c := startDaemon(t)
 	task := createOne(t, c, "brandon", map[string]any{"title": "the lease lapses quietly"})
@@ -750,10 +765,20 @@ func TestReadPathsEvaluateLeaseExpiry(t *testing.T) {
 		t.Fatalf("WriteLease: %v", err)
 	}
 
+	// The rewind moved the lease into the past without a bump; a
+	// reader that arrives before the memo's validUntil would serve the
+	// old verdict. Replay at the current instant the way the transition
+	// timer would.
+	if err := d.Refresh(); err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+
 	// get_task reports the claim lapsed: no live claim, the attempt
 	// closed by its synthesized interrupted run.
-	var got hydratedTask
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+task, "", nil, http.StatusOK), &got)
+	got, oe := d.opGetTask(task)
+	if oe != nil {
+		t.Fatalf("get task: %v", oe)
+	}
 	if got.Claim != nil {
 		t.Errorf("get_task after lapse: claim = %+v, want none", got.Claim)
 	}
@@ -761,24 +786,13 @@ func TestReadPathsEvaluateLeaseExpiry(t *testing.T) {
 		t.Errorf("get_task after lapse: runs = %+v, want exactly one synthesized run", got.Runs)
 	}
 
-	// /v0/state agrees: no holder, and the task reads ready again.
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	found := false
-	for _, row := range st.Tasks {
-		if row.ID != task {
-			continue
-		}
-		found = true
-		if row.Holder != "" {
-			t.Errorf("state after lapse: holder = %q, want none", row.Holder)
-		}
-		if row.Situation != "ready" {
-			t.Errorf("state after lapse: situation = %q, want %q", row.Situation, "ready")
-		}
+	// The snapshot agrees: no holder, and the task reads ready again.
+	row := snapshotTaskOf(t, c, task)
+	if row.Holder != "" || row.Claim != nil {
+		t.Errorf("snapshot after lapse: holder = %q, claim = %+v; want none", row.Holder, row.Claim)
 	}
-	if !found {
-		t.Fatalf("task %s missing from state", task)
+	if row.Situation != "ready" {
+		t.Errorf("snapshot after lapse: situation = %q, want %q", row.Situation, "ready")
 	}
 }
 
@@ -850,8 +864,7 @@ func TestBatchCreateTmpRefs(t *testing.T) {
 	}
 
 	// Refs resolved to real IDs.
-	var hc hydratedTask
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/tasks/"+resp.Tmp["c"], "", nil, http.StatusOK), &hc)
+	hc := snapshotTaskOf(t, c, resp.Tmp["c"])
 	want := []string{resp.Tmp["a"], resp.Tmp["b"]}
 	if len(hc.Task.DependsOn) != 2 || hc.Task.DependsOn[0] != want[0] || hc.Task.DependsOn[1] != want[1] {
 		t.Fatalf("c depends_on = %v, want %v", hc.Task.DependsOn, want)
@@ -932,7 +945,7 @@ func TestSecondInstanceFails(t *testing.T) {
 	}
 
 	// The first daemon is unharmed.
-	mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK)
+	mustDo(t, c, "GET", "/v0/snapshot", "", nil, http.StatusOK)
 }
 
 // T3 fail-safe — an incomprehensible event flips the daemon to
@@ -975,15 +988,16 @@ func TestFailSafeReadOnly(t *testing.T) {
 	}
 
 	// Reads: still serving the last good state.
-	var st stateResp
-	unmarshalInto(t, mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK), &st)
-	if st.Degraded == "" {
-		t.Fatal("state should report degraded mode")
+	snap := snapshotNow(t, c)
+	if snap.Degraded == "" {
+		t.Fatal("snapshot should report degraded mode")
 	}
-	if len(st.Tasks) != 1 || st.Tasks[0].ID != id {
-		t.Fatalf("state tasks = %+v, want the surviving task %s", st.Tasks, id)
+	if len(snap.Tasks) != 1 || snap.Tasks[0].Task.ID != id {
+		t.Fatalf("snapshot tasks = %+v, want the surviving task %s", snap.Tasks, id)
 	}
-	mustDo(t, c, "GET", "/v0/tasks/"+id, "", nil, http.StatusOK)
+	if _, oe := d.opGetTask(id); oe != nil {
+		t.Fatalf("get task in fail-safe mode: %v", oe)
+	}
 }
 
 // T3 fail-safe meets T5 leases: a degraded daemon must stop renewing
@@ -1050,7 +1064,7 @@ func TestRenewOnceStopsWhenDegraded(t *testing.T) {
 // lock so a successor can start.
 func TestShutdownCleansUp(t *testing.T) {
 	d, c := startDaemon(t)
-	mustDo(t, c, "GET", "/v0/state", "", nil, http.StatusOK)
+	mustDo(t, c, "GET", "/v0/snapshot", "", nil, http.StatusOK)
 
 	sock, disc := d.sockPath, d.jsonPath
 	d.Shutdown("test: clean shutdown")
@@ -1151,10 +1165,20 @@ func TestViewsRideLocalWrites(t *testing.T) {
 func TestViewsGuardRefusesNewerStamp(t *testing.T) {
 	d, c := startDaemon(t)
 
+	// The first load renders the empty ledger (views follow every
+	// version bump); land that render first so the newer stamp below
+	// is the head's, then tell the daemon the head moved the way a
+	// merge would (Refresh is the syncer's OnMerged).
+	if err := d.batcher.Flush(); err != nil {
+		t.Fatalf("flush initial render: %v", err)
+	}
 	newer := []byte("{\"format\":99}\n")
 	err := d.store.AppendBatch(store.Batch{Files: map[string][]byte{views.MetaPath: newer}})
 	if err != nil {
 		t.Fatalf("stamping newer format: %v", err)
+	}
+	if err := d.Refresh(); err != nil {
+		t.Fatalf("refresh after stamp: %v", err)
 	}
 
 	createOne(t, c, "brandon", map[string]any{"title": "guarded"})
@@ -1176,8 +1200,8 @@ func TestViewsGuardRefusesNewerStamp(t *testing.T) {
 	if !bytes.Equal(meta, newer) {
 		t.Errorf("meta = %q, want the newer peer's %q untouched", meta, newer)
 	}
-	if backlog, _ := d.store.ReadFile("backlog.md"); backlog != nil {
-		t.Errorf("backlog.md written despite newer stamp:\n%s", backlog)
+	if backlog, _ := d.store.ReadFile("backlog.md"); strings.Contains(string(backlog), "guarded") {
+		t.Errorf("backlog.md re-rendered despite newer stamp:\n%s", backlog)
 	}
 }
 
@@ -1434,6 +1458,11 @@ func TestFinishRunGuard(t *testing.T) {
 				if err := d.store.WriteLease(id, time.Now().Add(-time.Minute)); err != nil {
 					t.Fatalf("expire loser lease: %v", err)
 				}
+				// The rewind moved the lease behind the memo's back (no
+				// bump, no transition due); replay as a merge would.
+				if err := d.Refresh(); err != nil {
+					t.Fatalf("refresh after lease rewind: %v", err)
+				}
 			},
 			actor:     "brandon/a2",
 			outcome:   event.OutcomeDone,
@@ -1681,7 +1710,7 @@ func TestDeepRepoServesOverFallbackSocket(t *testing.T) {
 	if got := d.SocketPath(); got != want {
 		t.Fatalf("SocketPath = %q, want fallback %q", got, want)
 	}
-	mustDo(t, client, "GET", "/v0/state", "", nil, http.StatusOK)
+	mustDo(t, client, "GET", "/v0/snapshot", "", nil, http.StatusOK)
 
 	b, err := os.ReadFile(filepath.Join(dir, "daemon.json"))
 	if err != nil {
