@@ -1,13 +1,12 @@
 # Backlog
 
-2 in progress · 4 ready · 2 blocked · 7 on hold · 5 inbox · 119 done · 33 cancelled
+1 in progress · 4 ready · 2 blocked · 7 on hold · 5 inbox · 120 done · 33 cancelled
 
 ## In progress
 
 | ID | Task | Priority | Claimed by |
 |---|---|---:|---|
 | [`tuh-8q7x`](tasks/tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) | Versioned state: memoized replay, long-poll snapshot, views follow the version, TUI without the tick | 1 | `brandon/claude-code-1` |
-| [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) | Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X) | — | `4099114+brandonbews/probe-2` |
 
 ## Ready
 
@@ -170,6 +169,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-1bap`](tasks/tuh-01M26H99BZBCHHZX7G98X41BAP.md) Design revision: the daemon is the live replica; git is touched only when the ledger changes (D2, D3/T6, D6, D9, T2, T4)
 - [`tuh-6hd8`](tasks/tuh-01M26H99G1YXYDCSBFNQEF6HD8.md) Read fast, start fast: batch blob reads, Go-side object IDs, bind-before-load
 - [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed
+- [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 
 ## Cancelled
 
