@@ -8,10 +8,11 @@ package main
 // the same-family widgets would drag in a second styling system for
 // code no one here can audit line by line (T1: boring Go).
 //
-// The widget renders as a delineated box — a header bar naming the
-// entry, the buffer lines behind a "> " gutter, and the hint on its
-// own fixed line below the box, so the hint never rides the end of
-// the typed text (dogfood capture, 2026-08-01).
+// The widget renders its buffer lines behind a "> " gutter inside the
+// prompt box (overlay.go, 2026-09-11 — until then it drew its own
+// header bar and hint in the footer's slot): the box carries the label
+// above and the hint on its own fixed line below, so the hint never
+// rides the end of the typed text (dogfood capture, 2026-08-01).
 //
 // Multi-line is a mode of this same widget (Brandon, 2026-07-31):
 // it adds hard wrapping at the box width, up/down movement across the
@@ -20,7 +21,6 @@ package main
 // caller's key there, never an edit.
 
 import (
-	"strings"
 	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,15 +45,12 @@ func editInput(s string, multiline bool) textInput {
 	return textInput{buf: buf, cursor: len(buf), multiline: multiline}
 }
 
-// inputInnerWidth is the wrap width inside the box: the terminal
-// width minus the two-cell "> " gutter and one cell for the cursor
-// glyph, so no rendered line ever exceeds the terminal. Zero width
-// (no WindowSizeMsg yet) falls back to the mockup's 80 columns.
-func inputInnerWidth(width int) int {
-	if width <= 0 {
-		width = 80
-	}
-	w := width - 3
+// inputInnerWidth is the wrap width of the buffer rows: the prompt
+// box's inner width (promptFrame, overlay.go) minus the two-cell "> "
+// gutter and one cell for the cursor glyph, so no rendered row ever
+// exceeds the box.
+func inputInnerWidth(inner int) int {
+	w := inner - 3
 	if w < 1 {
 		w = 1
 	}
@@ -61,8 +58,8 @@ func inputInnerWidth(width int) int {
 }
 
 // handleKey applies one editing key and returns the updated input.
-// width is the terminal width — up/down movement walks the same
-// wrapped rows view renders at that width. The caller owns the mode
+// inner is the prompt box's inner width — up/down movement walks the
+// same wrapped rows view renders at that width. The caller owns the mode
 // keys — submit (enter single-line, ctrl+s multi-line), esc, ctrl+c —
 // and never routes them here; everything else lands here, so no
 // screen hand-rolls editing.
@@ -75,7 +72,7 @@ func inputInnerWidth(width int) int {
 //	ESC b / ESC f       → KeyRunes{'b'/'f'}, Alt: true
 //	ESC backspace       → KeyBackspace, Alt: true
 //	CSI 1;3D / CSI 1;3C → KeyLeft / KeyRight, Alt: true
-func (in textInput) handleKey(k tea.KeyMsg, width int) textInput {
+func (in textInput) handleKey(k tea.KeyMsg, inner int) textInput {
 	switch k.Type {
 	case tea.KeyLeft:
 		if k.Alt {
@@ -94,9 +91,9 @@ func (in textInput) handleKey(k tea.KeyMsg, width int) textInput {
 	case tea.KeyEnd, tea.KeyCtrlE:
 		in.cursor = lineEnd(in.buf, in.cursor)
 	case tea.KeyUp:
-		in = in.moveRow(-1, inputInnerWidth(width))
+		in = in.moveRow(-1, inputInnerWidth(inner))
 	case tea.KeyDown:
-		in = in.moveRow(+1, inputInnerWidth(width))
+		in = in.moveRow(+1, inputInnerWidth(inner))
 	case tea.KeyBackspace:
 		if k.Alt { // ESC backspace: delete the previous word
 			return in.deleteRange(prevWordStart(in.buf, in.cursor), in.cursor)
@@ -291,48 +288,42 @@ func (in textInput) hint(verb string) string {
 	return "enter " + verb + " · esc cancels"
 }
 
-// view renders the input box at the terminal width: a header bar
-// carrying the label, the buffer behind the "> " gutter with the █
-// cursor glyph, and the dim hint on its own line below the box. Every
-// line fits the width; single-line mode scrolls a window over the
-// buffer instead of wrapping, so the box stays exactly three lines
-// tall no matter what is typed.
-func (in textInput) view(col colors, label, verb string, width int) string {
-	if width <= 0 {
-		width = 80
-	}
-	inner := inputInnerWidth(width)
-	var b strings.Builder
-	b.WriteString(barLine(col, col.rev+col.bold, " "+label, "", width))
-	b.WriteString("\n")
+// view renders the buffer rows behind the "> " gutter at the prompt
+// box's inner width (prompt overlay, 2026-09-11 — the label and the
+// hint are the box's lines now, overlay.go): one line per rendered
+// row, the █ cursor glyph on the cursor's row, and the index of that
+// row, which the box keeps in view when the rows outgrow it. Every
+// line fits inner; single-line mode scrolls a window over the buffer
+// instead of wrapping, so it is always exactly one line no matter what
+// is typed.
+func (in textInput) view(inner int) (lines []string, cursorRow int) {
+	w := inputInnerWidth(inner)
 	if in.multiline {
-		rows := in.rows(inner)
+		rows := in.rows(w)
 		cr := in.cursorRow(rows)
 		for i, r := range rows {
 			line := string(in.buf[r.start:r.end])
 			if i == cr {
 				line = string(in.buf[r.start:in.cursor]) + "█" + string(in.buf[in.cursor:r.end])
 			}
-			b.WriteString("> " + line + "\n")
+			lines = append(lines, "> "+line)
 		}
-	} else {
-		// The cursor glyph sits at the cursor; the window over the
-		// glyph-bearing line keeps it in view when the text outgrows
-		// the box.
-		disp := make([]rune, 0, len(in.buf)+1)
-		disp = append(disp, in.buf[:in.cursor]...)
-		disp = append(disp, '█')
-		disp = append(disp, in.buf[in.cursor:]...)
-		off := 0
-		if in.cursor+1 > inner {
-			off = in.cursor + 1 - inner
-		}
-		end := off + inner
-		if end > len(disp) {
-			end = len(disp)
-		}
-		b.WriteString("> " + string(disp[off:end]) + "\n")
+		return lines, cr
 	}
-	b.WriteString("  " + sgr(col, col.dim, ellipsize(in.hint(verb), width-2)) + "\n")
-	return b.String()
+	// The cursor glyph sits at the cursor; the window over the
+	// glyph-bearing line keeps it in view when the text outgrows the
+	// box.
+	disp := make([]rune, 0, len(in.buf)+1)
+	disp = append(disp, in.buf[:in.cursor]...)
+	disp = append(disp, '█')
+	disp = append(disp, in.buf[in.cursor:]...)
+	off := 0
+	if in.cursor+1 > w {
+		off = in.cursor + 1 - w
+	}
+	end := off + w
+	if end > len(disp) {
+		end = len(disp)
+	}
+	return []string{"> " + string(disp[off:end])}, 0
 }

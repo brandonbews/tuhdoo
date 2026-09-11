@@ -767,11 +767,20 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 		}
 	}
 
-	// Validation rides the quiet strip too.
+	// Validation is the prompt box's own (prompt overlay, 2026-09-11 —
+	// regenerated: it rode the quiet strip until then): the rejection
+	// replaces the hint line inside the box, red, the prompt stays open,
+	// and the strip behind stays clear.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}}, keyOf(tea.KeyEnter))
 	v = m.View()
-	if want := "\x1b[100m" + padBar(80, " title cannot be empty", "") + "\x1b[0m"; !strings.Contains(v, want) {
-		t.Errorf("validation strip missing %q; view:\n%q", want, v)
+	if want := "\x1b[90m│\x1b[0m \x1b[31mtitle cannot be empty\x1b[0m"; !strings.Contains(v, want) {
+		t.Errorf("validation missing from the box's hint line %q; view:\n%q", want, v)
+	}
+	if strings.Contains(v, "\x1b[100m") || strings.Contains(v, "enter captures") {
+		t.Errorf("validation still rides the strip, or the hint survives beside it; view:\n%q", v)
+	}
+	if m.mode != modeCapture {
+		t.Errorf("mode %d after the rejection, want the capture prompt still open", m.mode)
 	}
 
 	// Errors take the loud bar.
@@ -1176,10 +1185,10 @@ func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 	}
 }
 
-// The footer — and a live input prompt riding its slot — pins to the
-// bottom row whenever the height is known (chrome hierarchy,
-// 2026-08-03): a short body pads with blank lines to a full-height
-// frame, on all three screens. Before the first WindowSizeMsg the
+// The footer pins to the bottom row whenever the height is known
+// (chrome hierarchy, 2026-08-03), a live prompt overlaid or not: a
+// short body pads with blank lines to a full-height frame, on all
+// three screens. Before the first WindowSizeMsg the
 // footer floats after the body, as it always did. The invariant is
 // bubbletea's, not an abstract one: the renderer splits the view on \n
 // and drops overflow from the TOP, so a pinned frame must split into
@@ -1201,13 +1210,16 @@ func TestTopGoldenFooterPinned(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	bottom(t, m.View(), 40, "q quit")
-	// A live input prompt (priority, opened from a ready row) rides the
-	// same pinned slot: the widget's hint line is the bottom row.
+	// A live input prompt (priority, opened from a ready row) leaves the
+	// pinned frame alone (prompt overlay, 2026-09-11 — until then it
+	// rode the footer's slot): the legend keeps the bottom row and the
+	// box, hint included, sits over the list.
 	mp, _ := press(t, m, keyOf(tea.KeyDown), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if mp.mode != modePriority {
 		t.Fatalf("p on a ready row: mode %d, want modePriority", mp.mode)
 	}
-	bottom(t, mp.View(), 40, "enter submits · esc cancels")
+	bottom(t, mp.View(), 40, "q quit")
+	mustContain(t, mp.View(), "enter submits · esc cancels")
 	// History.
 	mh, _ := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	bottom(t, mh.View(), 40, "q quit")
@@ -1218,7 +1230,8 @@ func TestTopGoldenFooterPinned(t *testing.T) {
 	if md.mode != modeEditTitle {
 		t.Fatalf("enter on the title stop: mode %d, want modeEditTitle", md.mode)
 	}
-	bottom(t, md.View(), 40, "enter saves · esc cancels")
+	bottom(t, md.View(), 40, "q quit")
+	mustContain(t, md.View(), "enter saves · esc cancels")
 	// Full-height content — the terminal shorter than the list, so
 	// visibleChunks windows the body — keeps the same invariant: no
 	// pad, and still no line lost off the top.
@@ -1270,5 +1283,222 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 	// Window respects the height budget: head(2) + body(<=4) + foot(2).
 	if n := strings.Count(v, "\n"); n > 8 {
 		t.Errorf("view is %d lines, terminal is 8; view:\n%s", n, v)
+	}
+}
+
+// ---- the prompt overlay (2026-09-11): prompts in a centered box ----
+
+// Every prompt, from both screens, at 80x40 plain colors: the screen
+// behind is byte-identical to its no-prompt render outside the box
+// (the list or task view, legend included — nothing reflows), and the
+// box — label, rows, hint — sits centered at the computed position:
+// 76 wide at column 2, its rows starting at (40 − lines) / 2.
+func TestTopGoldenPromptOverlay(t *testing.T) {
+	esc := func(k tea.KeyType) tea.KeyMsg { return keyOf(k) }
+	r := func(c rune) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{c}} }
+	fromDetail := func(t *testing.T, m topModel, walk int) topModel {
+		m = openDetail(t, m, "t-flak")
+		for i := 0; i < walk; i++ {
+			m, _ = press(t, m, r('j'))
+		}
+		return m
+	}
+	tests := []struct {
+		name  string
+		setup func(t *testing.T, m topModel) topModel // the screen the prompt opens over
+		open  tea.KeyMsg
+		mode  int
+		box   []string // inner lines
+	}{
+		{"list priority", func(t *testing.T, m topModel) topModel {
+			m, _ = press(t, m, esc(tea.KeyDown)) // t-flor
+			return m
+		}, r('p'), modePriority, []string{
+			"priority t-flor (sweep the floor)", "> █", "enter submits · esc cancels"}},
+		{"list cancel", func(t *testing.T, m topModel) topModel {
+			m, _ = press(t, m, esc(tea.KeyDown), esc(tea.KeyDown)) // t-pars
+			return m
+		}, r('c'), modeConfirmCancel, []string{
+			"cancel t-pars (write the parser)?", "history stays on the ledger", "y/n"}},
+		{"list capture", func(t *testing.T, m topModel) topModel { return m },
+			r('i'), modeCapture, []string{
+				"capture (to inbox)", "> █", "enter captures · esc cancels"}},
+		{"task view answer", func(t *testing.T, m topModel) topModel {
+			m, _ = press(t, m, esc(tea.KeyEnter)) // the Needs Input row: t-lic, escalation preselected
+			return m
+		}, esc(tea.KeyEnter), modeAnswer, []string{
+			"answer · Which license?", "> █", "enter submits · esc cancels"}},
+		{"task view priority", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 0) },
+			r('p'), modePriority, []string{
+				"priority t-flak (investigate the flake)", "> █", "enter submits · esc cancels"}},
+		{"task view cancel", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 0) },
+			r('c'), modeConfirmCancel, []string{
+				"cancel t-flak (investigate the flake)?", "history stays on the ledger", "y/n"}},
+		{"task view title", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 0) },
+			esc(tea.KeyEnter), modeEditTitle, []string{
+				"title t-flak", "> investigate the flake█", "enter saves · esc cancels"}},
+		{"task view labels", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 2) },
+			esc(tea.KeyEnter), modeEditLabels, []string{
+				"labels t-flak (investigate the flake)", "> █", "enter saves · esc cancels"}},
+		{"task view description", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 3) },
+			esc(tea.KeyEnter), modeEditDesc, []string{
+				"description t-flak (investigate the flake)",
+				"> The parser test flakes on CI.", "> Find out why.█",
+				"ctrl+s saves · enter newline · esc cancels"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := newTopModel(newFakeSteering())
+			m.width, m.height = 80, 40
+			m = tt.setup(t, m)
+			before := m.View()
+			m, _ = press(t, m, tt.open)
+			if m.mode != tt.mode {
+				t.Fatalf("mode %d after opening, want %d", m.mode, tt.mode)
+			}
+			v := m.View()
+			box := plainBox(tt.box...)
+			assertOverlay(t, before, v, box, 80, 40)
+			top := (40 - len(box)) / 2
+			if row := []rune(strings.Split(v, "\n")[top]); len(row) < 3 || row[2] != '┌' {
+				t.Errorf("box top edge not at row %d column 2: %q", top, string(row))
+			}
+			if strings.Contains(v, "\x1b") {
+				t.Errorf("plain render leaked ANSI escapes:\n%q", v)
+			}
+			// esc closes the box and restores the exact no-prompt render.
+			m, _ = press(t, m, esc(tea.KeyEsc))
+			if after := m.View(); after != before {
+				t.Errorf("esc did not restore the no-prompt render.\ngot:\n%s\nwant:\n%s", after, before)
+			}
+		})
+	}
+}
+
+// The overlay with real colors over the list, the selection bar under
+// the box: the border is dim, the label bold, the hint dim — all
+// 16-color — and the selected row cut by the box ends its head in a
+// reset (no tint bleeds into the box) while its tail re-applies the
+// bar's bg, so the cells beside the box still read as the bar.
+func TestTopGoldenPromptOverlayStyled(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.col = ansiColors
+	m.col.selBG = "\x1b[48;5;236m"
+	m.width, m.height = 80, 40
+	m = moveTo(t, m, "t-park") // the ON HOLD row: row 20, under a 5-line box at rows 17–21
+	before := strings.Split(m.View(), "\n")
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	v := m.View()
+	lines := strings.Split(v, "\n")
+	rule := strings.Repeat("─", 74)
+	for _, want := range []string{
+		"\x1b[90m┌" + rule + "┐\x1b[0m",
+		"\x1b[90m│\x1b[0m \x1b[1mpriority t-park (polish the docs)\x1b[0m",
+		"\x1b[90m│\x1b[0m \x1b[90menter submits · esc cancels\x1b[0m",
+		"\x1b[90m└" + rule + "┘\x1b[0m",
+	} {
+		if !strings.Contains(v, want) {
+			t.Errorf("styled overlay missing %q; view:\n%q", want, v)
+		}
+	}
+	// Rows outside the box are untouched, bytes and all.
+	for i := range lines {
+		if (i < 17 || i > 21) && lines[i] != before[i] {
+			t.Errorf("row %d outside the box changed: %q → %q", i, before[i], lines[i])
+		}
+	}
+	// The selected row under the box.
+	sel := lines[20]
+	if !strings.HasPrefix(sel, "\x1b[48;5;236m▌ ") {
+		t.Fatalf("row 20 is not the selection bar: %q", sel)
+	}
+	if !strings.Contains(sel, "\x1b[0m\x1b[90m│\x1b[0m") {
+		t.Errorf("no reset between the bar's head and the box edge: %q", sel)
+	}
+	if !strings.HasSuffix(sel, "\x1b[48;5;236m  \x1b[0m") {
+		t.Errorf("bar tail beside the box lost its bg: %q", sel)
+	}
+	if got := ansi.Strip(sel); !strings.HasPrefix(got, "▌ │ ") || ansi.StringWidth(got) != 80 {
+		t.Errorf("row 20 cells = %q (%d wide), want the gutter, the box, the bar's tail at 80", got, ansi.StringWidth(got))
+	}
+	noFaint(t, "prompt overlay", v)
+}
+
+// A description longer than the box's cap scrolls inside the box: at
+// 80x10 the cap is six lines — two body rows — and the window keeps
+// the cursor row visible, at the end on open and at the head after
+// walking up; the frame stays ten lines throughout.
+func TestTopGoldenDescEditorScrollsInBox(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	h := m.snap.tasks["t-flak"]
+	h.Task.Description = "l1\nl2\nl3\nl4\nl5"
+	m.snap.tasks["t-flak"] = h
+	m.width, m.height = 80, 10
+	m = openDetail(t, m, "t-flak")
+	m, _ = press(t, m,
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+		keyOf(tea.KeyEnter))
+	if m.mode != modeEditDesc {
+		t.Fatalf("mode %d, want modeEditDesc", m.mode)
+	}
+	v := m.View()
+	if n := len(strings.Split(v, "\n")); n != 10 {
+		t.Errorf("frame is %d lines, want 10:\n%s", n, v)
+	}
+	box := 0
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, "│") || strings.Contains(l, "┌") || strings.Contains(l, "└") {
+			box++
+		}
+	}
+	if box != 6 {
+		t.Errorf("box is %d lines, want the 6-line cap at height 10:\n%s", box, v)
+	}
+	mustContain(t, v, "│ > l4", "│ > l5█", "ctrl+s saves")
+	if strings.Contains(v, "> l1") || strings.Contains(v, "> l3") {
+		t.Errorf("rows above the window leaked:\n%s", v)
+	}
+	// Walk the cursor to the top row: the window follows it.
+	for i := 0; i < 4; i++ {
+		m, _ = press(t, m, keyOf(tea.KeyUp))
+	}
+	v = m.View()
+	mustContain(t, v, "│ > l1█", "│ > l2")
+	if strings.Contains(v, "> l3") || strings.Contains(v, "> l5") {
+		t.Errorf("window did not follow the cursor up:\n%s", v)
+	}
+}
+
+// A terminal too small for a bordered box renders the borderless
+// fallback: label, rows, hint at full width, no border glyphs, no line
+// wider than the terminal, no panic — at 18 columns and at 5 rows.
+func TestTopGoldenPromptSmallTerminal(t *testing.T) {
+	for _, tt := range []struct{ width, height int }{{18, 40}, {80, 5}, {18, 5}} {
+		m := newTopModel(newFakeSteering())
+		m.width, m.height = tt.width, tt.height
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+		m, _ = press(t, m, runes("idea")...)
+		v := m.View()
+		for _, glyph := range []string{"┌", "│", "└"} {
+			if strings.Contains(v, glyph) {
+				t.Errorf("%dx%d: fallback drew a border %q:\n%s", tt.width, tt.height, glyph, v)
+			}
+		}
+		mustContain(t, v, "capture (to inbox)", "> idea█")
+		// The box's own lines fit the terminal. (The list behind is not
+		// this test's subject: at 18 columns its rows already overflow.)
+		for _, l := range strings.Split(v, "\n") {
+			if !strings.Contains(l, "capture") && !strings.Contains(l, "> idea") {
+				continue
+			}
+			if w := ansi.StringWidth(l); w > tt.width {
+				t.Errorf("%dx%d: box line is %d cells wide: %q", tt.width, tt.height, w, l)
+			}
+		}
+		if n := len(strings.Split(v, "\n")); n != tt.height {
+			t.Errorf("%dx%d: frame is %d lines:\n%s", tt.width, tt.height, n, v)
+		}
 	}
 }

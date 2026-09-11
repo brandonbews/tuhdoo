@@ -326,12 +326,13 @@ type topModel struct {
 	inFlight bool
 	backoff  time.Duration
 
-	mode    int
-	back    int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
-	input   textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
-	target  topRow    // row a pending answer/priority/cancel/edit applies to
-	editWas string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
-	status  string    // one-line result of the last action
+	mode     int
+	back     int       // mode an input mode returns to on esc/submit: the list or the detail it was opened from
+	input    textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
+	target   topRow    // row a pending answer/priority/cancel/edit applies to
+	editWas  string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
+	inputErr string    // a submit rejection ("title cannot be empty"): the prompt box's hint line, red, while the prompt stays open (prompt overlay, 2026-09-11); set by submit, cleared when the prompt closes
+	status   string    // one-line result of the last action
 
 	detailID     string   // task shown by modeDetail
 	detailScroll int      // first visible body line in modeDetail
@@ -504,11 +505,16 @@ func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 // first press selects, the second finds the row selected. The wheel
 // falls out for free: the list scrolls by moving the cursor (windowing
 // follows it), the detail scrolls its line window. Input modes ignore
-// the mouse entirely, so a stray click never disturbs a pending answer
-// or confirm. Watch mode normally never sees a MouseMsg — tracking is
-// armed-only (see runTUI) — but if one arrives anyway, openRow keeps
-// the read-only contract: a disarmed pane opens detail, never input.
+// the mouse entirely — rowAt and detailStopAt are never consulted while
+// a prompt box is open (prompt overlay, 2026-09-11), so a click cannot
+// act on the row under the box or disturb a pending answer or confirm.
+// Watch mode normally never sees a MouseMsg — tracking is armed-only
+// (see runTUI) — but if one arrives anyway, openRow keeps the read-only
+// contract: a disarmed pane opens detail, never input.
 func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if m.mode != modeNav && m.mode != modeDetail {
+		return m, nil
+	}
 	wheelUp := msg.Button == tea.MouseButtonWheelUp
 	wheelDown := msg.Button == tea.MouseButtonWheelDown
 	click := msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionPress
@@ -632,7 +638,7 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "y":
 			return m.submit()
 		case "n", "esc":
-			m.mode, m.input = m.back, textInput{}
+			m.mode, m.input, m.inputErr = m.back, textInput{}, ""
 		case "ctrl+c":
 			return m, tea.Quit
 		}
@@ -642,7 +648,7 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		m.mode, m.input = m.back, textInput{}
+		m.mode, m.input, m.inputErr = m.back, textInput{}, ""
 		return m, nil
 	case "enter":
 		if !m.input.multiline {
@@ -653,8 +659,17 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.submit()
 		}
 	}
-	m.input = m.input.handleKey(k, m.width)
+	// The widget wraps and walks rows at the box's inner width — the
+	// width the box renders them at (prompt overlay, 2026-09-11).
+	m.input = m.input.handleKey(k, m.promptInner())
 	return m, nil
+}
+
+// promptInner is the prompt box's inner width at the current terminal
+// size: the one width the widget edits at and the box renders at.
+func (m topModel) promptInner() int {
+	_, inner, _ := promptFrame(m.renderWidth(), m.height)
+	return inner
 }
 
 // updateDetail: the armed task view steers the viewed task in place
@@ -662,7 +677,7 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 // trips): the focus ring walks every actionable field (field focus
 // ring, 2026-08-02 — retiring the undiscoverable e/E chords), enter
 // opens the focused stop's editor, p reprioritizes, c cancels, all
-// with the same footers and confirms as the list. Watch mode keeps
+// with the same prompts and confirms as the list. Watch mode keeps
 // the read-only contract: no focus, no input, ↑/↓ and j/k scroll, esc
 // steps back, q and ctrl+c quit.
 //
@@ -914,13 +929,17 @@ func (m topModel) selected() (topRow, bool) {
 }
 
 // submit turns the pending input into one steering write, run as a
-// command so a slow daemon never freezes the view loop.
+// command so a slow daemon never freezes the view loop. A rejection
+// keeps the prompt open and says why on the box's hint line (inputErr
+// — prompt overlay, 2026-09-11; until then the status strip behind),
+// so the screen under the box stays exactly the no-prompt render.
 func (m topModel) submit() (tea.Model, tea.Cmd) {
 	api, target, input := m.api, m.target, strings.TrimSpace(m.input.String())
+	m.inputErr = ""
 	switch m.mode {
 	case modeAnswer:
 		if input == "" {
-			m.status = "answer cannot be empty"
+			m.inputErr = "answer cannot be empty"
 			return m, nil
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "answering…"
@@ -930,7 +949,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 	case modePriority:
 		p, err := strconv.Atoi(input)
 		if err != nil {
-			m.status = fmt.Sprintf("priority must be an integer, got %q", input)
+			m.inputErr = fmt.Sprintf("priority must be an integer, got %q", input)
 			return m, nil
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "updating…"
@@ -944,7 +963,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 	case modeCapture:
 		if input == "" {
-			m.status = "title cannot be empty"
+			m.inputErr = "title cannot be empty"
 			return m, nil
 		}
 		m.mode, m.input, m.status = m.back, textInput{}, "capturing…"
@@ -953,7 +972,7 @@ func (m topModel) submit() (tea.Model, tea.Cmd) {
 		}
 	case modeEditTitle:
 		if input == "" {
-			m.status = "title cannot be empty"
+			m.inputErr = "title cannot be empty"
 			return m, nil
 		}
 		if input == m.editWas { // unchanged: close without writing
@@ -1372,9 +1391,10 @@ func (m topModel) detailRevealScroll() int {
 
 // detailWindow is how many body lines fit: terminal height minus the
 // lines detailView actually prints around the body — the header block
-// (with its optional status line), the blank separator, and the footer,
-// which is taller while an input box is open. Counting the rendered
-// strings keeps the window honest against any footer shape.
+// (with its optional status line), the blank separator, and the
+// footer. Counting the rendered strings keeps the window honest
+// against any footer shape. An open prompt changes nothing here: it
+// is an overlay over this same window (prompt overlay, 2026-09-11).
 func (m topModel) detailWindow() int {
 	width := m.renderWidth()
 	w := m.height - strings.Count(m.listHead(width), "\n") - 1 -
@@ -1431,7 +1451,8 @@ func (m topModel) detailView(body []string) string {
 // view on \n — a trailing newline is an extra (empty) line — and drops
 // any overflow from the TOP, so an unstripped final newline costs the
 // header row. Before the first WindowSizeMsg (height <= 0) the footer
-// floats unpadded and the frame keeps its trailing newline.
+// floats unpadded and the frame keeps its trailing newline. The exact
+// line count is also what overlay composites the prompt box over.
 func pinFrame(content string, pad int, footer string, height int) string {
 	if height > 0 {
 		if pad > 0 {
@@ -1442,18 +1463,15 @@ func pinFrame(content string, pad int, footer string, height int) string {
 	return content + footer
 }
 
-// detailFooter is the task view's bottom line: the live input prompt
-// while one is open (so answering reads the same from either screen),
-// else the same footer bar as the list — the armed legend advertises
-// steering; watch mode keeps the read-only legend. An armed view
-// always has a focus ring, so j/k always read "move"; "enter edit"
-// covers the field stops, while the NEEDS INPUT bar keeps carrying
-// "enter answer" for its own rows (the section-bar convention the
-// dashboard uses).
+// detailFooter is the task view's bottom line: the same footer bar as
+// the list — the armed legend advertises steering; watch mode keeps
+// the read-only legend. It renders the legend whether or not a prompt
+// is open (prompt overlay, 2026-09-11 — until then the live prompt
+// rode here in the legend's slot). An armed view always has a focus
+// ring, so j/k always read "move"; "enter edit" covers the field
+// stops, while the NEEDS INPUT bar keeps carrying "enter answer" for
+// its own rows (the section-bar convention the dashboard uses).
 func (m topModel) detailFooter() string {
-	if f := m.inputFooter(); f != "" {
-		return f
-	}
 	col := m.col
 	width := m.renderWidth()
 	legend := [][2]string{{"↑/↓ (j/k)", "scroll"}, {"esc", "back"}, {"q", "quit"}}
@@ -1470,10 +1488,33 @@ func (m topModel) detailFooter() string {
 	return legendLine(col, legend, "", width) + "\n"
 }
 
+// View renders the screen: the list or the task view, and — while an
+// input mode is live — the prompt box composited over it (prompt
+// overlay, 2026-09-11). The screen under the box is exactly what
+// renders with no prompt open, legend included: the row or task being
+// acted on stays in view, and nothing behind reflows when a prompt
+// opens or closes.
 func (m topModel) View() string {
-	// The detail screen also owns the frame while an input mode opened
-	// from it is live: the viewed task stays on screen, the prompt rides
-	// the footer — same shape as answering from the list.
+	base := m.screenView()
+	p, open := m.prompt()
+	if !open {
+		return base
+	}
+	width := m.renderWidth()
+	box := promptBox(m.col, p, width, m.height)
+	height := m.height
+	if height <= 0 {
+		// No WindowSizeMsg yet: the frame floats unpadded (pinFrame), so
+		// the box centers over however many lines it has.
+		height = max(strings.Count(base, "\n")+1, len(box))
+	}
+	return overlay(base, box, width, height)
+}
+
+// screenView renders the screen with no prompt on it: the task view
+// while modeDetail is live — or an input mode opened from it, so the
+// viewed task stays on screen under the box — else the list.
+func (m topModel) screenView() string {
 	if m.mode == modeDetail || (m.mode != modeNav && m.back == modeDetail) {
 		if body := m.detailBody(); body != nil {
 			return m.detailView(body)
@@ -1493,10 +1534,9 @@ func (m topModel) View() string {
 	foot := "\n" + m.footerView(width)
 	headN, footN := strings.Count(head, "\n"), strings.Count(foot, "\n")
 	body := joinChunks(visibleChunks(m.listChunks(width), m.height, headN, footN))
-	// The footer — or the live input prompt riding in its place — pins
-	// to the bottom row (chrome hierarchy, 2026-08-03). rowAt needs no
-	// padding awareness: the pad sits below every row chunk, where
-	// clicks already miss.
+	// The footer pins to the bottom row (chrome hierarchy, 2026-08-03).
+	// rowAt needs no padding awareness: the pad sits below every row
+	// chunk, where clicks already miss.
 	return pinFrame(head+body, m.height-headN-footN-strings.Count(body, "\n"), foot, m.height)
 }
 
@@ -2103,48 +2143,52 @@ func joinChunks(cs []chunk) string {
 	return b.String()
 }
 
-// inputFooter is the active input prompt, or "" when no input mode is
-// live — shared by the list and detail footers so each steering write
-// reads identically from either screen. Text entry renders through the
-// shared widget's box (textinput.go): header bar naming the entry, the
-// buffer with the cursor, and the hint fixed on its own line; only the
-// cancel y/n confirm — not a text input — keeps its one-liner.
-func (m topModel) inputFooter() string {
-	col := m.col
+// prompt is the open input mode's box content, or false when no input
+// mode is live — one source for every screen, so each steering write
+// reads identically whether it was opened from the list or the task
+// view (prompt overlay, 2026-09-11; until then this was inputFooter,
+// the prompt riding the footer's slot). Text entry is the shared
+// widget's rows (textinput.go) under the label, the hint fixed below;
+// only the cancel y/n confirm — not a text input — carries a sentence
+// as its body.
+func (m topModel) prompt() (promptContent, bool) {
+	inner := m.promptInner()
+	text := func(label, verb string) promptContent {
+		rows, cr := m.input.view(inner)
+		return promptContent{label: label, body: rows, cursor: cr, hint: m.input.hint(verb), err: m.inputErr}
+	}
+	short, title := event.ShortID(m.target.task.ID), oneLine(m.target.task.Title)
 	switch m.mode {
 	case modeAnswer:
-		return m.input.view(col, "answer · "+oneLine(m.target.esc.Question), "submits", m.width)
+		return text("answer · "+oneLine(m.target.esc.Question), "submits"), true
 	case modePriority:
-		label := fmt.Sprintf("priority %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
-		return m.input.view(col, label, "submits", m.width)
+		return text(fmt.Sprintf("priority %s (%s)", short, title), "submits"), true
 	case modeConfirmCancel:
-		return wrapTo(fmt.Sprintf("%scancel%s %s (%s)? y/n %s— history stays on the ledger%s\n",
-			col.bold, col.reset, event.ShortID(m.target.task.ID), oneLine(m.target.task.Title),
-			col.dim, col.reset), m.width)
+		// The confirm copy still ends "history stays on the ledger"
+		// (status-vocabulary revision, 2026-08-01): cancel is terminal,
+		// never a deletion.
+		body := strings.Split(strings.TrimRight(wrapTo("history stays on the ledger", inner), "\n"), "\n")
+		return promptContent{label: fmt.Sprintf("cancel %s (%s)?", short, title), body: body, cursor: -1, hint: "y/n"}, true
 	case modeCapture:
 		// No y/n: capture is cheap by design, and cancel reverses it.
-		return m.input.view(col, "capture (to inbox)", "captures", m.width)
+		return text("capture (to inbox)", "captures"), true
 	case modeEditTitle:
-		// The box carries the title being edited; the label only needs
-		// to name whose it is.
-		return m.input.view(col, "title "+event.ShortID(m.target.task.ID), "saves", m.width)
+		// The rows carry the title being edited; the label only needs to
+		// name whose it is.
+		return text("title "+short, "saves"), true
 	case modeEditDesc:
-		label := fmt.Sprintf("description %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
-		return m.input.view(col, label, "saves", m.width)
+		return text(fmt.Sprintf("description %s (%s)", short, title), "saves"), true
 	case modeEditLabels:
-		label := fmt.Sprintf("labels %s (%s)", event.ShortID(m.target.task.ID), oneLine(m.target.task.Title))
-		return m.input.view(col, label, "saves", m.width)
+		return text(fmt.Sprintf("labels %s (%s)", short, title), "saves"), true
 	}
-	return ""
+	return promptContent{}, false
 }
 
-// footerView is the footer bar (key legend left, done tally right), or
-// the active input prompt, full-width like the header.
+// footerView is the footer bar (key legend left, done tally right),
+// full-width like the header — rendered whether or not a prompt is
+// open (prompt overlay, 2026-09-11).
 func (m topModel) footerView(width int) string {
 	col := m.col
-	if f := m.inputFooter(); f != "" {
-		return f
-	}
 	if m.history {
 		// No steering keys and no done tally: the DONE bar above
 		// already carries the count.
