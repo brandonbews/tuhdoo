@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 4 ready · 1 blocked · 7 on hold · 4 inbox · 118 done · 33 cancelled
+1 in progress · 3 ready · 1 blocked · 7 on hold · 5 inbox · 118 done · 33 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) | The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-k0zx`](tasks/tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) | The store as live replica: in-memory head and tree, single ref mover, persistent index, write only what changed | 1 | `go` `store` `gitx` `syncer` `daemon` |
 | [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `go` `daemon` `audit-finding` |
 | [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
@@ -43,6 +44,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-hv8a`](tasks/tuh-01M10ZA2VCJ59WWYZG58RXHV8A.md) Grill: internal-docs tiering — decision records vs living mirrors vs stale artifacts
 - [`tuh-s5fw`](tasks/tuh-01M11XDA6ST74WD1JWCY0GS5FW.md) TUI pane grew to 3.4GB RSS overnight; a longer-lived pane sits at 21MB
 - [`tuh-8x1s`](tasks/tuh-01M26JSHKSEQ0MJYBK1NK18X1S.md) TestMCPShimStdinDeathNamesStreamAndBytes fails locally under Go 1.27 (CI 1.26 green): stdin byte count 64 vs expected 154
+- [`tuh-vcmn`](tasks/tuh-01M27FW5A3YG8XZYEH0KDSVCMN.md) Batch blob writes and the gate's tree build: hash-object --stdin-paths and a second private index for GatePush
 
 ## Done
 
