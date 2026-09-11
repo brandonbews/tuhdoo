@@ -261,9 +261,14 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			}
 			t.Status = *p.Status
 		}
-		if p.Priority != nil {
-			u.Fields = append(u.Fields, "priority "+priorityLabel(t.Priority)+"→"+priorityLabel(p.Priority))
-			t.Priority = p.Priority
+		if p.Priority.Present {
+			// v4 tri-state (2026-09-11): the key was sent, so this is
+			// an edit — a number sets, a nil Value (explicit null)
+			// clears back to unprioritized, and the history line reads
+			// "priority 2→none". A v3 null never reaches here: the
+			// upcaster drops it (it meant unchanged).
+			u.Fields = append(u.Fields, "priority "+priorityLabel(t.Priority)+"→"+priorityLabel(p.Priority.Value))
+			t.Priority = p.Priority.Value
 		}
 		if p.Labels != nil {
 			u.Fields = append(u.Fields, listDelta("labels", t.Labels, *p.Labels, func(v string) string { return v }))

@@ -1021,6 +1021,71 @@ func TestV2PriorityZeroUpcastsToUnprioritized(t *testing.T) {
 	})
 }
 
+// task.updated v4 (2026-09-11, clearable priority): the priority key is
+// tri-state — absent = unchanged, explicit null = clear, number = set.
+// v3 spent null on "unchanged", so a stored v3 null must keep meaning
+// that (the v3→v4 upcaster drops the key in memory; bytes untouched),
+// while a v4 null clears the set priority and the history line records
+// the clear like any other scalar edit.
+func TestTaskUpdatedPriorityTriState(t *testing.T) {
+	rawUpdate := func(v int, data string) event.Event {
+		return event.Event{ID: tick(t, 2), Type: event.TypeTaskUpdated, V: v,
+			Actor: "sarah", Machine: "m-test", Task: "t1",
+			Data: json.RawMessage(data)}
+	}
+	tests := []struct {
+		name       string
+		update     event.Event
+		wantPrio   *int
+		wantFields []string
+	}{
+		{"v3 null reads unchanged", rawUpdate(3, `{"priority":null}`), num(2), nil},
+		{"v3 number sets", rawUpdate(3, `{"priority":4}`), num(4), []string{"priority 2→4"}},
+		{"v4 absent reads unchanged", rawUpdate(4, `{"title":"after"}`), num(2), []string{"retitled"}},
+		{"v4 null clears", rawUpdate(4, `{"priority":null}`), nil, []string{"priority 2→none"}},
+		{"v4 number sets", rawUpdate(4, `{"priority":0}`), num(0), []string{"priority 2→0"}},
+		{"typed clear encodes as v4 null",
+			evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Priority: event.ClearPriority()}),
+			nil, []string{"priority 2→none"}},
+		{"typed unchanged encodes as v4 absent",
+			evt(t, 2, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Title: st("after")}),
+			num(2), []string{"retitled"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			events := []event.Event{
+				evt(t, 1, event.TypeTaskCreated, "brandon", "t1",
+					event.TaskCreated{Title: "before", Priority: num(2)}),
+				tt.update,
+			}
+			s := replay(t, events, nil)
+			if got := s.Tasks["t1"].Priority; !reflect.DeepEqual(got, tt.wantPrio) {
+				t.Errorf("priority = %s, want %s", priorityLabel(got), priorityLabel(tt.wantPrio))
+			}
+			want := []Update{{ID: tick(t, 2), Task: "t1", Actor: "sarah", Fields: tt.wantFields}}
+			if !reflect.DeepEqual(s.Updates, want) {
+				t.Errorf("Updates = %+v, want %+v", s.Updates, want)
+			}
+		})
+	}
+}
+
+// A task.updated from a binary newer than this one (v5) stops replay
+// with ErrCannotReplay — the T3 fail-safe, never a guessed reading.
+func TestTaskUpdatedV5FailsSafe(t *testing.T) {
+	future := evt(t, 2, event.TypeTaskUpdated, "sarah", "t1",
+		event.TaskUpdated{Priority: event.SetPriority(1)})
+	if future.V != 4 {
+		t.Fatalf("task.updated writes v%d, want v4", future.V)
+	}
+	future.V = 5
+	events := []event.Event{taskCreated(t, 1, "t1", "fix login"), future}
+	_, err := NewReplayer().Replay(Input{Events: events, Now: testNow})
+	if !errors.Is(err, ErrCannotReplay) {
+		t.Fatalf("err = %v, want ErrCannotReplay", err)
+	}
+}
+
 // ClosedAt/ClosedBy (2026-08-02, T5 read parity / history view): the
 // event *entering* a terminal status is the closing event; leaving
 // terminal clears the stamp; a task created directly terminal (the B12
@@ -1132,7 +1197,7 @@ func TestUpdateHistoryEntries(t *testing.T) {
 		want   []string
 	}{
 		{"scalars capture old to new",
-			event.TaskUpdated{Status: st(StatusHeld), Priority: num(2)},
+			event.TaskUpdated{Status: st(StatusHeld), Priority: event.SetPriority(2)},
 			[]string{"status open→held", "priority 5→2"}},
 		{"text fields read name-only",
 			event.TaskUpdated{Title: st("after"), Description: st("new body")},
@@ -1144,7 +1209,7 @@ func TestUpdateHistoryEntries(t *testing.T) {
 			event.TaskUpdated{Labels: list("web", "go")},
 			[]string{"labels edited"}},
 		{"multi-field edit is one entry, payload field order",
-			event.TaskUpdated{Title: st("after"), Priority: num(9), Labels: list("go")},
+			event.TaskUpdated{Title: st("after"), Priority: event.SetPriority(9), Labels: list("go")},
 			[]string{"retitled", "priority 5→9", "labels −web"}},
 		{"field-less update still records the edit",
 			event.TaskUpdated{},
@@ -1173,8 +1238,8 @@ func TestUpdateHistoryEntries(t *testing.T) {
 func TestUpdateHistoryEntriesChain(t *testing.T) {
 	events := []event.Event{
 		taskCreated(t, 1, "t1", "fix login"),
-		evt(t, 2, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Priority: num(2)}),
-		evt(t, 3, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Priority: num(7)}),
+		evt(t, 2, event.TypeTaskUpdated, "brandon", "t1", event.TaskUpdated{Priority: event.SetPriority(2)}),
+		evt(t, 3, event.TypeTaskUpdated, "sarah", "t1", event.TaskUpdated{Priority: event.SetPriority(7)}),
 	}
 	s := replay(t, events, nil)
 	want := []Update{

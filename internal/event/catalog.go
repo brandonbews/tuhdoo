@@ -47,9 +47,18 @@ const (
 // upcasters translate old semantics faithfully: 0 (v2's "default,
 // unprioritized") lifts to null; nonzero values carry through
 // numerically (internal/core/upcast.go).
+// task.updated moved to v4 on 2026-09-11 (clearable priority): the
+// priority key becomes tri-state — absent means "unchanged", an
+// explicit null means "clear back to unprioritized", a number sets.
+// v3 spent null on "unchanged", so "clear" and "leave alone" were the
+// same bytes and a set priority could not be cleared by anyone,
+// anywhere. Every other field keeps v3's null-means-unchanged. The
+// v3→v4 upcaster drops a null priority key in memory (v3 null meant
+// unchanged), so old events keep replaying to the state they always
+// had (internal/core/upcast.go). task.created is untouched at v3.
 var Versions = map[string]int{
 	TypeTaskCreated:        3,
-	TypeTaskUpdated:        3,
+	TypeTaskUpdated:        4,
 	TypeClaimMade:          1,
 	TypeClaimConfirmed:     1,
 	TypeClaimReleased:      1,
@@ -75,7 +84,9 @@ const (
 // Payload structs. Fields deliberately carry no omitempty: every known
 // field is always present in the encoded payload, which keeps the
 // canonical bytes of a payload a function of its values alone. A nil
-// slice or pointer encodes as null, meaning "none"/"unchanged".
+// slice or pointer encodes as null, meaning "none"/"unchanged". The
+// one exception is TaskUpdated.Priority (v4), whose absence is itself
+// a value — see PriorityChange.
 //
 // Each struct has an Unknown map holding payload fields this binary does
 // not recognize, so decoded payloads re-encode byte-identically.
@@ -100,16 +111,58 @@ type TaskCreated struct {
 }
 
 // TaskUpdated is the payload of "task.updated". Only changed fields are
-// non-null; null means "unchanged".
+// non-null; null means "unchanged" — except Priority, which since v4
+// (2026-09-11) is tri-state: absent means unchanged, an explicit null
+// clears, a number sets (PriorityChange).
 type TaskUpdated struct {
-	Title       *string   `json:"title"`
-	Description *string   `json:"description"`
-	Status      *string   `json:"status"`
-	Priority    *int      `json:"priority"`
-	Labels      *[]string `json:"labels"`
-	DependsOn   *[]string `json:"depends_on"`
+	Title       *string        `json:"title"`
+	Description *string        `json:"description"`
+	Status      *string        `json:"status"`
+	Priority    PriorityChange `json:"priority,omitzero"`
+	Labels      *[]string      `json:"labels"`
+	DependsOn   *[]string      `json:"depends_on"`
 
 	Unknown map[string]json.RawMessage `json:"-"`
+}
+
+// PriorityChange is task.updated's tri-state priority field (v4,
+// 2026-09-11). On the wire: key absent = unchanged, explicit null =
+// clear back to unprioritized, number = set. A plain *int cannot say
+// "absent" (nil marshals as null), so this small value type carries
+// presence explicitly: the zero value is "unchanged" and omitzero
+// keeps it off the wire; Present with a nil Value is "clear"; Present
+// with a Value is "set". Build one with SetPriority or ClearPriority.
+type PriorityChange struct {
+	Present bool
+	Value   *int
+}
+
+// SetPriority is the "set to n" change.
+func SetPriority(n int) PriorityChange { return PriorityChange{Present: true, Value: &n} }
+
+// ClearPriority is the "clear back to unprioritized" change.
+func ClearPriority() PriorityChange { return PriorityChange{Present: true} }
+
+// IsZero reports "unchanged", which encoding/json's omitzero uses to
+// leave the key off the wire.
+func (c PriorityChange) IsZero() bool { return !c.Present }
+
+// MarshalJSON emits null for clear and the number for set; the
+// unchanged case never reaches here (omitzero drops the key first).
+func (c PriorityChange) MarshalJSON() ([]byte, error) {
+	if c.Value == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(*c.Value)
+}
+
+// UnmarshalJSON marks the key present; null leaves Value nil (clear).
+// encoding/json calls this for a JSON null too, because the field is a
+// value type, not a pointer — that is the whole reason it is one.
+func (c *PriorityChange) UnmarshalJSON(b []byte) error {
+	c.Present = true
+	c.Value = nil
+	return json.Unmarshal(b, &c.Value)
 }
 
 // ClaimMade is the payload of "claim.made". The claimed task and the
@@ -378,7 +431,10 @@ func marshalWithUnknown(known any, unknown map[string]json.RawMessage) ([]byte, 
 // splitUnknown unmarshals payload bytes into the known fields of dst (a
 // pointer to an alias struct) and returns the fields dst has no place
 // for. Known keys are discovered by re-marshaling dst: payload structs
-// carry no omitempty, so every known key appears.
+// carry no omitempty, so every known key appears. The one omitzero
+// field (TaskUpdated.Priority) is safe here too: it is dropped from the
+// re-marshal only when the input had no such key, so it never lands in
+// the unknown set.
 func splitUnknown(b []byte, dst any) (map[string]json.RawMessage, error) {
 	if err := json.Unmarshal(b, dst); err != nil {
 		return nil, err

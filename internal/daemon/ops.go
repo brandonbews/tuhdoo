@@ -104,17 +104,36 @@ type createTaskItem struct {
 }
 
 type updateTaskReq struct {
-	Title       *string   `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
-	Description *string   `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
-	Status      *string   `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
-	Priority    *int      `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. A set priority cannot be cleared back to unprioritized"`
-	Labels      *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
-	DependsOn   *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
+	Title       *string `json:"title,omitempty" jsonschema:"new title; omit to leave unchanged"`
+	Description *string `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
+	Status      *string `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
+	Priority    *int    `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. To clear a set priority back to unprioritized, send clear_priority instead"`
+	// ClearPriority (2026-09-11) is the request-side spelling of the
+	// v4 explicit-null priority: a separate flag rather than a
+	// nullable priority field, because on this JSON surface too a
+	// null *int is indistinguishable from an omitted one.
+	ClearPriority bool      `json:"clear_priority,omitempty" jsonschema:"true clears a set priority back to unprioritized (the task then sorts after every prioritized one); cannot be combined with priority"`
+	Labels        *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
+	DependsOn     *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
 }
 
 func (r updateTaskReq) empty() bool {
 	return r.Title == nil && r.Description == nil && r.Status == nil &&
-		r.Priority == nil && r.Labels == nil && r.DependsOn == nil
+		r.Priority == nil && !r.ClearPriority && r.Labels == nil && r.DependsOn == nil
+}
+
+// priorityChange maps the request's two priority inputs onto the v4
+// tri-state payload field: clear_priority → explicit null, priority →
+// number, neither → key absent (unchanged). Both set is rejected by
+// opUpdateTask before this runs.
+func (r updateTaskReq) priorityChange() event.PriorityChange {
+	switch {
+	case r.ClearPriority:
+		return event.ClearPriority()
+	case r.Priority != nil:
+		return event.SetPriority(*r.Priority)
+	}
+	return event.PriorityChange{}
 }
 
 type finishRunReq struct {
@@ -251,6 +270,10 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 	if req.empty() {
 		return taskJSON{}, opErrf(http.StatusBadRequest, "no fields to update")
 	}
+	if req.Priority != nil && req.ClearPriority {
+		return taskJSON{}, opErrf(http.StatusBadRequest,
+			"priority and clear_priority are mutually exclusive: send one or the other")
+	}
 	if req.Status != nil {
 		switch *req.Status {
 		case core.StatusOpen, core.StatusInbox, core.StatusHeld,
@@ -288,7 +311,7 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 		Title:       req.Title,
 		Description: req.Description,
 		Status:      req.Status,
-		Priority:    req.Priority,
+		Priority:    req.priorityChange(),
 		Labels:      req.Labels,
 		DependsOn:   req.DependsOn,
 	})

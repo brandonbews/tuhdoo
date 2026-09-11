@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/brandonbews/tuhdoo/internal/event"
@@ -173,12 +174,13 @@ func runCreate(args []string) int {
 
 func runUpdate(args []string) int {
 	const use = `usage: tuhdoo update <id> [--title <t>] [--desc <text>|--desc -]
-                     [--priority <n>] [--status open|inbox|held|done|cancelled]
+                     [--priority <n>|--priority none]
+                     [--status open|inbox|held|done|cancelled]
                      [--labels a,b] [--depends-on <ids>] [--as <human>]
 (list flags are full replacements; an empty value clears the list;
- --priority is P0-highest: 0 is most urgent, and a set priority cannot
- be cleared back to none; --status open promotes/resumes, --status held
- pauses — promotion from inbox deserves a real description in the same breath)`
+ --priority is P0-highest: 0 is most urgent, and --priority none clears
+ a set priority; --status open promotes/resumes, --status held pauses —
+ promotion from inbox deserves a real description in the same breath)`
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		fmt.Fprintln(os.Stderr, use)
 		return 1
@@ -186,12 +188,12 @@ func runUpdate(args []string) int {
 	id := args[0]
 	fs := flag.NewFlagSet("tuhdoo update", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	var title, desc, status, labels, dependsOn, as string
-	var priority int
+	var title, desc, status, priority, labels, dependsOn, as string
 	fs.StringVar(&title, "title", "", "")
 	fs.StringVar(&desc, "desc", "", "")
 	fs.StringVar(&status, "status", "", "")
-	fs.IntVar(&priority, "priority", 0, "")
+	// A string, not an int: "none" is the clear form (2026-09-11).
+	fs.StringVar(&priority, "priority", "", "")
 	fs.StringVar(&labels, "labels", "", "")
 	fs.StringVar(&dependsOn, "depends-on", "", "")
 	fs.StringVar(&as, "as", "", "")
@@ -237,7 +239,20 @@ func runUpdate(args []string) int {
 		body["description"] = description
 	}
 	if set["priority"] {
-		body["priority"] = priority
+		// --priority none travels as clear_priority: the wire cannot
+		// say "set to none" with a nullable number (task.updated v4
+		// spends null on exactly that, but the HTTP body keeps the two
+		// intents as two keys).
+		if priority == "none" {
+			body["clear_priority"] = true
+		} else {
+			n, err := strconv.Atoi(priority)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "tuhdoo update: --priority wants an integer or none, got %q\n", priority)
+				return 1
+			}
+			body["priority"] = n
+		}
 	}
 	if set["status"] {
 		body["status"] = status

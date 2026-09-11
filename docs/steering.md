@@ -76,7 +76,7 @@ Add or remove edges with `tuhdoo update <id> --depends-on <ids>` (the list repla
 
 Everything above happens per-idea. Steering proper is continuous and deliberately small: a handful of levers, all available from the TUI or the one-shot command-line interface (CLI).
 
-- **Priorities.** A single number per task; P0 is highest. `0` is the most urgent, larger numbers matter less, and a task with no priority set waits behind every prioritized one. Agents take the most urgent ready task, oldest first within a rank. Reordering the backlog is editing numbers: `tuhdoo update <id> --priority 3`.
+- **Priorities.** A single number per task; P0 is highest. `0` is the most urgent, larger numbers matter less, and a task with no priority set waits behind every prioritized one. Agents take the most urgent ready task, oldest first within a rank. Reordering the backlog is editing numbers: `tuhdoo update <id> --priority 3`; `--priority none` clears a set priority.
 - **Dependencies.** Add an edge to sequence work, remove one to unblock it. Readiness recomputes immediately.
 - **Pause and resume.** `held` and back, per task, any time.
 - **Answer escalations.** Escalations are your inbox, and each one is written to be answerable on its own: the question carries the options the agent saw and its recommendation, with background in the context field. Answer from the TUI (select, type), or:

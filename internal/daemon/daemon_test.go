@@ -413,6 +413,62 @@ func TestHydrationCarriesUpdateRecords(t *testing.T) {
 	}
 }
 
+// Priority is clearable (2026-09-11, task.updated v4): PATCH with
+// clear_priority:true clears a set priority; the emitted event is v4
+// with an explicit null priority key; an update that does not touch
+// priority emits a v4 event with no priority key at all; sending both
+// priority and clear_priority is a 400.
+func TestClearPriority(t *testing.T) {
+	d, c := startDaemon(t)
+	id := createOne(t, c, "brandon", map[string]any{"title": "oops p2", "priority": 2})
+
+	body := string(mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon",
+		map[string]any{"priority": 3, "clear_priority": true}, http.StatusBadRequest))
+	if !strings.Contains(body, "clear_priority") {
+		t.Fatalf("both-set error = %q, want it to name clear_priority", body)
+	}
+
+	mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon", map[string]any{"clear_priority": true}, http.StatusOK)
+	got := snapshotTaskOf(t, c, id)
+	if got.Task.Priority != nil {
+		t.Fatalf("priority after clear = %d, want none", *got.Task.Priority)
+	}
+	if u := got.Updates; len(u) != 1 || !reflect.DeepEqual(u[0].Fields, []string{"priority 2→none"}) {
+		t.Fatalf("updates = %+v, want one entry reading priority 2→none", u)
+	}
+
+	mustDo(t, c, "PATCH", "/v0/tasks/"+id, "brandon", map[string]any{"title": "fixed"}, http.StatusOK)
+
+	// On the ledger: both updates are v4; the clear carries an explicit
+	// null priority key, the title edit no priority key at all.
+	var updates []event.Event
+	for _, e := range flushedEvents(t, d) {
+		if e.Type == event.TypeTaskUpdated {
+			updates = append(updates, e)
+		}
+	}
+	if len(updates) != 2 {
+		t.Fatalf("task.updated events = %d, want 2", len(updates))
+	}
+	payload := func(e event.Event) map[string]json.RawMessage {
+		var doc map[string]json.RawMessage
+		if err := json.Unmarshal(e.Data, &doc); err != nil {
+			t.Fatal(err)
+		}
+		return doc
+	}
+	clear, retitle := updates[0], updates[1]
+	if clear.V != 4 || retitle.V != 4 {
+		t.Fatalf("versions = %d, %d; want 4, 4", clear.V, retitle.V)
+	}
+	if raw, ok := payload(clear)["priority"]; !ok || string(raw) != "null" {
+		t.Fatalf("clear payload = %s, want an explicit \"priority\":null", clear.Data)
+	}
+	if _, ok := payload(retitle)["priority"]; ok {
+		t.Fatalf("retitle payload = %s, want no priority key", retitle.Data)
+	}
+}
+
 // One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): the snapshot serves
 // core's verdict per task — situation always present (ready /
 // in_progress / blocked for open tasks, the status word otherwise) and
