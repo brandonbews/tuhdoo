@@ -80,7 +80,7 @@ func newPair(t *testing.T) (peer, peer) {
 		if err := st.Init(); err != nil {
 			t.Fatal(err)
 		}
-		sy := New(g, Options{Ident: gitx.Identity{Name: name, Email: name + "@test.invalid"}})
+		sy := New(g, st, Options{Ident: gitx.Identity{Name: name, Email: name + "@test.invalid"}})
 		return peer{dir: dir, git: g, store: st, sync: sy}
 	}
 	return mk("machine-a"), mk("machine-b")
@@ -125,9 +125,10 @@ func sameTrees(t *testing.T, a, b peer) {
 }
 
 // mergeBothWays publishes B's head so A's object database holds both
-// sides, merges the two heads directly in both orders, asserts the two
-// directions produce the identical tree, and returns that tree — the
-// order-independence half of every same-path merge-rule test.
+// sides, merges the two trees directly in both orders through A's
+// syncer, asserts the two directions produce the identical tree, and
+// returns that tree — the order-independence half of every same-path
+// merge-rule test.
 func mergeBothWays(t *testing.T, a, b peer) map[string]string {
 	t.Helper()
 	cycle(t, b)
@@ -135,23 +136,16 @@ func mergeBothWays(t *testing.T, a, b peer) map[string]string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	localHead, err := a.git.ReadRef(store.DefaultRef)
+	theirs, err := treeMap(a.git, remoteHead)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m1, err := a.sync.merge(localHead, remoteHead)
+	ours := a.store.Tree()
+	t1, err := a.sync.mergeTrees(ours, theirs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m2, err := a.sync.merge(remoteHead, localHead)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t1, err := treeMap(a.git, m1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t2, err := treeMap(a.git, m2)
+	t2, err := a.sync.mergeTrees(theirs, ours)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +243,7 @@ func TestRemotelessIsNormalAndUnreachableRecovers(t *testing.T) {
 	if err := st.Init(); err != nil {
 		t.Fatal(err)
 	}
-	solo := New(g, Options{})
+	solo := New(g, st, Options{})
 	if err := solo.Cycle(); err != nil {
 		t.Fatalf("remoteless cycle must be a no-op, got %v", err)
 	}

@@ -136,8 +136,9 @@ func (s *Store) ReleaseLease(claimID string, at time.Time) error {
 	return s.AppendBatch(Batch{Files: map[string][]byte{path: encodeLeaseTombstone(at)}})
 }
 
-// ReadLeases returns every lease as claim ID → expiry (UTC).
+// ReadLeases returns every lease at the head as claim ID → expiry
+// (UTC), from memory.
 func (s *Store) ReadLeases() (map[string]time.Time, error) {
-	_, leases, err := s.LoadReplayInput()
+	_, leases, err := s.ReplayInput()
 	return leases, err
 }

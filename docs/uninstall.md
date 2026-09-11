@@ -19,7 +19,7 @@ There is intentionally no `tuhdoo uninstall` command. Leaving via ordinary git c
 The complete footprint, verified against the code:
 
 - **Three refs.** `refs/heads/tuhdoo`, the local copy of the data branch; `refs/remotes/origin/tuhdoo`, an ordinary remote-tracking ref (full clones only); and `refs/tuhdoo/remote`, the daemon's own tracking ref, where its fetches of the remote data branch land.
-- **The runtime directory** `.git/tuhdoo/`, containing `daemon.json`, `daemon.lock`, `daemon.log`, `daemon.sock`, and `machine-id`.
+- **The runtime directory** `.git/tuhdoo/`, containing `daemon.json`, `daemon.lock`, `daemon.log`, `daemon.sock`, `machine-id`, and `index` — the daemon's private git index for building data-branch commits, never a checkout — plus, after a daemon killed mid-commit, possibly a stale `index.lock`.
 - **One git config key**, `tuhdoo.principal`, repo-local or `--global` if you set it there. It is only present if you overrode the default identity.
 - **The Model Context Protocol (MCP) entry** in your agent harness's config — the snippet `tuhdoo init` printed — if you added one.
 - **The binary.**

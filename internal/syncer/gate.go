@@ -37,10 +37,7 @@ func (s *Syncer) GateHead() (string, *core.State, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	local, err := s.git.ReadRef(s.ref)
-	if err != nil {
-		return "", nil, fmt.Errorf("syncer: gate: %w", err)
-	}
+	local := s.store.Head()
 	if remoteHead != "" && remoteHead != local {
 		// Bring the remote's work in (fast-forward or app-level merge).
 		// A CAS loss inside reconcile leaves the local ref where it was;
@@ -49,15 +46,9 @@ func (s *Syncer) GateHead() (string, *core.State, error) {
 		if _, err := s.reconcile(local, remoteHead); err != nil {
 			return "", nil, err
 		}
-		local, err = s.git.ReadRef(s.ref)
-		if err != nil {
-			return "", nil, fmt.Errorf("syncer: gate: %w", err)
-		}
 	}
-	tree, err := treeMap(s.git, local)
-	if err != nil {
-		return "", nil, err
-	}
+	// The judged head is the replica's: head and tree from one instant.
+	local, tree := s.store.HeadAndTree()
 	state, err := s.replayTree(tree)
 	if err != nil {
 		return "", nil, fmt.Errorf("syncer: gate: replay %s: %w", local, err)
@@ -76,6 +67,12 @@ func (s *Syncer) GateHead() (string, *core.State, error) {
 // is advanced to include it, best-effort — a busy local writer defers
 // that to the next sync cycle without touching the verdict, because the
 // remote already holds it.
+//
+// The commit is built on head — which may no longer be the local head
+// by the time this runs — with MkTree, not the private index: the
+// index mirrors the local head for the store's next commit, and this
+// rare commit must not disturb it. The local ref then adopts the
+// pushed commit through the store like any other remote work.
 func (s *Syncer) GatePush(head string, e event.Event) error {
 	tree, err := treeMap(s.git, head)
 	if err != nil {
@@ -130,11 +127,7 @@ func (s *Syncer) GatePush(head string, e event.Event) error {
 	// are logged, not returned: the verdict is already won at the
 	// remote, and the ordinary sync loop converges on it regardless.
 	for attempt := 0; attempt < maxCycleRetries; attempt++ {
-		local, err := s.git.ReadRef(s.ref)
-		if err != nil {
-			s.logf("sync: gate: read local ref after push: %v", err)
-			return nil
-		}
+		local := s.store.Head()
 		landed, err := s.git.IsAncestor(commit, local)
 		if err != nil {
 			s.logf("sync: gate: ancestry check after push: %v", err)

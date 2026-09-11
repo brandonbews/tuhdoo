@@ -6,7 +6,9 @@ package syncer
 // app-level union merge with no manual repair.
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -84,14 +86,16 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	sya := New(ga, Options{Ident: ident("seeder")})
+	sya := New(ga, sta, Options{Ident: ident("seeder")})
 	if err := sya.Cycle(); err != nil {
 		t.Fatalf("seed cycle: %v", err)
 	}
 
-	// The joiner: fresh repo, remote configured, no local data branch.
+	// The joiner: fresh repo, remote configured, no local data branch,
+	// a store that has nothing to load yet.
 	bDir, gb := mkRepo(t, "joiner", bare)
-	syb := New(gb, Options{Ident: ident("joiner")})
+	stb := store.New(gb, "", ident("joiner"))
+	syb := New(gb, stb, Options{Ident: ident("joiner")})
 	syb.AdoptRemoteBranch()
 
 	remoteHead := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef))
@@ -104,7 +108,6 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	}
 
 	// Init after adoption must be the no-op arm, not a second root.
-	stb := store.New(gb, "", ident("joiner"))
 	if err := stb.Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -122,6 +125,71 @@ func TestAdoptRemoteBranchJoinsExistingHistory(t *testing.T) {
 	}
 	if len(evs) != 1 || evs[0].Task != "t1" {
 		t.Fatalf("adopted events = %+v, want the one seeded event", evs)
+	}
+}
+
+// lsTreeFailsOnceGit fails the first LsTree — for the store, the load
+// of the branch it just adopted.
+type lsTreeFailsOnceGit struct {
+	gitx.Git
+	calls int
+}
+
+func (g *lsTreeFailsOnceGit) LsTree(rev string) ([]gitx.TreeEntry, error) {
+	g.calls++
+	if g.calls == 1 {
+		return nil, errors.New("simulated: ls-tree failed")
+	}
+	return g.Git.LsTree(rev)
+}
+
+// TestAdoptReloadFailureDoesNotMint: the adopt's must-not-exist CAS
+// won, so the branch exists; when the load that follows fails, the log
+// says the branch was adopted and the reload failed — never "minting a
+// fresh root", which Init would not do (the ref is there) and which
+// would hide the real problem.
+func TestAdoptReloadFailureDoesNotMint(t *testing.T) {
+	gitEnv(t)
+	bare := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", "-b", "main", bare)
+	_, ga := mkRepo(t, "seeder", bare)
+	sta := store.New(ga, "", ident("seeder"))
+	if err := sta.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := sta.AppendBatch(store.Batch{Events: []event.Event{
+		evt(t, 1, event.TypeTaskCreated, "brandon", "m-a", "t1", event.TaskCreated{Title: "seeded work"}),
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := New(ga, sta, Options{Ident: ident("seeder")}).Cycle(); err != nil {
+		t.Fatalf("seed cycle: %v", err)
+	}
+	remoteHead := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef))
+
+	bDir, gb := mkRepo(t, "joiner", bare)
+	stb := store.New(&lsTreeFailsOnceGit{Git: gb}, "", ident("joiner"))
+	var logged bytes.Buffer
+	syb := New(gb, stb, Options{Ident: ident("joiner"), Log: log.New(&logged, "", 0)})
+	syb.AdoptRemoteBranch()
+
+	if localHead, err := gb.ReadRef(store.DefaultRef); err != nil || localHead != remoteHead {
+		t.Fatalf("local ref after adoption = %s, %v; want the adopted %s", localHead, err, remoteHead)
+	}
+	want := "adopted " + remoteHead + " but reload failed"
+	if !strings.Contains(logged.String(), want) || strings.Contains(logged.String(), "minting") {
+		t.Fatalf("adopt logged %q, want %q and no mention of minting", logged.String(), want)
+	}
+	if err := stb.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if got := roots(t, bDir); len(got) != 1 {
+		t.Fatalf("joiner history carries %d roots %v, want the adopted one only", len(got), got)
+	}
+	// The store recovers on its next load: the adopted branch serves.
+	evs, err := stb.LoadEvents()
+	if err != nil || len(evs) != 1 {
+		t.Fatalf("events after the failed reload = %d, %v; want the seeded event", len(evs), err)
 	}
 }
 
@@ -149,14 +217,14 @@ func TestAdoptRemoteBranchFallsBackToMinting(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir, g := mkRepo(t, "solo", tc.remote(t))
-			sy := New(g, Options{Ident: ident("solo")})
+			st := store.New(g, "", ident("solo"))
+			sy := New(g, st, Options{Ident: ident("solo")})
 			sy.AdoptRemoteBranch()
 
 			// Nothing adopted; Init mints exactly as without adoption.
 			if _, err := g.ReadRef(store.DefaultRef); !errors.Is(err, gitx.ErrRefNotFound) {
 				t.Fatalf("ref after failed adoption: err = %v, want ErrRefNotFound", err)
 			}
-			st := store.New(g, "", ident("solo"))
 			if err := st.Init(); err != nil {
 				t.Fatalf("init after fallback: %v", err)
 			}

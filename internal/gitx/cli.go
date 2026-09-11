@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,12 @@ const minGitMajor, minGitMinor = 2, 40
 // the user's full auth setup (SSH agents, credential helpers) for free.
 type CLI struct {
 	dir string
+	// gitDir is the repository's git directory, absolute, as reported
+	// by `rev-parse --git-dir` at New: the private index lives under
+	// it (indexPath), which puts it beside the daemon's runtime files
+	// and inside the right directory for a linked worktree, whose git
+	// dir is not `<root>/.git`.
+	gitDir string
 	// format is the repository's object format, "sha1" or "sha256",
 	// detected once by New (`rev-parse --show-object-format`) so
 	// BlobOID hashes the way this repository's git does.
@@ -38,6 +45,13 @@ var _ Git = (*CLI)(nil)
 // with a clear message when git is missing, older than the supported
 // floor, or dir is not a repository.
 func New(dir string) (*CLI, error) {
+	// Absolute from the start: the git dir is joined onto dir below,
+	// and the private index path derived from it must not depend on
+	// the process's working directory at the time of the call.
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("gitx: resolving %s: %w", dir, err)
+	}
 	g := &CLI{dir: dir}
 	out, _, err := g.run(nil, nil, "version")
 	if err != nil {
@@ -61,11 +75,115 @@ func New(dir string) (*CLI, error) {
 	if len(lines) != 2 {
 		return nil, fmt.Errorf("gitx: detect object format: rev-parse printed %q, want a git dir and a format", out)
 	}
+	// rev-parse prints the git dir relative to the working directory
+	// (".git" from a repository root) unless it had to be absolute.
+	gitDir := strings.TrimSpace(lines[0])
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(dir, gitDir)
+	}
+	g.gitDir = filepath.Clean(gitDir)
 	g.format = strings.TrimSpace(lines[1])
 	if _, err := newObjectHash(g.format); err != nil {
 		return nil, fmt.Errorf("gitx: %w", err)
 	}
 	return g, nil
+}
+
+// indexPath is the private index: `<git-dir>/tuhdoo/index`, the
+// daemon's runtime directory. Only ReadTree, UpdateIndex, and WriteTree
+// ever name it, and only through indexEnv, so no other git subprocess
+// can see it — and none of them can see the user's index.
+func (g *CLI) indexPath() string {
+	return filepath.Join(g.gitDir, "tuhdoo", "index")
+}
+
+// indexEnv selects the private index for one subprocess.
+func (g *CLI) indexEnv() []string {
+	return []string{"GIT_INDEX_FILE=" + g.indexPath()}
+}
+
+// zeroOID is the all-zero object name in the repository's format: what
+// an `update-index --index-info` removal line carries in place of a
+// blob (40 hex digits for SHA-1, 64 for SHA-256).
+func (g *CLI) zeroOID() string {
+	h, err := newObjectHash(g.format)
+	if err != nil {
+		panic("gitx: " + err.Error()) // validated by New
+	}
+	return strings.Repeat("0", h.Size()*2)
+}
+
+func (g *CLI) ReadTree(tree string) error {
+	idx := g.indexPath()
+	if err := os.MkdirAll(filepath.Dir(idx), 0o755); err != nil {
+		return fmt.Errorf("gitx: read-tree: create private index dir: %w", err)
+	}
+	// A lock file here can only be a leftover of a git that died
+	// mid-write: the daemon's flock (its caller) is the proof that no
+	// other process is writing this index right now.
+	if err := os.Remove(idx + ".lock"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("gitx: read-tree: clear stale index lock: %w", err)
+	}
+	// A single-tree read-tree replaces the index contents wholesale
+	// (no merge, no worktree: nothing is checked out), whatever state
+	// the file was in — including garbage or absent.
+	if _, _, err := g.run(nil, g.indexEnv(), "read-tree", tree); err != nil {
+		return fmt.Errorf("gitx: %w", err)
+	}
+	return nil
+}
+
+func (g *CLI) UpdateIndex(entries []TreeEntry) error {
+	if err := validateTreePaths(entries); err != nil {
+		return fmt.Errorf("gitx: update-index: %w", err)
+	}
+	// Checked before git runs, empty entries included: update-index
+	// creates a missing index file as empty and says nothing, and the
+	// write-tree that follows would then commit a tree holding only
+	// this batch's paths. The caller reseeds on this error.
+	if _, err := os.Stat(g.indexPath()); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("gitx: update-index: %w (%s)", ErrIndexMissing, g.indexPath())
+		}
+		return fmt.Errorf("gitx: update-index: private index: %w", err)
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	// --index-info takes ls-tree-shaped records for additions
+	// ("<mode> blob <oid>\t<path>") and mode-0 records with the zero
+	// object name for removals; -z makes the records NUL-terminated so
+	// no path byte can be mistaken for a terminator.
+	var input bytes.Buffer
+	for _, e := range entries {
+		if e.OID == "" {
+			fmt.Fprintf(&input, "0 %s\t%s\x00", g.zeroOID(), e.Path)
+			continue
+		}
+		fmt.Fprintf(&input, "100644 blob %s\t%s\x00", e.OID, e.Path)
+	}
+	if _, _, err := g.run(input.Bytes(), g.indexEnv(), "update-index", "-z", "--index-info"); err != nil {
+		return fmt.Errorf("gitx: %w", err)
+	}
+	return nil
+}
+
+func (g *CLI) WriteTree() (string, error) {
+	// git writes the empty tree for an index file that does not exist;
+	// for a commit that would mean silently dropping every file the
+	// branch holds. UpdateIndex checked the same thing a moment ago;
+	// this second look catches an index removed between the two.
+	if _, err := os.Stat(g.indexPath()); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("gitx: write-tree: private index unusable (reseed with ReadTree): %w", ErrIndexMissing)
+		}
+		return "", fmt.Errorf("gitx: write-tree: private index unusable (reseed with ReadTree): %w", err)
+	}
+	out, _, err := g.run(nil, g.indexEnv(), "write-tree")
+	if err != nil {
+		return "", fmt.Errorf("gitx: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // newObjectHash returns a fresh hash for a git object format name.

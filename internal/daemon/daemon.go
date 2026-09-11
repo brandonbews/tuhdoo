@@ -251,7 +251,8 @@ func New(root string, opts Options) (*Daemon, error) {
 		loadDone:     make(chan struct{}),
 		done:         make(chan struct{}),
 	}
-	d.sync = syncer.New(g, syncer.Options{
+	d.batcher.Log = logger
+	d.sync = syncer.New(g, st, syncer.Options{
 		Ref:      opts.Ref,
 		Interval: opts.SyncInterval,
 		Ident:    ident,
@@ -357,16 +358,19 @@ func (d *Daemon) start() {
 }
 
 // load brings the ledger into memory for the first time: adopt a
-// remote data branch if one exists, mint the branch if none does, and
-// replay. The first replay is installed and the daemon marked loaded
-// under one critical section, so a request parked on d.mu during the
-// load is answered with state, never with the placeholder after the
-// state was installed. Loaded covers the T3 fail-safe case too — the
-// daemon then serves reads of the last comprehensible state (here:
-// empty) with writes rejected; any other failure is returned for
-// start to end the daemon with. The long part of startup — the
-// adopt's fetch and the init — runs outside the mutex; only the
-// batched read and replay (tens of milliseconds) hold it.
+// remote data branch if one exists, mint the branch if none does, load
+// the store's replica (head, tree, every event and lease blob in one
+// batch — T2; the private index is reseeded by the first commit), and
+// replay. The first
+// replay is installed and the daemon marked loaded under one critical
+// section, so a request parked on d.mu during the load is answered
+// with state, never with the placeholder after the state was
+// installed. Loaded covers the T3 fail-safe case too — the daemon then
+// serves reads of the last comprehensible state (here: empty) with
+// writes rejected; any other failure is returned for start to end the
+// daemon with. The long part of startup — the adopt's fetch, the init,
+// the store load — runs outside the mutex; only the replay (memory,
+// milliseconds) holds it.
 func (d *Daemon) load() error {
 	// Clone-join before Init: a fresh clone whose remote already carries
 	// the data branch adopts that history instead of minting a second
@@ -375,8 +379,13 @@ func (d *Daemon) load() error {
 	// union merge remains the correctness backstop for two-root histories.
 	d.sync.AdoptRemoteBranch()
 	if err := d.store.Init(); err != nil {
-		return fmt.Errorf("daemon: %w", err)
+		return fmt.Errorf("daemon: initial load: %w", err)
 	}
+	loadStart := time.Now()
+	if err := d.store.Load(); err != nil {
+		return fmt.Errorf("daemon: initial load: %w", err)
+	}
+	d.log.Printf("daemon: load: replica at %s in %s", d.store.Head(), time.Since(loadStart).Round(10*time.Microsecond))
 	d.mu.Lock()
 	err := d.refreshLocked(time.Now())
 	if err == nil || isFailSafe(err) {
@@ -440,8 +449,9 @@ func (d *Daemon) cleanup() {
 // SocketPath returns the bound unix socket path.
 func (d *Daemon) SocketPath() string { return d.sockPath }
 
-// Refresh recomputes cached state from the branch. The sync loop (B7)
-// calls this after every fetch/merge (wired via OnMerged in New).
+// Refresh recomputes cached state from the store's replica. The sync
+// loop calls this after every head move it causes or notices (wired
+// via OnMerged in New).
 func (d *Daemon) Refresh() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -452,20 +462,21 @@ func (d *Daemon) Refresh() error {
 // always logged, whether or not the event count moved.
 const slowRefresh = 250 * time.Millisecond
 
-// refreshLocked reloads events and leases and replays. On a fail-safe
-// replay error the daemon degrades: the last good state keeps serving
-// reads and every write path starts rejecting.
+// refreshLocked takes the replay input from the store's replica and
+// replays. It spawns no git (001 D2, 2026-09-10: reads never spawn
+// git): the store's head tree and decode caches are complete after
+// every load and commit, so the "load" here is a walk of the in-memory
+// tree. On a fail-safe replay error the daemon degrades: the last good
+// state keeps serving reads and every write path starts rejecting.
 //
 // Full replay per refresh is a measured, deliberate keep: replay of the
 // 50-event dogfood log costs ~1ms and the pure core benchmarks linearly
-// (BenchmarkReplay in internal/core) — the load path was the real cost,
-// and the store's content-addressed decode caches take it from a
-// cat-file subprocess per event (~8ms each) to one rev-parse + one
-// ls-tree per refresh. Incremental apply / snapshot replay stay
-// unnecessary until replay itself shows up in the timing lines below.
+// (BenchmarkReplay in internal/core). The memoized replica with a
+// state version is the next step of the live-replica plan; until then
+// the timing lines below are the evidence stream.
 func (d *Daemon) refreshLocked(now time.Time) error {
 	loadStart := time.Now()
-	events, leases, err := d.store.LoadReplayInput()
+	events, leases, err := d.store.ReplayInput()
 	if err != nil {
 		return err
 	}

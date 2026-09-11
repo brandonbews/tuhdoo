@@ -41,9 +41,11 @@ func (s *Syncer) AdoptRemoteBranch() {
 	}
 
 	// Fetch into the syncer's own tracking ref, bounded so a dead
-	// remote cannot stall startup, then create the local ref with a
-	// must-not-exist CAS — never clobbering a branch that appeared
-	// concurrently.
+	// remote cannot stall startup, then create the local ref through
+	// the store with a must-not-exist CAS — never clobbering a branch
+	// that appeared concurrently. The store has not loaded (there was
+	// no branch to load), so its fast-forward is from "no ref" to the
+	// fetched head, and it loads the adopted branch as it lands.
 	err := s.git.FetchTimeout(s.remote, s.ref+":"+TrackingRef, adoptTimeout)
 	if err != nil {
 		if errors.Is(err, gitx.ErrRemoteRefMissing) {
@@ -57,10 +59,14 @@ func (s *Syncer) AdoptRemoteBranch() {
 		s.logf("adopt: reading fetched head: %v; minting a fresh root", err)
 		return
 	}
-	err = s.git.UpdateRef(s.ref, head, "")
+	err = s.store.FastForward("", head)
 	if err != nil {
 		if !errors.Is(err, gitx.ErrRefCASFailed) {
-			s.logf("adopt: setting %s: %v; minting a fresh root", s.ref, err)
+			// The ref was created (the must-not-exist CAS won) and the
+			// load of the adopted branch failed after it: the branch
+			// exists, so Init will not mint, and the daemon's own load
+			// reports whatever is wrong with it.
+			s.logf("adopt: adopted %s but reload failed: %v", head, err)
 		}
 		return
 	}

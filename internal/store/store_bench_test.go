@@ -2,11 +2,11 @@ package store
 
 // Scaling benchmarks for the branch load path, the measured bottleneck
 // of the daemon's refresh (t-01KYRMFV10W1N28TCN5ZZ9Z2C1): "cold" is a
-// Store with empty decode caches — the pre-cache behavior, one `git
-// cat-file` subprocess per blob — and "warm" is the steady state, one
-// rev-parse plus one ls-tree regardless of event count. Real git, real
-// subprocesses; setup for the 1000-event repo takes several seconds, so
-// run these deliberately:
+// fresh Store loading the branch — one rev-parse, one ls-tree, one
+// batched cat-file, one read-tree — and "warm" is the steady state, a
+// read answered from the replica with no subprocess at all. Real git
+// for the cold case; setup for the 1000-event repo takes several
+// seconds, so run these deliberately:
 //
 //	go test ./internal/store -bench BenchmarkLoadReplayInput -benchtime 3x -run '^$'
 //
@@ -54,8 +54,8 @@ func BenchmarkLoadReplayInput(b *testing.B) {
 				}
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					if _, _, err := s.LoadReplayInput(); err != nil {
-						b.Fatalf("LoadReplayInput: %v", err)
+					if _, _, err := s.ReplayInput(); err != nil {
+						b.Fatalf("ReplayInput: %v", err)
 					}
 				}
 			})

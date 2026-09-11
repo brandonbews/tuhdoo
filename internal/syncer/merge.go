@@ -2,8 +2,8 @@ package syncer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -44,30 +44,57 @@ import (
 //     copy losing to a tombstone is by construction stale.
 //   - views + everything else: decided by the view-format stamps — see
 //     resolveOther below.
-func (s *Syncer) merge(ours, theirs string) (string, error) {
-	ourTree, err := treeMap(s.git, ours)
+func (s *Syncer) merge(remote string) error {
+	theirTree, err := treeMap(s.git, remote)
 	if err != nil {
-		return "", err
+		return err
 	}
-	theirTree, err := treeMap(s.git, theirs)
+	// Our side is the replica's head and tree, taken together: the
+	// head anchors the commit below, so a merge computed against this
+	// tree can only land on this head.
+	ourHead, ourTree := s.store.HeadAndTree()
+
+	merged, err := s.mergeTrees(ourTree, theirTree)
 	if err != nil {
-		return "", err
+		return err
 	}
 
+	// The store commits the union as changes against our tree, with
+	// the remote head as the second parent; it moves the ref and the
+	// replica together (T2: single mover). A head that moved since —
+	// a local batch, an external move — refuses the commit with
+	// ErrRefCASFailed, and the caller's next pass merges afresh.
+	_, err = s.store.Commit(ourHead, treeChanges(ourTree, merged), []string{remote}, "tuhdoo: merge\n")
+	if err != nil {
+		return fmt.Errorf("merge: %w", err)
+	}
+	return nil
+}
+
+// mergeTrees computes the merged tree of two heads' trees under the
+// per-area rules above. Symmetric: both argument orders produce the
+// same map. Blob reads (lease states, view stamps, the guard's
+// replays) go through the store's caches.
+func (s *Syncer) mergeTrees(ourTree, theirTree map[string]string) (map[string]string, error) {
 	resolveOther, regen, err := s.viewsPolicy(ourTree, theirTree)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	refused, err := s.confirmGuard(ourTree, theirTree)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	merged := make(map[string]string, len(ourTree)+len(theirTree))
 	for path, oid := range ourTree {
 		merged[path] = oid
 	}
+	// Same-path lease conflicts are collected and decided after one
+	// batched read of every blob involved: a renewal since the last
+	// push conflicts with the remote's copy on every merge, and each
+	// such copy is a blob the replica no longer holds.
+	var conflicts []leaseConflict
 	for path, theirOID := range theirTree {
 		ourOID, both := merged[path]
 		if !both || ourOID == theirOID {
@@ -76,16 +103,19 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 		}
 		switch {
 		case strings.HasPrefix(path, "events/"):
-			return "", fmt.Errorf("syncer: merge: event %s differs between heads — data corruption", path)
+			return nil, fmt.Errorf("syncer: merge: event %s differs between heads — data corruption", path)
 		case strings.HasPrefix(path, "leases/"):
-			winner, err := s.mergeLease(path, ourOID, theirOID)
-			if err != nil {
-				return "", err
-			}
-			merged[path] = winner
+			conflicts = append(conflicts, leaseConflict{path: path, ours: ourOID, theirs: theirOID})
 		default:
 			merged[path] = resolveOther(ourOID, theirOID)
 		}
+	}
+	winners, err := s.mergeLeases(conflicts)
+	if err != nil {
+		return nil, err
+	}
+	for path, oid := range winners {
+		merged[path] = oid
 	}
 
 	for path := range refused {
@@ -94,24 +124,28 @@ func (s *Syncer) merge(ours, theirs string) (string, error) {
 
 	if regen {
 		if err := s.overlayViews(merged); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
+	return merged, nil
+}
 
-	treeOID, err := gitx.MkTreeFromMap(s.git, merged)
-	if err != nil {
-		return "", fmt.Errorf("syncer: merge: %w", err)
+// treeChanges expresses to as changes against from, in store.Commit's
+// shape: every path whose blob differs or is new maps to its OID in
+// to; every path from holds that to lacks maps to "" (delete). Pure.
+func treeChanges(from, to map[string]string) map[string]string {
+	changes := make(map[string]string)
+	for path, oid := range to {
+		if from[path] != oid {
+			changes[path] = oid
+		}
 	}
-
-	// Sorted parents: both machines merging the same pair state the
-	// parents identically.
-	parents := []string{ours, theirs}
-	sort.Strings(parents)
-	commit, err := s.git.CommitTree(treeOID, parents, s.ident, "tuhdoo: merge\n")
-	if err != nil {
-		return "", fmt.Errorf("syncer: merge: %w", err)
+	for path := range from {
+		if _, kept := to[path]; !kept {
+			changes[path] = ""
+		}
 	}
-	return commit, nil
+	return changes
 }
 
 // confirmGuard enforces the D6 writers' invariant (2026-08-04) at the
@@ -195,7 +229,7 @@ type confirmation struct {
 // binary cannot decode — the caller skips the guard rather than judging
 // a head it cannot read (fail-safe posture, deterministic per binary).
 func (s *Syncer) oneSidedConfirmations(own, other map[string]string) ([]confirmation, bool, error) {
-	var out []confirmation
+	var paths, oids []string
 	for path, oid := range own {
 		if !strings.HasPrefix(path, "events/") {
 			continue
@@ -203,14 +237,19 @@ func (s *Syncer) oneSidedConfirmations(own, other map[string]string) ([]confirma
 		if _, shared := other[path]; shared {
 			continue
 		}
-		data, err := s.git.CatFile(oid)
-		if err != nil {
-			return nil, false, fmt.Errorf("syncer: merge: %w", err)
-		}
-		e, err := event.Decode(data)
-		if err != nil {
+		paths = append(paths, path)
+		oids = append(oids, oid)
+	}
+	events, err := s.store.EventsByOID(oids)
+	if err != nil {
+		if errors.Is(err, store.ErrUndecodable) {
 			return nil, false, nil
 		}
+		return nil, false, fmt.Errorf("syncer: merge: %w", err)
+	}
+	var out []confirmation
+	for i, path := range paths {
+		e := events[oids[i]]
 		if e.Type != event.TypeClaimConfirmed {
 			continue
 		}
@@ -286,7 +325,7 @@ func (s *Syncer) stampFormat(tree map[string]string) (int, error) {
 	if !ok {
 		return 0, nil
 	}
-	data, err := s.git.CatFile(oid)
+	data, err := s.store.Blob(oid)
 	if err != nil {
 		return 0, fmt.Errorf("syncer: merge: %w", err)
 	}
@@ -294,7 +333,9 @@ func (s *Syncer) stampFormat(tree map[string]string) (int, error) {
 }
 
 // overlayViews replaces the view paths in the merged tree with a fresh
-// render of the merged state. A replay failure (fail-safe) skips the
+// render of the merged state, writing only the pages whose bytes
+// differ from what the tree already holds (store.WriteBlobs: the
+// object-ID diff of T2). A replay failure (fail-safe) skips the
 // overlay: the tree merge is still valid, every machine of this binary
 // version skips identically, and the daemon degrades honestly on its
 // next refresh.
@@ -304,11 +345,11 @@ func (s *Syncer) overlayViews(merged map[string]string) error {
 		s.logf("sync: cannot replay merged events (%v); views not regenerated", err)
 		return nil
 	}
-	for path, data := range views.Render(state) {
-		oid, err := s.git.HashObject(data)
-		if err != nil {
-			return fmt.Errorf("syncer: merge: render %s: %w", path, err)
-		}
+	rendered, err := s.store.WriteBlobs(views.Render(state), merged)
+	if err != nil {
+		return fmt.Errorf("syncer: merge: render: %w", err)
+	}
+	for path, oid := range rendered {
 		merged[path] = oid
 	}
 	return nil
@@ -324,16 +365,13 @@ func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
 // replayTreeAt is replayTree with an explicit instant, for callers that
 // need the verdict to be a pure function of the tree (confirmGuard).
 // The tree is read by the store's reader — the one place that
-// classifies paths and batches the blob reads (T2, 2026-09-10) — so
-// this replay and the store's head load compute the same lease set by
-// construction; views are never read back. The decode caches here are
-// throwaway: sharing the store's is the next task.
+// classifies paths and batches the blob reads, and the owner of the
+// decode caches (T2, 2026-09-10) — so this replay and the store's head
+// load compute the same lease set by construction, and a replay after
+// a fetch reads only the other side's new blobs; views are never read
+// back.
 func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.State, error) {
-	entries := make([]gitx.TreeEntry, 0, len(tree))
-	for path, oid := range tree {
-		entries = append(entries, gitx.TreeEntry{Path: path, OID: oid})
-	}
-	events, leases, err := store.ReplayInputFromTree(s.git, entries, map[string]event.Event{}, map[string]time.Time{})
+	events, leases, err := s.store.ReplayInputFor(tree)
 	if err != nil {
 		return nil, err
 	}
@@ -341,58 +379,62 @@ func (s *Syncer) replayTreeAt(tree map[string]string, now time.Time) (*core.Stat
 }
 
 func treeMap(g gitx.Git, rev string) (map[string]string, error) {
-	entries, err := g.LsTree(rev)
+	m, err := gitx.LsTreeMap(g, rev)
 	if err != nil {
 		return nil, fmt.Errorf("syncer: %w", err)
-	}
-	m := make(map[string]string, len(entries))
-	for _, e := range entries {
-		m[e.Path] = e.OID
 	}
 	return m, nil
 }
 
-// mergeLease picks the winning lease blob when the same leases/ path
-// holds different content on both heads. Released beats plain, two
-// released picks the earlier expiry, two plain picks the later expiry —
-// the rationale lives in the per-area rules on merge above. Ties fall
-// back to the lexically greater OID so both merge directions agree.
-func (s *Syncer) mergeLease(path, a, b string) (string, error) {
-	ta, releasedA, err := s.leaseState(path, a)
-	if err != nil {
-		return "", err
-	}
-	tb, releasedB, err := s.leaseState(path, b)
-	if err != nil {
-		return "", err
-	}
-	switch {
-	case releasedA && !releasedB:
-		return a, nil
-	case releasedB && !releasedA:
-		return b, nil
-	case releasedA && releasedB && ta.Before(tb):
-		return a, nil
-	case releasedA && releasedB && tb.Before(ta):
-		return b, nil
-	case !releasedA && !releasedB && ta.After(tb):
-		return a, nil
-	case !releasedA && !releasedB && tb.After(ta):
-		return b, nil
-	}
-	return maxOID(a, b), nil
+// leaseConflict is one leases/ path holding different blobs on the
+// two heads.
+type leaseConflict struct {
+	path, ours, theirs string
 }
 
-func (s *Syncer) leaseState(path, oid string) (time.Time, bool, error) {
-	data, err := s.git.CatFile(oid)
-	if err != nil {
-		return time.Time{}, false, fmt.Errorf("syncer: merge %s: %w", path, err)
+// mergeLeases decides every same-path lease conflict after one batched
+// read of the blobs involved (through the store's cache), returning
+// path → winning OID. Released beats plain, two released picks the
+// earlier expiry, two plain picks the later expiry — the rationale
+// lives in the per-area rules on merge above. Ties fall back to the
+// lexically greater OID so both merge directions agree.
+func (s *Syncer) mergeLeases(conflicts []leaseConflict) (map[string]string, error) {
+	if len(conflicts) == 0 {
+		return nil, nil
 	}
-	t, released, err := store.DecodeLeaseState(data)
-	if err != nil {
-		return time.Time{}, false, fmt.Errorf("syncer: merge %s: %w", path, err)
+	oids := make([]string, 0, 2*len(conflicts))
+	for _, c := range conflicts {
+		oids = append(oids, c.ours, c.theirs)
 	}
-	return t, released, nil
+	states, err := s.store.LeasesByOID(oids)
+	if err != nil {
+		return nil, fmt.Errorf("syncer: merge leases: %w", err)
+	}
+	winners := make(map[string]string, len(conflicts))
+	for _, c := range conflicts {
+		winners[c.path] = pickLease(c.ours, states[c.ours], c.theirs, states[c.theirs])
+	}
+	return winners, nil
+}
+
+// pickLease is the pure lease rule for one conflict: the winning OID
+// of a (blob a, state sa) versus (blob b, state sb).
+func pickLease(a string, sa store.LeaseState, b string, sb store.LeaseState) string {
+	switch {
+	case sa.Released && !sb.Released:
+		return a
+	case sb.Released && !sa.Released:
+		return b
+	case sa.Released && sb.Released && sa.Expires.Before(sb.Expires):
+		return a
+	case sa.Released && sb.Released && sb.Expires.Before(sa.Expires):
+		return b
+	case !sa.Released && !sb.Released && sa.Expires.After(sb.Expires):
+		return a
+	case !sa.Released && !sb.Released && sb.Expires.After(sa.Expires):
+		return b
+	}
+	return maxOID(a, b)
 }
 
 func maxOID(a, b string) string {

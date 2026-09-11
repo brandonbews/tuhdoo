@@ -1,6 +1,7 @@
 package store
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -28,6 +29,9 @@ const DefaultQuiet = 2 * time.Second
 type Batcher struct {
 	store *Store
 	quiet time.Duration
+	// Log, when set, gets one line per commit with its size and cost —
+	// the daemon's evidence stream for what a write costs (001 D2 note).
+	Log *log.Logger
 
 	mu      sync.Mutex
 	pending []event.Event
@@ -107,8 +111,13 @@ func (b *Batcher) flushLocked() error {
 	if len(b.pending) == 0 && len(b.files) == 0 {
 		return nil
 	}
+	start := time.Now()
 	err := b.store.AppendBatch(Batch{Events: b.pending, Files: b.files})
 	if err == nil {
+		if b.Log != nil {
+			b.Log.Printf("store: commit: %d events, %d files in %s",
+				len(b.pending), len(b.files), time.Since(start).Round(10*time.Microsecond))
+		}
 		b.pending = nil
 		b.files = nil
 	}
