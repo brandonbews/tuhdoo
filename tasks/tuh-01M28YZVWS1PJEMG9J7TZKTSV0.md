@@ -2,7 +2,7 @@
 
 `tuh-01M28YZVWS1PJEMG9J7TZKTSV0`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `go` `tui`
 - **Depends on:** [`tuh-8q7x`](tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) (done)
