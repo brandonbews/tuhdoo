@@ -2,7 +2,7 @@
 
 `tuh-01M26H99G1YXYDCSBFNQEF6HD8`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `go` `gitx` `store` `daemon` `cli`
 - **Depends on:** [`tuh-1bap`](tuh-01M26H99BZBCHHZX7G98X41BAP.md) (done)
