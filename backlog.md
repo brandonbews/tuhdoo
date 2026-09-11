@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 4 ready · 0 blocked · 7 on hold · 4 inbox · 123 done · 34 cancelled
+0 in progress · 4 ready · 0 blocked · 7 on hold · 3 inbox · 123 done · 35 cancelled
 
 ## In progress
 
@@ -39,7 +39,6 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 
 - [`tuh-e8gx`](tasks/tuh-01KZVZT7F8CVJYX1P00B2NE8GX.md) Selection-bar capability ladder is designed but unrecorded in internal-docs
 - [`tuh-hv8a`](tasks/tuh-01M10ZA2VCJ59WWYZG58RXHV8A.md) Grill: internal-docs tiering — decision records vs living mirrors vs stale artifacts
-- [`tuh-8x1s`](tasks/tuh-01M26JSHKSEQ0MJYBK1NK18X1S.md) TestMCPShimStdinDeathNamesStreamAndBytes fails locally under Go 1.27 (CI 1.26 green): stdin byte count 64 vs expected 154
 - [`tuh-vcmn`](tasks/tuh-01M27FW5A3YG8XZYEH0KDSVCMN.md) Batch blob writes and the gate's tree build: hash-object --stdin-paths and a second private index for GatePush
 
 ## Done
@@ -204,3 +203,4 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-s7mj`](tasks/tuh-01M0YEJBYZ1FAYXTJY1M8SS7MJ.md) placeholder: cancelled-row p0 badge check
 - [`tuh-w1v2`](tasks/tuh-01M11XDA6ST74WD1JWCWEAW1V2.md) get_task read-time refresh under TUI per-task polling saturates the daemon; writes starve for minutes
 - [`tuh-s5fw`](tasks/tuh-01M11XDA6ST74WD1JWCY0GS5FW.md) TUI pane grew to 3.4GB RSS overnight; a longer-lived pane sits at 21MB
+- [`tuh-8x1s`](tasks/tuh-01M26JSHKSEQ0MJYBK1NK18X1S.md) TestMCPShimStdinDeathNamesStreamAndBytes fails locally under Go 1.27 (CI 1.26 green): stdin byte count 64 vs expected 154
