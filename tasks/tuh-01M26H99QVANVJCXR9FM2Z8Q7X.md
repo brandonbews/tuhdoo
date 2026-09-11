@@ -2,7 +2,7 @@
 
 `tuh-01M26H99QVANVJCXR9FM2Z8Q7X`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `go` `core` `daemon` `views` `tui` `cli`
 - **Depends on:** [`tuh-k0zx`](tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) (done)
@@ -41,3 +41,7 @@ Added 2026-09-10: one more manual acceptance item, in the PR body. Leave an arme
 ### 2026-09-10 20:59 UTC — edit by `brandon`
 
 description edited
+
+### 2026-09-11 19:36 UTC — note from `brandon/claude-code-1`
+
+Branch: tuh-01M26H99QVANVJCXR9FM2Z8Q7X/versioned-state. Plan: server half first (core NextTransition, daemon version/memo/broadcast, /v0/snapshot long-poll, views on bump, delete /v0/state + GET /v0/tasks/{id}), then cmd/tuhdoo clients (one-shot commands + TUI long-poll without tick), then manual measurements for the PR body (first paint, 60s no-spawn, sync latency, 1h RSS for tuh-01M11XDA6ST74WD1JWCY0GS5FW).
