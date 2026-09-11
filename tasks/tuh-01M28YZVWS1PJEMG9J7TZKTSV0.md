@@ -2,10 +2,10 @@
 
 `tuh-01M28YZVWS1PJEMG9J7TZKTSV0`
 
-- **Status:** open — blocked on dependencies
+- **Status:** open — ready
 - **Priority:** 1
 - **Labels:** `go` `tui`
-- **Depends on:** [`tuh-8q7x`](tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) (open)
+- **Depends on:** [`tuh-8q7x`](tuh-01M26H99QVANVJCXR9FM2Z8Q7X.md) (done)
 - **Created:** 2026-09-11 19:26 UTC by `brandon/claude-code-1`
 
 ## Description

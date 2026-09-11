@@ -2,7 +2,7 @@
 
 `tuh-01M26H99QVANVJCXR9FM2Z8Q7X`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `go` `core` `daemon` `views` `tui` `cli`
 - **Depends on:** [`tuh-k0zx`](tuh-01M26H99M5ZYK5NSGDKQT3K0ZX.md) (done)
@@ -45,3 +45,11 @@ description edited
 ### 2026-09-11 19:36 UTC — note from `brandon/claude-code-1`
 
 Branch: tuh-01M26H99QVANVJCXR9FM2Z8Q7X/versioned-state. Plan: server half first (core NextTransition, daemon version/memo/broadcast, /v0/snapshot long-poll, views on bump, delete /v0/state + GET /v0/tasks/{id}), then cmd/tuhdoo clients (one-shot commands + TUI long-poll without tick), then manual measurements for the PR body (first paint, 60s no-spawn, sync latency, 1h RSS for tuh-01M11XDA6ST74WD1JWCY0GS5FW).
+
+### 2026-09-11 21:32 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M26H99QVANVJCXR9FM2Z8Q7X/versioned-state`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/105>
+- Merged as: `57a82d31326d08a634676c9a87e21902bf6e7980`
+
+Landed as PR #105 (squash 57a82d3). core: NextTransition. daemon: monotonic version, memo valid until the next lease transition, closed-channel broadcast, one timer; bumps on staged writes, merges, lease transitions; views re-rendered on every bump and staged by blob-OID diff (batcher.AddFiles became SetFiles with replace semantics); claim/release write lease-then-event and poke the syncer; lease expiry yields a view-only commit. API: GET /v0/snapshot?since=N&wait= (differs-not-exceeds per T4, capped 60s, {version, unchanged:true} on timeout); /v0/state and GET /v0/tasks/{id} deleted. Clients: one snapshot request, byte-identical one-shot output (goldens untouched), TUI long-polls one request at a time with a 1s→5s backoff, tick deleted. Manual acceptance in the PR body: first paint 48–51ms; 60s at rest with a pane open: 0 child processes, CPU flat; claim via shim → GitHub backlog.md In progress in 3.8s (probe task tuh-01M292K54DKSHW00J31P487R5T); 62-minute armed pane: daemon RSS 33.4MB → 37.7MB, flat after 10 minutes, 0 children — the verification tuh-01M11XDA6ST74WD1JWCY0GS5FW asked for. Two incidental test repairs called out in the PR: TestMCPShimStdinDeathNamesStreamAndBytes was already red on main under Go 1.27 (v2 encoding/json 64-byte first reads) and now asserts the contract bounds; TestMCPSessionAutoRenewsLease TTL 1s → 2s because expiries are second-truncated. 002-technology.md T4 startup note updated (snapshot answers the starting placeholder). Deploy restart of the dogfooding daemon follows this finish; until then old daemons return 404 to the new client binary.
