@@ -85,12 +85,14 @@ func TestTopGoldenPlain80(t *testing.T) {
 		// acting as its own derived identity is the normal state.
 		" tuhdoo · local-only                                                            ",
 		"",
-		" NEEDS INPUT (1)                                                   enter answer ",
+		// Bars carry no key hints (keyboard/priority grill, 2026-09-11):
+		// the footer legend is the single place keys are advertised.
+		" NEEDS INPUT (1)                                                                ",
 		"▌ t-lic   !   choose a license",
 		"▌             question: Which license?",
 		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
-		" READY (2)                                                p priority · c cancel ",
+		" READY (2)                                                                      ",
 		// Two-line rows (grill 2026-08-05): full title, dim meta line —
 		// and a bare row (t-flor) stays one line, the "no labels, no
 		// edges" signal. P0-highest (2026-08-21): p1 leads p5.
@@ -105,22 +107,24 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" BLOCKED (0)                                                                    ",
 		"  none",
 		"",
-		" ON HOLD (1)                                                           c cancel ",
+		" ON HOLD (1)                                                                    ",
 		"  t-park  p2  polish the docs",
 		"",
-		" INBOX (1)                                                 i capture · c cancel ",
+		" INBOX (1)                                                                      ",
 		"  t-idea      idea: dark mode",
 	}, "\n") + "\n" +
-		// The footer pins to the bottom row (chrome hierarchy,
-		// 2026-08-03): rows 25-39 are the blank pad, row 40 the footer.
-		strings.Repeat("\n", 15) +
-		// The armed legend grew "h history" (2026-08-02); at exactly 80
-		// columns the done tally is the sacrificed right text (barLine's
-		// rule, kept by segLine) — it returns on wider terminals. The
-		// pinned frame's last line is unterminated: bubbletea drops
-		// overflow from the top, so a trailing newline (an extra empty
+		// The footer pins to the bottom rows (chrome hierarchy,
+		// 2026-08-03): rows 25-38 are the blank pad, rows 39-40 the
+		// footer.
+		strings.Repeat("\n", 14) +
+		// The armed legend (keyboard/priority grill, 2026-09-11) is 111
+		// cells, so at 80 columns it wraps after p priority; the done
+		// tally rides the last line, where it now fits. The pinned
+		// frame's last line is unterminated: bubbletea drops overflow
+		// from the top, so a trailing newline (an extra empty
 		// split-line) would cost the header row.
-		" ↑/↓ (j/k) move · enter open · p priority · c cancel · h history · q quit       "
+		" ↑/↓ (j/k) move · enter open · r ready · h hold · i inbox · p priority          \n" +
+		" c cancel · n new · tab closed · q quit                                  1 done "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -130,9 +134,34 @@ func TestTopGoldenPlain80(t *testing.T) {
 	}
 }
 
+// The armed list legend at 60 columns, plain colors (keyboard/priority
+// grill, 2026-09-11): legendLine wraps at item boundaries — never
+// mid-item, never truncated — onto a second gutter-aligned line, with
+// the done tally on the last line. Byte-exact bottom two rows of a
+// 40-row frame.
+func TestTopGoldenLegend60(t *testing.T) {
+	m := newTopModel(newFakeSteering())
+	m.width, m.height = 60, 40
+	v := m.View()
+	lines := strings.Split(v, "\n")
+	if len(lines) != 40 {
+		t.Fatalf("frame is %d lines, want 40; view:\n%s", len(lines), v)
+	}
+	want := []string{
+		" ↑/↓ (j/k) move · enter open · r ready · h hold · i inbox   ",
+		" p priority · c cancel · n new · tab closed · q quit 1 done ",
+	}
+	if got := lines[38:]; got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("60-column legend diverged.\ngot:\n%q\n%q\nwant:\n%q\n%q", got[0], got[1], want[0], want[1])
+	}
+	if strings.Contains(v, "\x1b") || strings.Contains(v, "…") {
+		t.Errorf("60-column render leaked escapes or truncated the legend:\n%q", v)
+	}
+}
+
 // Bar composition with real colors, at 80 and 120 columns: one style
-// wraps the whole padded line; counts ride the left edge, steering
-// hints the right.
+// wraps the whole padded line; counts ride the left edge, and no bar
+// carries a key hint.
 // The ready-row priority badge ramp (P0-highest grill, 2026-08-21):
 // p0 bright red (contrast ramp, 2026-08-25 — normal red reads
 // low-contrast on dark themes; negatives too, the int is unbounded and
@@ -250,7 +279,7 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 		// Bar recolors II: black on bright red, black on slot-7 gray —
 		// in-palette on every rung.
 		"\x1b[30;101m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
-		"\x1b[30;47m" + padBar(120, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
+		"\x1b[30;47m" + padBar(120, " ON HOLD (1)", "") + "\x1b[0m",
 		// The blocked stack: muted-red lead, gray reason — the loud bar
 		// carries the urgency, the reason line never reads as an alarm.
 		"              \x1b[38;5;131mwaiting: \x1b[0m\x1b[90mdepends on t-flor (open — sweep the floor)\x1b[0m",
@@ -346,9 +375,9 @@ func TestTopGoldenBadgesEverySection(t *testing.T) {
 		}
 	}
 
-	// History mode: the close metadata keeps the meta line; the badge
+	// Closed: the close metadata keeps the meta line; the badge
 	// keeps the ramp.
-	hm := newHistoryModel(newFakeSteering())
+	hm := newClosedModel(newFakeSteering())
 	for i := range hm.snap.state.Tasks {
 		switch hm.snap.state.Tasks[i].ID {
 		case "t-ship":
@@ -359,14 +388,14 @@ func TestTopGoldenBadgesEverySection(t *testing.T) {
 	}
 	hm.col = ansiColors
 	hm.width, hm.height = 80, 40
-	hm, _ = press(t, hm, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	hm, _ = press(t, hm, keyOf(tea.KeyTab))
 	hv := hm.View()
 	for _, want := range []string{
 		"\x1b[90mt-ship\x1b[0m  \x1b[33mp1\x1b[0m  \x1b[1mship the tui\x1b[0m",
 		"\x1b[90mt-drop\x1b[0m  \x1b[91mp0\x1b[0m  \x1b[1mdrop the wiki\x1b[0m",
 	} {
 		if !strings.Contains(hv, want) {
-			t.Errorf("history missing ramp badge %q; view:\n%q", want, hv)
+			t.Errorf("Closed missing ramp badge %q; view:\n%q", want, hv)
 		}
 	}
 }
@@ -378,17 +407,20 @@ func TestTopGoldenBars(t *testing.T) {
 		m.width, m.height = width, 60
 		v := m.View()
 		// The unfilled footer (chrome hierarchy, 2026-08-03): bold keys,
-		// dim labels and separators, an unstyled space fill. The done
-		// tally survives only where the widened legend leaves room
-		// (segLine keeps barLine's drop-the-right-first rule): gone at
-		// 80, back at 120. The legend's visible width is 73 cells.
-		foot := " " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
-			legendSep + legendKey("p", "priority") + legendSep + legendKey("c", "cancel") +
-			legendSep + legendKey("h", "history") + legendSep + legendKey("q", "quit")
+		// dim labels and separators, an unstyled space fill. The armed
+		// legend is 111 cells (keyboard/priority grill, 2026-09-11):
+		// one line at 120 with the done tally beside it, two at 80 —
+		// wrapped after p priority, the tally on the last line.
+		head := " " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
+			legendSep + legendKey("r", "ready") + legendSep + legendKey("h", "hold") +
+			legendSep + legendKey("i", "inbox") + legendSep + legendKey("p", "priority")
+		tail := legendKey("c", "cancel") + legendSep + legendKey("n", "new") +
+			legendSep + legendKey("tab", "closed") + legendSep + legendKey("q", "quit")
+		var foot string
 		if width >= 120 {
-			foot += strings.Repeat(" ", width-73-7) + "\x1b[90m1 done \x1b[0m"
+			foot = head + legendSep + tail + strings.Repeat(" ", width-111-7) + "\x1b[90m1 done \x1b[0m"
 		} else {
-			foot += strings.Repeat(" ", width-73)
+			foot = head + strings.Repeat(" ", width-70) + "\n" + " " + tail + strings.Repeat(" ", width-39-7) + "\x1b[90m1 done \x1b[0m"
 		}
 		for _, bar := range []string{
 			// The unfilled header (chrome hierarchy, 2026-08-03; chrome
@@ -397,8 +429,10 @@ func TestTopGoldenBars(t *testing.T) {
 			// identity is unmarked, the normal state.
 			"\x1b[1m tuhdoo\x1b[0m\x1b[90m · \x1b[0m\x1b[90mlocal-only\x1b[0m" +
 				strings.Repeat(" ", width-20),
-			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "enter answer ") + "\x1b[0m",
-			"\x1b[30;42m" + padBar(width, " READY (2)", "p priority · c cancel ") + "\x1b[0m",
+			// No bar carries a key hint (keyboard/priority grill,
+			// 2026-09-11): counts ride the left edge, the fill is bare.
+			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "") + "\x1b[0m",
+			"\x1b[30;42m" + padBar(width, " READY (2)", "") + "\x1b[0m",
 			"\x1b[30;43m" + padBar(width, " IN PROGRESS (1)", "") + "\x1b[0m",
 			// Bar recolors II (2026-08-25): BLOCKED is black on bright
 			// red — the p0 badge's background twin — and ON HOLD black on
@@ -406,8 +440,8 @@ func TestTopGoldenBars(t *testing.T) {
 			// INBOX keeps black on bright-white (bar recolors,
 			// 2026-08-04).
 			"\x1b[30;101m" + padBar(width, " BLOCKED (0)", "") + "\x1b[0m",
-			"\x1b[30;47m" + padBar(width, " ON HOLD (1)", "c cancel ") + "\x1b[0m",
-			"\x1b[30;107m" + padBar(width, " INBOX (1)", "i capture · c cancel ") + "\x1b[0m",
+			"\x1b[30;47m" + padBar(width, " ON HOLD (1)", "") + "\x1b[0m",
+			"\x1b[30;107m" + padBar(width, " INBOX (1)", "") + "\x1b[0m",
 			foot,
 		} {
 			if !strings.Contains(v, bar) {
@@ -642,8 +676,8 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	m.armed = false
 	m.width, m.height = 80, 40
 	v := m.View()
-	mustContain(t, v, "watch ", "↑/↓ (j/k) move · enter open · h history · q quit")
-	for _, absent := range []string{"enter answer", "p priority", "c cancel", "i capture"} {
+	mustContain(t, v, "watch ", "↑/↓ (j/k) move · enter open · tab closed · q quit")
+	for _, absent := range []string{"enter answer", "r ready", "h hold", "i inbox", "p priority", "c cancel", "n new"} {
 		if strings.Contains(v, absent) {
 			t.Errorf("watch mode advertises steering key %q; view:\n%s", absent, v)
 		}
@@ -747,7 +781,7 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 	m, _ = press(t, m,
 		keyOf(tea.KeyDown), // t-flor (p1 leads ready)
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
-	m, cmd := press(t, m, append(runes("2"), keyOf(tea.KeyEnter))...)
+	m, cmd := press(t, m, runes("2")...) // the picker: one digit, no enter
 	v := m.View()
 	if want := "\x1b[100m" + padBar(80, " updating…", "") + "\x1b[0m"; !strings.Contains(v, want) {
 		t.Errorf("in-flight strip missing %q; view:\n%q", want, v)
@@ -771,7 +805,7 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 	// regenerated: it rode the quiet strip until then): the rejection
 	// replaces the hint line inside the box, red, the prompt stays open,
 	// and the strip behind stays clear.
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}}, keyOf(tea.KeyEnter))
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}, keyOf(tea.KeyEnter))
 	v = m.View()
 	if want := "\x1b[90m│\x1b[0m \x1b[31mtitle cannot be empty\x1b[0m"; !strings.Contains(v, want) {
 		t.Errorf("validation missing from the box's hint line %q; view:\n%q", want, v)
@@ -787,7 +821,7 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 	fake.err = errors.New("writes rejected (fail-safe read-only)")
 	m, _ = press(t, m, keyOf(tea.KeyEsc)) // abandon the capture
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
-	m, cmd = press(t, m, append(runes("9"), keyOf(tea.KeyEnter))...)
+	m, cmd = press(t, m, runes("9")...)
 	am = cmd().(actionMsg)
 	if am.err == nil {
 		t.Fatal("expected an action error")
@@ -882,10 +916,13 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		" HISTORY                                                                        ",
 		"  no activity yet",
 	}, "\n") + "\n" +
-		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 20-39 are the blank pad.
-		strings.Repeat("\n", 20) +
-		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        "
+		// Footer pinned to rows 39-40 (chrome hierarchy, 2026-08-03):
+		// rows 20-38 are the blank pad. The armed task-view legend
+		// (keyboard/priority grill, 2026-09-11) wraps after p priority
+		// at 80 columns.
+		strings.Repeat("\n", 19) +
+		" ↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority          \n" +
+		" c cancel · esc back · q quit                                                   "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column task view diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -951,10 +988,12 @@ func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 		padBar(80, " HISTORY", ""),
 		"  no activity yet",
 	}, "\n") + "\n" +
-		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 22-39 are the blank pad.
-		strings.Repeat("\n", 18) +
-		" ↑/↓ (j/k) move · enter edit · p priority · c cancel · esc back · q quit        "
+		// Footer pinned to rows 39-40 (chrome hierarchy, 2026-08-03):
+		// rows 22-38 are the blank pad; the armed legend wraps at 80
+		// (keyboard/priority grill, 2026-09-11).
+		strings.Repeat("\n", 17) +
+		" ↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority          \n" +
+		" c cancel · esc back · q quit                                                   "
 	got := m.View()
 	if got != want {
 		t.Errorf("plain 80-column edge sections diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
@@ -986,12 +1025,15 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		// reverse-dim): shelf, not queue.
 		"\x1b[100m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[100m" + padBar(80, " HISTORY", "") + "\x1b[0m",
-		// The unfilled footer: bold keys, dim labels, no fill. The
-		// legend's visible width is 72 cells, so 8 cells of plain pad.
+		// The unfilled footer: bold keys, dim labels, no fill — two
+		// lines at 80 (keyboard/priority grill, 2026-09-11): 70 cells
+		// then 10 of pad, 29 cells then 51 of pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "edit") +
-			legendSep + legendKey("p", "priority") + legendSep + legendKey("c", "cancel") +
-			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
-			strings.Repeat(" ", 8),
+			legendSep + legendKey("r", "ready") + legendSep + legendKey("h", "hold") +
+			legendSep + legendKey("i", "inbox") + legendSep + legendKey("p", "priority") +
+			strings.Repeat(" ", 10) + "\n" +
+			" " + legendKey("c", "cancel") + legendSep + legendKey("esc", "back") +
+			legendSep + legendKey("q", "quit") + strings.Repeat(" ", 51),
 		// Bold field names on the grid; the canonical id value stays dim.
 		"  \x1b[1mid\x1b[0m          \x1b[90mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",
@@ -1041,14 +1083,14 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	}
 }
 
-// History mode at 80 columns, plain colors (history view, 2026-08-02):
+// The Closed list at 80 columns, plain colors (Closed shelf, 2026-08-02):
 // the two-bar layout — DONE then CANCELLED, each newest close first —
 // rows on the ready-row anatomy with the dim close stamp and closing
 // actor appended, and the read-only footer legend. Byte-exact.
-func TestTopGoldenHistoryPlain80(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
+func TestTopGoldenClosedPlain80(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
 	m.width, m.height = 80, 40
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	want := strings.Join([]string{
 		" tuhdoo · local-only                                                            ",
 		"",
@@ -1074,22 +1116,22 @@ func TestTopGoldenHistoryPlain80(t *testing.T) {
 		" ↑/↓ (j/k) move · enter open · esc back · q quit                                "
 	got := m.View()
 	if got != want {
-		t.Errorf("plain 80-column history render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
+		t.Errorf("plain 80-column Closed render diverged from golden.\ngot:\n%s\nwant:\n%s", got, want)
 	}
 	if strings.Contains(got, "\x1b") {
-		t.Errorf("plain history render leaked ANSI escapes:\n%q", got)
+		t.Errorf("plain Closed render leaked ANSI escapes:\n%q", got)
 	}
 }
 
-// History bar composition with real colors: DONE keeps the ready
+// Closed bar composition with real colors: DONE keeps the ready
 // green, CANCELLED the shelves' reverse-dim, neither carries a hint,
 // and a row's title stays bold while its close metadata rides the dim
 // meta line below (two-line rows, 2026-08-05).
-func TestTopGoldenHistoryBars(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
+func TestTopGoldenClosedBars(t *testing.T) {
+	m := newClosedModel(newFakeSteering())
 	m.col = ansiColors
 	m.width, m.height = 80, 40
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	v := m.View()
 	for _, want := range []string{
 		"\x1b[30;42m" + padBar(80, " DONE (3)", "") + "\x1b[0m",
@@ -1108,19 +1150,19 @@ func TestTopGoldenHistoryBars(t *testing.T) {
 			"              \x1b[90m1 dep · 2026-07-29 · brandon\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
-			t.Errorf("history view missing %q; view:\n%q", want, v)
+			t.Errorf("Closed view missing %q; view:\n%q", want, v)
 		}
 	}
 }
 
 // The task view of a cancelled task at 80 columns, plain colors,
-// entered from history: the status line carries the close metadata,
+// entered from Closed: the status line carries the close metadata,
 // the unanswered escalation renders in HISTORY as record — no NEEDS
 // INPUT section — and the armed footer advertises no p/c. Byte-exact.
 func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
-	m := newHistoryModel(newFakeSteering())
+	m := newClosedModel(newFakeSteering())
 	m.width, m.height = 80, 40
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = press(t, m, keyOf(tea.KeyTab))
 	m = moveTo(t, m, "t-drop")
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
 	if m.mode != modeDetail || m.detailID != "t-drop" {
@@ -1219,9 +1261,9 @@ func TestTopGoldenFooterPinned(t *testing.T) {
 		t.Fatalf("p on a ready row: mode %d, want modePriority", mp.mode)
 	}
 	bottom(t, mp.View(), 40, "q quit")
-	mustContain(t, mp.View(), "enter submits · esc cancels")
-	// History.
-	mh, _ := press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	mustContain(t, mp.View(), "0-9 sets · - clears · esc")
+	// Closed.
+	mh, _ := press(t, m, keyOf(tea.KeyTab))
 	bottom(t, mh.View(), 40, "q quit")
 	// The task view, and an edit prompt opened from it.
 	md := openDetail(t, m, "t-pars")
@@ -1296,8 +1338,11 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 func TestTopGoldenPromptOverlay(t *testing.T) {
 	esc := func(k tea.KeyType) tea.KeyMsg { return keyOf(k) }
 	r := func(c rune) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{c}} }
+	// fromDetail opens t-flak's view with its claim released (unclaimed:
+	// a claimed task has no priority stop, so the ring walks below
+	// count title, priority, labels, description) and walks the ring.
 	fromDetail := func(t *testing.T, m topModel, walk int) topModel {
-		m = openDetail(t, m, "t-flak")
+		m = openDetail(t, unclaimed(m), "t-flak")
 		for i := 0; i < walk; i++ {
 			m, _ = press(t, m, r('j'))
 		}
@@ -1310,27 +1355,30 @@ func TestTopGoldenPromptOverlay(t *testing.T) {
 		mode  int
 		box   []string // inner lines
 	}{
+		// The priority picker (keyboard/priority grill, 2026-09-11): the
+		// label carries the current value, no text row, the three-key
+		// hint.
 		{"list priority", func(t *testing.T, m topModel) topModel {
 			m, _ = press(t, m, esc(tea.KeyDown)) // t-flor
 			return m
 		}, r('p'), modePriority, []string{
-			"priority t-flor (sweep the floor)", "> █", "enter submits · esc cancels"}},
+			"priority t-flor (sweep the floor) · now p1", "0-9 sets · - clears · esc"}},
 		{"list cancel", func(t *testing.T, m topModel) topModel {
 			m, _ = press(t, m, esc(tea.KeyDown), esc(tea.KeyDown)) // t-pars
 			return m
 		}, r('c'), modeConfirmCancel, []string{
 			"cancel t-pars (write the parser)?", "history stays on the ledger", "y/n"}},
 		{"list capture", func(t *testing.T, m topModel) topModel { return m },
-			r('i'), modeCapture, []string{
+			r('n'), modeCapture, []string{
 				"capture (to inbox)", "> █", "enter captures · esc cancels"}},
 		{"task view answer", func(t *testing.T, m topModel) topModel {
 			m, _ = press(t, m, esc(tea.KeyEnter)) // the Needs Input row: t-lic, escalation preselected
 			return m
 		}, esc(tea.KeyEnter), modeAnswer, []string{
 			"answer · Which license?", "> █", "enter submits · esc cancels"}},
-		{"task view priority", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 0) },
+		{"task view priority", func(t *testing.T, m topModel) topModel { return openDetail(t, m, "t-park") },
 			r('p'), modePriority, []string{
-				"priority t-flak (investigate the flake)", "> █", "enter submits · esc cancels"}},
+				"priority t-park (polish the docs) · now p2", "0-9 sets · - clears · esc"}},
 		{"task view cancel", func(t *testing.T, m topModel) topModel { return fromDetail(t, m, 0) },
 			r('c'), modeConfirmCancel, []string{
 				"cancel t-flak (investigate the flake)?", "history stays on the ledger", "y/n"}},
@@ -1385,7 +1433,7 @@ func TestTopGoldenPromptOverlayStyled(t *testing.T) {
 	m.col = ansiColors
 	m.col.selBG = "\x1b[48;5;236m"
 	m.width, m.height = 80, 40
-	m = moveTo(t, m, "t-park") // the ON HOLD row: row 20, under a 5-line box at rows 17–21
+	m = moveTo(t, m, "t-park") // the ON HOLD row: row 20, under the picker's 4-line box at rows 18–21
 	before := strings.Split(m.View(), "\n")
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	v := m.View()
@@ -1393,8 +1441,8 @@ func TestTopGoldenPromptOverlayStyled(t *testing.T) {
 	rule := strings.Repeat("─", 74)
 	for _, want := range []string{
 		"\x1b[90m┌" + rule + "┐\x1b[0m",
-		"\x1b[90m│\x1b[0m \x1b[1mpriority t-park (polish the docs)\x1b[0m",
-		"\x1b[90m│\x1b[0m \x1b[90menter submits · esc cancels\x1b[0m",
+		"\x1b[90m│\x1b[0m \x1b[1mpriority t-park (polish the docs) · now p2\x1b[0m",
+		"\x1b[90m│\x1b[0m \x1b[90m0-9 sets · - clears · esc\x1b[0m",
 		"\x1b[90m└" + rule + "┘\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
@@ -1403,7 +1451,7 @@ func TestTopGoldenPromptOverlayStyled(t *testing.T) {
 	}
 	// Rows outside the box are untouched, bytes and all.
 	for i := range lines {
-		if (i < 17 || i > 21) && lines[i] != before[i] {
+		if (i < 18 || i > 21) && lines[i] != before[i] {
 			t.Errorf("row %d outside the box changed: %q → %q", i, before[i], lines[i])
 		}
 	}
@@ -1429,7 +1477,7 @@ func TestTopGoldenPromptOverlayStyled(t *testing.T) {
 // the cursor row visible, at the end on open and at the head after
 // walking up; the frame stays ten lines throughout.
 func TestTopGoldenDescEditorScrollsInBox(t *testing.T) {
-	m := newTopModel(newFakeSteering())
+	m := newTopModelUnclaimed(newFakeSteering())
 	h := m.snap.tasks["t-flak"]
 	h.Task.Description = "l1\nl2\nl3\nl4\nl5"
 	m.snap.tasks["t-flak"] = h
@@ -1478,7 +1526,7 @@ func TestTopGoldenPromptSmallTerminal(t *testing.T) {
 	for _, tt := range []struct{ width, height int }{{18, 40}, {80, 5}, {18, 5}} {
 		m := newTopModel(newFakeSteering())
 		m.width, m.height = tt.width, tt.height
-		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+		m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 		m, _ = press(t, m, runes("idea")...)
 		v := m.View()
 		for _, glyph := range []string{"┌", "│", "└"} {

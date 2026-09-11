@@ -42,7 +42,7 @@ import (
 // drop-the-alarm muting), and bgGray is black on gray, slot 7: bright
 // enough to carry black text, and distinct from bgWhite's bright-white
 // INBOX bar, slot 15. bgDarkGray is the quiet chrome for surfaces
-// that are shelf, not queue — the CANCELLED history bar and the task
+// that are shelf, not queue — the CANCELLED bar of the Closed shelf and the task
 // view's section bars, which dropped reverse-dim for it: default
 // foreground on bright-black here (the floor and the CLI-facing
 // value), re-resolved by runTUI down the background ladder (chromeBG,
@@ -132,8 +132,8 @@ func stamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04 UTC")
 }
 
-// dayStamp is stamp at day precision, for the history surfaces
-// (history view, 2026-08-02): when a task closed matters to the day;
+// dayStamp is stamp at day precision, for the close-time surfaces
+// (Closed shelf, 2026-08-02): when a task closed matters to the day;
 // the exact instant lives on the ledger.
 func dayStamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02")

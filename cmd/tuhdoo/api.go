@@ -17,7 +17,7 @@ type taskJSON struct {
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
-	// Close metadata (history view, 2026-08-02): set on done and
+	// Close metadata (Closed shelf, 2026-08-02): set on done and
 	// cancelled tasks only.
 	ClosedAt *time.Time `json:"closed_at"`
 	ClosedBy string     `json:"closed_by"`
@@ -70,7 +70,7 @@ type noteJSON struct {
 }
 
 // updateJSON is one task edit: the actor and the compact per-field
-// summaries the history surfaces render verbatim.
+// summaries the Closed and task-view surfaces render verbatim.
 type updateJSON struct {
 	ID     string   `json:"id"`
 	Task   string   `json:"task"`
@@ -114,7 +114,7 @@ type stateTask struct {
 	// CLI renders these, it never re-derives them.
 	CancelledDeps []string `json:"cancelled_deps"`
 	Cyclic        bool     `json:"cyclic"`
-	// Close metadata (history view, 2026-08-02): what the history rows
+	// Close metadata (Closed shelf, 2026-08-02): what the Closed rows
 	// sort and stamp by; nil on open tasks and pre-upgrade daemons.
 	ClosedAt *time.Time `json:"closed_at"`
 	ClosedBy string     `json:"closed_by"`

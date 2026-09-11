@@ -157,7 +157,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	m = refreshTop(t, m)
 	m = moveTo(t, m, parser)
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
-	m, cmd = press(t, m, append(runes("7"), keyOf(tea.KeyEnter))...)
+	m, cmd = press(t, m, runes("7")...) // the picker: one digit, no enter
 	m = act(t, m, cmd)
 
 	// Visible to the next claimant: claim-next serves the same
@@ -176,6 +176,45 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 	if next.Task.Priority == nil || *next.Task.Priority != 7 {
 		t.Errorf("priority = %v, want 7", next.Task.Priority)
+	}
+
+	// ---- status moves and the priority clear (keyboard/priority grill, 2026-09-11) ----
+	// h on a ready row PATCHes status held — the stored word, never "on
+	// hold" — and the row lands on the ON HOLD shelf on the next poll; r
+	// from there PATCHes it back to open. Each is one task.updated, the
+	// same event `tuhdoo update --status` writes.
+	m = refreshTop(t, m)
+	m = moveTo(t, m, wrong)
+	m, cmd = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m = act(t, m, cmd)
+	if h := daemonTask(t, c, wrong); h.Task.Status != "held" {
+		t.Fatalf("status after h = %q, want held", h.Task.Status)
+	}
+	m = refreshTop(t, m)
+	m = moveTo(t, m, wrong)
+	if r, _ := m.selected(); r.section != "held" {
+		t.Fatalf("moved task renders under %q, want the held shelf", r.section)
+	}
+	m, cmd = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m = act(t, m, cmd)
+	if h := daemonTask(t, c, wrong); h.Task.Status != "open" {
+		t.Fatalf("status after r = %q, want open", h.Task.Status)
+	}
+	// The picker's - sends clear_priority: a set priority goes back to
+	// none on the daemon, the v4 explicit-null clear.
+	m = refreshTop(t, m)
+	m = moveTo(t, m, wrong)
+	m, cmd = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}})
+	m = act(t, m, cmd)
+	if h := daemonTask(t, c, wrong); h.Task.Priority == nil || *h.Task.Priority != 2 {
+		t.Fatalf("priority after the pick = %v, want 2", h.Task.Priority)
+	}
+	m = refreshTop(t, m)
+	m = moveTo(t, m, wrong)
+	m, cmd = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'-'}})
+	m = act(t, m, cmd)
+	if h := daemonTask(t, c, wrong); h.Task.Priority != nil {
+		t.Fatalf("priority after the clear = %v, want none", *h.Task.Priority)
 	}
 
 	// ---- edit title and description from the task view ----
@@ -293,7 +332,7 @@ func TestTopQuickCaptureRealDaemon(t *testing.T) {
 	m := topModel{c: c, api: httpSteering{c: c, actor: "brandon"}, actor: "brandon", armed: true}
 	m = refreshTop(t, m)
 
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	if m.mode != modeCapture {
 		t.Fatalf("i: mode = %d, want modeCapture", m.mode)
 	}

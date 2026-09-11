@@ -281,13 +281,15 @@ func TestTextInputViewMultilineWraps(t *testing.T) {
 
 // ---- the widget through the model: one input loop for every entry ----
 
-// Every entry edits mid-string through Update: capture, answer, and
-// priority all run on the shared widget — no per-screen input handling.
+// Every text entry edits mid-string through Update: capture and answer
+// run on the shared widget — no per-screen input handling. (Priority
+// is a one-keystroke picker, not a text entry, since the
+// keyboard/priority grill, 2026-09-11.)
 func TestTopAllInputsEditMidString(t *testing.T) {
 	// Capture: fix a typo at the head, then rebuild a word by motion.
 	fake := newFakeSteering()
 	m := newTopModel(fake)
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	m, _ = press(t, m, runes("hllo wrld")...)
 	m, _ = press(t, m, keyOf(tea.KeyHome), keyOf(tea.KeyRight))
 	m, _ = press(t, m, runes("e")...) // h|llo → he|llo
@@ -322,32 +324,13 @@ func TestTopAllInputsEditMidString(t *testing.T) {
 	if got := fake.answers["01E1"]; got != "Use MIT." {
 		t.Errorf("answered with %q, want %q", got, "Use MIT.")
 	}
-
-	// Priority: cursor left, backspace deletes the mistyped leading digit.
-	fake = newFakeSteering()
-	m = newTopModel(fake)
-	m, _ = press(t, m,
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}, // t-flor (p1 leads ready under P0-highest)
-		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
-	m, _ = press(t, m, runes("17")...)
-	m, _ = press(t, m, keyOf(tea.KeyLeft), keyOf(tea.KeyBackspace))
-	m, cmd = press(t, m, keyOf(tea.KeyEnter))
-	if cmd == nil {
-		t.Fatal("priority submit produced no command")
-	}
-	if am := cmd().(actionMsg); am.err != nil {
-		t.Fatalf("priority error: %v", am.err)
-	}
-	if got := fake.priorities["t-flor"]; got != 7 {
-		t.Errorf("priority set to %d, want 7", got)
-	}
 }
 
 // The alt chords land through the model exactly as the terminal sends
 // them (the KeyMsg forms of ESC b / ESC f / ESC DEL / CSI 1;3D / 1;3C).
 func TestTopInputAltChordsThroughUpdate(t *testing.T) {
 	m := newTopModel(newFakeSteering())
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	m, _ = press(t, m, runes("alpha beta gamma")...)
 	m, _ = press(t, m, altBackspace)
 	if got := m.input.String(); got != "alpha beta " {
@@ -368,13 +351,13 @@ func TestTopInputAltChordsThroughUpdate(t *testing.T) {
 }
 
 // The hint never moves while typing (dogfood capture, 2026-08-01): in
-// every entry it renders on its own line below the box, byte-identical
-// and on the same screen line before and after keystrokes.
+// every text entry it renders on its own line below the box,
+// byte-identical and on the same screen line before and after
+// keystrokes. (The priority picker takes no typing.)
 func TestTopInputHintFixedWhileTyping(t *testing.T) {
 	entries := map[string][]tea.KeyMsg{
-		"capture":  {{Type: tea.KeyRunes, Runes: []rune{'i'}}},
-		"answer":   {keyOf(tea.KeyEnter), keyOf(tea.KeyEnter)},
-		"priority": {{Type: tea.KeyRunes, Runes: []rune{'j'}}, {Type: tea.KeyRunes, Runes: []rune{'p'}}},
+		"capture": {{Type: tea.KeyRunes, Runes: []rune{'n'}}},
+		"answer":  {keyOf(tea.KeyEnter), keyOf(tea.KeyEnter)},
 	}
 	for name, open := range entries {
 		t.Run(name, func(t *testing.T) {
@@ -412,7 +395,7 @@ func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	before := m.View()
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	m, _ = press(t, m, runes("idea")...)
 	v := m.View()
 	assertOverlay(t, before, v, plainBox(
@@ -434,7 +417,7 @@ func TestTopInputMultilineEnterAndCtrlS(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
 	m.width, m.height = 80, 40
-	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	m.input.multiline = true
 	m, _ = press(t, m, runes("line one")...)
 	m, cmd := press(t, m, keyOf(tea.KeyEnter))
@@ -511,7 +494,7 @@ func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 // multi-line prefill renders one gutter row per logical line, cursor
 // on the last, the ctrl+s hint fixed below; a six-line box.
 func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
-	m := newTopModel(newFakeSteering())
+	m := newTopModelUnclaimed(newFakeSteering())
 	m.width, m.height = 80, 40
 	m = openDetail(t, m, "t-flak")
 	m, _ = press(t, m, // walk the ring past priority and labels to the description
