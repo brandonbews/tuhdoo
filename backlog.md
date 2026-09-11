@@ -1,16 +1,17 @@
 # Backlog
 
-0 in progress · 2 ready · 0 blocked · 7 on hold · 3 inbox · 125 done · 35 cancelled
+1 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 125 done · 35 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `brandon/claude-code-1` |
 
 ## Ready
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) | Batcher: log background flush failures at failure time | — | `go` `storage` `audit-finding` |
 | [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `go` `audit-finding` |
 
 ## Blocked / waiting
