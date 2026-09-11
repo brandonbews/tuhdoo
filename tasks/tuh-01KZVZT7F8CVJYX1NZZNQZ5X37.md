@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1NZZNQZ5X37`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `daemon` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -34,3 +34,11 @@ retitled · description edited · status open→open · labels edited
 ### 2026-08-27 15:01 UTC — edit by `brandon/claude-code-1`
 
 retitled · description edited · status open→open · labels edited
+
+### 2026-09-11 23:39 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01KZVZT7F8CVJYX1NZZNQZ5X37/op-layer-outcomes-drop-renew`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/109>
+- Merged as: `ead4fc0`
+
+Landed as PR #109 (squash ead4fc0 on main). opFinishRun rejects interrupted/superseded for every caller (HTTP 400, message names the four reportable outcomes); the MCP layer's own narrowing collapsed onto it, agent surface unchanged. POST /v0/claims/renew, handleRenewClaim, opRenewClaim, holderClaimLocked deleted; TestViewsFollowTheVersion (a renew caller the audit missed) now drives renewOnce directly. TestFinishRunOverHTTP is the first test of POST /v0/runs (rejections + happy path). 002 T5 dated revision note and one sentence in harness/README.md. Ledger note: the claim that did this work was made from a harness MCP session that the post-#108 deploy restart severed; it was released and re-claimed from a scripted shim session as the same principal so confirm_claim ran through a live session before the merge. Deploy (rebuild + daemon restart) follows this finish.

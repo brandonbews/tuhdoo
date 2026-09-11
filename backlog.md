@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 2 ready · 0 blocked · 7 on hold · 3 inbox · 124 done · 35 cancelled
+0 in progress · 2 ready · 0 blocked · 7 on hold · 3 inbox · 125 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) | HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint | — | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -140,6 +138,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7q0m`](tasks/tuh-01KZSBC7K0GNYNYTTAM6DW7Q0M.md) Agent protocol slim-down: de-bloat the protocol doc and its supplementary material (launch gate)
 - [`tuh-gp75`](tasks/tuh-01KZSBDXFZCRNEDY7DMD4XGP75.md) Copy tightening pass: docs and site to a tighter, utilitarian voice (launch gate)
 - [`tuh-bajp`](tasks/tuh-01KZT571HQ3JEDEA5FFXSHBAJP.md) One vocabulary: "tools" replaces "verbs" everywhere, "verb-time" becomes "call-time" (prose only, zero behavior)
+- [`tuh-5x37`](tasks/tuh-01KZVZT7F8CVJYX1NZZNQZ5X37.md) HTTP portal: narrow finish outcomes to the agent set at the op layer; delete the dead renew endpoint
 - [`tuh-k62e`](tasks/tuh-01KZVZT7F8CVJYX1NZZS3GK62E.md) get_task and /v0/state evaluate lease expiry at read time
 - [`tuh-smww`](tasks/tuh-01KZVZT7F8CVJYX1NZZTB1SMWW.md) closedByRun: match closes by claim, not actor — a later attempt must not erase a lost attempt's superseded trace
 - [`tuh-nxsm`](tasks/tuh-01KZVZT7F8CVJYX1NZZV9YNXSM.md) Police escalation.answered task mismatch as malformed, matching claim.confirmed
