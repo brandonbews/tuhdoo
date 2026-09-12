@@ -19,11 +19,23 @@ import (
 // lease that is over is closed by overwriting it with a released
 // tombstone: the same file, expiry pinned to the release instant, plus
 // an explicit "released" marker.
+//
+// A tombstone's instant is stored exactly, never rounded (2026-09-11,
+// collision-harness finding). A plain lease's expiry is a deadline and
+// second precision loses nothing; a tombstone's instant is a boundary
+// replay compares against claim ULID times — "live before it, lapsed
+// from it onward" (002 T8) — and truncating it to the second moved the
+// boundary up to 999ms into the past. A stand-down landing in the same
+// wall-clock second as the winner's claim then read as lapsed at that
+// claim's instant, and replay re-adjudicated the settled contest: the
+// earlier-ULID loser became "expired" with an interrupted run instead
+// of the promised superseded one. Every reader already accepts the
+// fractional form (RFC3339 parsing does), so older binaries are unaffected.
 
-// leaseFile is the stored JSON: an RFC3339 UTC expiry at second
-// precision, plus a released marker on tombstones (absent on ordinary
-// leases, so their bytes are unchanged). The claim ID lives in the
-// filename.
+// leaseFile is the stored JSON: an RFC3339 UTC expiry — second
+// precision on ordinary leases, exact on tombstones — plus a released
+// marker on tombstones (absent on ordinary leases, so their bytes are
+// unchanged). The claim ID lives in the filename.
 type leaseFile struct {
 	Expires  string `json:"expires"`
 	Released bool   `json:"released,omitempty"`
@@ -64,13 +76,15 @@ func LeaseClaimID(path string) (string, bool) {
 }
 
 // encodeLease renders lease-file bytes for an expiry (UTC, second
-// precision).
+// precision — a deadline, where the sub-second is noise).
 func encodeLease(expires time.Time) []byte {
 	return encodeLeaseFile(expires, false)
 }
 
 // encodeLeaseTombstone renders released-tombstone bytes: the lease
-// ended at expires, on purpose. Binaries that predate the marker ignore
+// ended at expires, on purpose, at exactly that instant (a plain lease
+// rounds; a tombstone must not, see the package comment). Binaries
+// that predate the marker ignore
 // the unknown field and read an ordinary lease lapsed at that instant —
 // the same verdict, minus the merge preference (leases are mutable
 // files, so this is acceptable degradation, not a T3 concern).
@@ -79,8 +93,14 @@ func encodeLeaseTombstone(expires time.Time) []byte {
 }
 
 func encodeLeaseFile(expires time.Time, released bool) []byte {
+	stamp := expires.UTC().Truncate(time.Second).Format(time.RFC3339)
+	if released {
+		// The boundary replay judges past claims against: exact, see
+		// the package comment.
+		stamp = expires.UTC().Format(time.RFC3339Nano)
+	}
 	data, err := json.Marshal(leaseFile{
-		Expires:  expires.UTC().Truncate(time.Second).Format(time.RFC3339),
+		Expires:  stamp,
 		Released: released,
 	})
 	if err != nil {
