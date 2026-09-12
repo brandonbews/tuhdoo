@@ -366,6 +366,37 @@ func TestLeasesDoNotTouchEvents(t *testing.T) {
 	assertNoWorktreeFiles(t, dir)
 }
 
+// TestReleaseLeaseKeepsTheExactInstant: a stand-down's tombstone is
+// the boundary replay judges past claims against, so it must read back
+// at exactly the instant it was written — a tombstone rounded down to
+// the second read as lapsed before a winner's claim minted later in the
+// same second, and replay re-adjudicated the settled contest (2026-09-11
+// collision-harness finding; T8: "live before the instant, lapsed from
+// it onward").
+func TestReleaseLeaseKeepsTheExactInstant(t *testing.T) {
+	s, _ := newStore(t)
+	instant := time.Date(2026, 9, 11, 17, 0, 0, 900_000_000, time.UTC)
+	if err := s.WriteLease("c1", instant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ReleaseLease("c1", instant); err != nil {
+		t.Fatal(err)
+	}
+	leases, err := s.ReadLeases()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := leases["c1"]; !got.Equal(instant) {
+		t.Fatalf("tombstoned lease reads back at %v, want the exact stand-down instant %v", got, instant)
+	}
+	// The claim that won this second: minted 300ms before the stand-down,
+	// it must find the lease still live.
+	claimedAt := instant.Add(-300 * time.Millisecond)
+	if !leases["c1"].After(claimedAt) {
+		t.Fatalf("tombstone at %v reads as lapsed at %v, a claim instant before the stand-down", leases["c1"], claimedAt)
+	}
+}
+
 // Lease bytes round-trip through the encode/decode pair in both shapes,
 // and the pre-tombstone format (no released field) still decodes — old
 // leases on the data branch stay readable forever.
@@ -380,8 +411,13 @@ func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
 		wantReleased bool
 	}{
 		{"plain lease", encodeLease(instant), truncated, false},
-		{"released tombstone", encodeLeaseTombstone(instant), truncated, true},
+		// A tombstone keeps its instant exactly: it is the boundary
+		// replay judges past claims against, and rounding it down
+		// re-adjudicated contests whose winner claimed in the same
+		// second as the stand-down (2026-09-11 harness finding).
+		{"released tombstone", encodeLeaseTombstone(instant), instant, true},
 		{"old format without released field", []byte(`{"expires":"2026-08-04T09:30:00Z"}`), truncated, false},
+		{"old second-precision tombstone", []byte(`{"expires":"2026-08-04T09:30:00Z","released":true}`), truncated, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
