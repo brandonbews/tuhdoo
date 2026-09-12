@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 127 done · 35 cancelled
+0 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 128 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) | Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check | — | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -146,6 +144,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-9fdb`](tasks/tuh-01KZVZT7F8CVJYX1P0090K9FDB.md) Batcher: log background flush failures at failure time
 - [`tuh-j4d9`](tasks/tuh-01KZVZT7F8CVJYX1P009AJJ4D9.md) 002 doc-drift sweep: T6 view-stamp path; T7 WAITING vocabulary, parent remnants, shelf bolding
 - [`tuh-e9qm`](tasks/tuh-01KZVZT7F8CVJYX1P009PAE9QM.md) tuhdoo answer: surface ambiguous task fragments as candidate lists
+- [`tuh-gmtx`](tasks/tuh-01KZVZT7F8CVJYX1P00BRPGMTX.md) Collision harness bounded extension: natural-expiry arm, confirm-warning assertion, repeat-confirm check
 - [`tuh-0n0d`](tasks/tuh-01KZVZT7F8CVJYX1P00ET00N0D.md) Daemon tests: gate retry exhaustion, degraded-mode renewal stop, shutdown final sync
 - [`tuh-r40s`](tasks/tuh-01KZW1WKW1MKWKJQ360Y5AR40S.md) LsTree: reject symlink (120000) tree entries — blobs-only means regular blobs
 - [`tuh-364k`](tasks/tuh-01KZWX46MBVN8BHVMB7537364K.md) pnpm/yarn install lines in docs + -h/--help on every subcommand

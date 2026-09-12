@@ -2,7 +2,7 @@
 
 `tuh-01KZVZT7F8CVJYX1P00BRPGMTX`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `audit-finding`
 - **Created:** 2026-08-12 21:59 UTC by `brandon/claude-code-bg`
@@ -32,3 +32,11 @@ priority none→2
 ### 2026-09-11 21:51 UTC — edit by `brandon`
 
 priority 2→none
+
+### 2026-09-12 00:19 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01KZVZT7F8CVJYX1P00BRPGMTX/harness-bounded-extension`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/112>
+- Merged as: `1980d2f`
+
+Landed as PR #112 (squash 1980d2f on main). Natural-expiry arm (-expiry-contests, -lease-ttl default 4m via TUHDOO_LEASE_TTL read by tuhdoo daemon; unset = today's default), confirm-warning assertion on every claim response, repeat-confirm stability check, verb literals retired, README documents -spare and the unit-covered D6 arms with corrected line citations. Two prerequisites beyond the ask: the harness was ported from the retired GET /v0/state to /v0/snapshot, and the first run exposed a real store bug (tombstones truncated to the second re-adjudicated same-second contests) landed separately as PR #111 / tuh-01M29FENAVT4FSGZR3W2D3NQ54. Recorded run: 20 checks passed, 0 failed, 4m08s, 394 events, identical trees. Deploy follows this finish.
