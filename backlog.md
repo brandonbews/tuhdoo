@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 128 done · 35 cancelled
+1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 128 done · 35 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-ta4c`](tasks/tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C.md) | Release: park the npm publish job while tuhdoo is pre-launch | 1 | `brandon/claude-code-1` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-ta4c`](tasks/tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C.md) | Release: park the npm publish job while tuhdoo is pre-launch | 1 | `release` `ci` |
+_None._
 
 ## Blocked / waiting
 

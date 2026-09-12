@@ -2,7 +2,7 @@
 
 `tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** 1
 - **Labels:** `release` `ci`
 - **Created:** 2026-09-12 22:31 UTC by `brandon/claude-code-1`
