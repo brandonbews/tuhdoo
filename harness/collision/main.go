@@ -21,19 +21,28 @@
 //  4. opens one MCP session per clone (`tuhdoo mcp --as <principal>`) —
 //     the claim lifecycle is session-only by design (T7), so a scripted
 //     actor must hold a session;
-//  5. storms the D6 confirmation gate: both actors deliberately claim
+//  5. runs the natural-expiry arm: deliberate collisions whose losers
+//     go silent — no report, no release — so their leases lapse on
+//     their own. The daemons run a short lease TTL (-lease-ttl, handed
+//     to them through TUHDOO_LEASE_TTL) so the lapse lands inside the
+//     run, and the harness watches both daemons close the attempt with
+//     replay's synthesized run at the lapse (D6 clause 3's never-reports
+//     arm, where the 2026-08-04 resurrection bug lived);
+//  6. storms the D6 confirmation gate: both actors deliberately claim
 //     the same task (claim_task behind a barrier), then race
 //     confirm_claim — the remote's ref CAS is the referee, and exactly
-//     one claim.confirmed may land per contest;
-//  6. fires claim_next from both actors behind a barrier, repeatedly;
-//  7. lets both daemons converge, then closes every attempt through the
+//     one claim.confirmed may land per contest; every confirmed verdict
+//     is asked again and must answer the same;
+//  7. fires claim_next from both actors behind a barrier, repeatedly;
+//  8. lets both daemons converge, then closes every attempt through the
 //     public tools alone: winners record done through the gate, and
 //     losers discover their fate from the daemon — a reported finish
 //     coerced to superseded, or a stand-down closed by replay's
 //     branch-less synthesized run. The harness never writes an outcome
 //     on a daemon's behalf;
-//  8. verifies convergence, the refereed winner rule, and the loser
-//     records, and prints a report.
+//  9. verifies convergence, the refereed winner rule, the loser
+//     records, and the claim-response contract (every claim carries
+//     the confirm-before-merge warning), and prints a report.
 //
 // Everything it asserts is machine-checked; a failed check exits
 // non-zero. It cleans up its temp dirs and kills the daemons it spawned,
@@ -88,10 +97,30 @@ type config struct {
 	spare    int
 	storm    int
 	contests int
+	expiry   int
+	leaseTTL time.Duration
 	gap      time.Duration
 	converge time.Duration
 	keep     bool
 }
+
+// leaseTTLEnv is the environment variable `tuhdoo daemon` reads its
+// lease TTL from (cmd/tuhdoo/daemon_cmd.go). The harness sets it in its
+// own environment before the first daemon is spawned, so every daemon
+// its children auto-spawn inherits it; nothing outside this process
+// ever sees it, and an unset variable is the daemon's ordinary default.
+const leaseTTLEnv = "TUHDOO_LEASE_TTL"
+
+// defaultLeaseTTL keeps a live lease live across machines while still
+// lapsing inside one run. Renewals ride the ordinary sync cycle, not an
+// eager push, so a peer's copy of an active lease can be as stale as
+// one renewal period (TTL/3) plus the batcher's 2s quiet plus two 60s
+// hops (the writer's push, the reader's fetch): the TTL must exceed
+// TTL/3 + 122s, i.e. about three minutes, or a peer could see a live
+// claim as lapsed between renewals — the exact flapping T8's 15m/5m
+// ratio rules out. Four minutes clears that bound with a margin and
+// still lapses well within the run.
+const defaultLeaseTTL = 4 * time.Minute
 
 func main() {
 	var cfg config
@@ -100,6 +129,12 @@ func main() {
 	flag.IntVar(&cfg.storm, "storm", 40, "simultaneous eager-write bursts aimed at the sync loop's push cycle")
 	flag.IntVar(&cfg.contests, "confirm-storm", 40,
 		"confirmation-race storm: deliberately collided claims whose confirm_claim verdicts are raced from both machines")
+	flag.IntVar(&cfg.expiry, "expiry-contests", 2,
+		"natural-expiry arm: deliberately collided claims whose losers go silent — no report, no release — "+
+			"so the harness can watch the lease lapse and replay close the attempt (0 skips the arm)")
+	flag.DurationVar(&cfg.leaseTTL, "lease-ttl", defaultLeaseTTL,
+		"claim lease TTL for the daemons this run spawns (via "+leaseTTLEnv+"); bounds the natural-expiry wait. "+
+			"Keep it above ~3m: renewals ride the 60s sync cycle, so a shorter TTL lets a peer see a live lease as lapsed")
 	flag.DurationVar(&cfg.gap, "storm-gap", 0, "pause between storm bursts; 0 is back-to-back, the harshest setting")
 	flag.DurationVar(&cfg.converge, "converge-timeout", 5*time.Minute,
 		"how long to wait for the two clones to reach identical data-branch trees "+
@@ -116,6 +151,9 @@ func main() {
 func run(cfg config) error {
 	if cfg.rounds < 1 {
 		return fmt.Errorf("-rounds must be at least 1")
+	}
+	if cfg.leaseTTL <= 0 {
+		return fmt.Errorf("-lease-ttl must be positive")
 	}
 	lab, err := setup(cfg)
 	if lab != nil {
@@ -164,6 +202,7 @@ type lab struct {
 	actors    []*actor
 	tasks     []string // seeded claimable task IDs for the claim_next rounds
 	contest   []string // seeded task IDs for the confirmation-race storm
+	expiry    []string // seeded task IDs for the natural-expiry arm
 	carrier   string   // held task the sync-storm escalations hang off
 	stormTook time.Duration
 	watch     *syncWatch
@@ -171,6 +210,14 @@ type lab struct {
 
 	statMu      sync.Mutex
 	gateRetries int // tool-level retries of the gate's honest 503 refusals
+	reconfirms  int // confirm_claim re-asked after a confirmed verdict
+	// unstable records every repeated confirm_claim that did not answer
+	// "confirmed, same claim" — a verdict D6 calls irrevocable moving.
+	unstable []string
+
+	// The natural-expiry arm's observations: how long after each silent
+	// loser's lease lapsed the two daemons showed the synthesized close.
+	expiryLags []time.Duration
 }
 
 func setup(cfg config) (*lab, error) {
@@ -184,6 +231,16 @@ func setup(cfg config) (*lab, error) {
 	}
 	l := &lab{cfg: cfg, work: work, origin: filepath.Join(work, "origin.git"), bin: filepath.Join(work, "tuhdoo")}
 	fmt.Printf("== scratch repos under %s\n", work)
+
+	// Every daemon this run spawns is a grandchild — `tuhdoo init`
+	// re-execs `tuhdoo daemon` — and inherits this environment. The
+	// default 15-minute TTL (T8) would outlive the run four times over;
+	// the natural-expiry arm needs a lease to lapse while both daemons
+	// are still watching.
+	if err := os.Setenv(leaseTTLEnv, cfg.leaseTTL.String()); err != nil {
+		return l, fmt.Errorf("set %s: %w", leaseTTLEnv, err)
+	}
+	fmt.Printf("== spawned daemons run a %s lease TTL (%s)\n", cfg.leaseTTL, leaseTTLEnv)
 
 	fmt.Println("== building ./cmd/tuhdoo")
 	if out, err := runCmd(root, "go", "build", "-o", l.bin, "./cmd/tuhdoo"); err != nil {
@@ -246,8 +303,15 @@ type attempt struct {
 	task   string
 	claim  string
 	branch string // the branch this attempt would have worked on
-	fate   string // how the daemon said it ended (fateDone/fateReported/fateSilent)
+	fate   string // how the daemon said it ended (fateDone/fateReported/fateSilent/fateExpired)
 	runID  string // the real run.finished event recorded, when the attempt wrote one
+	// warned records whether the claim response carried the standing
+	// confirm-before-merge warning (D6 clause 3: losers learn at
+	// call-time, so the rule is stated when the claim is handed over).
+	warned bool
+	// expires is the lease expiry the daemon reported with the claim —
+	// the instant a never-renewed lease lapses.
+	expires time.Time
 }
 
 // How an attempt's actor learned its attempt ended — always from a
@@ -258,6 +322,7 @@ const (
 	fateDone     = "done"          // finish_run recorded done, refereed through the gate
 	fateReported = "lost-reported" // finish_run(done) coerced to superseded, branch kept
 	fateSilent   = "lost-silent"   // stood down via release_claim; replay synthesizes the close
+	fateExpired  = "lost-expired"  // never reported, never released; the lease lapsed and replay closed it
 )
 
 func (l *lab) experiment() error {
@@ -280,9 +345,17 @@ func (l *lab) experiment() error {
 		return err
 	}
 
-	// The confirmation-race storm runs first, on its own task pool:
-	// every contest ends with the task done, so the claim_next rounds
-	// below can never be served a contest task.
+	// The natural-expiry arm goes first: its losers' leases lapse one
+	// TTL after the claim, and the rest of the experiment runs while
+	// that clock ticks. Like the storm, every contest ends with the
+	// task done, so the claim_next rounds can never be served one.
+	expiryAttempts, err := l.expiryArm()
+	if err != nil {
+		return err
+	}
+
+	// The confirmation-race storm runs on its own task pool for the
+	// same reason.
 	stormAttempts, stats, err := l.confirmStorm()
 	if err != nil {
 		return err
@@ -302,12 +375,25 @@ func (l *lab) experiment() error {
 	// waiting here makes the split deterministic: every loser discovers
 	// its fate at call-time from local state, and every winner's gate
 	// round-trip certifies against a remote that already holds the
-	// loser's claim.
-	if err := l.converge("post-race", append(claimIDs(raceAttempts), requiredEvents(stormAttempts)...)); err != nil {
+	// loser's claim. Events only, not trees: the sessions are still
+	// renewing their live leases every TTL/3, and a renewal is a lease
+	// file rewrite that rides the 60s cycle, so with the harness's short
+	// TTL the two trees are rarely still at the same moment while
+	// claims are held. The acceptance-grade tree check is the final
+	// convergence, taken with the sessions closed.
+	if err := l.awaitEvents("post-race", append(claimIDs(raceAttempts), requiredEvents(stormAttempts)...)); err != nil {
 		return err
 	}
 
 	if err := l.settle(raceAttempts); err != nil {
+		return err
+	}
+
+	// The natural-expiry losers' leases lapse about now. Watched with
+	// the sessions still open — including the losers' own — so the
+	// close the daemons show is the lease clock's doing and nothing
+	// else's.
+	if err := l.awaitExpiry(expiryAttempts); err != nil {
 		return err
 	}
 
@@ -319,7 +405,7 @@ func (l *lab) experiment() error {
 		a.closeSession()
 	}
 
-	attempts := append(stormAttempts, raceAttempts...)
+	attempts := append(append(expiryAttempts, stormAttempts...), raceAttempts...)
 	if err := l.converge("final", requiredEvents(attempts)); err != nil {
 		return err
 	}
@@ -347,8 +433,8 @@ func requiredEvents(attempts []attempt) []string {
 // pending events and runs a final sync cycle, which is what publishes the
 // seed without waiting out the 60s fetch cadence (T8).
 func (l *lab) seed(a *actor) error {
-	fmt.Printf("== seeding %d tasks on %s (%d race bait, %d storm contests)\n",
-		l.cfg.rounds+l.cfg.spare+l.cfg.contests, a.name, l.cfg.rounds+l.cfg.spare, l.cfg.contests)
+	fmt.Printf("== seeding %d tasks on %s (%d race bait, %d storm contests, %d expiry contests)\n",
+		l.cfg.rounds+l.cfg.spare+l.cfg.contests+l.cfg.expiry, a.name, l.cfg.rounds+l.cfg.spare, l.cfg.contests, l.cfg.expiry)
 	if out, err := runCmd(l.work, "git", "clone", "--quiet", l.origin, a.root); err != nil {
 		return fmt.Errorf("clone %s: %w: %s", a.name, err, out)
 	}
@@ -395,6 +481,13 @@ func (l *lab) seed(a *actor) error {
 				"deliberately, then race confirm_claim for the one verdict.",
 		})
 	}
+	for i := 0; i < l.cfg.expiry; i++ {
+		items = append(items, map[string]any{
+			"title": fmt.Sprintf("natural-expiry contest %02d", i+1),
+			"description": "Scratch task for the natural-expiry arm: both machines claim it, " +
+				"the loser goes silent, and its lease lapses on its own.",
+		})
+	}
 	var created struct {
 		IDs []string `json:"ids"`
 	}
@@ -403,7 +496,8 @@ func (l *lab) seed(a *actor) error {
 	}
 	l.carrier = created.IDs[0]
 	l.tasks = created.IDs[1 : 1+l.cfg.rounds+l.cfg.spare]
-	l.contest = created.IDs[1+l.cfg.rounds+l.cfg.spare:]
+	l.contest = created.IDs[1+l.cfg.rounds+l.cfg.spare : 1+l.cfg.rounds+l.cfg.spare+l.cfg.contests]
+	l.expiry = created.IDs[1+l.cfg.rounds+l.cfg.spare+l.cfg.contests:]
 
 	// The commit debounce is 2s (T8); give it room, then let the
 	// shutdown's final flush + sync cycle publish the branch.
@@ -440,7 +534,7 @@ func (l *lab) joinSecondClone(a *actor) error {
 
 	// Both machines must be looking at the same pool, or a "race" would
 	// just be two actors picking different tasks.
-	seeded := len(l.tasks) + len(l.contest)
+	seeded := len(l.tasks) + len(l.contest) + len(l.expiry)
 	for _, x := range l.actors {
 		ready, err := x.readyTasks()
 		if err != nil {
@@ -490,9 +584,11 @@ func (l *lab) race() ([]attempt, int, error) {
 			}
 			results[i] = attempt{
 				round: round, actor: a,
-				task:   out.Task.Task.ID,
-				claim:  out.Task.Claim.ID,
-				branch: fmt.Sprintf("%s/round-%02d-%s", event.ShortID(out.Task.Task.ID), round, a.name),
+				task:    out.Task.Task.ID,
+				claim:   out.Task.Claim.ID,
+				branch:  fmt.Sprintf("%s/round-%02d-%s", event.ShortID(out.Task.Task.ID), round, a.name),
+				warned:  out.Task.warned(),
+				expires: out.Task.Claim.expiry(),
 			}
 			return nil
 		})
@@ -538,7 +634,7 @@ func (l *lab) race() ([]attempt, int, error) {
 //     at the remote and a loser's report is coerced to superseded with
 //     its branch kept as the salvage record.
 func (l *lab) settle(attempts []attempt) error {
-	fmt.Println("== settling race attempts through the daemons (fates discovered at the verbs, never scripted)")
+	fmt.Println("== settling race attempts through the daemons (fates discovered at the tools, never scripted)")
 	done, reported, silent := 0, 0, 0
 	for i := range attempts {
 		at := &attempts[i]
@@ -549,6 +645,9 @@ func (l *lab) settle(attempts []attempt) error {
 				return err
 			}
 			if res.Confirmed {
+				if err := l.reconfirm(at, res, fmt.Sprintf("round %02d", at.round)); err != nil {
+					return err
+				}
 				fin, err := l.finishDone(at.actor, at.task, at.branch,
 					fmt.Sprintf("won the race on round %d (confirmed first)", at.round))
 				if err != nil {
@@ -608,16 +707,8 @@ type stormStats struct {
 
 // confirmStorm is the confirmation-race storm (roadmap v1 DoD clause 2,
 // extended 2026-08-04): N deliberate claim collisions, each contest's
-// verdict raced through the real D6 gate from both machines at once.
-//
-// The collision is certain, not probable: claims are optimistic and
-// judged against local state only (D6 clause 4), and a peer's eager
-// claim push needs about a second to cross, so two claim_task calls
-// fired behind one barrier both succeed. The verdict is then raced —
-// both sessions call confirm_claim simultaneously — and the remote's
-// ref CAS referees: at most one claim.confirmed can land per task, by
-// construction. A contest where both actors are told "confirmed" is a
-// duplicate certification and fails the run on the spot.
+// verdict raced through the real D6 gate from both machines at once
+// (collide), the losers' two honest exits alternating.
 func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 	stats := stormStats{wins: make(map[string]int, len(l.actors))}
 	if len(l.contest) == 0 {
@@ -628,58 +719,12 @@ func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 	var all []attempt
 	for i, task := range l.contest {
 		seq := i + 1
-
-		atts := make([]attempt, len(l.actors))
-		err := l.pair(func(j int, a *actor) error {
-			claimID, err := a.claimTask(task)
-			if err != nil {
-				return fmt.Errorf("contest %02d: %s claim_task: %w", seq, a.name, err)
-			}
-			atts[j] = attempt{round: seq, actor: a, task: task, claim: claimID,
-				branch: fmt.Sprintf("%s/storm-%02d-%s", event.ShortID(task), seq, a.name)}
-			return nil
-		})
+		atts, loser, err := l.collide(task, "storm", seq)
 		if err != nil {
 			return nil, stats, err
 		}
-
-		res := make([]confirmOut, len(l.actors))
-		err = l.pair(func(j int, a *actor) error {
-			var e error
-			res[j], e = l.confirmClaim(a, task, fmt.Sprintf("contest %02d", seq))
-			return e
-		})
-		if err != nil {
-			return nil, stats, err
-		}
-		winner := -1
-		for j := range res {
-			if !res[j].Confirmed {
-				continue
-			}
-			if winner != -1 {
-				return nil, stats, fmt.Errorf("contest %02d: DUPLICATE CONFIRMATION — both %s and %s were told confirmed",
-					seq, l.actors[winner].name, l.actors[j].name)
-			}
-			winner = j
-		}
-		if winner == -1 {
-			return nil, stats, fmt.Errorf("contest %02d: no confirmation — both machines were told lost", seq)
-		}
-		loser := 1 - winner
+		winner := 1 - loser
 		stats.wins[atts[winner].actor.name]++
-
-		// The winner records done. Its claim is already confirmed, so the
-		// finish is judged locally and instantly (D6: idempotent).
-		fin, err := l.finishDone(atts[winner].actor, task, atts[winner].branch,
-			fmt.Sprintf("won the confirmation race in contest %02d", seq))
-		if err != nil {
-			return nil, stats, err
-		}
-		if fin.Outcome != event.OutcomeDone {
-			return nil, stats, fmt.Errorf("contest %02d: confirmed winner's finish recorded %q, want done", seq, fin.Outcome)
-		}
-		atts[winner].fate, atts[winner].runID = fateDone, fin.ID
 
 		// The loser was told "lost"; its two honest exits alternate.
 		how := ""
@@ -724,6 +769,242 @@ func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 		l.actors[1].name, stats.wins[l.actors[1].name],
 		stats.reported, stats.silent)
 	return all, stats, nil
+}
+
+// collide is one deliberate collision, the storm's and the expiry
+// arm's shared core: both actors claim task behind a barrier (claims
+// are optimistic and judged locally, D6 clause 4, so both succeed —
+// a certain collision), then race confirm_claim from both sessions at
+// once. The remote's ref CAS referees: a contest where both actors are
+// told "confirmed" is a duplicate certification and fails the run on
+// the spot. The winner's verdict is asked again — D6 calls it
+// irrevocable, so the second answer must be the first — and the winner
+// records done. Returns both attempts in actor order and the loser's
+// index; the loser's exit is the caller's to script. kind names the
+// phase in the branch names ("storm", "expiry").
+func (l *lab) collide(task, kind string, seq int) ([]attempt, int, error) {
+	what := fmt.Sprintf("%s contest %02d", kind, seq)
+	atts := make([]attempt, len(l.actors))
+	err := l.pair(func(j int, a *actor) error {
+		out, err := a.claimTask(task)
+		if err != nil {
+			return fmt.Errorf("%s: %s claim_task: %w", what, a.name, err)
+		}
+		atts[j] = attempt{round: seq, actor: a, task: task, claim: out.Claim.ID,
+			branch:  fmt.Sprintf("%s/%s-%02d-%s", event.ShortID(task), kind, seq, a.name),
+			warned:  out.warned(),
+			expires: out.Claim.expiry()}
+		return nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res := make([]confirmOut, len(l.actors))
+	err = l.pair(func(j int, a *actor) error {
+		var e error
+		res[j], e = l.confirmClaim(a, task, what)
+		return e
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	winner := -1
+	for j := range res {
+		if !res[j].Confirmed {
+			continue
+		}
+		if winner != -1 {
+			return nil, 0, fmt.Errorf("%s: DUPLICATE CONFIRMATION — both %s and %s were told confirmed",
+				what, l.actors[winner].name, l.actors[j].name)
+		}
+		winner = j
+	}
+	if winner == -1 {
+		return nil, 0, fmt.Errorf("%s: no confirmation — both machines were told lost", what)
+	}
+	if err := l.reconfirm(&atts[winner], res[winner], what); err != nil {
+		return nil, 0, err
+	}
+
+	// The winner records done. Its claim is already confirmed, so the
+	// finish is judged locally and instantly (D6: idempotent).
+	fin, err := l.finishDone(atts[winner].actor, task, atts[winner].branch,
+		fmt.Sprintf("won the confirmation race in %s", what))
+	if err != nil {
+		return nil, 0, err
+	}
+	if fin.Outcome != event.OutcomeDone {
+		return nil, 0, fmt.Errorf("%s: confirmed winner's finish recorded %q, want done", what, fin.Outcome)
+	}
+	atts[winner].fate, atts[winner].runID = fateDone, fin.ID
+	return atts, 1 - winner, nil
+}
+
+// reconfirm asks confirm_claim again after a confirmed verdict. D6
+// clause 2 makes a confirmation irrevocable and the tool idempotent, so
+// the second answer must be "confirmed" for the very claim the first
+// named — and the first must have named this attempt's claim. Any
+// other answer is recorded for the verification list rather than
+// stopping the run; the storm's zero-duplicates check separately
+// proves the repeat wrote nothing.
+func (l *lab) reconfirm(at *attempt, first confirmOut, what string) error {
+	again, err := l.confirmClaim(at.actor, at.task, what+" (repeat)")
+	if err != nil {
+		return err
+	}
+	l.statMu.Lock()
+	defer l.statMu.Unlock()
+	l.reconfirms++
+	switch {
+	case first.Claim != at.claim:
+		l.unstable = append(l.unstable, fmt.Sprintf("%s: %s's first verdict named claim %s, its attempt is %s",
+			what, at.actor.name, event.ShortID(first.Claim), event.ShortID(at.claim)))
+	case !again.Confirmed || again.Claim != first.Claim:
+		l.unstable = append(l.unstable, fmt.Sprintf("%s: %s re-asked and got confirmed=%t claim %s (first: %s)",
+			what, at.actor.name, again.Confirmed, event.ShortID(again.Claim), event.ShortID(first.Claim)))
+	}
+	return nil
+}
+
+// expiryArm is D6 clause 3's never-reports arm, end to end: N deliberate
+// collisions whose losers do nothing at all — no finish_run, no
+// release_claim, the session simply stops mentioning the task. The
+// loser's daemon learned "lost" at the gate and never renews a voided
+// claim's lease (renewOnce), so the lease lapses one TTL after the
+// claim, and replay on every machine closes the attempt with a
+// branch-less synthesized superseded run at that instant. awaitExpiry
+// watches it happen; verify checks the ledger afterwards. This is the
+// arm the 2026-08-04 resurrection bug lived in (the union merge
+// bringing a deleted lease back), which no release-triggered close can
+// reach.
+func (l *lab) expiryArm() ([]attempt, error) {
+	if len(l.expiry) == 0 {
+		return nil, nil
+	}
+	fmt.Printf("== natural-expiry arm: %d deliberate collisions whose losers go silent (lease TTL %s)\n",
+		len(l.expiry), l.cfg.leaseTTL)
+	var all []attempt
+	for i, task := range l.expiry {
+		seq := i + 1
+		atts, loser, err := l.collide(task, "expiry", seq)
+		if err != nil {
+			return nil, err
+		}
+		lost := &atts[loser]
+		// The daemon reported the lease with the claim; that it runs the
+		// configured TTL is the plumbing's proof, checked before any
+		// waiting is built on it. The claim's ULID time is the lease's
+		// write time to the second; second-precision storage and the
+		// gap between minting and writing account for the slack.
+		if lost.expires.IsZero() {
+			return nil, fmt.Errorf("expiry contest %02d: %s's claim carried no lease expiry", seq, lost.actor.name)
+		}
+		madeAt, err := event.IDTime(lost.claim)
+		if err != nil {
+			return nil, fmt.Errorf("expiry contest %02d: %w", seq, err)
+		}
+		if ttl := lost.expires.Sub(madeAt); ttl < l.cfg.leaseTTL-5*time.Second || ttl > l.cfg.leaseTTL+5*time.Second {
+			return nil, fmt.Errorf("expiry contest %02d: %s's daemon leased for %s, the harness asked for %s — "+
+				"%s never reached it", seq, lost.actor.name, ttl.Round(time.Second), l.cfg.leaseTTL, leaseTTLEnv)
+		}
+		lost.fate = fateExpired
+		// Nothing is closed yet: the lease is live, so no daemon may
+		// show a synthesized close for this claim before the lapse.
+		for _, a := range l.actors {
+			closed, err := a.synthesizedClose(task, lost.claim)
+			if err != nil {
+				return nil, err
+			}
+			if closed {
+				return nil, fmt.Errorf("expiry contest %02d: %s already shows a synthesized close for %s's claim "+
+					"with the lease live until %s", seq, a.name, lost.actor.name, lost.expires.Format(time.RFC3339))
+			}
+		}
+		fmt.Printf("   contest %02d: %s confirmed, %s lost and goes silent; its lease lapses at %s\n",
+			seq, atts[1-loser].actor.name, lost.actor.name, lost.expires.Local().Format("15:04:05"))
+		all = append(all, atts...)
+	}
+	return all, nil
+}
+
+// awaitExpiry waits for each silent loser's lease to lapse and for both
+// daemons to show the synthesized close through their public read
+// surface — the transition timer (D6 clause 5: expiry is scheduled,
+// not reaped) firing on each machine. The deadline is the lapse plus
+// the renewal period plus a sync hop: a renewal tick can land in the
+// seconds between the claim and the verdict (legal — the claim was
+// still active) and move the lapse by that much, and a merge can be a
+// cycle away.
+func (l *lab) awaitExpiry(attempts []attempt) error {
+	var losers []*attempt
+	for i := range attempts {
+		if attempts[i].fate == fateExpired {
+			losers = append(losers, &attempts[i])
+		}
+	}
+	if len(losers) == 0 {
+		return nil
+	}
+	fmt.Printf("== waiting for %d silent losers' leases to lapse and both daemons to close them\n", len(losers))
+	for _, at := range losers {
+		if wait := time.Until(at.expires); wait > 0 {
+			fmt.Printf("   contest %02d: %s's lease lapses in %s\n", at.round, at.actor.name, round1s(wait))
+		}
+		deadline := at.expires.Add(l.cfg.leaseTTL/3 + 60*time.Second)
+		seen := make(map[string]bool, len(l.actors))
+		for len(seen) < len(l.actors) {
+			for _, a := range l.actors {
+				if seen[a.name] {
+					continue
+				}
+				closed, err := a.synthesizedClose(at.task, at.claim)
+				if err != nil {
+					return err
+				}
+				if closed {
+					seen[a.name] = true
+					lag := time.Since(at.expires)
+					l.expiryLags = append(l.expiryLags, lag)
+					fmt.Printf("   contest %02d: %s shows %s's attempt closed by synthesis %s after the lapse\n",
+						at.round, a.name, at.actor.name, lag.Round(100*time.Millisecond))
+				}
+			}
+			if len(seen) == len(l.actors) {
+				break
+			}
+			if time.Now().After(deadline) {
+				l.diagnose()
+				return fmt.Errorf("contest %02d: %s's lease lapsed at %s and %d of %d daemons never showed the synthesized close by %s",
+					at.round, at.actor.name, at.expires.Format(time.RFC3339), len(l.actors)-len(seen), len(l.actors),
+					deadline.Format(time.RFC3339))
+			}
+			time.Sleep(time.Second)
+		}
+	}
+	return nil
+}
+
+// synthesizedClose asks this daemon's snapshot whether task's runs
+// carry replay's branch-less synthesized superseded run for claim —
+// the read every client sees, so a lapsed lease is re-evaluated before
+// the answer (the read gate).
+func (a *actor) synthesizedClose(task, claim string) (bool, error) {
+	var snap snapshot
+	if err := a.get("/v0/snapshot", &snap); err != nil {
+		return false, fmt.Errorf("%s snapshot: %w", a.name, err)
+	}
+	for _, t := range snap.Tasks {
+		if t.Task.ID != task {
+			continue
+		}
+		for _, r := range t.Runs {
+			if r.Synthesized && r.Claim == claim && r.Outcome == event.OutcomeSuperseded && r.Branch == "" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // pair fires fn for both actors behind one barrier, as close to
@@ -853,9 +1134,9 @@ func (l *lab) burst(seq int) error {
 // while it is happening.
 func (l *lab) diagnose() {
 	for _, a := range l.actors {
-		var st stateResp
-		if err := a.get("/v0/state", &st); err != nil {
-			fmt.Printf("      %s: state unreadable: %v\n", a.name, err)
+		var st snapshot
+		if err := a.get("/v0/snapshot", &st); err != nil {
+			fmt.Printf("      %s: snapshot unreadable: %v\n", a.name, err)
 			continue
 		}
 		events, err := a.branchEventIDs()
@@ -911,6 +1192,32 @@ func (l *lab) converge(stage string, required []string) error {
 			fmt.Printf("   %s: %d events still to cross, trees %s vs %s (%s elapsed)\n",
 				stage, len(absent), trees[0][:12], trees[1][:12], round1s(time.Since(started)))
 			l.diagnose()
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
+// awaitEvents waits until the writes named by required are on both
+// clones, and nothing more — the post-race wait, where the sessions
+// are still holding claims and renewing their leases (see experiment).
+// A quiet wait like converge, for the same reason.
+func (l *lab) awaitEvents(stage string, required []string) error {
+	deadline := time.Now().Add(l.cfg.converge)
+	started := time.Now()
+	fmt.Printf("== waiting for every claim to reach both machines (%s)\n", stage)
+	for {
+		absent, err := l.missingEvents(required)
+		if err != nil {
+			return err
+		}
+		if len(absent) == 0 {
+			fmt.Printf("   all %d events on both machines after %s\n", len(required), round1s(time.Since(started)))
+			return nil
+		}
+		if time.Now().After(deadline) {
+			l.diagnose()
+			return fmt.Errorf("%s: %d of %d expected events still missing after %s (%s)",
+				stage, len(absent), 2*len(required), l.cfg.converge, strings.Join(absent, " "))
 		}
 		time.Sleep(2 * time.Second)
 	}
@@ -988,7 +1295,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	}
 
 	fmt.Println("\n== verification")
-	fmt.Println("   (every outcome checked below was written by a daemon verb; the harness wrote none)")
+	fmt.Println("   (every outcome checked below was written by a daemon tool; the harness wrote none)")
 	var c checklist
 
 	// --- convergence ---
@@ -1135,8 +1442,8 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	for i := range stateA.Runs {
 		runsByID[stateA.Runs[i].ID] = &stateA.Runs[i]
 	}
-	fatesOK, winnersOK, reportedOK, silentOK := true, true, true, true
-	winners, reported, silent := 0, 0, 0
+	fatesOK, winnersOK, reportedOK, silentOK, expiredOK := true, true, true, true, true
+	winners, reported, silent, expired := 0, 0, 0, 0
 	for _, loser := range voided {
 		at := byClaim[loser.ID]
 		if at == nil || at.fate == fateDone || at.fate == "" {
@@ -1157,18 +1464,37 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 			}
 		case fateSilent:
 			silent++
-			found := false
-			for i := range stateA.Runs {
-				r := &stateA.Runs[i]
-				if r.Synthesized && r.Claim == loser.ID && r.Outcome == event.OutcomeSuperseded && r.Branch == "" {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !synthesizedCloseIn(stateA, loser.ID) {
 				silentOK = false
 				fmt.Printf("        silent loser %s on task %s: no synthesized branch-less superseded run for claim %s\n",
 					loser.Actor, event.ShortID(at.task), event.ShortID(loser.ID))
+			}
+		case fateExpired:
+			expired++
+			// The close must be replay's, and nothing else's: no real run
+			// closes the claim, no release event stood it down, and the
+			// lease file on the branch is a plain lease — not a released
+			// tombstone — lapsed where the daemon said it would (the one
+			// legal move is a renewal tick landing in the seconds before
+			// the verdict, while the claim was still active).
+			problems := expiryProblems(stateA, eventsA, at, loser)
+			for _, x := range l.actors {
+				expires, released, err := leaseOnBranch(x.root, loser.ID)
+				if err != nil {
+					return err
+				}
+				if released {
+					problems = append(problems, fmt.Sprintf("%s's tree carries a released tombstone", x.name))
+				}
+				if moved := expires.Sub(at.expires); moved < 0 || moved > 30*time.Second {
+					problems = append(problems, fmt.Sprintf("%s's tree has the lease lapsing at %s, the claim said %s",
+						x.name, expires.Format(time.RFC3339), at.expires.Format(time.RFC3339)))
+				}
+			}
+			if len(problems) > 0 {
+				expiredOK = false
+				fmt.Printf("        expiry loser %s on task %s (claim %s): %s\n",
+					loser.Actor, event.ShortID(at.task), event.ShortID(loser.ID), strings.Join(problems, "; "))
 			}
 		}
 	}
@@ -1197,10 +1523,41 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 			}
 		}
 	}
-	c.check(fatesOK, "every verb-discovered fate matches replay's verdict (%d attempts)", len(attempts))
+	c.check(fatesOK, "every tool-discovered fate matches replay's verdict (%d attempts)", len(attempts))
 	c.check(winnersOK, "every done record is certified — the winner's claim carries its claim.confirmed (%d winners)", winners)
 	c.check(reportedOK, "every reporting loser was coerced to a real superseded run keeping its branch (%d)", reported)
 	c.check(silentOK, "every silent stand-down was closed by replay's branch-less synthesized run (%d)", silent)
+
+	// --- the natural-expiry arm (D6 clause 3, never-reports) ---
+	if len(l.expiry) > 0 {
+		c.check(expired == len(l.expiry) && expiredOK,
+			"every silent loser that never reported or released was closed by replay at its lease's natural lapse — "+
+				"lease unreleased on both trees, no real run, no release event (%d of %d)", expired, len(l.expiry))
+		slowest := time.Duration(0)
+		for _, lag := range l.expiryLags {
+			if lag > slowest {
+				slowest = lag
+			}
+		}
+		c.check(len(l.expiryLags) == len(l.actors)*len(l.expiry),
+			"both daemons showed each natural-expiry close through their snapshot after the lapse (%d of %d observations; slowest %s after expiry)",
+			len(l.expiryLags), len(l.actors)*len(l.expiry), slowest.Round(100*time.Millisecond))
+	}
+
+	// --- the claim-response contract (D6 clause 3: losers learn at call-time) ---
+	warned := 0
+	for _, at := range attempts {
+		if at.warned {
+			warned++
+		}
+	}
+	c.check(warned == len(attempts), "every claim response carried the confirm-before-merge warning (%d of %d)", warned, len(attempts))
+	for _, u := range l.unstable {
+		fmt.Printf("        %s\n", u)
+	}
+	c.check(len(l.unstable) == 0 && l.reconfirms > 0,
+		"every confirmed verdict answered the same when asked again — confirmed, same claim (%d verdicts re-asked)",
+		l.reconfirms)
 
 	// --- the push-retry loop ---
 	// Exhausting maxCycleRetries is not a failure of the experiment: the
@@ -1233,6 +1590,40 @@ func fateOf(at *attempt) string {
 	return at.fate
 }
 
+// synthesizedCloseIn reports whether replayed state carries the
+// branch-less synthesized superseded run that closes claim.
+func synthesizedCloseIn(s *core.State, claim string) bool {
+	for i := range s.Runs {
+		r := &s.Runs[i]
+		if r.Synthesized && r.Claim == claim && r.Outcome == event.OutcomeSuperseded && r.Branch == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// expiryProblems lists everything in the replayed ledger that says a
+// natural-expiry loser's close was not replay's alone: a missing
+// synthesized run, a real run closing the claim, or a release event
+// by the loser on the task.
+func expiryProblems(s *core.State, events []event.Event, at *attempt, loser *core.Claim) []string {
+	var problems []string
+	if !synthesizedCloseIn(s, loser.ID) {
+		problems = append(problems, "no synthesized branch-less superseded run")
+	}
+	for i := range s.Runs {
+		if r := &s.Runs[i]; !r.Synthesized && r.Claim == loser.ID {
+			problems = append(problems, fmt.Sprintf("real run %s (%s) closes the claim", event.ShortID(r.ID), r.Outcome))
+		}
+	}
+	for _, e := range events {
+		if e.Type == event.TypeClaimReleased && e.Task == at.task && e.Actor == loser.Actor {
+			problems = append(problems, fmt.Sprintf("release event %s stood the loser down", event.ShortID(e.ID)))
+		}
+	}
+	return problems
+}
+
 func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*core.Claim, merges int,
 	watch map[string]syncSample, exhausted, totalConfs, dup int) {
 
@@ -1240,7 +1631,7 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 	built := l.total(watch, func(w syncSample) int { return w.merges })
 	refLock := l.total(watch, func(w syncSample) int { return w.refLock })
 
-	done, coerced, stoodDown := 0, 0, 0
+	done, coerced, stoodDown, lapsed := 0, 0, 0, 0
 	for _, at := range attempts {
 		switch at.fate {
 		case fateDone:
@@ -1249,6 +1640,8 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 			coerced++
 		case fateSilent:
 			stoodDown++
+		case fateExpired:
+			lapsed++
 		}
 	}
 
@@ -1268,7 +1661,9 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 	fmt.Printf("   winners recorded done         %d\n", done)
 	fmt.Printf("   losers coerced on report      %d\n", coerced)
 	fmt.Printf("   losers closed by synthesis    %d\n", stoodDown)
-	fmt.Printf("   gate retries at the verbs     %d\n", l.gateRetries)
+	fmt.Printf("   losers closed by lease lapse  %d  (natural expiry, lease TTL %s)\n", lapsed, l.cfg.leaseTTL)
+	fmt.Printf("   confirmations re-asked        %d\n", l.reconfirms)
+	fmt.Printf("   gate retries at the tools     %d\n", l.gateRetries)
 	fmt.Printf("   merge commits on data branch  %d\n", merges)
 	fmt.Printf("   non-fast-forward pushes       %d  %s\n", nonFF,
 		l.perMachine(watch, func(w syncSample) int { return w.collisions }))
@@ -1437,6 +1832,21 @@ func mergeCount(root string) (int, error) {
 	return strconv.Atoi(strings.TrimSpace(out))
 }
 
+// leaseOnBranch reads the lease file for claim off a clone's data
+// branch: when it lapses, and whether it is a released tombstone
+// (store.ReleaseLease) rather than a plain lease left to expire.
+func leaseOnBranch(root, claim string) (time.Time, bool, error) {
+	out, err := runCmd(root, "git", "cat-file", "-p", dataRef+":leases/"+claim+".json")
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("read lease %s in %s: %w: %s", event.ShortID(claim), root, err, out)
+	}
+	expires, released, err := store.DecodeLeaseState([]byte(out))
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("lease %s in %s: %w", event.ShortID(claim), root, err)
+	}
+	return expires, released, nil
+}
+
 func (a *actor) treeOID() (string, error) {
 	out, err := runCmd(a.root, "git", "rev-parse", dataRef+"^{tree}")
 	if err != nil {
@@ -1572,8 +1982,12 @@ func (a *actor) post(path, principal string, body, dst any) error {
 	return json.Unmarshal(respBody, dst)
 }
 
-// stateResp is the slice of GET /v0/state this harness reads.
-type stateResp struct {
+// snapshot is the slice of GET /v0/snapshot this harness reads — the
+// one read endpoint (T4, 2026-09-10). Called without ?wait it answers
+// at the current version at once, through the same read gate every
+// client gets: a lease that lapsed since the last replay is
+// re-evaluated before the answer.
+type snapshot struct {
 	Sync struct {
 		Mode       string `json:"mode"`
 		LastError  string `json:"last_error"`
@@ -1581,20 +1995,32 @@ type stateResp struct {
 		Merges     int    `json:"merges"`
 	} `json:"sync"`
 	Tasks []struct {
-		ID        string `json:"id"`
-		Situation string `json:"situation"`
+		Task struct {
+			ID string `json:"id"`
+		} `json:"task"`
+		Situation string   `json:"situation"`
+		Runs      []runOut `json:"runs"`
 	} `json:"tasks"`
 }
 
+// runOut is a hydrated run as the daemon serves it.
+type runOut struct {
+	ID          string `json:"id"`
+	Claim       string `json:"claim"`
+	Outcome     string `json:"outcome"`
+	Branch      string `json:"branch"`
+	Synthesized bool   `json:"synthesized"`
+}
+
 func (a *actor) readyTasks() ([]string, error) {
-	var st stateResp
-	if err := a.get("/v0/state", &st); err != nil {
-		return nil, fmt.Errorf("%s state: %w", a.name, err)
+	var snap snapshot
+	if err := a.get("/v0/snapshot", &snap); err != nil {
+		return nil, fmt.Errorf("%s snapshot: %w", a.name, err)
 	}
 	var ready []string
-	for _, t := range st.Tasks {
+	for _, t := range snap.Tasks {
 		if t.Situation == core.SituationReady {
-			ready = append(ready, t.ID)
+			ready = append(ready, t.Task.ID)
 		}
 	}
 	return ready, nil
@@ -1678,19 +2104,44 @@ func toolText(res *mcp.CallToolResult) string {
 	return flatten(strings.Join(parts, " "))
 }
 
-// claimNextOut mirrors the fields of claim_next's result the harness
-// needs. Decoded from the tool's structured content rather than typed
-// against the daemon's unexported shapes.
-type claimNextOut struct {
-	Claimed bool `json:"claimed"`
-	Task    *struct {
-		Task struct {
-			ID string `json:"id"`
-		} `json:"task"`
-		Claim *struct {
-			ID string `json:"id"`
-		} `json:"claim"`
+// claimOut mirrors the fields of a claim response — claim_task's
+// result, and the task inside claim_next's — that the harness needs:
+// the claim, its lease, and the standing confirm-before-merge warning
+// every claim response must carry (D6 clause 3). Decoded from the
+// tool's structured content rather than typed against the daemon's
+// unexported shapes.
+type claimOut struct {
+	Task struct {
+		ID string `json:"id"`
 	} `json:"task"`
+	Claim   *claimRef `json:"claim"`
+	Warning string    `json:"warning"`
+}
+
+type claimRef struct {
+	ID      string     `json:"id"`
+	Expires *time.Time `json:"expires"`
+}
+
+// warned reports whether the response carried the confirm-before-merge
+// rule — the warning has to name the tool the rule is about.
+func (c *claimOut) warned() bool {
+	return strings.Contains(c.Warning, "confirm_claim")
+}
+
+// expiry is the lease expiry the daemon reported, or zero when the
+// claim carried no lease on record.
+func (c *claimRef) expiry() time.Time {
+	if c == nil || c.Expires == nil {
+		return time.Time{}
+	}
+	return *c.Expires
+}
+
+// claimNextOut mirrors claim_next's result.
+type claimNextOut struct {
+	Claimed bool      `json:"claimed"`
+	Task    *claimOut `json:"task"`
 }
 
 func (a *actor) claimNext() (claimNextOut, error) {
@@ -1700,25 +2151,23 @@ func (a *actor) claimNext() (claimNextOut, error) {
 }
 
 // claimTask claims one specific task through the session — the
-// deliberate half of a storm collision — and returns the claim ID.
-func (a *actor) claimTask(task string) (string, error) {
-	var out struct {
-		Claim *struct {
-			ID string `json:"id"`
-		} `json:"claim"`
-	}
+// deliberate half of a collision — and returns the claim response.
+func (a *actor) claimTask(task string) (claimOut, error) {
+	var out claimOut
 	if err := a.callTool("claim_task", map[string]any{"task": task}, &out); err != nil {
-		return "", err
+		return claimOut{}, err
 	}
 	if out.Claim == nil {
-		return "", fmt.Errorf("claim_task on %s returned no claim", a.name)
+		return claimOut{}, fmt.Errorf("claim_task on %s returned no claim", a.name)
 	}
-	return out.Claim.ID, nil
+	return out, nil
 }
 
-// confirmOut is confirm_claim's answer: the referee's verdict.
+// confirmOut is confirm_claim's answer: the referee's verdict, and the
+// claim it is about.
 type confirmOut struct {
-	Confirmed bool `json:"confirmed"`
+	Confirmed bool   `json:"confirmed"`
+	Claim     string `json:"claim"`
 }
 
 func (a *actor) confirmClaim(task string) (confirmOut, error) {
@@ -1809,8 +2258,8 @@ func newSyncWatch(actors []*actor) *syncWatch {
 
 func (w *syncWatch) sample(actors []*actor) {
 	for _, a := range actors {
-		var st stateResp
-		if a.hc == nil || a.get("/v0/state", &st) != nil {
+		var st snapshot
+		if a.hc == nil || a.get("/v0/snapshot", &st) != nil {
 			continue // a daemon being restarted is not an observation
 		}
 		w.mu.Lock()

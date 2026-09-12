@@ -73,7 +73,7 @@ case "$status_out" in
   *) echo "FAIL: status does not report local-only:" >&2; echo "$status_out" >&2; exit 1 ;;
 esac
 
-echo "== MCP shim serves the twelve verbs through the launcher"
+echo "== MCP shim serves the twelve tools through the launcher"
 mcp_out="$(
   {
     printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}'
@@ -108,7 +108,7 @@ for t in $actual_tools; do
   esac
 done
 if [ -n "$missing" ] || [ -n "$unexpected" ]; then
-  echo "FAIL: tools/list does not match the twelve expected verbs" >&2
+  echo "FAIL: tools/list does not match the twelve expected tools" >&2
   if [ -n "$missing" ]; then echo "  missing:$missing" >&2; fi
   if [ -n "$unexpected" ]; then echo "  unexpected:$unexpected" >&2; fi
   exit 1
