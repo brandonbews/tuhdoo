@@ -14,11 +14,16 @@ Each harness is a plain `package main` under `harness/<name>/`, so
 go run ./harness/collision
 ```
 
-Flags: `-rounds` (claim rounds, default 10), `-confirm-storm` (deliberate
-claim collisions whose `confirm_claim` verdicts are raced from both
-machines, default 40), `-storm` / `-storm-gap` (the eager-write burst aimed
-at the sync loop), `-converge-timeout` (default 5m), `-keep` (leave the
-scratch repos behind for inspection).
+Flags: `-rounds` (claim rounds, default 10), `-spare` (extra seeded tasks
+beyond the rounds so the claim_next pool never runs dry, default 3),
+`-confirm-storm` (deliberate claim collisions whose `confirm_claim`
+verdicts are raced from both machines, default 40), `-expiry-contests`
+(deliberate collisions whose losers go silent so their leases lapse on
+their own, default 2; 0 skips the arm), `-lease-ttl` (the claim lease TTL
+the spawned daemons run, default 4m — see "Why it takes minutes" for the
+lower bound), `-storm` / `-storm-gap` (the eager-write burst aimed at the
+sync loop), `-converge-timeout` (default 5m), `-keep` (leave the scratch
+repos behind for inspection).
 
 ### What it proves, and why it exists
 
@@ -46,23 +51,42 @@ The run, end to end:
    design (T7): there is deliberately no one-shot `tuhdoo claim`, so a
    scripted actor has to hold a session, and holding it is what keeps the
    leases renewed;
-5. storms the D6 confirmation gate: both actors deliberately claim the
+5. runs the natural-expiry arm: deliberate collisions (the same shape as
+   the storm's, below) whose losers then do nothing at all — no
+   `finish_run`, no `release_claim`, the session stays open and silent.
+   The loser's daemon learned "lost" at the gate and never renews a
+   voided claim's lease, so the lease lapses one TTL after the claim and
+   replay on every machine closes the attempt with a branch-less
+   synthesized `superseded` run at that instant. The daemons run a short
+   TTL for this (`-lease-ttl`, handed to them through the
+   `TUHDOO_LEASE_TTL` environment variable, which `tuhdoo daemon` reads and
+   which is unset everywhere else); the harness checks each claim's
+   reported lease against the flag before building any wait on it;
+6. storms the D6 confirmation gate: both actors deliberately claim the
    same task (`claim_task` behind a barrier — claims are optimistic and
    judged locally, so both succeed: a certain collision), then race
    `confirm_claim` from both sessions at once. The remote's ref CAS is the
    referee; exactly one `claim.confirmed` may land per contest, and a
    contest where both actors are told "confirmed" fails the run on the
-   spot. Winners record `done`; losers alternate between the two honest
-   exits — reporting `finish_run(done)` and being coerced to `superseded`
-   (branch kept), or standing down via `release_claim` and being closed by
-   replay's branch-less synthesized run;
-6. fires `claim_next` from both actors behind a barrier, once per round;
-7. storms the sync loop with simultaneous eager writes on both machines;
-8. lets the two machines converge, then settles the claim rounds through
-   the public tools alone — every fate is discovered from a daemon's
-   answer (`confirm_claim` answering lost, or `finish_run(done)` refereed
-   through the gate), never decided by the harness reading state — and
-   verifies. The harness writes no outcome on any daemon's behalf.
+   spot. Every confirmed verdict is asked again and must answer the same
+   (confirmed, same claim — D6 calls it irrevocable). Winners record
+   `done`; losers alternate between the two honest exits — reporting
+   `finish_run(done)` and being coerced to `superseded` (branch kept), or
+   standing down via `release_claim` and being closed by replay's
+   branch-less synthesized run;
+7. fires `claim_next` from both actors behind a barrier, once per round;
+8. storms the sync loop with simultaneous eager writes on both machines;
+9. waits for every claim to reach both machines, then settles the claim
+   rounds through the public tools alone — every fate is discovered from
+   a daemon's answer (`confirm_claim` answering lost, or
+   `finish_run(done)` refereed through the gate), never decided by the
+   harness reading state;
+10. waits for the natural-expiry losers' leases to lapse and for both
+    daemons to show the synthesized close through `GET /v0/snapshot` —
+    the sessions, the losers' included, still open — recording how long
+    after the lapse each daemon showed it;
+11. closes the sessions, lets the two machines converge, and verifies. The
+    harness writes no outcome on any daemon's behalf.
 
 ### How to read the output
 
@@ -82,10 +106,14 @@ machine-checked; `[FAIL]` on any of them exits non-zero.
 | claims voided by the winner rule | replay called the race, i.e. `core.ClaimVoided` |
 | exactly one survivor — the confirmed claim, else earliest ULID | the refereed D6 rule re-derived from the replayed claims, not trusted; the storm makes confirmations that out-rank an earlier ULID actually happen |
 | every race crossed machines | winner and loser carry different machine ids |
-| every verb-discovered fate matches replay | what each daemon told its agent (done / lost) is what the ledger says |
+| every tool-discovered fate matches replay | what each daemon told its agent (done / lost) is what the ledger says |
 | every done is certified | a `done` run's claim carries its `claim.confirmed` — no uncertified `done` exists |
 | reporting losers coerced, branch kept | D6 clause 3's real coercion: `finish_run(done)` on a lost attempt recorded `superseded` with the reported branch as salvage |
 | silent losers closed by synthesis | D6 clause 3's other arm: a stand-down with no report is closed by replay's branch-less synthesized `superseded` run |
+| natural-expiry losers closed at the lapse, lease unreleased | D6 clause 3's never-reports arm: a loser that neither reported nor released is closed by replay's synthesized run once its lease lapses — no real run, no release event, and the lease file on both trees is a plain lease (not a released tombstone) lapsing where the daemon said it would. The arm the 2026-08-04 resurrection bug lived in |
+| both daemons showed each natural-expiry close after the lapse | the daemons' own read surface showed the close (D6 clause 5's scheduled transition, on each machine), with the slowest observed lag |
+| every claim response carried the confirm-before-merge warning | D6 clause 3's "every claim response carries the warning to confirm before merging", counted over every `claim_next` and `claim_task` answer of the run |
+| every confirmed verdict answered the same when asked again | `confirm_claim` re-asked after every confirmed verdict: still confirmed, same claim (D6 clause 2: irrevocable and idempotent); the zero-duplicates line separately proves the repeat wrote nothing |
 
 `[note]` lines are things the acceptance asks to be *reported* rather than
 passed — currently only the `maxCycleRetries` clause.
@@ -111,8 +139,83 @@ T8's cadence: the fetch interval is 60s, and only claim and escalation
 writes push eagerly. The harness's one lever on that is an eager write, and
 an eager write is exactly what has to *stop* before the two machines can be
 still at the same moment — so the convergence waits are quiet waits, one
-fetch interval per hop. A full run is roughly three to five minutes, most of
-it spent waiting on purpose.
+fetch interval per hop.
+
+The natural-expiry arm adds the lease TTL to that floor: its losers' leases
+lapse one `-lease-ttl` after the claim, and the run waits for it. The
+default is 4m, and it cannot be much shorter. Lease renewals are ordinary
+batched writes riding the 60s cycle, not eager pushes, so a peer's copy of
+a live lease can trail by one renewal period (TTL/3) plus the batcher's 2s
+quiet plus two 60s hops — the writer's push and the reader's fetch. The
+TTL has to exceed TTL/3 + 122s, about three minutes, or a peer can see a
+live claim as lapsed between renewals: the exact flapping T8's 15m/5m
+ratio rules out in production. Four minutes clears the bound with a
+margin. The arm's contests run first so the clock starts early; the post-
+race wait is an events-only wait (both machines hold every claim) rather
+than a tree comparison, because the still-open sessions renew their live
+leases every TTL/3 and a renewal moves a tree — the acceptance-grade tree
+check is the final convergence, taken with the sessions closed. A full run
+is roughly six to seven minutes, most of it spent waiting on purpose.
+
+### D6 arms: what runs here, what stays unit-covered
+
+Covered end to end by this harness, through the public tools on two
+daemons: the confirmation race (clause 2), the coerced report and the
+stand-down synthesis (clause 3), the never-reports natural-expiry
+synthesis (clause 3, with clause 5's scheduled transition), the
+claim-response warning (clause 3), and the repeat-confirm stability
+(clause 2).
+
+Not run here, on purpose — they need one daemon and a remote that is
+absent or unreachable, which two live clones of one origin cannot stage
+without severing the very link the rest of the run measures — and covered
+by `internal/daemon` unit tests instead (line ranges as of 2026-09-11):
+
+- **remote configured but unreachable → honest retryable refusal, nothing
+  written**: `gate_test.go:121-148`
+  (`TestConfirmClaimUnreachableRemoteRefusesHonestly`);
+- **remoteless confirmation is local, instant, idempotent**:
+  `gate_test.go:85-115` (`TestConfirmClaimRemoteless`);
+- **late-loser messaging** — a loser returning after its attempt was
+  closed by synthesis is refused with the `add_note` salvage pointer, and
+  the salvage note carries no stand-down nag: `loser_test.go:179-230`
+  (`TestLateLoserFinishRejectedWithAddNotePointer`); the call-time
+  stand-down notices on `add_note` and `escalate`, and the coerced finish
+  through the MCP surface: `loser_test.go:334-375`
+  (`TestCallTimeStandDownNotices`);
+- the rule the natural-expiry arm leans on — a provisionally-voided claim
+  stays tracked by its session but is never renewed:
+  `loser_test.go:520-572` (`TestRenewOnceKeepsVoidedClaimsTracked`).
+
+### Observed run (2026-09-11, defaults, macOS — the bounded extension)
+
+```
+claim rounds fired            10
+claim races observed          10   (every round contested)
+storm contests fired          40
+claims made                   104
+claims voided (D6 losers)     52
+claim.confirmed on the branch 52   (0 duplicates; alpha 20, bravo 20)
+winners recorded done         52
+losers coerced on report      25
+losers closed by synthesis    25
+losers closed by lease lapse  2    (natural expiry, lease TTL 4m)
+confirmations re-asked        47
+merge commits on data branch  108
+non-fast-forward pushes       103  (alpha 61, bravo 42)
+maxCycleRetries exhausted     1    (1.0% of non-fast-forward pushes)
+```
+
+394 events, byte-identical replayed state (~122 kB) and 60 byte-identical
+view files on both machines, on an identical data-branch tree. All twenty
+hard checks passed. The two natural-expiry losers' leases lapsed 4m after
+their claims with the sessions still open; both daemons showed the
+synthesized close 500 ms after the lapse, and both trees carried the plain,
+unreleased, unrenewed lease. Every one of the 104 claim responses carried
+the confirm-before-merge warning, and all 47 re-asked verdicts answered
+confirmed for the same claim. Wall time 4m08s (the storm now takes 29 s
+for 40 contests, so the expiry wait overlaps what used to be quiet
+convergence time rather than adding to it).
 
 ### Observed run (2026-08-03, defaults, macOS)
 
@@ -133,6 +236,46 @@ files on both machines, on an identical data-branch tree. All ten acceptance
 checks passed. Wall time about four minutes, three of them quiet convergence
 waits. Two independent runs on the same day produced the same figures on every
 line — the per-round race is reliable, not lucky.
+
+### Findings from running it (2026-09-11, the bounded extension)
+
+The extension's first full run passed every new line — both natural-expiry
+losers closed by replay at the lapse with the lease left unreleased and
+unrenewed, both daemons showing the close 600 ms after it; 104 of 104 claim
+responses carrying the warning; 46 confirmed verdicts stable on repeat — and
+failed two of the forty storm contests on checks that had been green since
+2026-08-04:
+
+**A stand-down tombstone rounded to the second re-adjudicated the contest.**
+*(Resolved the same day, in this change: `internal/store/lease.go` now stores
+a tombstone's instant exactly — RFC3339 with fractional seconds, which every
+existing reader already parses — while ordinary leases keep second
+precision. The original text follows as the record.)* `encodeLeaseFile`
+truncated every lease instant to the second, tombstones included. A plain
+lease's expiry is a deadline and the sub-second is noise; a tombstone's
+instant is the boundary replay judges past claims against — T8 promises
+"live before the instant, lapsed from it onward" — and truncation moved that
+boundary up to 999 ms into the past. In the two failing contests the loser
+held the *earlier* ULID (the confirmation out-ranked it, the storm's marquee
+case), stood down, and its release landed in the same wall-clock second as
+the winner's claim; the truncated tombstone therefore read as lapsed *at* the
+winner's claim instant, so `leaseExpiredBy(leases, incumbent, when)` found
+the incumbent already gone when the winner's claim arrived: the loser was
+recorded `expired` with an `interrupted` run, the confirmation bound through
+the ordinary provisional-winner arm, and the promised `superseded` run never
+existed — deterministic and converged on both machines, with the tool having
+told the agent "recorded as superseded". The same shape as the 2026-08-04
+deletion finding, one second wide instead of infinitely wide. It stayed
+hidden until now because a storm contest used to take seconds; since the
+2026-09-10 live-replica work (PRs #103–#105) one takes about 0.7 s, so a
+stand-down now routinely lands in the winner's claim second. Not a
+consequence of the shorter lease TTL: the truncated boundary is stored data
+and re-adjudicates at every replay instant.
+
+The port to `GET /v0/snapshot` is also from this session: the harness read
+`GET /v0/state`, which the 2026-09-10 read-side revision retired (T4), so
+before this change a default run could not get past joining the second
+clone.
 
 ### Findings from running it (2026-08-04, driving the real D6 machinery)
 
