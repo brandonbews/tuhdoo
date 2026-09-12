@@ -2,7 +2,7 @@
 
 `tuh-01M29FENAVT4FSGZR3W2D3NQ54`
 
-- **Status:** open — ready
+- **Status:** open — in progress, claimed by `brandon/claude-code-1`
 - **Priority:** none
 - **Labels:** `go` `storage` `audit-finding`
 - **Created:** 2026-09-12 00:14 UTC by `brandon/claude-code-1`
