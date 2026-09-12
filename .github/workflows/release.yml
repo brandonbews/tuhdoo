@@ -82,7 +82,14 @@ jobs:
   # failure reasons log only at verbose level), so publish passes
   # --provenance explicitly — then a provenance failure fails the publish
   # loudly instead of shipping an unattested package.
+  #
+  # PARKED pre-launch (2026-09-12): tuhdoo is off npm until it's ready to
+  # be public. The five names are held by hand-published 0.0.1 placeholder
+  # stubs; the real 0.1.0–0.5.0 were unpublished. Before re-enabling:
+  # the first real version must be above 0.5.0 (unpublished versions are
+  # retired forever), and --provenance fails while the repo is private.
   npm:
+    if: false
     needs: release
     runs-on: ubuntu-latest
     permissions:
