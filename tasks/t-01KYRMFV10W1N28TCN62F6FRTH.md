@@ -3,7 +3,7 @@
 `t-01KYRMFV10W1N28TCN62F6FRTH`
 
 - **Status:** on hold — deliberately paused
-- **Priority:** 2
+- **Priority:** none
 - **Labels:** `go` `storage`
 - **Depends on:** [`t-qm7a`](t-01KYRMFV10W1N28TCN5SH4QM7A.md) (done)
 - **Created:** 2026-07-30 04:28 UTC by `brandon/migrator`
@@ -45,3 +45,7 @@ priority 1→2
 ### 2026-08-27 07:06 UTC — edit by `brandon/claude-code-1`
 
 description edited
+
+### 2026-09-12 01:00 UTC — edit by `brandon`
+
+priority 2→none

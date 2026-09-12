@@ -20,7 +20,7 @@ Triaged, deliberately paused — never served to agents until reopened.
 
 | ID | Task | Priority | Labels |
 |---|---|---:|---|
-| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | 2 | `go` `storage` |
+| [`t-frth`](tasks/t-01KYRMFV10W1N28TCN62F6FRTH.md) | Epoch compaction (D9): snapshot event + in-commit deletion | — | `go` `storage` |
 | [`tuh-8xe2`](tasks/tuh-01KZA0VT234XJYVZWT8YFV8XE2.md) | Monorepo grain: is one tuhdoo branch per repo right when a repo hosts many projects? | — | `design` |
 | [`tuh-7k2y`](tasks/tuh-01KZA0VT234XJYVZWT980V7K2Y.md) | Working-set retirement: bounding what surfaces show without deleting history | — | `design` `ledger` |
 | [`tuh-yayn`](tasks/tuh-01KZPPRY7P2A6GN0AMSKPEYAYN.md) | The announcement moment: where, what, when | — | `launch` `product` |
