@@ -2,7 +2,7 @@
 
 `tuh-01M29FENAVT4FSGZR3W2D3NQ54`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** none
 - **Labels:** `go` `storage` `audit-finding`
 - **Created:** 2026-09-12 00:14 UTC by `brandon/claude-code-1`
@@ -19,4 +19,10 @@ Constraints: no reader changes (RFC3339 parsing already accepts fractional secon
 
 ## History
 
-_No activity yet._
+### 2026-09-12 00:16 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M29FENAVT4FSGZR3W2D3NQ54/lease-tombstone-exact`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/111>
+- Merged as: `84b29a6`
+
+Landed as PR #111 (squash 84b29a6 on main). Released tombstones now store the exact stand-down instant (RFC3339Nano); plain leases keep second precision. Fixes replay re-adjudicating a settled contest when the loser's stand-down and the winner's claim shared a wall-clock second (loser replayed expired/interrupted instead of superseded). Tests: TestReleaseLeaseKeepsTheExactInstant plus round-trip cases for exact and legacy second-precision tombstones. 002 T8 clarified in place. Found by, and required by, the collision-harness extension tuh-01KZVZT7F8CVJYX1P00BRPGMTX.
