@@ -1,6 +1,6 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 126 done · 35 cancelled
+1 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 126 done · 35 cancelled
 
 ## In progress
 
@@ -10,7 +10,9 @@
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-nq54`](tasks/tuh-01M29FENAVT4FSGZR3W2D3NQ54.md) | Store: released-lease tombstones keep the exact stand-down instant | — | `go` `storage` `audit-finding` |
 
 ## Blocked / waiting
 
