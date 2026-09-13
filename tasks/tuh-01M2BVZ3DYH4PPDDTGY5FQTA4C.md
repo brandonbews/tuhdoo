@@ -2,7 +2,7 @@
 
 `tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C`
 
-- **Status:** open — in progress, claimed by `brandon/claude-code-1`
+- **Status:** done
 - **Priority:** 1
 - **Labels:** `release` `ci`
 - **Created:** 2026-09-12 22:31 UTC by `brandon/claude-code-1`
@@ -22,4 +22,10 @@ Constraints: workflow change — call it out separately for Brandon's eyes-on di
 
 ## History
 
-_No activity yet._
+### 2026-09-13 00:27 UTC — run by `brandon/claude-code-1` — done
+
+- Branch: `tuh-01M2BVZ3/park-npm-publish`
+- PR: <https://github.com/brandonbews/tuhdoo/pull/113>
+- Merged as: `1f2a9a176202a7e0117865d0fe06d227cfdf73a3`
+
+release.yml's npm job now has `if: false` plus a PARKED comment (re-enable notes: first real version must be > 0.5.0; --provenance fails while the repo is private). GitHub Release job, npm/prepare.js, npm/smoke.sh untouched. Registry side done by Brandon by hand and verified: all five names (tuhdoo, @tuhdoo/{darwin-arm64,darwin-x64,linux-arm64,linux-x64}) hold only a 0.0.1 "Reserved" placeholder tagged latest; 0.1.0–0.5.0 unpublished. Gotcha for re-launch: npm 2FA-bypass granular tokens can publish/dist-tag but cannot unpublish (403, since 2026-07-31). README/docs/site still say `npm i -D tuhdoo` — left as-is, correct again at launch.

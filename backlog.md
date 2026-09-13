@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 128 done · 35 cancelled
+0 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-ta4c`](tasks/tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C.md) | Release: park the npm publish job while tuhdoo is pre-launch | 1 | `brandon/claude-code-1` |
+_None._
 
 ## Ready
 
@@ -168,6 +166,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-qk8h`](tasks/tuh-01M28YZVWS1PJEMG9J7VM0QK8H.md) TUI keymap rework: r/h/i move status, n captures, tab opens Closed, priority picker with clear
 - [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 - [`tuh-nq54`](tasks/tuh-01M29FENAVT4FSGZR3W2D3NQ54.md) Store: released-lease tombstones keep the exact stand-down instant
+- [`tuh-ta4c`](tasks/tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C.md) Release: park the npm publish job while tuhdoo is pre-launch
 
 ## Cancelled
 
