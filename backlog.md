@@ -1,16 +1,16 @@
 # Backlog
 
-0 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
+1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
 
 ## In progress
 
-_None._
+| ID | Task | Priority | Claimed by |
+|---|---|---:|---|
+| [`tuh-4va2`](tasks/tuh-01M2JZRZJ3Y01FT5ZDPQ2N4VA2.md) | Release: re-enable the npm publish job and ship v0.6.0 to npm | 1 | `brandon/claude-code-3` |
 
 ## Ready
 
-| ID | Task | Priority | Labels |
-|---|---|---:|---|
-| [`tuh-4va2`](tasks/tuh-01M2JZRZJ3Y01FT5ZDPQ2N4VA2.md) | Release: re-enable the npm publish job and ship v0.6.0 to npm | 1 | `release` `ci` |
+_None._
 
 ## Blocked / waiting
 
