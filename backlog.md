@@ -1,12 +1,10 @@
 # Backlog
 
-1 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
+0 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 130 done · 35 cancelled
 
 ## In progress
 
-| ID | Task | Priority | Claimed by |
-|---|---|---:|---|
-| [`tuh-4va2`](tasks/tuh-01M2JZRZJ3Y01FT5ZDPQ2N4VA2.md) | Release: re-enable the npm publish job and ship v0.6.0 to npm | 1 | `brandon/claude-code-3` |
+_None._
 
 ## Ready
 
@@ -169,6 +167,7 @@ Untriaged captures — promoting one to open means writing it a real (prompt-qua
 - [`tuh-7r5t`](tasks/tuh-01M292K54DKSHW00J31P487R5T.md) Probe: claim-to-GitHub latency for the versioned-state daemon (tuh-01M26H99QVANVJCXR9FM2Z8Q7X)
 - [`tuh-nq54`](tasks/tuh-01M29FENAVT4FSGZR3W2D3NQ54.md) Store: released-lease tombstones keep the exact stand-down instant
 - [`tuh-ta4c`](tasks/tuh-01M2BVZ3DYH4PPDDTGY5FQTA4C.md) Release: park the npm publish job while tuhdoo is pre-launch
+- [`tuh-4va2`](tasks/tuh-01M2JZRZJ3Y01FT5ZDPQ2N4VA2.md) Release: re-enable the npm publish job and ship v0.6.0 to npm
 
 ## Cancelled
 
