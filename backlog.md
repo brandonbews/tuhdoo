@@ -1,6 +1,6 @@
 # Backlog
 
-0 in progress · 0 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
+0 in progress · 1 ready · 0 blocked · 7 on hold · 3 inbox · 129 done · 35 cancelled
 
 ## In progress
 
@@ -8,7 +8,9 @@ _None._
 
 ## Ready
 
-_None._
+| ID | Task | Priority | Labels |
+|---|---|---:|---|
+| [`tuh-4va2`](tasks/tuh-01M2JZRZJ3Y01FT5ZDPQ2N4VA2.md) | Release: re-enable the npm publish job and ship v0.6.0 to npm | 1 | `release` `ci` |
 
 ## Blocked / waiting
 
