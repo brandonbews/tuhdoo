@@ -1,16 +1,13 @@
-import { readFrontmatter } from "@/lib/docs";
-import { docsNav, routeFor } from "@/lib/nav";
-
 // llms.txt (https://llmstxt.org): a machine-readable index of the site for
 // agents and LLM crawlers. Built from the same nav config and frontmatter as
-// the human site, so it cannot drift from the published docs. Statically
-// generated at build time (route handlers are dynamic by default since
-// Next 15, hence force-static).
-export const dynamic = "force-static";
+// the human site, so it cannot drift from the published docs. Written to
+// dist/llms.txt at build time.
+import type { APIRoute } from "astro";
+import { readFrontmatter } from "../lib/docs";
+import { docsNav, routeFor } from "../lib/nav";
+import { ORIGIN } from "../lib/site";
 
-const ORIGIN = "https://www.tuhdoo.com";
-
-export function GET(): Response {
+export const GET: APIRoute = () => {
   const docLines = docsNav.map((entry) => {
     const { description } = readFrontmatter(entry.file);
     return `- [${entry.title}](${ORIGIN}${routeFor(entry)}): ${description}`;
@@ -36,4 +33,4 @@ export function GET(): Response {
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8" },
   });
-}
+};

@@ -1,0 +1,24 @@
+---
+// /docs/<slug>: one page per entry in nav.ts (the index is docs/index.astro).
+// Every docs route is known from the nav config; anything else is a 404 at
+// build time — there is no server.
+import type { GetStaticPaths } from "astro";
+import Docs from "../../layouts/Docs.astro";
+import { docsNav, type NavEntry } from "../../lib/nav";
+
+export const getStaticPaths = (() =>
+  docsNav
+    .filter((entry) => entry.slug.length > 0)
+    .map((entry) => ({
+      params: { slug: entry.slug.join("/") },
+      props: { entry },
+    }))) satisfies GetStaticPaths;
+
+interface Props {
+  entry: NavEntry;
+}
+
+const { entry } = Astro.props;
+---
+
+<Docs entry={entry} />

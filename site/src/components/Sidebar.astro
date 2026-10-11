@@ -1,0 +1,27 @@
+---
+// The docs nav. The current page is marked when the page is built (the
+// route is passed in, not read from the browser), so it needs no JavaScript.
+import { docsNav, routeFor } from "../lib/nav";
+
+interface Props {
+  current: string; // the route of the page being built, e.g. /docs/joining
+}
+
+const { current } = Astro.props;
+---
+
+<nav class="docs-sidebar" aria-label="Docs">
+  <ul>
+    {
+      docsNav.map((entry) => {
+        const href = routeFor(entry);
+        const nested = entry.slug.length > 1;
+        return (
+          <li class={nested ? "nested" : undefined}>
+            <a href={href} aria-current={href === current ? "page" : undefined}>{entry.title}</a>
+          </li>
+        );
+      })
+    }
+  </ul>
+</nav>

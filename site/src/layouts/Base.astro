@@ -1,0 +1,90 @@
+---
+// Every page: the <head>, the site header, and the footer. No JavaScript:
+// nothing here (or anywhere on the site) renders a client component, so
+// Astro emits no <script> — and the build fails if one ever appears
+// (scripts/check-no-js.mjs).
+import Logo from "../components/Logo.astro";
+import type { PageHead } from "../lib/head";
+import { OG_IMAGE, REPO_URL, SITE_NAME } from "../lib/site";
+import "../styles/global.css";
+
+interface Props {
+  head: PageHead;
+}
+
+const { head } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Sora's Latin subset, used by every heading (fonts in global.css). */}
+    <link rel="preload" href="/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
+    {head.noindex && <meta name="robots" content="noindex" />}
+    {/* Browser chrome color, matched to --color-bg in each theme. */}
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#060806" media="(prefers-color-scheme: dark)" />
+    <title>{head.title}</title>
+    <meta name="description" content={head.description} />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    {head.canonical && <link rel="canonical" href={head.canonical} />}
+    <meta property="og:title" content={head.og.title} />
+    <meta property="og:description" content={head.og.description} />
+    <meta property="og:url" content={head.og.url} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:image" content={OG_IMAGE.url} />
+    {
+      head.imageDetails && (
+        <>
+          <meta property="og:image:type" content={OG_IMAGE.type} />
+          <meta property="og:image:width" content={String(OG_IMAGE.width)} />
+          <meta property="og:image:height" content={String(OG_IMAGE.height)} />
+          <meta property="og:image:alt" content={OG_IMAGE.alt} />
+        </>
+      )
+    }
+    <meta property="og:type" content={head.og.type} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={head.og.title} />
+    <meta name="twitter:description" content={head.og.description} />
+    <meta name="twitter:image" content={OG_IMAGE.url} />
+    {
+      head.imageDetails && (
+        <>
+          <meta name="twitter:image:alt" content={OG_IMAGE.alt} />
+          <meta name="twitter:image:type" content={OG_IMAGE.type} />
+          <meta name="twitter:image:width" content={String(OG_IMAGE.width)} />
+          <meta name="twitter:image:height" content={String(OG_IMAGE.height)} />
+        </>
+      )
+    }
+    {
+      /* Icons in public/. The .ico is the fallback; sizes="32x32" stops
+         browsers preferring it over the SVG. */
+    }
+    <link rel="icon" href="/favicon.ico" sizes="32x32" type="image/x-icon" />
+    <link rel="icon" href="/icon.svg" sizes="any" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-icon.png" sizes="180x180" type="image/png" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="lockup" aria-label="tuhdoo: home" href="/"><Logo /></a>
+        <nav aria-label="Site">
+          <a href="/docs">Docs</a>
+          <a href={REPO_URL} rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <span>tuhdoo: coordination over git, nothing else.</span>
+        <a href={REPO_URL} rel="noopener">github.com/brandonbews/tuhdoo</a>
+      </div>
+    </footer>
+  </body>
+</html>

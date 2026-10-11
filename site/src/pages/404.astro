@@ -1,0 +1,24 @@
+---
+// The 404 page, built to dist/404.html. Cloudflare Pages serves it with a
+// real 404 status for any path that matches no file. It sits inside the
+// base layout, so the header and footer come for free; the body reuses the
+// landing classes — no new visual language.
+import Base from "../layouts/Base.astro";
+import { notFoundHead } from "../lib/head";
+---
+
+<Base head={notFoundHead()}>
+  <main id="main" class="landing">
+    <section class="hero">
+      <h1>404. No such page.</h1>
+      <p class="lede">
+        There is no page at this address. Try the docs, or head back to the
+        homepage.
+      </p>
+      <div class="hero-actions">
+        <a class="button" href="/">Back to the homepage</a>
+        <a class="button" href="/docs">Read the docs</a>
+      </div>
+    </section>
+  </main>
+</Base>

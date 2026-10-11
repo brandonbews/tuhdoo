@@ -1,0 +1,28 @@
+---
+// A docs page: the sidebar beside the rendered doc, with previous/next links
+// below it. The doc's HTML is rendered at build time (src/lib/markdown.ts).
+import PrevNext from "../components/PrevNext.astro";
+import Sidebar from "../components/Sidebar.astro";
+import { readDocSource } from "../lib/docs";
+import { docHead } from "../lib/head";
+import { renderMarkdown } from "../lib/markdown";
+import { type NavEntry, routeFor } from "../lib/nav";
+import Base from "./Base.astro";
+
+interface Props {
+  entry: NavEntry;
+}
+
+const { entry } = Astro.props;
+const html = await renderMarkdown(readDocSource(entry.file), entry.file);
+---
+
+<Base head={docHead(entry)}>
+  <div class="docs-shell">
+    <Sidebar current={routeFor(entry)} />
+    <main id="main" class="doc">
+      <article set:html={html} />
+      <PrevNext entry={entry} />
+    </main>
+  </div>
+</Base>
