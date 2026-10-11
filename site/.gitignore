@@ -1,9 +1,7 @@
 node_modules/
-.next/
-out/
-*.tsbuildinfo
-next-env.d.ts
+dist/
+.astro/
 
-# Local secrets — never commit
+# Local settings, never committed
 .env
 .env*.local

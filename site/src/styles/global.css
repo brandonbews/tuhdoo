@@ -1,12 +1,7 @@
-/* tuhdoo site — Tailwind v4 substrate; light + dark via prefers-color-scheme.
- *
- * Preflight is deliberately NOT imported (the two granular imports below are
- * the documented way to disable it): the semantic component classes and the
- * rendered markdown under `.doc` rely on UA default styles (list markers,
- * paragraph/heading margins). Importing `tailwindcss` wholesale would reset
- * those and change rendering. Revisited during the identity pass and kept:
- * the identity is carried by tokens + these component classes, so Preflight
- * still buys nothing and would still break `.doc` rendering.
+/* tuhdoo site — plain CSS: design tokens as custom properties, light + dark
+ * via prefers-color-scheme, and semantic component classes. No reset: the
+ * component classes and the rendered markdown under `.doc` rely on UA
+ * default styles (list markers, paragraph/heading margins).
  *
  * Identity: every color below derives from the brand mark
  * (public/brand/tuhdoo-lockup-dark.svg) — gradient stops #f2fff7 / #8bffbb /
@@ -15,21 +10,61 @@
  * stays quiet around it: flat surfaces, one accent family, no gradients or
  * glass outside the mark itself.
  */
-@layer theme, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
 
-/* Design tokens. Light values live in @theme (emitted on :root and usable as
- * Tailwind utilities: bg-bg, text-fg-muted, border-border, font-mono, …);
- * dark mode overrides the same custom properties below, so both the component
- * classes here and any future utility classes flip automatically.
+/* Cascade layers: a rule in `components` always beats a rule in `base`,
+ * whatever their selectors' specificity (e.g. `.skip-link` keeps its color
+ * over `a:hover`). Rules outside any layer (the tokens and fonts below)
+ * would beat both, but they only define custom properties and @font-face. */
+@layer base, components;
+
+/* Sora, self-hosted (public/fonts/, SIL Open Font License — OFL.txt there):
+ * the variable font, weights 100–800, split by Google Fonts into a Latin and
+ * a Latin Extended file; the browser fetches a file only when the page uses
+ * a character in its unicode-range. The Latin file is preloaded in
+ * Base.astro. "Sora Fallback" is Arial scaled to Sora's metrics, so text
+ * barely shifts while Sora loads (font-display: swap). */
+@font-face {
+  font-family: Sora;
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/sora-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: Sora;
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/sora-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Sora Fallback";
+  src: local("Arial");
+  ascent-override: 85.29%;
+  descent-override: 25.5%;
+  line-gap-override: 0%;
+  size-adjust: 113.73%;
+}
+
+/* Design tokens. Light values live on :root; dark mode overrides the same
+ * custom properties below, so every component class flips automatically.
  *
  * Contrast (WCAG AA, computed): every fg/bg and accent/bg pair used for text
  * here clears 4.5:1 in both themes — see the identity task report.
  * Light: fg 18.1:1, fg-muted 6.2:1 (5.8:1 on raised), accent 5.4:1 (5.0:1 on
  * raised), white-on-accent-fill 5.4:1. Dark: fg 18.6:1, fg-muted 9.3:1,
  * accent 12.4:1, fill-contrast-on-accent-fill 11.5:1. */
-@theme {
+:root {
   /* Neutrals: green-cast, from the wordmark fill #f4f7f2 (which doubles as
    * the light raised surface) and near-black anchored to the fg hue. */
   --color-bg: #ffffff;
@@ -53,13 +88,12 @@
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
-  /* Sora (the wordmark face, loaded via next/font in layout.tsx) for
-   * headings only; body copy stays on the system stack for long-form
-   * readability. */
-  --font-heading: var(--font-sora), var(--font-sans);
+  /* Sora (the wordmark face, @font-face above) for headings only; body copy
+   * stays on the system stack for long-form readability. */
+  --font-heading: Sora, "Sora Fallback", var(--font-sans);
 
-  /* Layout widths (max-w-site / max-w-prose-col as utilities).
-   * prose-col: 42rem ≈ 70–75 characters per line at doc body size. */
+  /* Layout widths. prose-col: 42rem ≈ 70–75 characters per line at doc
+   * body size. */
   --container-site: 72rem;
   --container-prose-col: 42rem;
 }

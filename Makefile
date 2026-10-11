@@ -14,8 +14,10 @@ lint-go:
 	go vet ./...
 
 # Site targets need dependencies installed first (cd site && npm ci).
-# The site has no test suite; `next build` is its executable correctness
-# check — it compiles, type-checks the routes, and prerenders every page.
+# The site has no test suite; `npm run build` is its executable correctness
+# check — `astro build` renders every page (a doc missing from docs/ or
+# missing its frontmatter fails it), then check-no-js fails the build if any
+# page ships JavaScript.
 test-site:
 	cd site && npm run build
 

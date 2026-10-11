@@ -1,0 +1,28 @@
+---
+import { type NavEntry, prevNext, routeFor } from "../lib/nav";
+
+interface Props {
+  entry: NavEntry;
+}
+
+const { prev, next } = prevNext(Astro.props.entry);
+---
+
+{
+  (prev || next) && (
+    <nav class="prev-next" aria-label="Docs pages">
+      {prev && (
+        <a href={routeFor(prev)} class="prev">
+          <span class="direction">← Previous</span>
+          <span>{prev.title}</span>
+        </a>
+      )}
+      {next && (
+        <a href={routeFor(next)} class="next">
+          <span class="direction">Next →</span>
+          <span>{next.title}</span>
+        </a>
+      )}
+    </nav>
+  )
+}

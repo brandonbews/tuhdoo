@@ -1,14 +1,12 @@
 // Reads doc sources from the repo-root docs/ directory at build time.
 //
-// The site consumes ../docs by fs-read: on Vercel with root directory =
-// site/, the full repo is still checked out, so ../docs exists at build.
-// Docs are never vendored or copied into site/.
+// The site consumes ../docs by fs-read: the host builds with root
+// directory = site/, but the full repo is still checked out, so ../docs
+// exists at build. Docs are never vendored or copied into site/.
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Metadata } from "next";
 import { parse as parseYaml } from "yaml";
-import { type NavEntry, routeFor } from "@/lib/nav";
 
 export const DOCS_ROOT = path.join(process.cwd(), "..", "docs");
 
@@ -38,33 +36,4 @@ export function readFrontmatter(file: string): DocFrontmatter {
     );
   }
   return { title, description };
-}
-
-// Page metadata for a doc route. Next replaces nested `openGraph` objects
-// wholesale (no per-field merge with the root layout), so each doc page must
-// carry the full og object — siteName and images included; setting openGraph
-// here would otherwise drop the image the app/opengraph-image.png file
-// convention gives the root route. (Verified against the running site: an
-// openGraph object without `images` loses og:image entirely.)
-//
-// Takes the nav entry (not just the file) because canonical and og:url need
-// the route; relative URLs resolve against metadataBase (www.tuhdoo.com).
-export function docPageMetadata(entry: NavEntry): Metadata {
-  const { title, description } = readFrontmatter(entry.file);
-  const route = routeFor(entry);
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: route,
-    },
-    openGraph: {
-      siteName: "tuhdoo",
-      type: "article",
-      url: route,
-      title,
-      description,
-      images: "/opengraph-image.png",
-    },
-  };
 }
