@@ -8,8 +8,8 @@ import (
 )
 
 // adoptTimeout bounds the one startup fetch AdoptRemoteBranch makes. An
-// unreachable remote must not hang daemon startup (T2: remoteless — and
-// by extension offline — is a normal state); a bound this generous only
+// unreachable remote must not hang daemon startup (remoteless — and by
+// extension offline — is a normal state); a bound this generous only
 // ever cuts off a genuinely dead transport, and losing the adoption is
 // harmless (see below).
 const adoptTimeout = 10 * time.Second
@@ -38,7 +38,7 @@ func (s *Syncer) AdoptRemoteBranch() {
 		return // local branch exists; nothing to adopt
 	}
 	if err := s.checkRemote(); err != nil {
-		// No remote is the normal remoteless state (T2); anything else
+		// No remote is the normal remoteless state; anything else
 		// is config trouble the sync loop will surface on its own.
 		if !errors.Is(err, gitx.ErrNoRemote) {
 			s.logf("adopt: reading remote %q: %v; minting a fresh root", s.remote, err)

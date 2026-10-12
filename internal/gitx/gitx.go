@@ -1,13 +1,13 @@
 // Package gitx wraps the git command-line tool behind a small interface.
 //
-// tuhdoo's data branch is never checked out (design doc 002, T2): every
-// method works on git's object database and refs directly, via plumbing
-// commands. The interface deliberately has no checkout or worktree
-// operations, so code built on it cannot touch the user's working tree
-// even by accident. The only index it touches is tuhdoo's own private
-// one (T2, 2026-09-10: `<git-dir>/tuhdoo/index`, selected per
-// subprocess through GIT_INDEX_FILE) — the user's index is never read
-// or written, and a private index is not a worktree.
+// tuhdoo's data branch is never checked out: every method works on
+// git's object database and refs directly, via plumbing commands. The
+// interface deliberately has no checkout or worktree operations, so
+// code built on it cannot touch the user's working tree even by
+// accident. The only index it touches is tuhdoo's own private one
+// (`<git-dir>/tuhdoo/index`, selected per subprocess through
+// GIT_INDEX_FILE) — the user's index is never read or written, and a
+// private index is not a worktree.
 package gitx
 
 import (
@@ -73,7 +73,7 @@ var (
 	ErrNonFastForward = errors.New("push rejected: non-fast-forward")
 
 	// ErrNoRemote reports that the asked-for remote is not configured.
-	// Remoteless operation is a normal state (T2), not a crash.
+	// Remoteless operation is a normal state, not a crash.
 	ErrNoRemote = errors.New("remote not configured")
 
 	// ErrRemoteRefMissing reports a fetch of a ref the remote does not
@@ -123,14 +123,14 @@ type Git interface {
 
 	// CatFiles returns the exact bytes of every blob named in oids,
 	// keyed by OID, read through one `git cat-file --batch` process
-	// (T2, 2026-09-10: reads are batched — a cold start is one process
-	// for the whole tree, not one per blob). Each oid is a full hex
+	// (reads are batched: a cold start is one process for the whole
+	// tree, not one per blob). Each oid is a full hex
 	// object name exactly as git prints it: the batch parser matches
 	// git's answer records to the requests by name, so an abbreviated
 	// or ref-form name would be answered under a different string and
 	// fail the read. Duplicate OIDs are read once. An OID the
 	// repository lacks is an error naming it, never a silently absent
-	// key (T3's fail-safe posture: a load that cannot read an object
+	// key (the fail-safe posture: a load that cannot read an object
 	// must fail, not skip it); an OID naming a non-blob is an error
 	// too. Empty input spawns nothing and returns an empty map.
 	CatFiles(oids []string) (map[string][]byte, error)
@@ -138,8 +138,8 @@ type Git interface {
 	// BlobOID returns the object ID git would assign data as a blob —
 	// the hash of "blob <len>\0<bytes>" in the repository's object
 	// format (SHA-1 or SHA-256) — without writing anything. Local OIDs
-	// exist to diff in-memory bytes against a tree (T2, 2026-09-10);
-	// HashObject remains the only way an object is written.
+	// exist to diff in-memory bytes against a tree; HashObject remains
+	// the only way an object is written.
 	BlobOID(data []byte) string
 
 	// LsTree lists every blob reachable from rev (a tree or commit OID,
@@ -151,19 +151,19 @@ type Git interface {
 	// missing index file is created, a garbage one overwritten, and a
 	// stale index.lock cleared first (the daemon's flock proves no
 	// other process writes this index, so a lock file is a leftover of
-	// a killed git). T2, 2026-09-10: the index mirrors the parent tree
-	// of the next commit, so the committing process reseeds before the
-	// first commit after any reload of the head from git; a tree built
-	// from an index not reseeded after a reload silently drops the
-	// other side's files. Only a committing process may call it: a
-	// read-only load must not rewrite a running daemon's index.
+	// a killed git). The index mirrors the parent tree of the next
+	// commit, so the committing process reseeds before the first commit
+	// after any reload of the head from git; a tree built from an index
+	// not reseeded after a reload silently drops the other side's
+	// files. Only a committing process may call it: a read-only load
+	// must not rewrite a running daemon's index.
 	ReadTree(tree string) error
 
 	// UpdateIndex applies entries to the private index in one
 	// `update-index --index-info` process: an entry with an OID adds or
 	// replaces the regular blob (mode 100644) at its path; an entry
 	// with an empty OID removes the path (a no-op when absent — the
-	// mode-0 line D9 compaction will use). Paths are validated exactly
+	// mode-0 line compaction will use). Paths are validated exactly
 	// as MkTree validates them. The index file must already exist: its
 	// absence is an error matching ErrIndexMissing, checked before
 	// anything runs, never an index silently recreated empty (git

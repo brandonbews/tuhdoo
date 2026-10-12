@@ -1,8 +1,8 @@
 package gitx
 
-// CatFiles / CatFile / BlobOID (T2, 2026-09-10: reads are batched;
-// object IDs may be computed locally). Real git for the integration
-// tests, synthetic output for the batch parser.
+// CatFiles / CatFile / BlobOID: reads are batched, and object IDs may
+// be computed locally. Real git for the integration tests, synthetic
+// output for the batch parser.
 
 import (
 	"bytes"

@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-// Minimum supported git version (design doc 002, T2).
+// Minimum supported git version.
 const minGitMajor, minGitMinor = 2, 40
 
 // CLI implements Git by running the real git binary as a subprocess
@@ -619,7 +619,7 @@ func pushRejectionIsContention(stdout, stderr string) bool {
 	// Two pushes landing at the same instant can lose the remote's own
 	// ref-update race instead: the remote relays "cannot lock ref '…':
 	// is at X but expected Y" on stderr. Contention all the same — not
-	// counting it undercounts Status.Collisions (T8) and skips the retry
+	// counting it undercounts Status.Collisions and skips the retry
 	// loop for a cycle (observed in the collision-harness storm).
 	return strings.Contains(stderr, "cannot lock ref")
 }

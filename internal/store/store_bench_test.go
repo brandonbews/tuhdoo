@@ -1,18 +1,17 @@
 package store
 
 // Scaling benchmarks for the branch load path, the measured bottleneck
-// of the daemon's refresh (t-01KYRMFV10W1N28TCN5ZZ9Z2C1): "cold" is a
-// fresh Store loading the branch — one rev-parse, one ls-tree, one
-// batched cat-file, one read-tree — and "warm" is the steady state, a
-// read answered from the replica with no subprocess at all. Real git
-// for the cold case; setup for the 1000-event repo takes several
-// seconds, so run these deliberately:
+// of the daemon's refresh: "cold" is a fresh Store loading the branch
+// — one rev-parse, one ls-tree, one batched cat-file, one read-tree —
+// and "warm" is the steady state, a read answered from the replica
+// with no subprocess at all. Real git for the cold case; setup for the
+// 1000-event repo takes several seconds, so run these deliberately:
 //
 //	go test ./internal/store -bench BenchmarkLoadReplayInput -benchtime 3x -run '^$'
 //
-// Measured on the dogfood machine (Apple M4, 2026-07-30): cold ~6.5ms
-// per event (100 events ≈ 0.69s, 1000 ≈ 6.5s); warm ≈ 12-13ms flat at
-// both sizes.
+// Measured on the dogfood machine (Apple M4): cold ~6.5ms per event
+// (100 events ≈ 0.69s, 1000 ≈ 6.5s); warm ≈ 12-13ms flat at both
+// sizes.
 
 import (
 	"fmt"

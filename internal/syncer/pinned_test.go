@@ -125,8 +125,8 @@ func TestPinnedAdoptJoinsTargetNotOrigin(t *testing.T) {
 	}
 }
 
-// TestTargetSwitchWithTrackingRefAhead replays the 2026-10-12 ledger
-// cutover. A clone syncing with origin copies its ledger to a private
+// TestTargetSwitchWithTrackingRefAhead replays a ledger moving to a new
+// target. A clone syncing with origin copies its ledger to a private
 // repo (docs/adopting.md, "Keeping the ledger in a private repo"), its
 // old daemon pushes to origin once more, and the restarted daemon is
 // pinned to the private repo. TrackingRef still holds origin's newer

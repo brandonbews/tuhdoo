@@ -1,8 +1,8 @@
 package gitx
 
-// The private index (T2, 2026-09-10): ReadTree seeds it from a tree,
-// UpdateIndex feeds only the changed paths, WriteTree writes the tree
-// out — all against `<git-dir>/tuhdoo/index`, never the user's index.
+// The private index: ReadTree seeds it from a tree, UpdateIndex feeds
+// only the changed paths, WriteTree writes the tree out — all against
+// `<git-dir>/tuhdoo/index`, never the user's index.
 // Real git throughout; the user's index and working tree are checked
 // untouched after every operation.
 

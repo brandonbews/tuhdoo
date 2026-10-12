@@ -195,7 +195,7 @@ func TestAdoptReloadFailureDoesNotMint(t *testing.T) {
 
 // TestAdoptRemoteBranchFallsBackToMinting covers every arm where
 // adoption must quietly stand aside and let Init mint: no remote at
-// all (T2 remoteless, a normal state), a remote without the branch,
+// all (remoteless, a normal state), a remote without the branch,
 // and an unreachable remote. None may error; all end in one fresh root.
 func TestAdoptRemoteBranchFallsBackToMinting(t *testing.T) {
 	gitEnv(t)

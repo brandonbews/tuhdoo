@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-// Leases live as mutable per-claim files under leases/ (D9): heartbeat
+// Leases live as mutable per-claim files under leases/: heartbeat
 // churn stays out of the permanent event log, and only the owning
 // machine's daemon touches its own claims' files. Lease writes are still
 // ordinary commits — they just carry no events.
 //
-// Lease files are never deleted, only overwritten (2026-08-04 grill).
+// Lease files are never deleted, only overwritten.
 // Replay reads a missing lease as "lapsed at every instant", so deleting
 // a lease rewrites history — past claim contests re-adjudicate — and the
 // sync layer's union merge resurrects one-sided deletions anyway. A
@@ -20,12 +20,12 @@ import (
 // tombstone: the same file, expiry pinned to the release instant, plus
 // an explicit "released" marker.
 //
-// A tombstone's instant is stored exactly, never rounded (2026-09-11,
+// A tombstone's instant is stored exactly, never rounded (a
 // collision-harness finding). A plain lease's expiry is a deadline and
 // second precision loses nothing; a tombstone's instant is a boundary
-// replay compares against claim ULID times — "live before it, lapsed
-// from it onward" (002 T8) — and truncating it to the second moved the
-// boundary up to 999ms into the past. A stand-down landing in the same
+// replay compares against claim ULID times — live before it, lapsed
+// from it onward — and truncating it to the second moved the boundary
+// up to 999ms into the past. A stand-down landing in the same
 // wall-clock second as the winner's claim then read as lapsed at that
 // claim's instant, and replay re-adjudicated the settled contest: the
 // earlier-ULID loser became "expired" with an interrupted run instead
@@ -87,7 +87,8 @@ func encodeLease(expires time.Time) []byte {
 // that predate the marker ignore
 // the unknown field and read an ordinary lease lapsed at that instant —
 // the same verdict, minus the merge preference (leases are mutable
-// files, so this is acceptable degradation, not a T3 concern).
+// files, not stored events, so this is acceptable degradation, not a
+// schema-evolution concern).
 func encodeLeaseTombstone(expires time.Time) []byte {
 	return encodeLeaseFile(expires, true)
 }
