@@ -1,6 +1,6 @@
 package daemon
 
-// The daemon over the live replica (001 D2, 2026-09-10): once loaded,
+// The daemon over the live replica: once loaded,
 // reads never spawn git — every GET handler and every MCP read tool
 // answers from the store's memory — and a ref moved from outside the
 // daemon is noticed by the next sync cycle, remote or not.

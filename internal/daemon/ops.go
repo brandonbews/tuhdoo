@@ -2,7 +2,7 @@ package daemon
 
 // The operations layer: every tool both surfaces expose, as methods on
 // *Daemon. The HTTP API (api.go) and the MCP endpoint (mcp.go) are thin
-// wrappers around these — T4's "all surfaces are projections of the same
+// wrappers around these — "all surfaces are projections of the same
 // daemon state" holds because there is exactly one implementation of
 // each operation, serialized by the one write mutex.
 
@@ -34,8 +34,8 @@ func opErrf(code int, format string, args ...any) *opError {
 }
 
 // startingLocked returns the retryable rejection every operation answers
-// until the first replay lands (T4 startup order, 2026-09-10: the socket
-// serves before the ledger is loaded), nil once loaded. A 503 so both
+// until the first replay lands (startup order: the socket serves
+// before the ledger is loaded), nil once loaded. A 503 so both
 // surfaces read it as "try again shortly", and the word "starting" so
 // clients can tell it from every other refusal. Caller holds d.mu.
 func (d *Daemon) startingLocked() *opError {
@@ -47,7 +47,7 @@ func (d *Daemon) startingLocked() *opError {
 
 // degradedLocked is the write gate: every write runs it first, and it
 // refuses in two cases, checked in this order — the startup window
-// (startingLocked, above: nothing has been replayed yet), then the T3
+// (startingLocked, above: nothing has been replayed yet), then the
 // fail-safe read-only mode (the last replay could not be trusted). nil
 // when writes may proceed. Caller holds d.mu.
 func (d *Daemon) degradedLocked() *opError {
@@ -63,7 +63,7 @@ func (d *Daemon) degradedLocked() *opError {
 // readGateLocked is the read gate for the operations that hydrate
 // state: the startup window first (startingLocked: nothing has been
 // replayed yet), then a replay at the current instant so lease
-// verdicts move with the clock (D6: expiry is evaluated at read time
+// verdicts move with the clock (expiry is evaluated at read time
 // — a stale expiry must not hydrate a lapsed claim as live or hide a
 // ready task). Degraded skips the refresh: the last good state keeps
 // serving reads. nil when the read may proceed. Caller holds d.mu.
@@ -91,7 +91,7 @@ func (d *Daemon) writeErrLocked(err error) *opError {
 // ---- request shapes shared by both surfaces ----
 //
 // The jsonschema descriptions double as the MCP tools' agent-facing
-// documentation (T5: the agent protocol is a first-class deliverable).
+// documentation (the agent protocol is a first-class deliverable).
 
 type createTaskItem struct {
 	Tmp         string   `json:"tmp,omitempty" jsonschema:"optional name other items in this batch can reference as 'tmp:<name>' in depends_on; resolved to the real task ID on commit"`
@@ -108,7 +108,7 @@ type updateTaskReq struct {
 	Description *string `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
 	Status      *string `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int    `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. To clear a set priority back to unprioritized, send clear_priority instead"`
-	// ClearPriority (2026-09-11) is the request-side spelling of the
+	// ClearPriority is the request-side spelling of the
 	// v4 explicit-null priority: a separate flag rather than a
 	// nullable priority field, because on this JSON surface too a
 	// null *int is indistinguishable from an omitted one.
@@ -153,16 +153,16 @@ type escalateReq struct {
 	Blocking bool   `json:"blocking,omitempty"`
 }
 
-// taskIDPrefix brands newly minted task IDs (T7, 2026-07-31): tuh- is
-// uniquely tuhdoo. Tasks minted before the rebrand carry t- and are
-// never rewritten (T3) — every surface derives the prefix from the ID
+// taskIDPrefix brands newly minted task IDs: tuh- is uniquely
+// tuhdoo. Tasks minted before the rebrand carry t- and are never
+// rewritten — every surface derives the prefix from the ID
 // itself (first hyphen), so both eras coexist until t- ages out.
 const taskIDPrefix = "tuh-"
 
 // ---- operations ----
 
-// opCreateTasks is batch create with intra-batch tmp refs (T5
-// create_task): the whole DAG lands in one store batch or none of it
+// opCreateTasks is batch create with intra-batch tmp refs
+// (create_task): the whole DAG lands in one store batch or none of it
 // does. Validation runs to completion before any event is staged.
 func (d *Daemon) opCreateTasks(actor string, items []createTaskItem) (ids []string, tmp map[string]string, oe *opError) {
 	if len(items) == 0 {
@@ -324,7 +324,7 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 	return taskJSONOf(d.state.Tasks[id]), nil
 }
 
-// opClaimTask claims one specific task (T5 claim_task, the
+// opClaimTask claims one specific task (claim_task, the
 // human-directed path).
 func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
 	now := d.now()
@@ -367,7 +367,7 @@ func (d *Daemon) opClaimTask(actor, taskID string) (hydratedTask, *opError) {
 	return d.claimTargetLocked(actor, t, now)
 }
 
-// opClaimNext is the atomic query-and-claim (T5 claim_next): pick the
+// opClaimNext is the atomic query-and-claim (claim_next): pick the
 // best ready task and claim it under the one write mutex. A nil task
 // with a nil error means no ready task matched — a normal outcome, not
 // a failure; each surface renders it in its own idiom.
@@ -399,10 +399,10 @@ func (d *Daemon) opClaimNext(actor string, labels []string) (*hydratedTask, *opE
 	return &h, nil
 }
 
-// claimWarning rides every claim response (agent protocol step 5,
-// 2026-08-04): a claim is provisional until confirmed, and tool results
-// are the only channel the daemon has to a working agent (D6 — losers
-// learn at call-time), so the confirm-before-merge rule is stated at
+// claimWarning rides every claim response (agent protocol step 5): a
+// claim is provisional until confirmed, and tool results are the only
+// channel the daemon has to a working agent (losers learn at call
+// time), so the confirm-before-merge rule is stated at
 // the moment the claim is handed over.
 const claimWarning = "Before merging anything from this work, call confirm_claim and merge only on a " +
 	"confirmed verdict — a claim is provisional, and merging on an unconfirmed claim is a protocol " +
@@ -419,11 +419,10 @@ const claimWarning = "Before merging anything from this work, call confirm_claim
 // crash between the two commits leaves an orphan file replay never
 // looks up); a claim whose lease failed to land would read as expired
 // and return the task to the pool — self-healing, not corrupting.
-// Then the claim event goes through commitLocked, eager (T8: claims
-// race across machines, so the commit must not sit in the debounce
-// window) — one replay, one version bump, the views staged by that
-// bump riding the claim's own commit (T6), and the syncer poked for
-// eager wire time (D9 clause 1, made literal 2026-09-10).
+// Then the claim event goes through commitLocked, eager (claims race
+// across machines, so the commit must not sit in the debounce window)
+// — one replay, one version bump, the views staged by that bump riding
+// the claim's own commit, and the syncer poked for eager wire time.
 func (d *Daemon) claimTargetLocked(actor string, target *core.Task, now time.Time) (hydratedTask, *opError) {
 	ev, err := d.newEventLocked(event.TypeClaimMade, actor, target.ID, event.ClaimMade{})
 	if err != nil {
@@ -441,10 +440,10 @@ func (d *Daemon) claimTargetLocked(actor string, target *core.Task, now time.Tim
 }
 
 // opReleaseClaim ends the actor's hold voluntarily. Two shapes succeed:
-// the live holder releasing (the task returns to the pool), and — since
-// 2026-08-04 (D6 clause 3) — a provisionally-voided claimant standing
-// down, which is exactly what the protocol asks of a race loser and so
-// is acknowledged, never errored. The stand-down writes the release
+// the live holder releasing (the task returns to the pool), and a
+// provisionally-voided claimant standing down, which is exactly what
+// the protocol asks of a race loser and so is acknowledged, never
+// errored. The stand-down writes the release
 // event for the reason's sake (replay no-ops a release from a
 // non-holder) and tombstones the loser's lease — overwritten, never
 // deleted — which lets replay close the attempt as a synthesized
@@ -494,7 +493,7 @@ func (d *Daemon) opReleaseClaim(actor, taskID, reason string) (claimID, message 
 // the release's own commit. Tombstone first for the same reason the
 // claim writes its lease first: the replay that renders must see both.
 // Eager because a release returns the task to the pool, and peers
-// racing to claim should see that as fast as a claim itself (T8); the
+// racing to claim should see that as fast as a claim itself; the
 // commit pokes the syncer like a claim's. Caller holds d.mu.
 func (d *Daemon) releaseLocked(actor, taskID, reason, claimID string, now time.Time) *opError {
 	ev, err := d.newEventLocked(event.TypeClaimReleased, actor, taskID, event.ClaimReleased{Reason: reason})
@@ -535,24 +534,24 @@ func (d *Daemon) releaseVoidedLocked(actor, taskID, reason string, mine *core.Cl
 }
 
 // finishRunResult is what a finish actually recorded — with the
-// referee's statement when the record differs from the report (D6,
-// 2026-08-04: the daemon is the referee of how attempts ended; agents
-// report what they did).
+// referee's statement when the record differs from the report (the
+// daemon is the referee of how attempts ended; agents report what they
+// did).
 type finishRunResult struct {
 	ID      string `json:"id" jsonschema:"the recorded run.finished event's ID"`
-	Outcome string `json:"outcome" jsonschema:"the outcome as recorded — done is refereed (D6): an attempt that lost its claim race is recorded superseded, never done"`
+	Outcome string `json:"outcome" jsonschema:"the outcome as recorded — done is refereed by the daemon: an attempt that lost its claim race is recorded superseded, never done"`
 	Message string `json:"message,omitempty" jsonschema:"the referee's statement when the recorded outcome is not the reported one; empty when the run recorded exactly as reported"`
 }
 
 // opFinishRun records a run. The outcome must be one a caller can
 // report — done, failed, abandoned, or blocked; interrupted and
-// superseded are daemon-synthesized verdicts (T5) and are rejected
-// here for every caller (op-layer refereeing, 2026-09-11: the MCP tool
-// and the HTTP portal both meet D6 at this op, so neither surface
-// narrows on its own). The finish guard then enforces that the actor
+// superseded are daemon-synthesized verdicts and are rejected here for
+// every caller (op-layer refereeing: the MCP tool and the HTTP portal
+// both meet the referee at this op, so neither surface narrows on its
+// own). The finish guard then enforces that the actor
 // has an attempt of their own to close.
 //
-// The op is also the referee of how the attempt ended (D6, 2026-08-04):
+// The op is also the referee of how the attempt ended:
 // a finish on an attempt that lost its claim race is coerced to outcome
 // superseded, keeping the reported branch/PR/commits/summary as the
 // salvage record; and outcome done runs the confirmation gate — a done
@@ -583,7 +582,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 		}
 	}
 	// The guard also resolves WHICH attempt this finish closes — the
-	// claim the written run will name (close-by-claim, 2026-08-27).
+	// claim the written run will name (close-by-claim).
 	var mine *core.Claim
 	if oe == nil {
 		mine, oe = d.finishGuardLocked(req.Task, actor)
@@ -596,7 +595,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 	if req.Outcome != event.OutcomeDone {
 		// Non-done outcomes never certify work, so no gate — but a lost
 		// attempt still records as superseded, whatever the report said
-		// (D6 clause 3: the daemon is the referee of how attempts ended).
+		// (the daemon is the referee of how attempts ended).
 		// The coercion judges the attempt actually being closed, so the
 		// recorded outcome and the recorded claim can never disagree.
 		defer d.mu.Unlock()
@@ -656,7 +655,7 @@ func (d *Daemon) opFinishRun(actor string, req finishRunReq) (finishRunResult, *
 }
 
 // writeRunLocked stamps one run.finished carrying the refereed outcome,
-// the claim it closes (close-by-claim, 2026-08-27 — the finish guard
+// the claim it closes (close-by-claim — the finish guard
 // resolved it), and the caller's reported links, and answers with the
 // record — plus the referee's stand-down statement when the recorded
 // outcome is not the reported one. Caller holds d.mu with the finish
@@ -728,7 +727,7 @@ func lostResult(claimID, why string) confirmClaimResult {
 // winner with no competing confirmation? A nil result with a nil error
 // means proceed — push the confirmation for claimID. The same rule
 // judges the local state (remoteless: the daemon is the sole writer, so
-// local is final) and the reconciled remote head (D6).
+// local is final) and the reconciled remote head.
 func judgeConfirm(st *core.State, taskID, actor string) (res *confirmClaimResult, claimID string, oe *opError) {
 	if _, ok := st.Tasks[taskID]; !ok {
 		return nil, "", opErrf(http.StatusNotFound, "unknown task %s", taskID)
@@ -740,7 +739,7 @@ func judgeConfirm(st *core.State, taskID, actor string) (res *confirmClaimResult
 			"no claim by %s on task %s: confirm_claim certifies your own claim — claim before confirming", actor, taskID)
 	}
 	if mine.Confirmation != "" {
-		// Idempotent: an already-won verdict answers instantly (D6).
+		// Idempotent: an already-won verdict answers instantly.
 		r := confirmedResult(mine.ID, taskID)
 		return &r, mine.ID, nil
 	}
@@ -769,13 +768,13 @@ func judgeConfirm(st *core.State, taskID, actor string) (res *confirmClaimResult
 	}
 }
 
-// opConfirmClaim is the D6 confirmation gate (T5 confirm_claim, added
-// 2026-08-04): make the claim's verdict final before the agent merges.
+// opConfirmClaim is the confirmation gate (confirm_claim): make the
+// claim's verdict final before the agent merges.
 // The final verdict is won, not computed — the daemon syncs against the
 // remote, judges the head it would push onto, and lands claim.confirmed
 // onto exactly that head through the remote's atomic ref CAS; a
 // non-fast-forward means the remote moved and the loop re-judges,
-// bounded. Remoteless (T2): the daemon is the sole writer, so the local
+// bounded. Remoteless: the daemon is the sole writer, so the local
 // verdict is final and instant. Remote configured but unreachable: a
 // retryable refusal with nothing written — the referee never guesses.
 func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opError) {
@@ -811,12 +810,12 @@ func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opEr
 	return d.gateVerdict(actor, taskID, now)
 }
 
-// gateVerdict is the D6 gate's fetch → judge → push loop, shared by
-// confirm_claim and every done-recording path (T5: the gate rides the
-// tools). Each pass judges the head a confirmation would land on and
-// pushes claim.confirmed onto exactly that head through the remote's
-// ref CAS; a non-fast-forward means the remote moved and the loop
-// re-judges, bounded. Remoteless falls to the T2 local arm — never for
+// gateVerdict is the confirmation gate's fetch → judge → push loop,
+// shared by confirm_claim and every done-recording path (the gate
+// rides the tools). Each pass judges the head a confirmation would
+// land on and pushes claim.confirmed onto exactly that head through the
+// remote's ref CAS; a non-fast-forward means the remote moved and the loop
+// re-judges, bounded. Remoteless falls to the local arm — never for
 // a pinned target (target.go), whose GateHead cannot answer
 // ErrNoRemote: its ledger's home is elsewhere, so a target that cannot
 // be reached is a refusal. The caller must have flushed everything
@@ -850,7 +849,7 @@ func (d *Daemon) gateVerdict(actor, taskID string, now time.Time) (confirmClaimR
 		}
 		err = d.sync.GatePush(head, ev)
 		if errors.Is(err, gitx.ErrNonFastForward) {
-			continue // the remote moved: refetch and re-judge (D6 in action)
+			continue // the remote moved: refetch and re-judge
 		}
 		if err != nil {
 			return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
@@ -874,7 +873,7 @@ func (d *Daemon) pinnedHint() string {
 	return fmt.Sprintf(" (ledger remote %q, from %s; after changing it, restart the daemon)", d.target.remote, d.target.source)
 }
 
-// confirmLocally is the T2 remoteless arm of the gate: no remote, one
+// confirmLocally is the remoteless arm of the gate: no remote, one
 // writer, so the local provisional verdict is the final verdict.
 func (d *Daemon) confirmLocally(actor, taskID string, now time.Time) (confirmClaimResult, *opError) {
 	d.mu.Lock()
@@ -896,7 +895,7 @@ func (d *Daemon) confirmLocally(actor, taskID string, now time.Time) (confirmCla
 	if err != nil {
 		return confirmClaimResult{}, opErrf(http.StatusInternalServerError, "%v", err)
 	}
-	// Eager (T8): a confirmation is exactly the class of event peers
+	// Eager: a confirmation is exactly the class of event peers
 	// race against — it must not sit in the debounce window if a remote
 	// is added later, and the agent is waiting on it now.
 	if err := d.commitLocked(true, ev); err != nil {
@@ -921,7 +920,7 @@ func (d *Daemon) refreshAfterGate(now time.Time) {
 
 // opEscalate raises a question for a human. The warning return is the
 // call-time stand-down notice when the caller's claim on the task has
-// lost its race (D6), "" otherwise.
+// lost its race, "" otherwise.
 func (d *Daemon) opEscalate(actor string, req escalateReq) (id, warning string, oe *opError) {
 	if req.Task == "" {
 		return "", "", opErrf(http.StatusBadRequest, "%q is required", "task")
@@ -946,7 +945,7 @@ func (d *Daemon) opEscalate(actor string, req escalateReq) (id, warning string, 
 	if err != nil {
 		return "", "", opErrf(http.StatusInternalServerError, "%v", err)
 	}
-	// Eager (T8): a human is waiting on this.
+	// Eager: a human is waiting on this.
 	if err := d.commitLocked(true, ev); err != nil {
 		return "", "", d.writeErrLocked(err)
 	}
@@ -962,8 +961,8 @@ func (d *Daemon) opAnswerEscalation(actor, escalation, answer string) (string, *
 	return d.answerLocked(actor, actor, escalation, answer, false)
 }
 
-// opRelayAnswer is the agent path (T5 relay_answer, 2026-07-30
-// revision): the agent records an answer given out of band, attributed
+// opRelayAnswer is the agent path (relay_answer): the agent records an
+// answer given out of band, attributed
 // to the session principal's root — derived here, never agent-supplied,
 // so a session can only attribute an answer to its own root. Open
 // escalations only: amending a settled answer stays steering work.
@@ -1009,8 +1008,8 @@ func (d *Daemon) answerLocked(actor, answeredBy, escalation, answer string, open
 	return ev.ID, nil
 }
 
-// rootPrincipal is the human half of a D7 principal: "brandon/impl-2"
-// roots to "brandon"; a root principal roots to itself.
+// rootPrincipal is the human half of a principal: "sarah/impl-2"
+// roots to "sarah"; a root principal roots to itself.
 func rootPrincipal(actor string) string {
 	root, _, _ := strings.Cut(actor, "/")
 	return root
@@ -1018,7 +1017,7 @@ func rootPrincipal(actor string) string {
 
 // opAddNote records a checkpoint note. The warning return is the
 // call-time stand-down notice when the caller's claim on the task has
-// lost its race (D6), "" otherwise.
+// lost its race, "" otherwise.
 func (d *Daemon) opAddNote(actor, task, text string) (id, warning string, oe *opError) {
 	if task == "" {
 		return "", "", opErrf(http.StatusBadRequest, "%q is required", "task")
@@ -1045,9 +1044,9 @@ func (d *Daemon) opAddNote(actor, task, text string) (id, warning string, oe *op
 	return ev.ID, d.lostNoticeLocked(task, actor), nil
 }
 
-// opGetTask hydrates one task (T5 get_task: start work in one call).
+// opGetTask hydrates one task (get_task: start work in one call).
 // Lease verdicts move with the clock, so replay at the current instant
-// first (D6: expiry is evaluated at read time) — a stale expiry must
+// first (expiry is evaluated at read time) — a stale expiry must
 // not hydrate a lapsed claim as live.
 func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 	now := d.now()
@@ -1062,15 +1061,15 @@ func (d *Daemon) opGetTask(id string) (hydratedTask, *opError) {
 	return d.hydrateLocked(id), nil
 }
 
-// opBacklog lists claimable tasks, highest priority first (T5
-// get_backlog: ready-filtered and dependency-aware, not a raw dump),
-// plus the inbox and held shelves (2026-07-31) in creation order so
+// opBacklog lists claimable tasks, highest priority first
+// (get_backlog: ready-filtered and dependency-aware, not a raw dump),
+// plus the inbox and held shelves in creation order so
 // agents can orient on parked and captured work without ever being
 // served it — claim_next/claim_task take from ready alone. Lease
 // verdicts move with the clock, so replay at the current instant
 // first — a stale expiry must not hide a ready task.
 //
-// scope (T5 read parity, 2026-08-02) requests the remaining sections
+// scope requests the remaining sections
 // by name: in_progress, blocked, done, cancelled, escalations. Empty
 // or omitted, the result carries exactly the three arrays above.
 func (d *Daemon) opBacklog(scope []string) (backlogResult, *opError) {
@@ -1246,8 +1245,8 @@ func (d *Daemon) attemptCloseLocked(c *core.Claim) (closed, synthesized bool) {
 	return closed, synthesized
 }
 
-// lostNoticeLocked words the call-time stand-down (D6 clause 3,
-// 2026-08-04: losers learn at call-time — there is no push channel to a
+// lostNoticeLocked words the call-time stand-down (losers learn at
+// call time — there is no push channel to a
 // working agent, so every tool a provisionally-voided claimant touches
 // on its task states the loss plainly). Empty unless actor's latest
 // claim on taskID is a voided, still-unclosed attempt: once the
@@ -1270,19 +1269,19 @@ func (d *Daemon) lostNoticeLocked(taskID, actor string) string {
 // finishGuardLocked enforces that actor has an attempt of their own to
 // close on taskID before a run.finished event is written, and resolves
 // WHICH attempt that is — the claim the written run will name
-// (close-by-claim, 2026-08-27). Three shapes are admitted: the actor
+// (close-by-claim). Three shapes are admitted: the actor
 // holds the live claim (the normal finish); the
 // actor's latest claim ended released and no later run of theirs has
 // closed it (the blocking protocol: escalate → release_claim →
 // finish_run blocked); or it ended voided and is likewise unclosed — a
 // race loser reporting back, admitted only until the voided claim's
 // lease expires, because at expiry replay synthesizes the branch-less
-// superseded close itself (D6 clause 3, 2026-08-04) and one close per
+// superseded close itself and one close per
 // attempt makes that final. Everything else is rejected: no claim
 // history, a live claim held by someone else, an expired claim (replay
 // already synthesized its interrupted run), or a second close of the
 // same attempt. This is write-side validation only — replay never
-// re-judges stored run.finished events (T3), so the claimless runs
+// re-judges stored run.finished events, so the claimless runs
 // already on ledgers stand untouched. Caller holds d.mu with freshly
 // replayed state.
 func (d *Daemon) finishGuardLocked(taskID, actor string) (*core.Claim, *opError) {

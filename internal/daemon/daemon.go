@@ -1,6 +1,6 @@
-// Package daemon is the per-repo tuhdoo daemon (002 T4): single
-// instance per repository, a Unix-socket JSON HTTP API, and the one
-// mutex through which every write is serialized — that mutex is D2's
+// Package daemon is the per-repo tuhdoo daemon: single instance per
+// repository, a Unix-socket JSON HTTP API, and the one mutex through
+// which every write is serialized — that mutex is the ledger's whole
 // machine-local serialization, not an implementation detail.
 package daemon
 
@@ -32,11 +32,11 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
-// DefaultLeaseTTL is the claim lease lifetime (T8).
+// DefaultLeaseTTL is the claim lease lifetime.
 const DefaultLeaseTTL = 15 * time.Minute
 
 // DefaultMCPKeepAlive is the MCP session ping interval. Session
-// liveness is what keeps leases renewed (T5: session-bound leases), so
+// liveness is what keeps leases renewed (leases are session-bound), so
 // the daemon pings well inside the lease TTL.
 const DefaultMCPKeepAlive = 30 * time.Second
 
@@ -133,15 +133,15 @@ type Daemon struct {
 	now       func() time.Time
 	afterFunc func(time.Duration, func()) timer
 	// poke asks the sync loop for an immediate pass (d.sync.Poke); a
-	// seam, so a test can count the pokes eager commits owe (T8).
+	// seam, so a test can count the pokes eager commits owe.
 	poke func()
 
 	// mu serializes every write and guards all fields below. Reads take
-	// it too — boring wins over a RWMutex at v0 volumes.
+	// it too — boring wins over a RWMutex at current ledger volumes.
 	mu     sync.Mutex
 	state  *core.State
 	leases map[string]time.Time
-	// The versioned replica (001 D2/D3, 002 T4, 2026-09-10). version
+	// The versioned replica. version
 	// counts state changes: it moves on every replay — a staged write,
 	// a merge, a lease transition, the first load — and a read at an
 	// unchanged version is answered from state as memoized. validUntil
@@ -162,8 +162,8 @@ type Daemon struct {
 	// viewsGuardLogged keeps the "newer stamp" refusal to one log line:
 	// it would otherwise repeat on every bump.
 	viewsGuardLogged bool
-	// loaded flips true once the first replay has landed (T4 startup
-	// order, 2026-09-10: the socket is bound and daemon.json written
+	// loaded flips true once the first replay has landed (startup
+	// order: the socket is bound and daemon.json written
 	// before the ledger is loaded). Until then every read answers sync
 	// mode "starting" and every write a retryable 503 — the daemon
 	// promises nothing it has not yet replayed.
@@ -175,7 +175,7 @@ type Daemon struct {
 	// startErr is why the first load failed; Run returns it so the
 	// process exits non-zero with the reason already in daemon.log.
 	startErr error
-	// degraded is non-nil after a fail-safe replay error (T3): reads
+	// degraded is non-nil after a fail-safe replay error: reads
 	// keep serving the last good state, writes are rejected with 503.
 	degraded error
 	// written holds events this process has produced that are not yet
@@ -217,8 +217,8 @@ type Daemon struct {
 // New prepares a daemon for the git repository rooted at root: acquires
 // the single-instance lock, loads (or mints) the machine id, opens the
 // store, binds the socket, and writes daemon.json. Run serves it and
-// loads the ledger — in that order (T4, 2026-09-10: lock, socket,
-// discovery file, then load), so a client finds the socket while a
+// loads the ledger — in that order (lock, socket, discovery file,
+// then load), so a client finds the socket while a
 // cold load is still running instead of timing out on it.
 func New(root string, opts Options) (*Daemon, error) {
 	logger := opts.Log
@@ -367,8 +367,8 @@ func New(root string, opts Options) (*Daemon, error) {
 }
 
 // Run serves the API until Shutdown is called; it returns after cleanup
-// completes. Serving starts first and the ledger loads behind it (T4
-// startup order): until the first replay lands, reads answer sync mode
+// completes. Serving starts first and the ledger loads behind it
+// (startup order): until the first replay lands, reads answer sync mode
 // "starting" and writes a retryable 503. A first load that fails ends
 // the daemon — socket and discovery file torn down, the reason logged,
 // the error returned — so no client can loop on "starting" forever.
@@ -425,12 +425,13 @@ func (d *Daemon) start() {
 // load brings the ledger into memory for the first time: adopt a
 // remote data branch if one exists, mint the branch if none does, load
 // the store's replica (head, tree, every event and lease blob in one
-// batch — T2; the private index is reseeded by the first commit), and
+// batch — git plumbing, never a checkout; the private index is
+// reseeded by the first commit), and
 // replay. The first
 // replay is installed and the daemon marked loaded under one critical
 // section, so a request parked on d.mu during the load is answered
 // with state, never with the placeholder after the state was
-// installed. Loaded covers the T3 fail-safe case too — the daemon then
+// installed. Loaded covers the fail-safe case too — the daemon then
 // serves reads of the last comprehensible state (here: empty) with
 // writes rejected; any other failure is returned for start to end the
 // daemon with. The long part of startup — the adopt's fetch, the init,
@@ -476,7 +477,7 @@ func (d *Daemon) load() error {
 // when the load did not land (it failed, or the daemon is going down
 // before it finished), nothing was staged and the sync loop never ran,
 // so the flush and final sync are skipped. Every parked snapshot
-// request is woken first (T4: shutdown must wake every parked request
+// request is woken first (shutdown must wake every parked request
 // before the HTTP server drains, or the drain waits on them).
 func (d *Daemon) Shutdown(reason string) {
 	d.shutdownOnce.Do(func() {
@@ -525,7 +526,7 @@ func (d *Daemon) SocketPath() string { return d.sockPath }
 // Refresh recomputes cached state from the store's replica and bumps
 // the state version. The sync loop calls this after every head move it
 // causes or notices (wired via OnMerged in New): a merge is a version
-// bump exactly like a local write (002 T2, 2026-09-10).
+// bump exactly like a local write.
 func (d *Daemon) Refresh() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -539,8 +540,8 @@ const slowRefresh = 250 * time.Millisecond
 // replayLocked takes the replay input from the store's replica,
 // replays at now, installs the result as the memoized state, and bumps
 // the version — every caller is a state change: a staged write, a
-// merge, a lease transition, the first load. It spawns no git (001 D2,
-// 2026-09-10: reads never spawn git): the store's head tree and decode
+// merge, a lease transition, the first load. It spawns no git (reads
+// never spawn git): the store's head tree and decode
 // caches are complete after every load and commit, so the "load" here
 // is a walk of the in-memory tree. On a fail-safe replay error the
 // daemon degrades: the last good state keeps serving reads and every
@@ -629,7 +630,7 @@ func (d *Daemon) freshenLocked(now time.Time) error {
 
 // bumpLocked is the one place the state version moves: increment,
 // wake every parked snapshot request, re-render the views against the
-// new state (T6: views follow the version), and re-arm the transition
+// new state (views follow the version), and re-arm the transition
 // timer to the memo's new validUntil. Caller holds d.mu.
 func (d *Daemon) bumpLocked(now time.Time) {
 	d.stateVersion++
@@ -671,7 +672,7 @@ func (d *Daemon) armLocked(now time.Time) {
 // onTransition is the timer callback: a lease is due to lapse. A
 // replay at the current instant moves the verdict, bumps the version
 // (waking parked requests, re-rendering views — a lapse is a view-only
-// commit, 001 D9), and re-arms for the next lapse. Fired early (clock
+// commit), and re-arms for the next lapse. Fired early (clock
 // skew, or a fake clock that has not advanced), it re-arms and waits.
 func (d *Daemon) onTransition() {
 	d.mu.Lock()
@@ -722,7 +723,7 @@ func (d *Daemon) stageLocked(evs ...event.Event) {
 // commitLocked stages events, replays (the version bump stages the
 // views these events produce, so they ride the same batch — an eager
 // commit carries its own views), and flushes immediately when eager
-// (claim and escalation writes, T8 — everything else rides the
+// (claim and escalation writes — everything else rides the
 // debounce). A fail-safe replay must not strand the events themselves,
 // so the flush runs regardless. Caller holds d.mu.
 func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
@@ -732,7 +733,7 @@ func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 		if err := d.batcher.Flush(); err != nil {
 			return fmt.Errorf("daemon: flush: %w", err)
 		}
-		// Eager writes deserve eager wire time too (T8): ask the sync
+		// Eager writes deserve eager wire time too: ask the sync
 		// loop for an immediate pass.
 		d.poke()
 	}
@@ -741,11 +742,11 @@ func (d *Daemon) commitLocked(eager bool, evs ...event.Event) error {
 
 // renderViewsLocked renders the views from the memoized state and
 // stages the ones whose bytes differ from the head tree, to ride the
-// next batch commit (T6, 2026-09-10: views are a projection of the
+// next batch commit (views are a projection of the
 // versioned state, rendered on every bump, staged only when they
 // change). It runs from bumpLocked, never from a write path — staging
-// is no longer a call a write path can forget. Highest version wins
-// (B8): views stamped by a newer generator are never overwritten —
+// is no longer a call a write path can forget. Highest version wins:
+// views stamped by a newer generator are never overwritten —
 // events still flow, and the newer peer keeps regenerating. Degraded,
 // there is no trustworthy state to render. Caller holds d.mu.
 func (d *Daemon) renderViewsLocked() {

@@ -1,10 +1,10 @@
 package daemon
 
 // Where the data branch syncs. By default that is origin, the code
-// repo's own remote (002 T2). A repo can instead name its ledger's home
-// — typically a private `<repo>-internal` repo beside a public code
-// repo (decided by Brandon, 2026-10-12) — with a committed `.tuhdoo`
-// file at the worktree root, in git-config format like .gitmodules:
+// repo's own remote. A repo can instead name its ledger's home —
+// typically a private `<repo>-internal` repo beside a public code repo
+// — with a committed `.tuhdoo` file at the worktree root, in
+// git-config format like .gitmodules:
 //
 //	[ledger]
 //		remote = git@github.com:owner/repo-internal.git
@@ -48,7 +48,7 @@ const (
 )
 
 // defaultRemote is the unpinned target: today's behaviour exactly,
-// including local-only mode when no origin is configured (T2).
+// including local-only mode when no origin is configured.
 const defaultRemote = "origin"
 
 // ledgerTarget is a resolved sync target. source is sourceFile or
