@@ -29,7 +29,7 @@ Steps 1 and 6–7 are tuhdoo protocol (linked); steps 2–5 are this recipe.
    tuh-<short-id>/<slug>
    ```
 
-   For example, `tuh-d83w/retry-on-stale-lease` for task `tuh-…d83w`. Every task ID ends in a four-character tail: the *short ID*, shown throughout tuhdoo's command-line interface (CLI) and terminal user interface (TUI). Putting it in the branch name lets anyone — human or successor agent — trace a branch to its task at a glance, and find an interrupted agent's work by searching branches for the short ID. Branch from freshly-pulled `main`, not from another task branch: stacked branches die badly under squash merges.
+   For example, `tuh-qx4r/retry-on-stale-lease` for task `tuh-…qx4r`. Every task ID ends in a four-character tail: the *short ID*, shown throughout tuhdoo's command-line interface (CLI) and terminal user interface (TUI). Putting it in the branch name lets anyone — human or successor agent — trace a branch to its task at a glance, and find an interrupted agent's work by searching branches for the short ID. Branch from freshly-pulled `main`, not from another task branch: stacked branches die badly under squash merges.
 
 3. **Work and commit freely.** Make ordinary commits on the task branch, as many as useful. Run the repo's tests locally before opening the PR; CI is the gate, not the first line of defense.
 

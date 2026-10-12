@@ -64,4 +64,4 @@ Daemon writes are additive by construction. An append takes the current tip's tr
 
 ## If your project sets a Root Directory
 
-Monorepo projects that deploy a subdirectory (a Root Directory in Vercel's project settings) never see any of this: Vercel skips pushes that do not touch that directory up front, and the data branch never touches it. Verified live: tuhdoo's own repository deploys its site this way, and its ledger pushes produce no deployment attempts.
+Monorepo projects that deploy a subdirectory (a Root Directory in Vercel's project settings) never see any of this: Vercel skips pushes that do not touch that directory up front, and the data branch never touches it. Verified live on a repository whose Vercel project deploys a subdirectory this way: its ledger pushes produced no deployment attempts.

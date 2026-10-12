@@ -1,14 +1,14 @@
 // Command collision is tuhdoo's deliberate claim-collision harness: two
 // independent daemons, one remote, many claim races in minutes.
 //
-// The hole it closes is the D3 set-union merge path. A single machine
+// The hole it closes is the set-union merge path. A single machine
 // never diverges from itself, so on a solo-dogfooded ledger the
 // divergent-history merge — union the event files, regenerate views,
 // write a two-parent commit via commit-tree — has never run outside unit
 // tests. Two clones on one box is a faithful stand-in for two machines:
 // the machine id is minted per repository directory (daemon.go
 // machineID), so the clones get distinct ids, and event ordering is ULID
-// order, never a wall clock (T3). No second physical machine is needed.
+// order, never a wall clock. No second physical machine is needed.
 //
 // What it does, end to end:
 //
@@ -19,16 +19,16 @@
 //     (/var/folders/...) would blow the limit (see npm/smoke.sh);
 //  3. seeds tasks that need no work at all, so a "run" is one claim;
 //  4. opens one MCP session per clone (`tuhdoo mcp --as <principal>`) —
-//     the claim lifecycle is session-only by design (T7), so a scripted
+//     the claim lifecycle is session-only by design, so a scripted
 //     actor must hold a session;
 //  5. runs the natural-expiry arm: deliberate collisions whose losers
 //     go silent — no report, no release — so their leases lapse on
 //     their own. The daemons run a short lease TTL (-lease-ttl, handed
 //     to them through TUHDOO_LEASE_TTL) so the lapse lands inside the
 //     run, and the harness watches both daemons close the attempt with
-//     replay's synthesized run at the lapse (D6 clause 3's never-reports
-//     arm, where the 2026-08-04 resurrection bug lived);
-//  6. storms the D6 confirmation gate: both actors deliberately claim
+//     replay's synthesized run at the lapse (the close for a loser that
+//     never reports, where a lease-resurrection bug once lived);
+//  6. storms the confirmation gate: both actors deliberately claim
 //     the same task (claim_task behind a barrier), then race
 //     confirm_claim — the remote's ref CAS is the referee, and exactly
 //     one claim.confirmed may land per contest; every confirmed verdict
@@ -117,9 +117,9 @@ const leaseTTLEnv = "TUHDOO_LEASE_TTL"
 // one renewal period (TTL/3) plus the batcher's 2s quiet plus two 60s
 // hops (the writer's push, the reader's fetch): the TTL must exceed
 // TTL/3 + 122s, i.e. about three minutes, or a peer could see a live
-// claim as lapsed between renewals — the exact flapping T8's 15m/5m
-// ratio rules out. Four minutes clears that bound with a margin and
-// still lapses well within the run.
+// claim as lapsed between renewals — the exact flapping the production
+// default (a 15m TTL renewed every 5m) rules out. Four minutes clears
+// that bound with a margin and still lapses well within the run.
 const defaultLeaseTTL = 4 * time.Minute
 
 func main() {
@@ -138,7 +138,7 @@ func main() {
 	flag.DurationVar(&cfg.gap, "storm-gap", 0, "pause between storm bursts; 0 is back-to-back, the harshest setting")
 	flag.DurationVar(&cfg.converge, "converge-timeout", 5*time.Minute,
 		"how long to wait for the two clones to reach identical data-branch trees "+
-			"(T8 fetch cadence is 60s, so an unpoked hop costs up to a minute)")
+			"(the daemon fetches every 60s, so an unpoked hop costs up to a minute)")
 	flag.BoolVar(&cfg.keep, "keep", false, "keep the scratch repos on exit instead of deleting them")
 	flag.Parse()
 
@@ -182,7 +182,7 @@ func run(cfg config) error {
 // MCP session its claims hang off.
 type actor struct {
 	name      string // "alpha" / "bravo", for the report
-	principal string // D7 principal, fixed with --as so the ledger is legible
+	principal string // human/agent principal, fixed with --as so the ledger is legible
 	root      string // clone path
 	bin       string // the tuhdoo binary under test
 
@@ -212,7 +212,7 @@ type lab struct {
 	gateRetries int // tool-level retries of the gate's honest 503 refusals
 	reconfirms  int // confirm_claim re-asked after a confirmed verdict
 	// unstable records every repeated confirm_claim that did not answer
-	// "confirmed, same claim" — a verdict D6 calls irrevocable moving.
+	// "confirmed, same claim" — an irrevocable verdict moving.
 	unstable []string
 
 	// The natural-expiry arm's observations: how long after each silent
@@ -234,7 +234,7 @@ func setup(cfg config) (*lab, error) {
 
 	// Every daemon this run spawns is a grandchild — `tuhdoo init`
 	// re-execs `tuhdoo daemon` — and inherits this environment. The
-	// default 15-minute TTL (T8) would outlive the run four times over;
+	// default 15-minute TTL would outlive the run four times over;
 	// the natural-expiry arm needs a lease to lapse while both daemons
 	// are still watching.
 	if err := os.Setenv(leaseTTLEnv, cfg.leaseTTL.String()); err != nil {
@@ -248,7 +248,7 @@ func setup(cfg config) (*lab, error) {
 	}
 
 	// The remote is an ordinary bare repo on the filesystem: tuhdoo
-	// speaks the git protocol and nothing else (T2), so no host is
+	// speaks the git protocol and nothing else, so no host is
 	// involved and none is needed.
 	if out, err := runCmd(work, "git", "init", "--bare", "--initial-branch=main", l.origin); err != nil {
 		return l, fmt.Errorf("init origin: %w: %s", err, out)
@@ -306,8 +306,8 @@ type attempt struct {
 	fate   string // how the daemon said it ended (fateDone/fateReported/fateSilent/fateExpired)
 	runID  string // the real run.finished event recorded, when the attempt wrote one
 	// warned records whether the claim response carried the standing
-	// confirm-before-merge warning (D6 clause 3: losers learn at
-	// call-time, so the rule is stated when the claim is handed over).
+	// confirm-before-merge warning (losers learn they lost at call-time,
+	// so the rule is stated when the claim is handed over).
 	warned bool
 	// expires is the lease expiry the daemon reported with the claim —
 	// the instant a never-renewed lease lapses.
@@ -316,8 +316,7 @@ type attempt struct {
 
 // How an attempt's actor learned its attempt ended — always from a
 // daemon tool's answer, never from the harness reading replayed state
-// and deciding for it (that was the impersonation this harness used to
-// commit before the 2026-08-04 D6 machinery existed).
+// and deciding for it.
 const (
 	fateDone     = "done"          // finish_run recorded done, refereed through the gate
 	fateReported = "lost-reported" // finish_run(done) coerced to superseded, branch kept
@@ -415,7 +414,7 @@ func (l *lab) experiment() error {
 
 // requiredEvents lists the stored events these attempts produced — the
 // claims and the real run records. Synthesized closes are replay-derived
-// and never stored (D6 clause 3), so they have no event to wait for;
+// and never stored, so they have no event to wait for;
 // tree equality covers them.
 func requiredEvents(attempts []attempt) []string {
 	var ids []string
@@ -431,7 +430,7 @@ func requiredEvents(attempts []attempt) []string {
 // seed creates the scratch task pool on the first clone and hands it to
 // the remote. The daemon is stopped once at the end: its shutdown flushes
 // pending events and runs a final sync cycle, which is what publishes the
-// seed without waiting out the 60s fetch cadence (T8).
+// seed without waiting out the 60s fetch cadence.
 func (l *lab) seed(a *actor) error {
 	fmt.Printf("== seeding %d tasks on %s (%d race bait, %d storm contests, %d expiry contests)\n",
 		l.cfg.rounds+l.cfg.spare+l.cfg.contests+l.cfg.expiry, a.name, l.cfg.rounds+l.cfg.spare, l.cfg.contests, l.cfg.expiry)
@@ -499,7 +498,7 @@ func (l *lab) seed(a *actor) error {
 	l.contest = created.IDs[1+l.cfg.rounds+l.cfg.spare : 1+l.cfg.rounds+l.cfg.spare+l.cfg.contests]
 	l.expiry = created.IDs[1+l.cfg.rounds+l.cfg.spare+l.cfg.contests:]
 
-	// The commit debounce is 2s (T8); give it room, then let the
+	// The commit debounce is 2s; give it room, then let the
 	// shutdown's final flush + sync cycle publish the branch.
 	time.Sleep(3 * time.Second)
 	if err := a.stopDaemon(); err != nil {
@@ -565,7 +564,7 @@ func (l *lab) openSessions() error {
 // race fires claim_next from both actors as close to simultaneously as
 // the runtime allows, for cfg.rounds rounds. The window a collision needs
 // is the gap between one daemon writing a claim and the other daemon
-// fetching it: eager claim pushes (T8) close it in about a second, and
+// fetching it: eager claim pushes close it in about a second, and
 // the barrier below aims both calls at that second.
 func (l *lab) race() ([]attempt, int, error) {
 	fmt.Printf("== racing %d rounds\n", l.cfg.rounds)
@@ -620,8 +619,8 @@ func (l *lab) race() ([]attempt, int, error) {
 
 // settle closes every race attempt through the public tools alone. The
 // harness never reads replayed state to decide who won — the daemons'
-// answers are the only oracle (D6, 2026-08-04: the daemon is the referee
-// of how attempts ended). Two agent styles alternate, both
+// answers are the only oracle (the daemon is the referee of how
+// attempts ended). Two agent styles alternate, both
 // protocol-legal:
 //
 //   - confirm-first (even attempts): confirm_claim discovers the fate;
@@ -630,7 +629,7 @@ func (l *lab) race() ([]attempt, int, error) {
 //     and never reports a run — replay closes that attempt with a
 //     branch-less synthesized superseded run.
 //   - report-only (odd attempts): finish_run(done) straight away; the
-//     gate rides the tool (D6 clause 2), so a winner's done is certified
+//     gate rides the tool, so a winner's done is certified
 //     at the remote and a loser's report is coerced to superseded with
 //     its branch kept as the salvage record.
 func (l *lab) settle(attempts []attempt) error {
@@ -705,10 +704,10 @@ type stormStats struct {
 	silent   int            // losers that stood down for replay synthesis
 }
 
-// confirmStorm is the confirmation-race storm (roadmap v1 DoD clause 2,
-// extended 2026-08-04): N deliberate claim collisions, each contest's
-// verdict raced through the real D6 gate from both machines at once
-// (collide), the losers' two honest exits alternating.
+// confirmStorm is the confirmation-race storm: N deliberate claim
+// collisions, each contest's verdict raced through the real confirmation
+// gate from both machines at once (collide), the losers' two honest exits
+// alternating.
 func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 	stats := stormStats{wins: make(map[string]int, len(l.actors))}
 	if len(l.contest) == 0 {
@@ -773,11 +772,11 @@ func (l *lab) confirmStorm() ([]attempt, stormStats, error) {
 
 // collide is one deliberate collision, the storm's and the expiry
 // arm's shared core: both actors claim task behind a barrier (claims
-// are optimistic and judged locally, D6 clause 4, so both succeed —
+// are optimistic and judged locally, so both succeed —
 // a certain collision), then race confirm_claim from both sessions at
 // once. The remote's ref CAS referees: a contest where both actors are
 // told "confirmed" is a duplicate certification and fails the run on
-// the spot. The winner's verdict is asked again — D6 calls it
+// the spot. The winner's verdict is asked again — a confirmation is
 // irrevocable, so the second answer must be the first — and the winner
 // records done. Returns both attempts in actor order and the loser's
 // index; the loser's exit is the caller's to script. kind names the
@@ -828,7 +827,7 @@ func (l *lab) collide(task, kind string, seq int) ([]attempt, int, error) {
 	}
 
 	// The winner records done. Its claim is already confirmed, so the
-	// finish is judged locally and instantly (D6: idempotent).
+	// finish is judged locally and instantly (confirming is idempotent).
 	fin, err := l.finishDone(atts[winner].actor, task, atts[winner].branch,
 		fmt.Sprintf("won the confirmation race in %s", what))
 	if err != nil {
@@ -841,8 +840,8 @@ func (l *lab) collide(task, kind string, seq int) ([]attempt, int, error) {
 	return atts, 1 - winner, nil
 }
 
-// reconfirm asks confirm_claim again after a confirmed verdict. D6
-// clause 2 makes a confirmation irrevocable and the tool idempotent, so
+// reconfirm asks confirm_claim again after a confirmed verdict. A
+// confirmation is irrevocable and the tool idempotent, so
 // the second answer must be "confirmed" for the very claim the first
 // named — and the first must have named this attempt's claim. Any
 // other answer is recorded for the verification list rather than
@@ -867,7 +866,7 @@ func (l *lab) reconfirm(at *attempt, first confirmOut, what string) error {
 	return nil
 }
 
-// expiryArm is D6 clause 3's never-reports arm, end to end: N deliberate
+// expiryArm is the never-reports arm, end to end: N deliberate
 // collisions whose losers do nothing at all — no finish_run, no
 // release_claim, the session simply stops mentioning the task. The
 // loser's daemon learned "lost" at the gate and never renews a voided
@@ -875,7 +874,7 @@ func (l *lab) reconfirm(at *attempt, first confirmOut, what string) error {
 // claim, and replay on every machine closes the attempt with a
 // branch-less synthesized superseded run at that instant. awaitExpiry
 // watches it happen; verify checks the ledger afterwards. This is the
-// arm the 2026-08-04 resurrection bug lived in (the union merge
+// arm a past resurrection bug lived in (the union merge
 // bringing a deleted lease back), which no release-triggered close can
 // reach.
 func (l *lab) expiryArm() ([]attempt, error) {
@@ -930,8 +929,8 @@ func (l *lab) expiryArm() ([]attempt, error) {
 
 // awaitExpiry waits for each silent loser's lease to lapse and for both
 // daemons to show the synthesized close through their public read
-// surface — the transition timer (D6 clause 5: expiry is scheduled,
-// not reaped) firing on each machine. The deadline is the lapse plus
+// surface — the transition timer (expiry is scheduled, not reaped)
+// firing on each machine. The deadline is the lapse plus
 // the renewal period plus a sync hop: a renewal tick can land in the
 // seconds between the claim and the verdict (legal — the claim was
 // still active) and move the lapse by that much, and a merge can be a
@@ -1082,7 +1081,7 @@ func (l *lab) finishDone(a *actor, task, branch, summary string) (finishOut, err
 }
 
 // storm hammers the sync loop's push cycle. Claim and escalation writes
-// are the two eager cases (T8): the daemon flushes them immediately and
+// are the two eager cases: the daemon flushes them immediately and
 // pokes the syncer, so each burst puts both daemons into fetch → merge →
 // push at the same instant. That overlap is what produces
 // non-fast-forward pushes, the bounded retry loop's only real exercise.
@@ -1111,7 +1110,7 @@ func (l *lab) storm() error {
 
 // burst writes one escalation on every machine at once, behind the same
 // barrier the claim rounds use. It doubles as the harness's only lever on
-// the T8 cadence: an eager write pokes the sync loop, and a poked cycle
+// the sync cadence: an eager write pokes the sync loop, and a poked cycle
 // fetches before it pushes, so a burst pulls the peer's work in too.
 func (l *lab) burst(seq int) error {
 	return l.pair(func(i int, a *actor) error {
@@ -1158,7 +1157,7 @@ func (l *lab) diagnose() {
 // trivially "identical".
 //
 // Nothing is poked here, deliberately. The harness's only lever on the
-// T8 cadence is an eager write, and a write is exactly what has to stop
+// sync cadence is an eager write, and a write is exactly what has to stop
 // before the two sides can be still at the same moment; a poke every
 // half-second also starves the peer's push (see the storm finding in
 // harness/README.md). So this is a quiet wait, and one hop costs up to
@@ -1272,9 +1271,9 @@ func (c *checklist) check(ok bool, format string, args ...any) {
 	fmt.Printf("   [%s] %s\n", mark, fmt.Sprintf(format, args...))
 }
 
-// note records something the acceptance asks to be *reported* rather
-// than passed: the maxCycleRetries clause is "never exhausts — or, if it
-// does, that is reported as a finding with the rate".
+// note records something to be *reported* rather than passed: the push
+// cycle should never exhaust maxCycleRetries, and if it does, that is
+// reported as a finding with the rate.
 func (c *checklist) note(format string, args ...any) {
 	fmt.Printf("   [note] %s\n", fmt.Sprintf(format, args...))
 }
@@ -1340,7 +1339,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	}
 	c.check(merges >= 1, "at least one real merge commit on the data branch (%d)", merges)
 
-	// --- the confirmation gate (D6 clause 2, 2026-08-04) ---
+	// --- the confirmation gate ---
 	// Read-side verification straight off the stored events: at most one
 	// claim.confirmed may ever land per task, by construction — a
 	// duplicate is a bug at any probability.
@@ -1389,7 +1388,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	c.check(stormOK, "every storm contest landed exactly one claim.confirmed, one done run, one superseded run (%d contests)",
 		len(l.contest))
 
-	// --- the D6 winner rule, refereed ---
+	// --- the winner rule, refereed ---
 	voided := voidedClaims(stateA)
 	c.check(races > 0, "claim races observed in the claim_next rounds (%d)", races)
 	c.check(len(voided) > 0, "claims voided by the winner rule (%d)", len(voided))
@@ -1437,7 +1436,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 		len(voided))
 	c.check(crossMachine == len(voided), "every race crossed machines (%d of %d)", crossMachine, len(voided))
 
-	// --- loser records: real coercion and real synthesis (D6 clause 3) ---
+	// --- loser records: real coercion and real synthesis ---
 	runsByID := make(map[string]*core.Run, len(stateA.Runs))
 	for i := range stateA.Runs {
 		runsByID[stateA.Runs[i].ID] = &stateA.Runs[i]
@@ -1528,7 +1527,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 	c.check(reportedOK, "every reporting loser was coerced to a real superseded run keeping its branch (%d)", reported)
 	c.check(silentOK, "every silent stand-down was closed by replay's branch-less synthesized run (%d)", silent)
 
-	// --- the natural-expiry arm (D6 clause 3, never-reports) ---
+	// --- the natural-expiry arm (losers that never report) ---
 	if len(l.expiry) > 0 {
 		c.check(expired == len(l.expiry) && expiredOK,
 			"every silent loser that never reported or released was closed by replay at its lease's natural lapse — "+
@@ -1544,7 +1543,7 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 			len(l.expiryLags), len(l.actors)*len(l.expiry), slowest.Round(100*time.Millisecond))
 	}
 
-	// --- the claim-response contract (D6 clause 3: losers learn at call-time) ---
+	// --- the claim-response contract (losers learn at call-time) ---
 	warned := 0
 	for _, at := range attempts {
 		if at.warned {
@@ -1560,8 +1559,8 @@ func (l *lab) verify(attempts []attempt, races int, stats stormStats) error {
 		l.reconfirms)
 
 	// --- the push-retry loop ---
-	// Exhausting maxCycleRetries is not a failure of the experiment: the
-	// acceptance asks for it to be reported with a rate if it happens.
+	// Exhausting maxCycleRetries is not a failure of the experiment: it
+	// is reported, with a rate, if it happens.
 	watch := l.watch.snapshot()
 	exhausted := 0
 	for _, w := range watch {
@@ -1652,7 +1651,7 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 	fmt.Printf("   claim races observed          %d\n", races)
 	fmt.Printf("   storm contests fired          %d\n", stats.contests)
 	fmt.Printf("   claims made                   %d\n", len(attempts))
-	fmt.Printf("   claims voided (D6 losers)     %d\n", len(voided))
+	fmt.Printf("   claims voided (race losers)   %d\n", len(voided))
 	fmt.Printf("   claim.confirmed on the branch %d\n", totalConfs)
 	fmt.Printf("   duplicate confirmations       %d\n", dup)
 	fmt.Printf("   confirmation races won        (%s %d, %s %d)\n",
@@ -1669,7 +1668,7 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 		l.perMachine(watch, func(w syncSample) int { return w.collisions }))
 	fmt.Printf("   app-level merges built        %d  %s\n", built,
 		l.perMachine(watch, func(w syncSample) int { return w.merges }))
-	fmt.Printf("   pushes losing the ref lock    %d  %s — not counted as collisions, see FINDINGS\n", refLock,
+	fmt.Printf("   pushes losing the ref lock    %d  %s — should be 0, see FINDINGS if not\n", refLock,
 		l.perMachine(watch, func(w syncSample) int { return w.refLock }))
 	if nonFF > 0 {
 		fmt.Printf("   maxCycleRetries exhausted     %d (%.1f%% of non-fast-forward pushes)\n",
@@ -1698,20 +1697,20 @@ func (l *lab) report(attempts []attempt, races int, stats stormStats, voided []*
 			"   the remote for the length of the burst, because the peer's eager pushes kept\n"+
 			"   winning the ref. Nothing was lost — the ledger converged once the burst\n"+
 			"   stopped — but while it lasted one machine was invisible to the other, which\n"+
-			"   is exactly the window D6 races open in.\n",
+			"   is exactly the window claim races open in.\n",
 			l.cfg.storm, round1s(l.stormTook),
 			float64(l.cfg.storm)/stormSeconds(l.stormTook), exhausted)
 	}
 	if refLock > 0 {
-		fmt.Printf("\n   %d push(es) were rejected as a lost ref-update race at the remote\n"+
-			"   (\"cannot lock ref 'refs/heads/tuhdoo': is at X but expected Y\") rather than\n"+
-			"   as a stale history. gitx.Push classifies a rejection as ErrNonFastForward\n"+
-			"   only when git's porcelain output says \"non-fast-forward\" or \"fetch first\"\n"+
-			"   (internal/gitx/cli.go Push), so this shape falls through as a generic error:\n"+
-			"   Syncer.Cycle returns instead of going around the retry loop, the daemon\n"+
-			"   records mode=error, and Status.Collisions does not count it. The next cycle\n"+
-			"   recovers, so nothing is lost — but the push-contention counter T8 says the\n"+
-			"   daemon keeps undercounts real contention by this many.\n", refLock)
+		fmt.Printf("\n   %d push(es) lost the remote's ref-update race\n"+
+			"   (\"cannot lock ref 'refs/heads/tuhdoo': is at X but expected Y\") and surfaced\n"+
+			"   as a sync error. gitx.Push should classify that as contention\n"+
+			"   (pushRejectionIsContention in internal/gitx/cli.go) and return\n"+
+			"   ErrNonFastForward, so the syncer retries it and Status.Collisions counts it.\n"+
+			"   Seeing it as an error means that classification has regressed: Syncer.Cycle\n"+
+			"   returned instead of going around the retry loop, the daemon recorded\n"+
+			"   mode=error, and the push-contention counter undercounts real contention by\n"+
+			"   this many. The next cycle recovers, so nothing is lost.\n", refLock)
 	}
 }
 
@@ -1788,7 +1787,7 @@ func voidedClaims(s *core.State) []*core.Claim {
 }
 
 // viewFiles returns the generated view blobs on a clone's data branch,
-// path → contents. Everything outside events/ and leases/ is a view (T6).
+// path → contents. Everything outside events/ and leases/ is a view.
 func viewFiles(root string) (map[string]string, error) {
 	g, err := gitx.New(root)
 	if err != nil {
@@ -1886,7 +1885,7 @@ func (a *actor) machineID() string {
 // ---------------------------------------------------------------------
 
 // startDaemon brings up the clone's daemon the way any CLI call does —
-// `tuhdoo init` auto-spawns it (T4 lazy lifecycle) — and records the pid
+// `tuhdoo init` auto-spawns it — and records the pid
 // and socket the harness will need.
 func (a *actor) startDaemon() error {
 	if out, err := runCmd(a.root, a.bin, "init"); err != nil {
@@ -1983,7 +1982,7 @@ func (a *actor) post(path, principal string, body, dst any) error {
 }
 
 // snapshot is the slice of GET /v0/snapshot this harness reads — the
-// one read endpoint (T4, 2026-09-10). Called without ?wait it answers
+// one read endpoint. Called without ?wait it answers
 // at the current version at once, through the same read gate every
 // client gets: a lease that lapsed since the last replay is
 // re-evaluated before the answer.
@@ -2032,7 +2031,7 @@ func (a *actor) readyTasks() ([]string, error) {
 
 // openSession spawns `tuhdoo mcp --as <principal>` as a child process and
 // speaks MCP to it over stdio. One process is one live session, which is
-// what keeps the claims it makes leased (T5/T8); the shim is used rather
+// what keeps the claims it makes leased; the shim is used rather
 // than the daemon's /mcp endpoint directly because that is the only
 // sanctioned agent door (docs/agent-protocol.md).
 func (a *actor) openSession() error {
@@ -2107,7 +2106,7 @@ func toolText(res *mcp.CallToolResult) string {
 // claimOut mirrors the fields of a claim response — claim_task's
 // result, and the task inside claim_next's — that the harness needs:
 // the claim, its lease, and the standing confirm-before-merge warning
-// every claim response must carry (D6 clause 3). Decoded from the
+// every claim response must carry. Decoded from the
 // tool's structured content rather than typed against the daemon's
 // unexported shapes.
 type claimOut struct {
@@ -2186,7 +2185,7 @@ type finishOut struct {
 
 // finishRunDone reports outcome done and returns what the referee
 // recorded — done for a certified winner, superseded for a coerced
-// loser (D6: agents report what they did; the daemon referees how the
+// loser (agents report what they did; the daemon referees how the
 // attempt ended).
 func (a *actor) finishRunDone(task, branch, summary string) (finishOut, error) {
 	var out finishOut
@@ -2197,7 +2196,7 @@ func (a *actor) finishRunDone(task, branch, summary string) (finishOut, error) {
 }
 
 // releaseOut is release_claim's answer; a non-empty message is the
-// stand-down acknowledgment for a voided claimant (D6 clause 3).
+// stand-down acknowledgment for a voided claimant.
 type releaseOut struct {
 	Message string `json:"message"`
 }
@@ -2222,9 +2221,9 @@ type syncSample struct {
 	keptMoving int
 	// refLock counts pushes that lost the remote's ref-update race
 	// outright ("cannot lock ref ... is at X but expected Y"). git
-	// reports that differently from a stale-history rejection, and
-	// gitx.Push only classifies the latter as ErrNonFastForward — see
-	// the finding in harness/README.md.
+	// reports that differently from a stale-history rejection; gitx.Push
+	// classifies both as ErrNonFastForward, so a sync error carrying it
+	// means that classification regressed — see harness/README.md.
 	refLock int
 	errors  []string
 }

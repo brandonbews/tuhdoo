@@ -3,7 +3,7 @@
   <!-- Flat favicon derivation of the tuhdoo mark: same two-dividing-cells
        silhouette as brand/tuhdoo-lockup-dark.svg, filters and noise dropped
        (they turn to mush at 16-32px), simple gradient from the delivered
-       stops (#8bffbb / #2fe884 / #0c9152). Pending Brandon's sign-off. -->
+       stops (#8bffbb / #2fe884 / #0c9152). -->
   <defs>
     <linearGradient id="flat" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#8bffbb" />
