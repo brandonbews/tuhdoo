@@ -1,0 +1,3 @@
+# This repo plans its work with tuhdoo. The ledger lives in a private repo.
+[ledger]
+	remote = https://github.com/brandonbews/tuhdoo-internal.git

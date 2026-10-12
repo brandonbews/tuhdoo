@@ -34,4 +34,4 @@ config:
 
 ## Learn more
 
-Docs, design record, and source: <https://github.com/brandonbews/tuhdoo>
+Docs and source: <https://github.com/brandonbews/tuhdoo>
