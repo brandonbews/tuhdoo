@@ -26,11 +26,13 @@ import (
 //
 // With no remote configured the error matches gitx.ErrNoRemote: the
 // caller owns the T2 remoteless path (the daemon is the sole writer, so
-// its local verdict is final). Any other error means the remote could
-// not be honestly consulted; the caller must refuse and write nothing —
-// the referee never guesses.
+// its local verdict is final). A pinned target never answers that way
+// (checkRemote): a pinned ledger has a home that is not this machine,
+// so a local verdict would not be final. Any other error means the
+// remote could not be honestly consulted; the caller must refuse and
+// write nothing — the referee never guesses.
 func (s *Syncer) GateHead() (string, *core.State, error) {
-	if _, err := s.git.RemoteURL(s.remote); err != nil {
+	if err := s.checkRemote(); err != nil {
 		return "", nil, fmt.Errorf("syncer: gate: %w", err)
 	}
 	remoteHead, err := s.fetch()

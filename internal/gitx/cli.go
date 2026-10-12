@@ -626,3 +626,34 @@ func (g *CLI) RemoteURL(remote string) (string, error) {
 	}
 	return strings.TrimSpace(string(out)), nil
 }
+
+func (g *CLI) ReadConfig(path, key string) (string, bool, error) {
+	args := []string{"config", "--local"}
+	if path != "" {
+		args = []string{"config", "--file", path}
+	}
+	args = append(args, "--get", key)
+	out, _, err := g.run(nil, nil, args...)
+	if err != nil {
+		// `git config --get` exits 1 for a key that is not set — and for
+		// a file it cannot open, after a warning, which is why callers
+		// that need the file to exist check it first. A file it cannot
+		// parse is exit 128, an error.
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("gitx: %w", err)
+	}
+	// git prints the value and one newline; anything else is the value.
+	return strings.TrimSuffix(string(out), "\n"), true, nil
+}
+
+func (g *CLI) SetLocalConfig(key, value string) error {
+	// --end-of-options: a value that starts with "-" is a value, never
+	// an option.
+	if _, _, err := g.run(nil, nil, "config", "--local", "--replace-all", "--end-of-options", key, value); err != nil {
+		return fmt.Errorf("gitx: %w", err)
+	}
+	return nil
+}

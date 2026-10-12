@@ -166,6 +166,14 @@ func (r *recordingGit) RemoteURL(remote string) (string, error) {
 	r.count("RemoteURL")
 	return r.Git.RemoteURL(remote)
 }
+func (r *recordingGit) ReadConfig(path, key string) (string, bool, error) {
+	r.count("ReadConfig")
+	return r.Git.ReadConfig(path, key)
+}
+func (r *recordingGit) SetLocalConfig(key, value string) error {
+	r.count("SetLocalConfig")
+	return r.Git.SetLocalConfig(key, value)
+}
 
 // newRecordedStore is newStore over a recording wrapper: a fresh
 // repository, an initialized and loaded Store, counts reset.

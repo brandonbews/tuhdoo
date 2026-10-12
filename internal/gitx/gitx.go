@@ -50,8 +50,9 @@ func LsTreeMap(g Git, rev string) (map[string]string, error) {
 	return m, nil
 }
 
-// Identity names the author and committer of a commit. gitx never reads
-// the user's git config, so callers must always say who is committing.
+// Identity names the author and committer of a commit. gitx never
+// derives an identity from the user's git config, so callers must
+// always say who is committing.
 type Identity struct {
 	Name  string
 	Email string
@@ -204,4 +205,18 @@ type Git interface {
 	// RemoteURL returns the URL configured for remote, or "" and an
 	// error matching ErrNoRemote when it is not configured.
 	RemoteURL(remote string) (string, error)
+
+	// ReadConfig returns the value of key ("section.name") from the
+	// git-config-format file at path — or, when path is "", from the
+	// repository's local config (`.git/config`, which every linked
+	// worktree shares). ok is false when the key is not set; a missing
+	// file reads as unset, so callers that care whether the file exists
+	// check that themselves. A file git cannot parse is an error.
+	// Include directives are not followed (git's default for one file).
+	// With several values for key, the last one wins, as in git.
+	ReadConfig(path, key string) (value string, ok bool, err error)
+
+	// SetLocalConfig sets key to value in the repository's local config,
+	// replacing every earlier value of key.
+	SetLocalConfig(key, value string) error
 }

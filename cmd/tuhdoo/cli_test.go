@@ -328,6 +328,97 @@ func TestStatusWithRemote(t *testing.T) {
 	}
 }
 
+// statusSettled runs status until the first sync cycle has finished
+// (the line no longer reads "starting"), bounded, and returns it.
+func statusSettled(t *testing.T, repo string) string {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		out, code := runCLI(t, repo, "status")
+		if code != 0 {
+			t.Fatalf("status exit %d; output:\n%s", code, out)
+		}
+		if !strings.Contains(out, "starting") || time.Now().After(deadline) {
+			return out
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// pinnedCLIRepo is a repo whose origin is a reachable bare repo and
+// whose committed-style .tuhdoo names target as the ledger's home.
+func pinnedCLIRepo(t *testing.T, target func(base string) string) (repo, origin, ledger string) {
+	t.Helper()
+	repo = newRepo(t)
+	base := t.TempDir()
+	origin = filepath.Join(base, "origin.git")
+	runGit(t, base, "init", "--quiet", "--bare", origin)
+	runGit(t, repo, "remote", "add", "origin", origin)
+	ledger = target(base)
+	body := "# This repo plans its work with tuhdoo. The ledger lives in a private repo.\n" +
+		"[ledger]\n\tremote = " + ledger + "\n"
+	if err := os.WriteFile(filepath.Join(repo, ".tuhdoo"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return repo, origin, ledger
+}
+
+// With a .tuhdoo naming the ledger's home, status names that target
+// and where it came from — and origin never receives the data branch.
+func TestStatusShowsPinnedTarget(t *testing.T) {
+	repo, origin, ledger := pinnedCLIRepo(t, func(base string) string {
+		ledger := filepath.Join(base, "ledger.git")
+		runGit(t, base, "init", "--quiet", "--bare", ledger)
+		return ledger
+	})
+	out := statusSettled(t, repo)
+	mustContain(t, out, fmt.Sprintf("syncing with %q from .tuhdoo", ledger))
+	stopDaemon(repo) // the final sync has run
+	if runGit(t, ledger, "branch", "--list", branchName()) == "" {
+		t.Errorf("the pinned target never received the data branch")
+	}
+	if got := runGit(t, origin, "branch", "--list", branchName()); got != "" {
+		t.Errorf("origin received the data branch: %q", got)
+	}
+}
+
+// An unreachable pinned target is a plain sync error naming the target,
+// its source, and that changing it takes a daemon restart — never
+// local-only, and never a push to origin.
+func TestStatusPinnedTargetUnreachable(t *testing.T) {
+	repo, origin, ledger := pinnedCLIRepo(t, func(base string) string {
+		return filepath.Join(base, "no-such-ledger.git")
+	})
+	out := statusSettled(t, repo)
+	mustContain(t, out, fmt.Sprintf("sync error (remote %q from .tuhdoo; changing it takes a daemon restart):", ledger))
+	if strings.Contains(out, "local-only") {
+		t.Errorf("an unreachable pinned target reads as local-only:\n%s", out)
+	}
+	stopDaemon(repo)
+	if got := runGit(t, origin, "branch", "--list", branchName()); got != "" {
+		t.Errorf("origin received the data branch: %q", got)
+	}
+}
+
+// A .tuhdoo the daemon cannot trust is a loud startup failure: the
+// command fails, and daemon.log names the file and what is wrong.
+func TestMalformedTuhdooIsALoudStartupError(t *testing.T) {
+	repo := newRepo(t)
+	if err := os.WriteFile(filepath.Join(repo, ".tuhdoo"), []byte("[ledger]\n\tbranch = tuhdoo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, code := runCLI(t, repo, "status")
+	if code == 0 {
+		t.Fatalf("status succeeded over a .tuhdoo without ledger.remote:\n%s", out)
+	}
+	mustContain(t, out, "daemon.log")
+	logged, err := os.ReadFile(filepath.Join(repo, ".git", "tuhdoo", "daemon.log"))
+	if err != nil {
+		t.Fatalf("read daemon.log: %v", err)
+	}
+	mustContain(t, string(logged), ".tuhdoo does not set ledger.remote")
+}
+
 // backlog / task / escalations render a seeded state.
 func TestReadCommandsRenderSeededState(t *testing.T) {
 	repo := newRepo(t)

@@ -121,6 +121,14 @@ func (c *countingGit) RemoteURL(remote string) (string, error) {
 	c.count("RemoteURL")
 	return c.Git.RemoteURL(remote)
 }
+func (c *countingGit) ReadConfig(path, key string) (string, bool, error) {
+	c.count("ReadConfig")
+	return c.Git.ReadConfig(path, key)
+}
+func (c *countingGit) SetLocalConfig(key, value string) error {
+	c.count("SetLocalConfig")
+	return c.Git.SetLocalConfig(key, value)
+}
 
 // newCountedRepo builds a fresh repository and a counting wrapper over
 // its real git, for daemons started with the Options.git seam.

@@ -118,6 +118,7 @@ type Daemon struct {
 	root         string
 	dir          string // <git-dir>/tuhdoo runtime dir
 	machine      string
+	target       ledgerTarget // where the ledger syncs, fixed at startup (target.go)
 	leaseTTL     time.Duration
 	mcpKeepAlive time.Duration
 	version      string
@@ -273,6 +274,13 @@ func New(root string, opts Options) (*Daemon, error) {
 			return nil, fmt.Errorf("daemon: %w", err)
 		}
 	}
+	// Where the ledger syncs, decided once per daemon (target.go). A
+	// .tuhdoo that cannot be trusted ends startup here, before the
+	// socket: the daemon refuses to run rather than guess.
+	target, err := resolveTargetAt(g, root, logger)
+	if err != nil {
+		return nil, err
+	}
 	st := store.New(g, opts.Ref, ident)
 	now := opts.now
 	if now == nil {
@@ -287,6 +295,7 @@ func New(root string, opts Options) (*Daemon, error) {
 		root:         root,
 		dir:          dir,
 		machine:      machine,
+		target:       target,
 		leaseTTL:     ttl,
 		mcpKeepAlive: keepAlive,
 		version:      version,
@@ -306,6 +315,9 @@ func New(root string, opts Options) (*Daemon, error) {
 	d.batcher.Log = logger
 	d.sync = syncer.New(g, st, syncer.Options{
 		Ref:      opts.Ref,
+		Remote:   target.remote,
+		Pinned:   target.pinned(),
+		Source:   target.source,
 		Interval: opts.SyncInterval,
 		Ident:    ident,
 		OnMerged: func() {

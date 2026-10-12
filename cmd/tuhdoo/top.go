@@ -1684,7 +1684,11 @@ func relAge(d time.Duration) string {
 // adds the relative age in yellow ("⇅ 8m"); a syncing daemon with no
 // parseable fetch stamp is stale of unknown age, glyph alone.
 // local-only stays a word — remoteless is a normal mode (T2), and a
-// bare missing glyph would look broken. Errors stay loud text, red.
+// bare missing glyph would look broken. Errors stay loud text, red, on
+// one line: a git failure can span several (an unreachable or closed
+// ledger remote's usually does), and the header has exactly one. The
+// remote is quoted as given, so a URL target reads as plainly as a
+// name; where a pinned one came from is `tuhdoo status`'s to say.
 func syncSegs(col colors, s syncJSON, now time.Time) []seg {
 	switch s.Mode {
 	case "local-only":
@@ -1700,7 +1704,7 @@ func syncSegs(col colors, s syncJSON, now time.Time) []seg {
 		}
 		return []seg{{col.yellow, "⇅" + age}}
 	case "error":
-		return []seg{{col.red, fmt.Sprintf("sync error (remote %q): %s", s.Remote, s.LastError)}}
+		return []seg{{col.red, fmt.Sprintf("sync error (remote %q): %s", s.Remote, oneLine(s.LastError))}}
 	default:
 		return []seg{{col.dim, s.Mode}} // "starting": first cycle hasn't finished
 	}

@@ -27,11 +27,17 @@ const adoptTimeout = 10 * time.Second
 // before either pushes produce two roots no matter what, and the
 // app-level union merge converges them (D6/T2) — adoption only keeps
 // the common case to a single root. Correctness never rests here.
+//
+// A pinned target goes straight to the bounded fetch (checkRemote): a
+// clone without access to the ledger's private home mints locally, the
+// sync loop then reports the fetch error every cycle, and the minted
+// root merges into the ledger's history once access arrives. Nothing
+// here reads or writes any other remote.
 func (s *Syncer) AdoptRemoteBranch() {
 	if _, err := s.git.ReadRef(s.ref); err == nil {
 		return // local branch exists; nothing to adopt
 	}
-	if _, err := s.git.RemoteURL(s.remote); err != nil {
+	if err := s.checkRemote(); err != nil {
 		// No remote is the normal remoteless state (T2); anything else
 		// is config trouble the sync loop will surface on its own.
 		if !errors.Is(err, gitx.ErrNoRemote) {
