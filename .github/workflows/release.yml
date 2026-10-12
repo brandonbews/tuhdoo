@@ -4,7 +4,7 @@
 # that runs is visible in this one file, and the only third-party code
 # is actions/checkout and actions/setup-go, pinned by commit SHA.
 #
-# Host-agnosticism (T2) is untouched: this pipeline publishes artifacts;
+# Host-agnosticism is untouched: this pipeline publishes artifacts;
 # the binary itself never learns about GitHub. Triggering is tag-only,
 # so the tuhdoo data branch can never fire it.
 name: release
@@ -83,10 +83,9 @@ jobs:
   # --provenance explicitly — then a provenance failure fails the publish
   # loudly instead of shipping an unattested package.
   #
-  # History: this job was parked (if: false) from 2026-09-12 to 2026-09-15
-  # while tuhdoo was private. In that window 0.1.0–0.5.0 were unpublished
-  # from all five names (retired forever — npm never reissues an
-  # unpublished version) and 0.0.1 placeholder stubs held the names. The
+  # Versions 0.1.0–0.5.0 are retired forever: they were unpublished from
+  # all five names while tuhdoo was private, npm never reissues an
+  # unpublished version, and 0.0.1 placeholder stubs held the names. The
   # first republished version is 0.6.0; never tag anything at or below
   # 0.5.0 again. --provenance also requires the repo to be public.
   npm:

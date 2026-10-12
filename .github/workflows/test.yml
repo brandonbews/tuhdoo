@@ -1,5 +1,5 @@
 # Tests run on every push EXCEPT to the tuhdoo data branch — the same CI
-# path-filter guidance `tuhdoo init` will one day print for its users (B1/T2).
+# path-filter guidance `tuhdoo init` will one day print for its users.
 name: test
 on:
   push:
