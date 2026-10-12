@@ -391,9 +391,11 @@ func TestFetchAndPush(t *testing.T) {
 }
 
 // TestFetchTimeoutClassifiesLikeFetch: the bounded variant preserves
-// Fetch's error classification when the remote answers promptly.
+// Fetch's error classification when the remote answers promptly. The
+// refspec is the syncer's, forced: the leading "+" must not hide a
+// missing remote ref.
 func TestFetchTimeoutClassifiesLikeFetch(t *testing.T) {
-	const spec = "refs/heads/tuhdoo:refs/tuhdoo/remote"
+	const spec = "+refs/heads/tuhdoo:refs/tuhdoo/remote"
 
 	g := newRepo(t)
 	remote := newBareRemote(t)
@@ -416,6 +418,42 @@ func TestFetchTimeoutClassifiesLikeFetch(t *testing.T) {
 	}
 	if got, err := g.ReadRef("refs/tuhdoo/remote"); err != nil || got != c1 {
 		t.Fatalf("tracking ref after fetch = %s, %v; want %s", got, err, c1)
+	}
+}
+
+// TestFetchFailureReportsGitStderr: a failed fetch carries git's own
+// explanation. The case is the one that once failed silently: an
+// unforced refspec into a local ref that is ahead of the remote's
+// branch, which git refuses as non-fast-forward. git reports that
+// refusal only in its per-ref status lines, which --quiet suppressed,
+// so the error used to end in an empty message.
+func TestFetchFailureReportsGitStderr(t *testing.T) {
+	g := newRepo(t)
+	remote := newBareRemote(t)
+	runGit(t, g.dir, "remote", "add", "origin", remote)
+
+	c1 := writeCommit(t, g, map[string][]byte{"events/x.json": []byte(`{"id":"x"}`)}, "c1\n")
+	if err := g.UpdateRef("refs/heads/tuhdoo", c1, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.Push("origin", "refs/heads/tuhdoo:refs/heads/tuhdoo"); err != nil {
+		t.Fatal(err)
+	}
+	// The local ref is one commit ahead of the remote's branch.
+	c2 := writeCommit(t, g, map[string][]byte{"events/y.json": []byte(`{"id":"y"}`)}, "c2\n", c1)
+	if err := g.UpdateRef("refs/tuhdoo/remote", c2, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	err := g.Fetch("origin", "refs/heads/tuhdoo:refs/tuhdoo/remote")
+	if err == nil {
+		t.Fatal("non-fast-forward fetch succeeded, want git's rejection")
+	}
+	if errors.Is(err, ErrRemoteRefMissing) {
+		t.Fatalf("non-fast-forward fetch classified as a missing ref: %v", err)
+	}
+	if !strings.Contains(err.Error(), "non-fast-forward") {
+		t.Fatalf("fetch error does not carry git's reason: %q", err)
 	}
 }
 

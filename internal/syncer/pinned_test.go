@@ -9,7 +9,10 @@ package syncer
 // branch" is a real check, not a vacuous one.
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -119,6 +122,118 @@ func TestPinnedAdoptJoinsTargetNotOrigin(t *testing.T) {
 	gone.sync.AdoptRemoteBranch()
 	if got, err := gone.git.ReadRef(store.DefaultRef); err == nil && got == originHead {
 		t.Fatal("an unreachable pinned target adopted origin's data branch")
+	}
+}
+
+// TestTargetSwitchWithTrackingRefAhead replays the 2026-10-12 ledger
+// cutover. A clone syncing with origin copies its ledger to a private
+// repo (docs/adopting.md, "Keeping the ledger in a private repo"), its
+// old daemon pushes to origin once more, and the restarted daemon is
+// pinned to the private repo. TrackingRef still holds origin's newer
+// head, and the private repo's branch is an ancestor of it. The fetch
+// force-updates the tracking ref, so the cycles succeed: the local
+// branch and the new target converge, and origin is never touched. The
+// backwards move is logged as a warning exactly once.
+func TestTargetSwitchWithTrackingRefAhead(t *testing.T) {
+	gitEnv(t)
+	origin, ledger := newBare(t, "origin.git"), newBare(t, "ledger.git")
+	dir, g := mkRepo(t, "switcher", origin)
+	write := func(st *store.Store, n int) {
+		t.Helper()
+		if err := st.AppendBatch(store.Batch{Events: []event.Event{
+			evt(t, n, event.TypeTaskCreated, "brandon", "m-switcher", fmt.Sprintf("t%d", n), event.TaskCreated{Title: "work"}),
+		}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Before the switch: the old daemon syncs with origin.
+	oldStore := store.New(g, "", ident("switcher"))
+	if err := oldStore.Init(); err != nil {
+		t.Fatal(err)
+	}
+	oldSync := New(g, oldStore, Options{Ident: ident("switcher")})
+	write(oldStore, 1)
+	if err := oldSync.Cycle(); err != nil {
+		t.Fatal(err)
+	}
+	// The copy step: push the ledger to the private repo.
+	runGit(t, dir, "push", "--quiet", ledger, store.DefaultRef+":"+store.DefaultRef)
+	// The old daemon pushes to origin again before its restart; its
+	// next cycle fetches that head back into the tracking ref.
+	write(oldStore, 2)
+	for i := 0; i < 2; i++ {
+		if err := oldSync.Cycle(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	originRefs := runGit(t, origin, "for-each-ref")
+	originHead := strings.TrimSpace(runGit(t, origin, "rev-parse", store.DefaultRef))
+	ledgerHead := strings.TrimSpace(runGit(t, ledger, "rev-parse", store.DefaultRef))
+	if tracking, err := g.ReadRef(TrackingRef); err != nil || tracking != originHead {
+		t.Fatalf("setup: tracking ref = %q (%v), want origin's head %s", tracking, err, originHead)
+	}
+	if behind, err := g.IsAncestor(ledgerHead, originHead); err != nil || !behind || ledgerHead == originHead {
+		t.Fatalf("setup: the ledger (%s) must be strictly behind origin (%s)", ledgerHead, originHead)
+	}
+
+	// The restart: a fresh store and a syncer pinned to the private
+	// repo, plus one more local write so the push it owes is visible.
+	st := store.New(g, "", ident("switcher"))
+	if err := st.Load(); err != nil {
+		t.Fatal(err)
+	}
+	write(st, 3)
+	var logged bytes.Buffer
+	sy := New(g, st, Options{Remote: ledger, Pinned: true, Source: ".tuhdoo", Ident: ident("switcher"), Log: log.New(&logged, "", 0)})
+	// The first cycle pushes; the second fetches the pushed head back.
+	for i := 1; i <= 2; i++ {
+		if err := sy.Cycle(); err != nil {
+			t.Fatalf("cycle %d after the switch: %v", i, err)
+		}
+	}
+
+	local := strings.TrimSpace(runGit(t, dir, "rev-parse", store.DefaultRef))
+	if got := strings.TrimSpace(runGit(t, ledger, "rev-parse", store.DefaultRef)); got != local {
+		t.Fatalf("ledger head = %s, want the local head %s", got, local)
+	}
+	if tracking, err := g.ReadRef(TrackingRef); err != nil || tracking != local {
+		t.Fatalf("tracking ref = %q (%v), want the converged head %s", tracking, err, local)
+	}
+	if st := sy.Status(); st.Mode != "syncing" || st.LastError != "" {
+		t.Fatalf("status = %+v, want syncing with no error", st)
+	}
+	if got := runGit(t, origin, "for-each-ref"); got != originRefs {
+		t.Fatalf("origin's refs changed after the switch:\nbefore:\n%s\nafter:\n%s", originRefs, got)
+	}
+	if n := strings.Count(logged.String(), rewindWarning); n != 1 {
+		t.Fatalf("logged %d rewind warnings, want exactly 1:\n%s", n, logged.String())
+	}
+}
+
+// TestTargetSwitchAdoptWithTrackingRefAhead: adoption fetches with the
+// same forced refspec as the cycle. A clone with no local data branch,
+// but with a tracking ref left ahead of the target's branch, adopts the
+// target's head. An unforced fetch would be refused, and the clone
+// would mint a second root instead.
+func TestTargetSwitchAdoptWithTrackingRefAhead(t *testing.T) {
+	gitEnv(t)
+	origin, ledger := newBare(t, "origin.git"), newBare(t, "ledger.git")
+	ledgerHead := seedBare(t, ledger, "private", "the real ledger")
+
+	p := pinnedPeer(t, origin, ledger)
+	// Leave the tracking ref one commit ahead of the ledger's branch.
+	runGit(t, p.dir, "fetch", "--quiet", ledger, store.DefaultRef+":"+TrackingRef)
+	ahead := strings.TrimSpace(runGit(t, p.dir, "commit-tree", "-p", ledgerHead, "-m", "ahead", ledgerHead+"^{tree}"))
+	runGit(t, p.dir, "update-ref", TrackingRef, ahead)
+
+	p.sync.AdoptRemoteBranch()
+	if got, err := p.git.ReadRef(store.DefaultRef); err != nil || got != ledgerHead {
+		t.Fatalf("adopted %q (%v), want the target's head %s", got, err, ledgerHead)
+	}
+	if got, err := p.git.ReadRef(TrackingRef); err != nil || got != ledgerHead {
+		t.Fatalf("tracking ref = %q (%v), want the target's head %s", got, err, ledgerHead)
 	}
 }
 

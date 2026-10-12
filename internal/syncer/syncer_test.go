@@ -2,6 +2,8 @@ package syncer
 
 import (
 	"bytes"
+	"errors"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -272,6 +274,62 @@ func TestRemotelessIsNormalAndUnreachableRecovers(t *testing.T) {
 	a.sync.cycleAndRecord()
 	if st := a.sync.Status(); st.LastError != "" || st.Mode != "syncing" {
 		t.Fatalf("expected recovery, got %+v", st)
+	}
+}
+
+// rewindWarning is the fixed part of warnIfRewound's log line.
+const rewindWarning = "remote data branch moved backwards or sideways"
+
+// TestTrackingRefRewindWarning: fetch logs one warning when it moves
+// TrackingRef backwards or sideways, and nothing otherwise. A first
+// fetch (no tracking ref yet) and plain forward fetches stay silent.
+// A remote rewound by hand, the "someone rewrote the remote branch"
+// case, logs once, and the same cycle pushes the dropped commit back.
+func TestTrackingRefRewindWarning(t *testing.T) {
+	a, b := newPair(t)
+	var logged bytes.Buffer
+	a.sync = New(a.git, a.store, Options{Ident: gitx.Identity{Name: "machine-a", Email: "machine-a@test.invalid"}, Log: log.New(&logged, "", 0)})
+	warnings := func() int { return strings.Count(logged.String(), rewindWarning) }
+
+	// A missing tracking ref: A has never fetched.
+	if _, err := a.git.ReadRef(TrackingRef); !errors.Is(err, gitx.ErrRefNotFound) {
+		t.Fatalf("setup: tracking ref should be missing, got %v", err)
+	}
+	cycle(t, b) // publish B's root
+	cycle(t, a) // A's first fetch lands it; A merges and pushes
+	if n := warnings(); n != 0 {
+		t.Fatalf("a first fetch logged %d rewind warnings:\n%s", n, logged.String())
+	}
+
+	// Plain forward fetches: B takes A's merge, writes, and pushes.
+	cycle(t, b)
+	if err := b.store.AppendBatch(store.Batch{Events: []event.Event{
+		evt(t, 1, event.TypeTaskCreated, "brandon", "m-b", "t1", event.TaskCreated{Title: "forward"}),
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	cycle(t, b)
+	cycle(t, a)
+	if n := warnings(); n != 0 {
+		t.Fatalf("forward fetches logged %d rewind warnings:\n%s", n, logged.String())
+	}
+
+	// Someone rewinds the remote branch by one commit.
+	bare, err := a.git.RemoteURL("origin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pushed := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef))
+	runGit(t, bare, "update-ref", store.DefaultRef, pushed+"^")
+	cycle(t, a)
+	if n := warnings(); n != 1 {
+		t.Fatalf("a rewound remote logged %d rewind warnings, want exactly 1:\n%s", n, logged.String())
+	}
+	if got := strings.TrimSpace(runGit(t, bare, "rev-parse", store.DefaultRef)); got != pushed {
+		t.Fatalf("remote head = %s after the healing cycle, want %s pushed back", got, pushed)
+	}
+	if st := a.sync.Status(); st.Mode != "syncing" || st.LastError != "" {
+		t.Fatalf("status = %+v, want syncing with no error: the warning is a log line only", st)
 	}
 }
 
