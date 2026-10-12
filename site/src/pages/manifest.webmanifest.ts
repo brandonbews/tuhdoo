@@ -1,6 +1,5 @@
 // Web app manifest, served at /manifest.webmanifest. The PNG renditions in
-// public/ are rasterized from the flat favicon mark (public/icon.svg) — see
-// the production-readiness task record.
+// public/ are rasterized from the flat favicon mark (public/icon.svg).
 import type { APIRoute } from "astro";
 
 const manifest = {

@@ -61,7 +61,7 @@ Promotion (`inbox` → `open`) is the moment an idea becomes a commission, and i
 Task quality bounds output quality. An agent builds exactly what the description asks, because it was not in the meeting and its session starts cold with the description as its brief. Nothing enforces the bar mechanically, but the protocol closes the loop: a claimant handed an unscoped task will correctly raise a blocking escalation asking for the missing criteria, and you will end up writing the description anyway — later, with an agent parked on it. Write it at promotion time instead.
 
 ```sh
-tuhdoo update tuh-d83w --status open --desc -   # reads the description from stdin
+tuhdoo update tuh-qx4r --status open --desc -   # reads the description from stdin
 ```
 
 ## 4. Decompose: the graph is the plan
@@ -90,21 +90,21 @@ Everything above happens per-idea. Steering proper is continuous and deliberatel
 - **Cancel.** A human call, always. Agents never cancel unbidden, and a cancelled task keeps its full history on the ledger.
 - **Read the ledger.** `tuhdoo task <id>` shows one task with its chronological history: who claimed it and when, notes left mid-flight, how each run ended, what was asked and answered. `tuhdoo backlog` is the whole backlog, one line per task. Because every entry is a typed, attributed event, catching up after time away is a read of the ledger, not a reconstruction. The data branch also carries generated **views** — browsable markdown on your git host, for free.
 
-## A worked example: launching tuhdoo.com
+## A worked example: launching a website
 
-This is how tuhdoo's own website shipped, exactly as its ledger records it.
+This example follows one piece of work through the whole loop: a project's website and its docs.
 
-**Capture.** Over about a week, ideas landed as cheap captures: *"marketing/docs site for tuhdoo"*, *"workflow recipe docs"*, *"ship the agent protocol with the binary"*, *"user-facing docs"*. Some were title-only inbox tasks; the site capture carried one early decision (build it inside the main repo) and was parked `held`: real, but not yet.
+**Capture.** Over about a week, ideas land as cheap captures: *"marketing/docs site"*, *"workflow recipe docs"*, *"publish the agent instructions"*, *"user-facing docs"*. Some are title-only inbox tasks; the site capture carries one early decision (build it inside the main repo) and is parked `held`: real, but not yet.
 
-**Triage.** A planning session walked the pile and noticed that the site, the docs, and the recipes all hung on the same unsettled decisions: framework, hosting, one site or two, the domain, and where the docs content should live. Rather than promote anything half-decided, triage created a decision task (a human-led discussion) and made the build tasks depend on it.
+**Triage.** A planning session walks the pile and notices that the site, the docs, and the recipes all hang on the same unsettled decisions: framework, hosting, one site or two, the domain, and where the docs content should live. Rather than promote anything half-decided, triage creates a decision task (a human-led discussion) and makes the build tasks depend on it.
 
-**Decide, then promote.** The discussion settled everything: Next.js, hosting that watches the repo directly, one combined marketing-and-docs site, the already-owned domain, and docs living in the repo's `docs/` directory as plain markdown the site consumes at build time. Each build task was then promoted with a full five-part description recording the decisions, so every future claimant inherits the *why*, not just the *what*.
+**Decide, then promote.** The discussion settles all of them: a static-site framework, hosting that builds straight from the repo, one combined marketing-and-docs site, a domain the team already owns, and docs living in the repo's `docs/` directory as plain markdown the site reads at build time. Each build task is then promoted with a full five-part description recording the decisions, so every future claimant inherits the *why*, not just the *what*.
 
-**Decompose.** A container task, *"Launch tuhdoo"*, was created depending on all of it: the decision task, the site build, the docs, the recipes, shipping the protocol with the binary, a docs restructuring, and DNS wiring. The edges encoded the real ordering: the restructuring had to land before the site could consume the docs, and the DNS wiring depended on the site landing first. The DNS wiring was also a human-owned task; not everything in a backlog is agent work.
+**Decompose.** A container task, *"Launch the site"*, is created depending on all of it: the decision task, the site build, the docs, the recipes, a docs restructuring, and DNS wiring. The edges encode the real ordering: the restructuring has to land before the site can consume the docs, and the DNS wiring depends on the site landing first. The DNS wiring is also a human-owned task; not everything in a backlog is agent work.
 
-**Drain.** Agents then worked the ready frontier one task at a time — claim → branch → pull request → finish — each run recording its pull request and the commit that landed. One task blocked instead of landing: its claimant hit two genuinely open questions and did what the protocol prescribes. It raised one blocking escalation carrying both questions with recommendations, noted where work stopped, released the claim, and finished the run as blocked. That task now waits, out of the ready pool, in the human's escalation inbox: a question owed an answer, not a mystery.
+**Drain.** Agents then work the ready frontier one task at a time — claim → branch → pull request → finish — each run recording its pull request and the commit that landed. One task blocks instead of landing: its claimant hits two genuinely open questions and does what the protocol prescribes. It raises one blocking escalation carrying both questions with recommendations, notes where work stopped, releases the claim, and finishes the run as blocked. That task now waits, out of the ready pool, in the human's escalation inbox: a question owed an answer, not a mystery.
 
-The container stays open until the human declares the launch done; some calls are judgment, and the ledger records them as such. The page you are reading was itself one of those children: captured, triaged, promoted, claimed, and landed through this exact loop.
+The container stays open until the human declares the launch done; some calls are judgment, and the ledger records them as such. tuhdoo's own website and these docs were built through this same loop.
 
 ## Where next
 
