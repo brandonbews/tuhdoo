@@ -1,12 +1,11 @@
 package main
 
-// The interactive TUI (002 T7, revised by Cycle 4): the single live
-// human surface. Reads arrive from one long poll on the daemon's
-// snapshot (see the polling section below); the steering writes
-// (answer an escalation, reprioritize or clear a priority, move a
-// task between ready, on hold, and inbox, cancel, capture, edit
-// title/description/labels) go through the daemon HTTP API only,
-// stamped with the acting human principal.
+// The interactive TUI: the single live human surface. Reads arrive from
+// one long poll on the daemon's snapshot (see the polling section
+// below); the steering writes (answer an escalation, reprioritize or
+// clear a priority, move a task between ready, on hold, and inbox,
+// cancel, capture, edit title/description/labels) go through the daemon
+// HTTP API only, stamped with the acting human principal.
 // Watch mode is the same screen disarmed: steering keys dead, fixed at
 // launch — no keypress can re-arm a disarmed pane.
 
@@ -42,16 +41,16 @@ func wrapTo(s string, width int) string {
 
 // ---- polling: state arrives from one long poll, never by keypress ----
 //
-// The screen holds exactly one snapshot request at a time (T4,
-// 2026-09-10): a long poll parked on the version last rendered, which
-// the daemon answers the moment its state moves — a write, a merge, a
-// lease lapsing — or, after pollWait, with the unchanged version, and
-// the next poll goes out with whatever came back. There is no tick:
-// every poll is the continuation of the one before it, and the guard
-// in startPoll keeps a refresh asked for elsewhere (an action landing,
-// a retry timer firing) from ever putting a second request in flight.
-// A failed poll is shown and retried on a backoff (1 s, doubling to
-// retryCap), reset by the next answer.
+// The screen holds exactly one snapshot request at a time: a long poll
+// parked on the version last rendered, which the daemon answers the
+// moment its state moves — a write, a merge, a lease lapsing — or,
+// after pollWait, with the unchanged version, and the next poll goes
+// out with whatever came back. There is no tick: every poll is the
+// continuation of the one before it, and the guard in startPoll keeps a
+// refresh asked for elsewhere (an action landing, a retry timer firing)
+// from ever putting a second request in flight. A failed poll is shown
+// and retried on a backoff (1 s, doubling to retryCap), reset by the
+// next answer.
 
 // pollWait is how long one poll parks on an unchanged version before
 // the daemon answers with the version alone and the screen re-polls.
@@ -106,7 +105,7 @@ func retryCmd(after time.Duration) tea.Cmd {
 
 // steeringAPI is the full set of writes top can perform. An interface
 // so interaction tests run against a fake; the real one speaks the
-// daemon HTTP API — never git, never the ops layer (T7).
+// daemon HTTP API — never git, never the ops layer.
 type steeringAPI interface {
 	answerEscalation(escalation, answer string) error
 	setPriority(task string, priority int) error
@@ -136,37 +135,34 @@ func (s httpSteering) setPriority(task string, priority int) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"priority": priority})
 }
 
-// clearPriority is the picker's `-` (keyboard/priority grill,
-// 2026-09-11): the same PATCH as `tuhdoo update --priority none`,
-// spelled with the request-side clear_priority flag — a nullable
-// number cannot tell "clear" from "unchanged" on the wire (T3, the v4
-// revision), so the clear is its own input.
+// clearPriority is the picker's `-`: the same PATCH as `tuhdoo update
+// --priority none`, spelled with the request-side clear_priority flag —
+// a nullable number cannot tell "clear" from "unchanged" on the wire,
+// so the clear is its own input (task.updated v4).
 func (s httpSteering) clearPriority(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"clear_priority": true})
 }
 
 // setStatus moves a task between the open statuses — r/h/i on the
-// list and in the task view (keyboard/priority grill, 2026-09-11):
-// one PATCH with the status field, the same task.updated event as
-// `tuhdoo update --status`. The wire word is the stored word — held,
-// never "on hold" (status-vocabulary revision, 2026-08-01); the
-// display mapping lives in views.HumanStatus alone.
+// list and in the task view: one PATCH with the status field, the same
+// task.updated event as `tuhdoo update --status`. The wire word is the
+// stored word — held, never "on hold"; the display mapping lives in
+// views.HumanStatus alone.
 func (s httpSteering) setStatus(task, status string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": status})
 }
 
 // cancelTask writes the terminal curation status. The task model has
-// no delete (D5) — "cancelled" is terminal but never removed, and
-// since the status-vocabulary revision (2026-08-01) cancel is the word
-// everywhere: the one-day "archive" porcelain verb is retired.
+// no delete — "cancelled" is terminal but never removed, and cancel is
+// the word everywhere: the short-lived "archive" porcelain verb is
+// retired.
 func (s httpSteering) cancelTask(task string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"status": "cancelled"})
 }
 
-// setTitle and setDescription are the task view's edit writes
-// (dogfood capture, 2026-08-01): the same PATCH — and so the same
-// task.updated ledger event — as `tuhdoo update --title/--desc`,
-// stamped with the steering human.
+// setTitle and setDescription are the task view's edit writes:
+// the same PATCH — and so the same task.updated ledger event — as
+// `tuhdoo update --title/--desc`, stamped with the steering human.
 func (s httpSteering) setTitle(task, title string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"title": title})
 }
@@ -176,15 +172,14 @@ func (s httpSteering) setDescription(task, description string) error {
 }
 
 // setLabels writes the full replacement list — the same PATCH, and so
-// the same task.updated ledger event, as `tuhdoo update --labels`
-// (labels editable, 2026-08-05). An empty list is a legitimate clear;
-// no value is weight-bearing to the platform (D5 label agnosticism).
+// the same task.updated ledger event, as `tuhdoo update --labels`.
+// An empty list is a legitimate clear; no value is weight-bearing to
+// the platform, which gives labels no meaning of its own.
 func (s httpSteering) setLabels(task string, labels []string) error {
 	return s.c.write("PATCH", "/v0/tasks/"+task, s.actor, map[string]any{"labels": labels})
 }
 
-// captureTask is TUI quick-capture (2026-07-31; on n since the
-// keyboard/priority grill, 2026-09-11 — i now sets inbox status): a
+// captureTask is TUI quick-capture (on n, since i sets inbox status): a
 // title-only inbox item, created as the steering human. Capture is
 // deliberately cheap — no priority, no description, no confirm
 // (cancel reverses it); the description a promoted task needs is
@@ -221,10 +216,10 @@ func (r topRow) id() string {
 
 // buildRows flattens a snapshot into the selectable rows in render
 // order: open escalations, then ready, in-progress, and blocked tasks,
-// then the dim shelves — held above inbox (2026-07-31; held passed
-// triage, so it sits closer to workable than raw captures). Done and
-// cancelled tasks are not steerable and get no rows; held and inbox
-// rows are ordinary rows — enter opens detail, c cancels, r/h/i move.
+// then the dim shelves — held above inbox (held passed triage, so it
+// sits closer to workable than raw captures). Done and cancelled tasks
+// are not steerable and get no rows; held and inbox rows are ordinary
+// rows — enter opens detail, c cancels, r/h/i move.
 func buildRows(s *snapshot) []topRow {
 	var rows []topRow
 	for _, e := range s.state.OpenEscalations {
@@ -239,9 +234,9 @@ func buildRows(s *snapshot) []topRow {
 	}
 	for _, t := range b.blocked {
 		// A task whose only blocker is an open blocking escalation is
-		// represented by its Needs Input row alone (grill cycle,
-		// 2026-07-31); only unmet deps earn a BLOCKED row. The one-shot
-		// commands keep the full blocked bucket — their count may differ.
+		// represented by its Needs Input row alone; only unmet deps
+		// earn a BLOCKED row. The one-shot commands keep the full
+		// blocked bucket — their count may differ.
 		if len(t.UnmetDeps) == 0 {
 			continue
 		}
@@ -256,12 +251,10 @@ func buildRows(s *snapshot) []topRow {
 	return rows
 }
 
-// buildClosedRows flattens the terminal shelf for the Closed list
-// (Closed shelf, 2026-08-02 — "history" on h until the keyboard/
-// priority grill, 2026-09-11, put it on tab): DONE then CANCELLED,
-// each newest close first — recency is the browse axis here, not
-// priority. Closed is a "what did I build" device for the steering
-// human; forensics stay in the raw events.
+// buildClosedRows flattens the terminal shelf for the Closed list (on
+// tab): DONE then CANCELLED, each newest close first — recency is the
+// browse axis here, not priority. Closed is a "what did I build" device
+// for the steering human; forensics stay in the raw events.
 func buildClosedRows(s *snapshot) []topRow {
 	b := s.classify()
 	var rows []topRow
@@ -310,18 +303,18 @@ func (m topModel) activeRows(s *snapshot) []topRow {
 const (
 	modeNav = iota
 	modeAnswer
-	modePriority // the priority picker (keyboard/priority grill, 2026-09-11): 0-9 sets, - clears, esc — not a text input
+	modePriority // the priority picker: 0-9 sets, - clears, esc — not a text input
 	modeConfirmCancel
 	modeCapture // quick-capture: one line of title, straight to inbox
 	modeDetail
-	modeEditTitle  // task-view edits (2026-08-01): the widget prefilled
+	modeEditTitle  // task-view edits: the widget prefilled
 	modeEditDesc   // with the current value; unchanged submit writes nothing
-	modeEditLabels // labels as one comma-joined line (2026-08-05), same rules
+	modeEditLabels // labels as one comma-joined line, same rules
 )
 
 // actionMsg is the result of one steering write. Success carries
-// nothing (status line = feedback only, chrome pass 2026-08-21): the
-// screen updating on the refresh is the confirmation.
+// nothing (the status line is feedback only): the screen updating on
+// the refresh is the confirmation.
 type actionMsg struct {
 	err error
 }
@@ -332,14 +325,14 @@ type topModel struct {
 	col        colors
 	actor      string
 	armed      bool   // false in watch mode: steering keys are dead
-	repoName   string // repo-root directory basename: the header's sense of place (chrome pass, 2026-08-21)
+	repoName   string // repo-root directory basename: the header's sense of place
 	asOverride bool   // --as overrode the derived identity; the header badge marks it
 
 	snap   *snapshot
 	err    error
 	rows   []topRow
 	cursor int
-	closed bool // the Closed list (2026-08-02; tab since 2026-09-11): the list shows the done/cancelled shelf
+	closed bool // the Closed list (on tab): the list shows the done/cancelled shelf
 
 	// The poll chain (see startPoll): fetch is the injectable long
 	// poll (nil: the client's), version the snapshot version last
@@ -356,16 +349,16 @@ type topModel struct {
 	input    textInput // the shared text-entry widget (textinput.go); zero value = empty single-line
 	target   topRow    // row a pending answer/priority/cancel/edit applies to
 	editWas  string    // the edited field's value when an edit mode opened: an unchanged submit writes nothing
-	inputErr string    // a submit rejection ("title cannot be empty"): the prompt box's hint line, red, while the prompt stays open (prompt overlay, 2026-09-11); set by submit, cleared when the prompt closes
+	inputErr string    // a submit rejection ("title cannot be empty"): the prompt box's hint line, red, while the prompt stays open; set by submit, cleared when the prompt closes
 	status   string    // one-line result of the last action
 
 	detailID     string   // task shown by modeDetail
 	detailScroll int      // first visible body line in modeDetail
 	detailFocus  int      // focused stop in an armed detail (index into detailStops)
-	detailBack   []string // task views walked through by edge hops (edge rows, 2026-08-11): esc pops, newest last — a plain slice, boring Go
+	detailBack   []string // task views walked through by edge hops: esc pops, newest last — a plain slice, boring Go
 	// escExpanded holds the escalation contexts toggled open in the task
-	// view (escalation readability, 2026-08-11), keyed by escalation ID —
-	// ephemeral view state: cleared when the view closes, never persisted.
+	// view, keyed by escalation ID — ephemeral view state: cleared when
+	// the view closes, never persisted.
 	escExpanded map[string]bool
 	width       int // terminal columns; 0 (no WindowSizeMsg yet) wraps nothing
 	height      int // terminal rows; 0 renders all
@@ -429,10 +422,10 @@ func (m topModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = "error: " + msg.err.Error()
 		} else {
-			// Success clears the in-flight marker and says nothing more
-			// (feedback only, 2026-08-21): the refresh putting the
-			// effect on screen is the confirmation. Accepted: a capture
-			// lands below the fold — trusted anyway.
+			// Success clears the in-flight marker and says nothing
+			// more: the refresh putting the effect on screen is the
+			// confirmation. We accept that a capture can land below the
+			// fold, unseen: it is trusted anyway.
 			m.status = ""
 		}
 		// The action's effect reaches the screen through the parked
@@ -460,9 +453,8 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.openRow(r)
 		}
 	case "tab":
-		// The Closed shelf toggles on tab (keyboard/priority grill,
-		// 2026-09-11 — h opened it, as "history", from 2026-08-02 until
-		// then; h sets held now): the done/cancelled shelf on the
+		// The Closed shelf toggles on tab (h once opened it, as
+		// "history"; h sets held now): the done/cancelled shelf on the
 		// dashboard's own list machinery. Browsing is reading, so watch
 		// mode gets it too.
 		if m.snap != nil {
@@ -477,9 +469,9 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor, m.status = 0, ""
 		}
 	case "r", "h", "i":
-		// Status moves (keyboard/priority grill, 2026-09-11): the key
-		// spells the destination — r ready (open), h hold, i inbox —
-		// and moveStatus applies the one rule for all three.
+		// Status moves: the key spells the destination — r ready
+		// (open), h hold, i inbox — and moveStatus applies the one rule
+		// for all three.
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask {
 			return m.moveStatus(r.task, moveKeys[k.String()])
 		}
@@ -488,17 +480,15 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.mode, m.back, m.target, m.input, m.status = modePriority, modeNav, r, textInput{}, ""
 		}
 	case "c":
-		// Cancel is c (status-vocabulary revision, 2026-08-01): the key
-		// spells its verb again.
+		// Cancel is c: the key spells its verb.
 		if r, ok := m.selected(); m.armed && ok && r.kind == rowTask && !terminalStatus(r.task.Status) {
 			m.mode, m.back, m.target, m.input, m.status = modeConfirmCancel, modeNav, r, textInput{}, ""
 		}
 	case "n":
-		// Quick capture (2026-07-31; n since the keyboard/priority grill,
-		// 2026-09-11 — i now sets inbox status): armed only — a watch
-		// pane never writes. No row target: capture is about the idea in
-		// your head, not the row under the cursor. A dashboard
-		// affordance: Closed keeps no write keys at all.
+		// Quick capture (on n, since i sets inbox status): armed only —
+		// a watch pane never writes. No row target: capture is about
+		// the idea in your head, not the row under the cursor. A
+		// dashboard affordance: Closed keeps no write keys at all.
 		if m.armed && !m.closed {
 			m.mode, m.back, m.target, m.input, m.status = modeCapture, modeNav, topRow{}, textInput{}, ""
 		}
@@ -506,14 +496,13 @@ func (m topModel) updateNav(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// moveKeys maps the status keys to the stored status words they write
-// (keyboard/priority grill, 2026-09-11): r "ready" is open, h "hold"
-// is held — the wire word, never the display word — and i is inbox.
+// moveKeys maps the status keys to the stored status words they write:
+// r "ready" is open, h "hold" is held — the wire word, never the
+// display word — and i is inbox.
 var moveKeys = map[string]string{"r": "open", "h": "held", "i": "inbox"}
 
 // steerable reports whether a task takes the keys that rewrite its
-// record — r/h/i and p (keyboard/priority grill, 2026-09-11): not a
-// closed record (browsed, not steered — Closed shelf, 2026-08-02) and
+// record — r/h/i and p: not a closed record (browsed, not steered) and
 // not under a live claim (pausing work someone holds goes through
 // cancel and its y/n). c stays live on a claim: cancel is how work is
 // taken off a holder.
@@ -521,13 +510,12 @@ func steerable(status, holder string) bool {
 	return !terminalStatus(status) && holder == ""
 }
 
-// moveStatus is one r/h/i press on a task (keyboard/priority grill,
-// 2026-09-11): one PATCH with the status field and no confirm — every
-// move is undone by the next keystroke, so the y/n that guards the
-// irreversible cancel would only slow steering here. Silently dead on
-// a task that is not steerable, and silently a no-op when the task is
-// already in that status — a blocked task is open, so r is the no-op
-// there and h/i move it.
+// moveStatus is one r/h/i press on a task: one PATCH with the status
+// field and no confirm — every move is undone by the next keystroke, so
+// the y/n that guards the irreversible cancel would only slow steering
+// here. Silently dead on a task that is not steerable, and silently a
+// no-op when the task is already in that status — a blocked task is
+// open, so r is the no-op there and h/i move it.
 func (m topModel) moveStatus(t stateTask, status string) (tea.Model, tea.Cmd) {
 	if !steerable(t.Status, t.Holder) || t.Status == status {
 		return m, nil
@@ -541,12 +529,11 @@ func (m topModel) moveStatus(t stateTask, status string) (tea.Model, tea.Cmd) {
 
 // openRow is what enter — and a click on the already-selected row —
 // does: open the task view. A Needs Input row opens its task's view
-// with that escalation preselected (task-view rework, 2026-08-01 —
-// superseding the 2026-07-30 inline answer prompt: dogfooding showed
-// answering needs the task's context on screen, so the task view is
-// where answering happens now); a plain task row opens its biography
-// with the title stop focused at the top of the view. Watch mode gets
-// the same view, read-only.
+// with that escalation preselected (it replaced an inline answer
+// prompt: dogfooding showed answering needs the task's context on
+// screen, so the task view is where answering happens); a plain task
+// row opens its biography with the title stop focused at the top of the
+// view. Watch mode gets the same view, read-only.
 func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 	id := r.task.ID
 	if r.kind == rowEscalation {
@@ -567,18 +554,18 @@ func (m topModel) openRow(r topRow) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// updateMouse (dogfood steering, 2026-07-31): a single click moves the
-// cursor to the row under the pointer; a click on the already-selected
-// row acts as enter — which is also exactly what a double-click is: the
-// first press selects, the second finds the row selected. The wheel
-// falls out for free: the list scrolls by moving the cursor (windowing
-// follows it), the detail scrolls its line window. Input modes ignore
-// the mouse entirely — rowAt and detailStopAt are never consulted while
-// a prompt box is open (prompt overlay, 2026-09-11), so a click cannot
-// act on the row under the box or disturb a pending answer or confirm.
-// Watch mode normally never sees a MouseMsg — tracking is armed-only
-// (see runTUI) — but if one arrives anyway, openRow keeps the read-only
-// contract: a disarmed pane opens detail, never input.
+// updateMouse: a single click moves the cursor to the row under the
+// pointer; a click on the already-selected row acts as enter — which is
+// also exactly what a double-click is: the first press selects, the
+// second finds the row selected. The wheel falls out for free: the list
+// scrolls by moving the cursor (windowing follows it), the detail
+// scrolls its line window. Input modes ignore the mouse entirely —
+// rowAt and detailStopAt are never consulted while a prompt box is
+// open, so a click cannot act on the row under the box or disturb a
+// pending answer or confirm. Watch mode normally never sees a MouseMsg
+// — tracking is armed-only (see runTUI) — but if one arrives anyway,
+// openRow keeps the read-only contract: a disarmed pane opens detail,
+// never input.
 func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if m.mode != modeNav && m.mode != modeDetail {
 		return m, nil
@@ -637,7 +624,7 @@ func (m topModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 }
 
 // renderWidth is the width every render pass draws to: the terminal's,
-// or 80 — the mockup's design width — before the first WindowSizeMsg.
+// or 80 — the layout's design width — before the first WindowSizeMsg.
 func (m topModel) renderWidth() int {
 	if m.width <= 0 {
 		return 80
@@ -733,18 +720,17 @@ func (m topModel) updateInput(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	// The widget wraps and walks rows at the box's inner width — the
-	// width the box renders them at (prompt overlay, 2026-09-11).
+	// width the box renders them at.
 	m.input = m.input.handleKey(k, m.promptInner())
 	return m, nil
 }
 
-// pickPriority is the priority picker's key handling (keyboard/
-// priority grill, 2026-09-11): a digit writes that priority at once
-// and closes, - clears it (clear_priority) and closes, esc closes with
-// no write, and every other key is ignored — a picker, not a text
-// field, so a priority outside 0-9 set elsewhere shows in the label's
-// "now" and is overwritten or cleared here, never retyped. ctrl+c
-// quits, like every mode.
+// pickPriority is the priority picker's key handling: a digit writes
+// that priority at once and closes, - clears it (clear_priority) and
+// closes, esc closes with no write, and every other key is ignored — a
+// picker, not a text field, so a priority outside 0-9 set elsewhere
+// shows in the label's "now" and is overwritten or cleared here, never
+// retyped. ctrl+c quits, like every mode.
 func (m topModel) pickPriority(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	api, id := m.api, m.target.task.ID
 	s := k.String()
@@ -776,9 +762,8 @@ func (m topModel) promptInner() int {
 }
 
 // updateDetail: the armed task view steers the viewed task in place
-// (dogfood steering, 2026-07-30 — no more esc → navigate → answer round
-// trips): the focus ring walks every actionable field (field focus
-// ring, 2026-08-02 — retiring the undiscoverable e/E chords), enter
+// (no esc → navigate → answer round trips): the focus ring walks every
+// actionable field (it replaced the undiscoverable e/E chords), enter
 // opens the focused stop's editor, p reprioritizes, c cancels, all
 // with the same prompts and confirms as the list. Watch mode keeps
 // the read-only contract: no focus, no input, ↑/↓ and j/k scroll, esc
@@ -790,7 +775,7 @@ func (m topModel) promptInner() int {
 // scroll one line otherwise. The description is the last stop, so j
 // below it line-scrolls the history into view; k above the title
 // line-scrolls back up. r/h/i move the viewed task's status, exactly
-// as p and c act on it (keyboard/priority grill, 2026-09-11).
+// as p and c act on it.
 func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	stops := m.detailStops()
 	focus := detailFocusIdx(m.detailFocus, len(stops))
@@ -798,9 +783,9 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "esc":
-		// The edge-hop back stack (edge rows, 2026-08-11): esc pops to
-		// the task view the hop came from; from the first task it steps
-		// back to the list — dashboard or Closed, whichever is under it.
+		// The edge-hop back stack: esc pops to the task view the hop
+		// came from; from the first task it steps back to the list —
+		// dashboard or Closed, whichever is under it.
 		if n := len(m.detailBack); n > 0 {
 			m.detailID, m.detailBack = m.detailBack[n-1], m.detailBack[:n-1]
 			m.detailScroll, m.detailFocus = 0, 0
@@ -828,14 +813,14 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.openStop(stops[focus])
 		}
 	case "e":
-		// The context toggle (escalation readability, 2026-08-11): an
-		// escalation's context block trades places with its collapsed
-		// stub. With an escalation stop focused, e flips that one; watch
-		// mode has no focus ring, so e flips every open escalation of the
-		// view — expansion is reading, and a disarmed pane still reads.
-		// Armed with focus elsewhere, e does nothing: the ring is the
-		// selector. (The one-day e/E edit chords retired 2026-08-02 stay
-		// retired; this is a new binding on the freed key.)
+		// The context toggle: an escalation's context block trades
+		// places with its collapsed stub. With an escalation stop
+		// focused, e flips that one; watch mode has no focus ring, so e
+		// flips every open escalation of the view — expansion is
+		// reading, and a disarmed pane still reads. Armed with focus
+		// elsewhere, e does nothing: the ring is the selector. (The
+		// short-lived e/E edit chords stay retired; this is a new
+		// binding on the freed key.)
 		var ids []string
 		if focus >= 0 && stops[focus].kind == stopEscalation {
 			ids = []string{stops[focus].esc.ID}
@@ -851,15 +836,13 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.escExpanded[id] = !m.escExpanded[id]
 		}
 	case "r", "h", "i":
-		// The same status moves as the list, on the viewed task
-		// (keyboard/priority grill, 2026-09-11).
+		// The same status moves as the list, on the viewed task.
 		if t, ok := m.viewedTask(); m.armed && ok {
 			return m.moveStatus(t, moveKeys[k.String()])
 		}
 	case "p":
-		// Dead on a closed record (Closed shelf, 2026-08-02: browsed,
-		// not steered) and under a live claim (keyboard/priority grill,
-		// 2026-09-11) — the steerable rule. c below stays live on a
+		// Dead on a closed record (browsed, not steered) and under a
+		// live claim — the steerable rule. c below stays live on a
 		// claim: cancel is how work is taken off a holder.
 		if t, ok := m.viewedTask(); m.armed && ok && steerable(t.Status, t.Holder) {
 			m.mode, m.back = modePriority, modeDetail
@@ -876,9 +859,8 @@ func (m topModel) updateDetail(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // The task view's focusable stops, in render order: title, the
 // priority and labels meta lines, each open escalation, each edge row
-// (DEPENDS ON, then NEEDED BY — edge rows, 2026-08-11), then the
-// description body. Bars and the read-only meta lines (id, status,
-// created) are never stops.
+// (DEPENDS ON, then NEEDED BY), then the description body. Bars and the
+// read-only meta lines (id, status, created) are never stops.
 const (
 	stopTitle       = "title"
 	stopPriority    = "priority"
@@ -901,15 +883,14 @@ type detailStop struct {
 // body — the same order they render in, which is what lets detailLines
 // tag lines by position. Empty in watch mode: the disarmed pane stays
 // fully read-only, so it has no focus to act on. A terminal task loses
-// the priority and labels stops (Closed shelf, 2026-08-02; labels
-// editable, 2026-08-05): a closed record is browsed, not steered —
-// but keeps its edge stops, because an edge hop is navigation, not
-// steering. A task under a live claim loses the priority stop alone
-// (keyboard/priority grill, 2026-09-11): the stop opens the picker p
-// opens, and p is dead there — the steerable rule, so the ring never
-// offers what the key refuses. An edge that does not resolve in the
-// snapshot is never a stop: it has no view to open, so its row stays
-// plain (the taskRef never-invent rule, applied to selection).
+// the priority and labels stops: a closed record is browsed, not
+// steered — but keeps its edge stops, because an edge hop is
+// navigation, not steering. A task under a live claim loses the
+// priority stop alone: the stop opens the picker p opens, and p is dead
+// there — the steerable rule, so the ring never offers what the key
+// refuses. An edge that does not resolve in the snapshot is never a
+// stop: it has no view to open, so its row stays plain (the taskRef
+// never-invent rule, applied to selection).
 func (m topModel) detailStops() []detailStop {
 	if !m.armed || m.snap == nil {
 		return nil
@@ -946,9 +927,9 @@ func (m topModel) detailStops() []detailStop {
 // which is how click-to-open on edge rows falls out of the existing
 // machinery for free.
 func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
-	// An edge stop navigates instead of editing (edge rows, 2026-08-11):
-	// push the current task and open the target's view in place; esc
-	// pops back through the visited views (updateDetail).
+	// An edge stop navigates instead of editing: push the current task
+	// and open the target's view in place; esc pops back through the
+	// visited views (updateDetail).
 	if s.kind == stopDep || s.kind == stopNeededBy {
 		m.detailBack = append(m.detailBack, m.detailID)
 		m.detailID, m.detailScroll, m.detailFocus, m.status = s.task, 0, 0, ""
@@ -974,13 +955,13 @@ func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
 	case stopLabels:
 		// One comma-joined line ("tui, design"): the same list syntax as
 		// `tuhdoo update --labels`, edited in place. A comma inside a
-		// label is unrepresentable on every surface — accepted.
+		// label is unrepresentable on every surface — accepted as a limit.
 		labels := strings.Join(m.snap.tasks[t.ID].Task.Labels, ", ")
 		m.mode, m.back = modeEditLabels, modeDetail
 		m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(labels, false), labels, ""
 	case stopDescription:
 		// Multi-line in the shared widget itself, never a separate
-		// editor or $EDITOR (Brandon, 2026-07-31).
+		// editor or $EDITOR.
 		desc := m.snap.tasks[t.ID].Task.Description
 		m.mode, m.back = modeEditDesc, modeDetail
 		m.target, m.input, m.editWas, m.status = topRow{kind: rowTask, task: t}, editInput(desc, true), desc, ""
@@ -991,9 +972,9 @@ func (m topModel) openStop(s detailStop) (tea.Model, tea.Cmd) {
 // detailEscalations lists the viewed task's unanswered escalations in
 // ULID order: the rows of the task view's NEEDS INPUT section. Both
 // modes render them — watch just never selects one. A terminal task
-// has none by definition (Closed shelf, 2026-08-02): an unanswered
-// escalation on a finished task is part of the record, so it renders
-// in the History section instead of a section soliciting answers.
+// has none by definition: an unanswered escalation on a finished task
+// is part of the record, so it renders in the History section instead
+// of a section soliciting answers.
 func (m topModel) detailEscalations() []escalationJSON {
 	if m.snap == nil {
 		return nil
@@ -1048,11 +1029,11 @@ func (m topModel) selected() (topRow, bool) {
 
 // submit turns the pending input into one steering write, run as a
 // command so a slow daemon never freezes the view loop. A rejection
-// keeps the prompt open and says why on the box's hint line (inputErr
-// — prompt overlay, 2026-09-11; until then the status strip behind),
-// so the screen under the box stays exactly the no-prompt render.
-// The priority picker never submits: its keys act on their own
-// (pickPriority), so there is nothing to validate.
+// keeps the prompt open and says why on the box's hint line (inputErr,
+// not the status strip behind), so the screen under the box stays
+// exactly the no-prompt render. The priority picker never submits: its
+// keys act on their own (pickPriority), so there is nothing to
+// validate.
 func (m topModel) submit() (tea.Model, tea.Cmd) {
 	api, target, input := m.api, m.target, strings.TrimSpace(m.input.String())
 	m.inputErr = ""
@@ -1142,14 +1123,13 @@ type detailLine struct {
 	stop int
 }
 
-// detailLines renders the task view on the dashboard's visual language
-// (task-view rework, 2026-08-01): bold field names in the header block,
-// dashboard section bars, and the task's open escalations as selectable
-// rows under a NEEDS INPUT bar — the same gutter-bar/tint selection UI
-// as the list. Open escalations live in that section alone; History
-// keeps notes, runs, and answered escalations (the single-home rule the
-// dashboard already follows). Returns nil if the task vanished under a
-// refresh.
+// detailLines renders the task view on the dashboard's visual language:
+// bold field names in the header block, dashboard section bars, and the
+// task's open escalations as selectable rows under a NEEDS INPUT bar —
+// the same gutter-bar/tint selection UI as the list. Open escalations
+// live in that section alone; History keeps notes, runs, and answered
+// escalations (the single-home rule the dashboard already follows).
+// Returns nil if the task vanished under a refresh.
 func (m topModel) detailLines() []detailLine {
 	if m.snap == nil {
 		return nil
@@ -1191,10 +1171,10 @@ func (m topModel) detailLines() []detailLine {
 	// every resulting screen line — wrapped continuations and blank
 	// paragraph separators included — onto the two-cell mark column, so
 	// a focused block's selection gutter is continuous and unfocused
-	// continuations stay aligned (wrap-then-indent, 2026-08-02; the
-	// escalationRow wrapIndent precedent). add() indents first and
-	// wraps after, which strands continuations at column 0 — fine for
-	// chrome, wrong for a stop.
+	// continuations stay aligned (wrap-then-indent, the escalationRow
+	// wrapIndent precedent). add() indents first and wraps after, which
+	// strands continuations at column 0 — fine for chrome, wrong for a
+	// stop.
 	addBlock := func(stop int, text string) {
 		inner := width - 2
 		if inner < 10 {
@@ -1221,9 +1201,9 @@ func (m topModel) detailLines() []detailLine {
 		if h.Claim.Expires != nil {
 			status += fmt.Sprintf(" (lease expires %s)", stamp(*h.Claim.Expires))
 		}
-	// A terminal task's status line carries its close metadata (Closed
-	// shelf, 2026-08-02) at day precision — the browse granularity; the
-	// full instant lives on the ledger.
+	// A terminal task's status line carries its close metadata at day
+	// precision — the browse granularity; the full instant lives on the
+	// ledger.
 	case t.Status == "done" && t.ClosedAt != nil:
 		status += fmt.Sprintf(" — finished %s by %s", dayStamp(*t.ClosedAt), t.ClosedBy)
 	case t.Status == "cancelled" && t.ClosedAt != nil:
@@ -1236,8 +1216,8 @@ func (m topModel) detailLines() []detailLine {
 	}
 	field(prioStop, "priority", priorityWord(t.Priority))
 	// The labels line always renders — dim none placeholder when empty,
-	// the description-body pattern — armed, watch, and terminal alike
-	// (labels editable, 2026-08-05): one uniform rule.
+	// the description-body pattern — armed, watch, and terminal alike:
+	// one uniform rule.
 	labelsStop := -1
 	if !terminalStatus(t.Status) {
 		labelsStop = nextStop() // terminal tasks: rendered, never a stop
@@ -1247,9 +1227,9 @@ func (m topModel) detailLines() []detailLine {
 		labels = strings.Join(t.Labels, ", ")
 	}
 	field(labelsStop, "labels", labels)
-	// Loud blockage annotations only (2026-08-05 edge grill): the line
-	// renders when a human must act — loop membership, cancelled deps —
-	// never for ordinary waiting, which the depends-on refs already tell.
+	// Loud blockage annotations only: the line renders when a human
+	// must act — loop membership, cancelled deps — never for ordinary
+	// waiting, which the depends-on refs already tell.
 	if wn := waitingNote(m.snap.stateTaskOf(t.ID), m.snap.taskRef); wn != "" {
 		field(-1, "waiting", wn)
 	}
@@ -1257,10 +1237,10 @@ func (m topModel) detailLines() []detailLine {
 
 	// The escalations section: every open escalation, selectable. The
 	// task view's bars keep their hints where the dashboard's dropped
-	// theirs (keyboard/priority grill, 2026-09-11): enter means answer
-	// on these rows and edit elsewhere, and the context toggle is a
-	// section key with no other home. Watch mode keeps the toggle
-	// (expansion is reading), so its bar carries the hint too, alone.
+	// theirs: enter means answer on these rows and edit elsewhere, and
+	// the context toggle is a section key with no other home. Watch
+	// mode keeps the toggle (expansion is reading), so its bar carries
+	// the hint too, alone.
 	if open := m.detailEscalations(); len(open) > 0 {
 		add(-1, "")
 		hint := "e context "
@@ -1273,17 +1253,16 @@ func (m topModel) detailLines() []detailLine {
 		}
 	}
 
-	// The edge sections (2026-08-11 grill): DEPENDS ON — the old
-	// comma-joined field line de-blobbed into one row per edge, because
-	// a container's dep list read top-to-bottom is its progress
-	// checklist and the status word is the glanceable signal — then
-	// NEEDED BY, the reverse edges computed at render from the snapshot
-	// (no stored reverse index). Every dependent renders regardless of
-	// status (accuracy over noise; the dim status word carries the
-	// story), in ULID order. Rows whose target resolves are selectable
-	// stops: enter hops to the target's view, esc walks back. The task
-	// view's section bars are quiet chrome — shelf, not queue: bgDarkGray
-	// since bar recolors II (2026-08-25); was reverse-dim.
+	// The edge sections: DEPENDS ON — the old comma-joined field line
+	// de-blobbed into one row per edge, because a container's dep list
+	// read top-to-bottom is its progress checklist and the status word
+	// is the glanceable signal — then NEEDED BY, the reverse edges
+	// computed at render from the snapshot (no stored reverse index).
+	// Every dependent renders regardless of status (accuracy over
+	// noise; the dim status word carries the story), in ULID order.
+	// Rows whose target resolves are selectable stops: enter hops to
+	// the target's view, esc walks back. The task view's section bars
+	// are quiet chrome — shelf, not queue: bgDarkGray.
 	deps, dependents := t.DependsOn, m.snap.dependentsOf(t.ID)
 	if len(deps) > 0 || len(dependents) > 0 {
 		idW, statusW := edgeCols(m.snap, deps, dependents)
@@ -1321,9 +1300,9 @@ func (m topModel) detailLines() []detailLine {
 	add(-1, "")
 	addRaw(-1, barLine(col, col.bgDarkGray, " HISTORY", "", width))
 	// History keeps answered escalations (the single-home rule) — and,
-	// on a terminal task, the unanswered ones too (Closed shelf,
-	// 2026-08-02): the NEEDS INPUT section only serves open work, and a
-	// finished task's unanswered question is part of the record.
+	// on a terminal task, the unanswered ones too: the NEEDS INPUT
+	// section only serves open work, and a finished task's unanswered
+	// question is part of the record.
 	hh := h
 	hh.Escalations = nil
 	for _, e := range h.Escalations {
@@ -1351,11 +1330,11 @@ func (m topModel) detailLines() []detailLine {
 }
 
 // escalationRow renders one open escalation of the task view: badge
-// cell and question (bold, wrapped, line structure kept — escalation
-// readability, 2026-08-11: the agent's A)/B) options and recommendation
-// survive, where oneLine used to flatten them), any context, then dim
-// meta — all on the list's two-cell mark column, so the selection bar's
-// ▌ gutter and tint read exactly like the dashboard's rows.
+// cell and question (bold, wrapped, line structure kept: the agent's
+// A)/B) options and recommendation survive, where oneLine used to
+// flatten them), any context, then dim meta — all on the list's
+// two-cell mark column, so the selection bar's ▌ gutter and tint read
+// exactly like the dashboard's rows.
 //
 // The context collapses to a stub by default — its first screen line
 // plus a hidden-line count — so a fat context (old-style escalations
@@ -1431,11 +1410,10 @@ func edgeCols(s *snapshot, deps, dependents []string) (idW, statusW int) {
 
 // edgeRow renders one edge of the task view on the two-cell mark
 // column: bold short ID, dim status word, plain title — hard-truncated
-// to one line with an ellipsis, never wrapped (edge rows, 2026-08-11;
-// chosen over id+title alone because the status word is the glanceable
-// signal of a dep checklist). An edge the snapshot cannot resolve
-// renders its bare short ID — never an invented status (the taskRef
-// rule).
+// to one line with an ellipsis, never wrapped (chosen over id+title
+// alone because the status word is the glanceable signal of a dep
+// checklist). An edge the snapshot cannot resolve renders its bare
+// short ID — never an invented status (the taskRef rule).
 func edgeRow(col colors, idW, statusW int, id string, t stateTask, ok bool, width int) string {
 	short := event.ShortID(id)
 	if !ok {
@@ -1504,7 +1482,7 @@ func (m topModel) detailRevealScroll() int {
 // (with its optional status line), the blank separator, and the
 // footer. Counting the rendered strings keeps the window honest
 // against any footer shape. An open prompt changes nothing here: it
-// is an overlay over this same window (prompt overlay, 2026-09-11).
+// is an overlay over this same window.
 func (m topModel) detailWindow() int {
 	width := m.renderWidth()
 	w := m.height - strings.Count(m.listHead(width), "\n") - 1 -
@@ -1532,8 +1510,7 @@ func (m topModel) detailMaxScroll() int {
 func (m topModel) detailView(body []string) string {
 	width := m.renderWidth()
 	var w strings.Builder
-	// The same header bar as the list: one screen identity (task-view
-	// rework, 2026-08-01).
+	// The same header bar as the list: one screen identity.
 	w.WriteString(m.listHead(width))
 	scroll := m.detailScroll
 	if max := m.detailMaxScroll(); scroll > max {
@@ -1548,10 +1525,10 @@ func (m topModel) detailView(body []string) string {
 	}
 	w.WriteString(strings.Join(body, "\n"))
 	w.WriteString("\n\n")
-	// Same bottom-pinning as the list (chrome hierarchy, 2026-08-03):
-	// detailWindow already reserves the footer rows, so only the
-	// shortfall of a short body pads. detailStopAt needs no padding
-	// awareness — clicks below the body already miss every stop.
+	// Same bottom-pinning as the list: detailWindow already reserves
+	// the footer rows, so only the shortfall of a short body pads.
+	// detailStopAt needs no padding awareness — clicks below the body
+	// already miss every stop.
 	return pinFrame(w.String(), m.detailWindow()-len(body), m.detailFooter(), m.height)
 }
 
@@ -1576,14 +1553,12 @@ func pinFrame(content string, pad int, footer string, height int) string {
 // detailFooter is the task view's bottom lines: the same footer bar as
 // the list — the armed legend advertises steering; watch mode keeps
 // the read-only legend. It renders the legend whether or not a prompt
-// is open (prompt overlay, 2026-09-11 — until then the live prompt
-// rode here in the legend's slot). An armed view always has a focus
-// ring, so j/k always read "move"; "enter edit" covers the field
-// stops, while the NEEDS INPUT bar keeps carrying "enter answer" for
-// its own rows. The legend advertises only live keys: a closed record
-// drops r/h/i, p, and c (Closed shelf, 2026-08-02), a task under a
-// live claim keeps c alone (keyboard/priority grill, 2026-09-11 — the
-// steerable rule).
+// is open (the prompt is an overlay, never in the legend's slot). An
+// armed view always has a focus ring, so j/k always read "move"; "enter
+// edit" covers the field stops, while the NEEDS INPUT bar keeps
+// carrying "enter answer" for its own rows. The legend advertises only
+// live keys: a closed record drops r/h/i, p, and c, a task under a live
+// claim keeps c alone (the steerable rule).
 func (m topModel) detailFooter() string {
 	col := m.col
 	width := m.renderWidth()
@@ -1605,11 +1580,10 @@ func (m topModel) detailFooter() string {
 }
 
 // View renders the screen: the list or the task view, and — while an
-// input mode is live — the prompt box composited over it (prompt
-// overlay, 2026-09-11). The screen under the box is exactly what
-// renders with no prompt open, legend included: the row or task being
-// acted on stays in view, and nothing behind reflows when a prompt
-// opens or closes.
+// input mode is live — the prompt box composited over it. The screen
+// under the box is exactly what renders with no prompt open, legend
+// included: the row or task being acted on stays in view, and nothing
+// behind reflows when a prompt opens or closes.
 func (m topModel) View() string {
 	base := m.screenView()
 	p, open := m.prompt()
@@ -1650,14 +1624,14 @@ func (m topModel) screenView() string {
 	foot := "\n" + m.footerView(width)
 	headN, footN := strings.Count(head, "\n"), strings.Count(foot, "\n")
 	body := joinChunks(visibleChunks(m.listChunks(width), m.height, headN, footN))
-	// The footer pins to the bottom row (chrome hierarchy, 2026-08-03).
-	// rowAt needs no padding awareness: the pad sits below every row
-	// chunk, where clicks already miss.
+	// The footer pins to the bottom row. rowAt needs no padding
+	// awareness: the pad sits below every row chunk, where clicks
+	// already miss.
 	return pinFrame(head+body, m.height-headN-footN-strings.Count(body, "\n"), foot, m.height)
 }
 
 // syncStaleAfter is quiet sync's health bar: a last fetch older than
-// two default fetch intervals (T8: 60s) means the background cycle is
+// two default fetch intervals (60s each) means the background cycle is
 // not keeping up, and the glyph grows its age.
 const syncStaleAfter = 2 * time.Minute
 
@@ -1677,18 +1651,18 @@ func relAge(d time.Duration) string {
 	}
 }
 
-// syncSegs renders the header's sync state (quiet sync, chrome pass
-// 2026-08-21). Healthy syncing is a static dim ⇅ glyph alone — no
-// timestamp, no spinner: sync is a ~60s background cycle, and motion
-// would claim a liveness the screen cannot honestly show. Stale sync
-// adds the relative age in yellow ("⇅ 8m"); a syncing daemon with no
-// parseable fetch stamp is stale of unknown age, glyph alone.
-// local-only stays a word — remoteless is a normal mode (T2), and a
-// bare missing glyph would look broken. Errors stay loud text, red, on
-// one line: a git failure can span several (an unreachable or closed
-// ledger remote's usually does), and the header has exactly one. The
-// remote is quoted as given, so a URL target reads as plainly as a
-// name; where a pinned one came from is `tuhdoo status`'s to say.
+// syncSegs renders the header's sync state (quiet sync). Healthy
+// syncing is a static dim ⇅ glyph alone — no timestamp, no spinner:
+// sync is a ~60s background cycle, and motion would claim a liveness
+// the screen cannot honestly show. Stale sync adds the relative age in
+// yellow ("⇅ 8m"); a syncing daemon with no parseable fetch stamp is
+// stale of unknown age, glyph alone. local-only stays a word —
+// remoteless is a normal mode, and a bare missing glyph would look
+// broken. Errors stay loud text, red, on one line: a git failure can
+// span several (an unreachable or closed ledger remote's usually does),
+// and the header has exactly one. The remote is quoted as given, so a
+// URL target reads as plainly as a name; where a pinned one came from
+// is `tuhdoo status`'s to say.
 func syncSegs(col colors, s syncJSON, now time.Time) []seg {
 	switch s.Mode {
 	case "local-only":
@@ -1722,16 +1696,15 @@ func (m topModel) listHead(width int) string {
 	if m.snap != nil {
 		sync = syncSegs(col, m.snap.state.Sync, time.Now())
 	}
-	// Unfilled header (chrome hierarchy, 2026-08-03): the frame stops
-	// competing with content. The bold name is the repo-root basename,
-	// not the product (sense of place, chrome pass 2026-08-21): you
-	// know what you launched; you need to know which ledger this is.
-	// Badge only when special (same pass — absence is the normal state,
-	// the vim convention): dim watch when disarmed, "as <principal>" at
-	// normal weight when --as overrode the derived identity, nothing
-	// for an armed pane acting as its own derived identity. This
-	// revises the 2026-08-03 "armed must be glanceable" note:
-	// glanceability now means the special states are marked.
+	// Unfilled header: the frame stops competing with content. The bold
+	// name is the repo-root basename, not the product (sense of place):
+	// you know what you launched; you need to know which ledger this
+	// is. Badge only when special (absence is the normal state, the vim
+	// convention): dim watch when disarmed, "as <principal>" at normal
+	// weight when --as overrode the derived identity, nothing for an
+	// armed pane acting as its own derived identity. Glanceability
+	// means the special states are marked; the armed state is the
+	// unmarked normal.
 	var badge []seg
 	switch {
 	case !m.armed:
@@ -1743,12 +1716,12 @@ func (m topModel) listHead(width int) string {
 		append([]seg{{col.bold, " " + m.repoName}, {col.dim, " · "}}, sync...),
 		badge, width) + "\n"
 	if m.status != "" {
-		// The status strip (feedback only, chrome pass 2026-08-21):
-		// errors ride the loud bgRed bar, validation and in-flight
-		// markers the quiet chrome bar — a full-width strip, so
-		// feedback reads as frame, never as content. The actionMsg
-		// handler is the one writer of the "error: " prefix, which is
-		// what makes the prefix a safe discriminator.
+		// The status strip (feedback only): errors ride the loud bgRed
+		// bar, validation and in-flight markers the quiet chrome bar —
+		// a full-width strip, so feedback reads as frame, never as
+		// content. The actionMsg handler is the one writer of the
+		// "error: " prefix, which is what makes the prefix a safe
+		// discriminator.
 		style := col.bgDarkGray
 		if strings.HasPrefix(m.status, "error: ") {
 			style = col.bgRed
@@ -1758,7 +1731,7 @@ func (m topModel) listHead(width int) string {
 	return head + "\n"
 }
 
-// ---- the list screen (mock-a, 2026-07-31): bars and one column grid ----
+// ---- the list screen: bars and one column grid ----
 
 // The shared column grid: mark(2) + id + gap(2) + badge(2) + gap(2).
 // The ID column is derived per snapshot (idColWidth) with gridIDW as
@@ -1769,16 +1742,15 @@ const (
 	gridBadgeW = 2
 )
 
-// gridTitleCol is the column titles start at — derived, not const
-// (two-line rows, 2026-08-05): the ID column widens with the
-// snapshot's widest short ID.
+// gridTitleCol is the column titles start at — derived, not const: the
+// ID column widens with the snapshot's widest short ID.
 func gridTitleCol(idW int) int { return 2 + idW + 2 + gridBadgeW + 2 }
 
 // idColWidth derives the ID column width: the widest short ID across
 // every task in the snapshot, floored at gridIDW. Snapshot-stable —
 // never per-window — so the column cannot jitter while scrolling:
 // migrated t- IDs render 6 wide, minted tuh- IDs 8, and a mixed list
-// keeps one title column (gutter alignment, 2026-08-05).
+// keeps one title column.
 func idColWidth(s *snapshot) int {
 	w := gridIDW
 	for _, t := range s.state.Tasks {
@@ -1790,10 +1762,9 @@ func idColWidth(s *snapshot) int {
 }
 
 // topSection describes one dashboard section: which rows it collects
-// and its bar color. Bars carry no key hints (keyboard/priority grill,
-// 2026-09-11 — the per-section hints of 2026-07-31 are gone): the keys
-// work on every task in every bucket, so the footer legend is the
-// single place the dashboard advertises them.
+// and its bar color. Bars carry no key hints: the keys work on every
+// task in every bucket, so the footer legend is the single place the
+// dashboard advertises them.
 type topSection struct {
 	key   string
 	label string
@@ -1801,35 +1772,33 @@ type topSection struct {
 }
 
 var topSections = []topSection{
-	// "NEEDS INPUT", not "open escalations" (T7, 2026-07-30): the
-	// entity keeps its name; the header alone softens the severity the
-	// word overstates, and names no answerer — a future one may not be
-	// a human.
+	// "NEEDS INPUT", not "open escalations": the entity keeps its name;
+	// the header alone softens the severity the word overstates, and
+	// names no answerer — a future one may not be a human.
 	{"escalations", "NEEDS INPUT", func(c colors) string { return c.bgMagenta }},
 	{"ready", "READY", func(c colors) string { return c.bgGreen }},
 	{"inprogress", "IN PROGRESS", func(c colors) string { return c.bgYellow }},
-	// BLOCKED is black on bright red (bar recolors II, 2026-08-25,
-	// steering — reversing the 2026-08-04 dim-red muting): the
-	// background twin of the p0 badge's 91, same dark text as READY and
-	// IN PROGRESS; the bar joins the black-on-color dashboard, and the
-	// row's muted waiting: lead carries the "ordinary sequencing" tone.
+	// BLOCKED is black on bright red (a muted dim red was tried and
+	// reversed): the background twin of the p0 badge's 91, same dark
+	// text as READY and IN PROGRESS; the bar joins the black-on-color
+	// dashboard, and the row's muted waiting: lead carries the
+	// "ordinary sequencing" tone.
 	{"blocked", "BLOCKED", func(c colors) string { return c.bgRed }},
-	// The shelves (2026-07-31): held above inbox, both dim rows — parked
-	// and captured work sits below the live queue and never claims the
-	// eye. Bar recolors II (2026-08-25): held takes bgGray, black on
-	// slot-7 gray — bright enough for black text, so every dashboard bar
-	// reads black-on-color, and still distinct from inbox's bright-white
-	// bgWhite bar (bar recolors, 2026-08-04), which awaits attention.
+	// The shelves: held above inbox, both dim rows — parked and
+	// captured work sits below the live queue and never claims the eye.
+	// Held takes bgGray, black on slot-7 gray — bright enough for black
+	// text, so every dashboard bar reads black-on-color, and still
+	// distinct from inbox's bright-white bgWhite bar, which awaits
+	// attention.
 	{"held", "ON HOLD", func(c colors) string { return c.bgGray }},
 	{"inbox", "INBOX", func(c colors) string { return c.bgWhite }},
 }
 
-// closedSections are the Closed list's bars (Closed shelf,
-// 2026-08-02): finished work first under the green bar, cancellations
-// second under the quiet dark-gray chrome — bgDarkGray since bar
-// recolors II (2026-08-25); the brightened bgGray belongs to the
-// dashboard's ON HOLD alone — closed, kept, never claiming the eye.
-// The shelf is read-only in both panes.
+// closedSections are the Closed list's bars: finished work first under
+// the green bar, cancellations second under the quiet dark-gray chrome
+// — bgDarkGray; the brightened bgGray belongs to the dashboard's ON
+// HOLD alone — closed, kept, never claiming the eye. The shelf is
+// read-only in both panes.
 var closedSections = []topSection{
 	{"done", "DONE", func(c colors) string { return c.bgGreen }},
 	{"cancelled", "CANCELLED", func(c colors) string { return c.bgDarkGray }},
@@ -1895,8 +1864,8 @@ func barLine(col colors, style, left, right string, width int) string {
 // seg is one styled span of a composed chrome line. barLine styles a
 // whole line at once and pads by rune count over the raw string, so
 // embedding SGRs in its text would wreck the geometry; the unfilled
-// chrome (header, footer — chrome hierarchy, 2026-08-03) mixes styles
-// on one line, so segLine tracks visible width per segment instead.
+// chrome (header, footer) mixes styles on one line, so segLine tracks
+// visible width per segment instead.
 type seg struct{ style, text string }
 
 // segWidth is the visible width of a segment list in cells
@@ -1958,16 +1927,15 @@ func truncSegs(segs []seg, width int) []seg {
 	return out
 }
 
-// legendLine renders the unfilled footer legend (chrome hierarchy,
-// 2026-08-03): key tokens bold, labels and the · separators dim, the
-// optional right text (the done tally) dim and right-aligned. items are
-// {key, label} pairs. Bold keys live here only — the colored section
-// bars stay single-style because barLine pads by rune count. A legend
-// wider than the terminal wraps at item boundaries onto further lines
-// (keyboard/priority grill, 2026-09-11 — the armed list legend outgrew
-// 80 columns), each on the same one-space gutter; the right text rides
-// the last line, dropped there under segLine's fitting rule. A single
-// item wider than the terminal is truncated by segLine as before.
+// legendLine renders the unfilled footer legend: key tokens bold,
+// labels and the · separators dim, the optional right text (the done
+// tally) dim and right-aligned. items are {key, label} pairs. Bold keys
+// live here only — the colored section bars stay single-style because
+// barLine pads by rune count. A legend wider than the terminal wraps at
+// item boundaries onto further lines (the armed list legend outgrows 80
+// columns), each on the same one-space gutter; the right text rides the
+// last line, dropped there under segLine's fitting rule. A single item
+// wider than the terminal is truncated by segLine as before.
 func legendLine(col colors, items [][2]string, right string, width int) string {
 	var lines []string
 	left := []seg{{"", " "}}
@@ -1992,12 +1960,11 @@ func legendLine(col colors, items [][2]string, right string, width int) string {
 
 // gridRow renders a row's first line on the shared column grid: dim
 // id, badge, bold title — plain-ellipsized to the width, no suffix
-// fight (two-line rows, 2026-08-05: metadata lives on the meta line
-// now, so titles and metadata both win). Titles are bold in every
-// section (visual hierarchy, 2026-07-31) — shelf rows keep their dim
-// id and badge but the title reads full-strength, an accepted
-// consequence. Selection is no longer per-line styling: the
-// chunk-level bar (selectedText) carries it.
+// fight (metadata lives on the meta line, so titles and metadata both
+// win). Titles are bold in every section — shelf rows keep their dim id
+// and badge but the title reads full-strength, a cost we accept.
+// Selection is no longer per-line styling: the chunk-level bar
+// (selectedText) carries it.
 func gridRow(col colors, idW int, id, badge, badgeStyle, title string, width int) string {
 	budget := width - gridTitleCol(idW)
 	if budget < 2 {
@@ -2085,22 +2052,20 @@ func closeText(t stateTask) string {
 
 // rowChunk renders one selectable row as an unsplittable chunk; the
 // selected chunk is re-rendered as the full-height bar in one place,
-// after its section shape is built. Task rows are two-line (grill
-// 2026-08-05): full bold title, then a dim meta line — one rule across
-// every section, `[labels] · edges · <mode tail>` — rendered only when
-// non-empty, so a one-line row signals "no labels, no edges".
-// priorityBadgeStyle is the ready-row badge ramp (P0-highest grill,
-// 2026-08-21): p0 bright red — ANSI 91 since the contrast ramp
-// (2026-08-25): normal red reads low-contrast on dark themes, and
-// bright is in the 16-color palette, so it holds on every rung — p1
-// orange — 256-color rung only, falling back to yellow on the 16-color
-// floor, where the p1/p2 collision is the accepted cost of not faking
-// orange — p2 yellow, everything less urgent the same muted gray.
-// Negative priorities are possible (the int is unbounded) and more
-// urgent than 0, so they take bright red too. The ramp colors the
-// badge in every section (steering, 2026-08-25) — held, blocked,
-// inbox, and Closed rows included: priority is the fact being shown,
-// wherever the row lives.
+// after its section shape is built. Task rows are two-line: full bold
+// title, then a dim meta line — one rule across every section,
+// `[labels] · edges · <mode tail>` — rendered only when non-empty, so a
+// one-line row signals "no labels, no edges".
+// priorityBadgeStyle is the ready-row badge ramp (p0 is highest): p0
+// bright red — ANSI 91, because normal red reads low-contrast on dark
+// themes, and bright is in the 16-color palette, so it holds on every
+// rung — p1 orange — 256-color rung only, falling back to yellow on the
+// 16-color floor, where the p1/p2 collision is the accepted cost of not
+// faking orange — p2 yellow, everything less urgent the same muted
+// gray. Negative priorities are possible (the int is unbounded) and
+// more urgent than 0, so they take bright red too. The ramp colors the
+// badge in every section — held, blocked, inbox, and Closed rows
+// included: priority is the fact being shown, wherever the row lives.
 func priorityBadgeStyle(col colors, p int) string {
 	switch {
 	case p <= 0:
@@ -2121,11 +2086,11 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 	tcol := gridTitleCol(idW)
 	var text string
 	if r.kind == rowEscalation {
-		// Task-shaped three-liner (grill cycle, 2026-07-31): title line
-		// like every other section, the question on its own line, then
-		// the meta line with actor · stamp as its mode tail — the
-		// metadata sits on line 3 because the question outranks it. The
-		// red ! badge alone carries "blocking" — the word is gone.
+		// Task-shaped three-liner: title line like every other section,
+		// the question on its own line, then the meta line with actor ·
+		// stamp as its mode tail — the metadata sits on line 3 because
+		// the question outranks it. The red ! badge alone carries
+		// "blocking" — the word is gone.
 		e := r.esc
 		badge, style := blockingBadge(col, e.Blocking)
 		meta := append(metaParts(s, e.Task), e.Actor, stamp(e.RaisedAt))
@@ -2136,14 +2101,13 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		t := r.task
 		meta := metaParts(s, t.ID)
 		badge, badgeStyle, tail, tailStyle := "", "", "", ""
-		// The ramp badge renders in every section (steering, 2026-08-25
-		// — reversing the 2026-08-21 held-dim and no-badge-in-inbox/
-		// blocked/closed consequences): wherever a priority was set,
-		// the row says so in the ramp's colors, whatever the row's
-		// situation. Unprioritized still renders bare (P0-highest flip,
-		// 2026-08-21): no badge is the honest mark of "nobody set one".
-		// Escalation rows are the one exception — their badge cell
-		// carries the red !, and blocking outranks priority there.
+		// The ramp badge renders in every section — held rows undimmed,
+		// and inbox, blocked, and closed rows included: wherever a priority
+		// was set, the row says so in the ramp's colors, whatever the
+		// row's situation. Unprioritized still renders bare: no badge
+		// is the honest mark of "nobody set one". Escalation rows are
+		// the one exception — their badge cell carries the red !, and
+		// blocking outranks priority there.
 		if t.Priority != nil {
 			badge, badgeStyle = fmt.Sprintf("p%d", *t.Priority), priorityBadgeStyle(col, *t.Priority)
 		}
@@ -2153,9 +2117,8 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 			// meta line.
 			tail, tailStyle = "← "+t.Holder, col.yellow
 		case "done", "cancelled":
-			// Closed rows (Closed shelf, 2026-08-02): the close stamp
-			// and closing actor are the mode tail, dim with the rest of
-			// the meta line.
+			// Closed rows: the close stamp and closing actor are the
+			// mode tail, dim with the rest of the meta line.
 			if c := closeText(t); c != "" {
 				meta = append(meta, c)
 			}
@@ -2166,10 +2129,9 @@ func rowChunk(col colors, s *snapshot, r topRow, cursor bool, idW, width int) ch
 		}
 		if r.section == "blocked" {
 			// The waiting: line stays its own line below the meta line —
-			// a reason, not metadata. Its lead stays muted red (bar
-			// recolors II, 2026-08-25): the loud bright-red bar carries
-			// the section's urgency now; the row only explains it, and a
-			// reason line is not an alarm.
+			// a reason, not metadata. Its lead stays muted red: the
+			// loud bright-red bar carries the section's urgency; the
+			// row only explains it, and a reason line is not an alarm.
 			text += "\n" + secondLine(col, tcol, "waiting: ", col.dimRed, blockedReasonTUI(t, s.taskRef), width)
 		}
 	}
@@ -2275,12 +2237,10 @@ func joinChunks(cs []chunk) string {
 // prompt is the open input mode's box content, or false when no input
 // mode is live — one source for every screen, so each steering write
 // reads identically whether it was opened from the list or the task
-// view (prompt overlay, 2026-09-11; until then this was inputFooter,
-// the prompt riding the footer's slot). Text entry is the shared
-// widget's rows (textinput.go) under the label, the hint fixed below;
-// the two one-keystroke modes are not text inputs — the cancel y/n
-// confirm carries a sentence as its body, the priority picker no body
-// at all.
+// view. Text entry is the shared widget's rows (textinput.go) under the
+// label, the hint fixed below; the two one-keystroke modes are not text
+// inputs — the cancel y/n confirm carries a sentence as its body, the
+// priority picker no body at all.
 func (m topModel) prompt() (promptContent, bool) {
 	inner := m.promptInner()
 	text := func(label, verb string) promptContent {
@@ -2292,10 +2252,10 @@ func (m topModel) prompt() (promptContent, bool) {
 	case modeAnswer:
 		return text("answer · "+oneLine(m.target.esc.Question), "submits"), true
 	case modePriority:
-		// The picker (keyboard/priority grill, 2026-09-11): the label
-		// carries the value as it stands — read live, so a refresh under
-		// the open box keeps "now" honest — and the hint the three keys;
-		// there are no rows, because nothing is typed (pickPriority).
+		// The picker: the label carries the value as it stands — read
+		// live, so a refresh under the open box keeps "now" honest —
+		// and the hint the three keys; there are no rows, because
+		// nothing is typed (pickPriority).
 		now := "none"
 		if p := m.snap.stateTaskOf(m.target.task.ID).Priority; p != nil {
 			now = fmt.Sprintf("p%d", *p)
@@ -2303,9 +2263,8 @@ func (m topModel) prompt() (promptContent, bool) {
 		return promptContent{label: fmt.Sprintf("priority %s (%s) · now %s", short, title, now),
 			cursor: -1, hint: "0-9 sets · - clears · esc"}, true
 	case modeConfirmCancel:
-		// The confirm copy still ends "history stays on the ledger"
-		// (status-vocabulary revision, 2026-08-01): cancel is terminal,
-		// never a deletion.
+		// The confirm copy ends "history stays on the ledger": cancel
+		// is terminal, never a deletion.
 		body := strings.Split(strings.TrimRight(wrapTo("history stays on the ledger", inner), "\n"), "\n")
 		return promptContent{label: fmt.Sprintf("cancel %s (%s)?", short, title), body: body, cursor: -1, hint: "y/n"}, true
 	case modeCapture:
@@ -2325,10 +2284,9 @@ func (m topModel) prompt() (promptContent, bool) {
 
 // footerView is the footer bar (key legend left, done tally right),
 // full-width like the header — rendered whether or not a prompt is
-// open (prompt overlay, 2026-09-11). Since the section bars dropped
-// their hints (keyboard/priority grill, 2026-09-11) this legend is the
-// one place the dashboard's keys are advertised; watch mode's names
-// no steering key at all.
+// open. The section bars carry no key hints, so this legend is the one
+// place the dashboard's keys are advertised; watch mode's names no
+// steering key at all.
 func (m topModel) footerView(width int) string {
 	col := m.col
 	if m.closed {
@@ -2340,7 +2298,7 @@ func (m topModel) footerView(width int) string {
 	}
 	// "enter open" on every row: a Needs Input row opens its task's view
 	// with the question preselected — answering happens there, with the
-	// task's context on screen (task-view rework, 2026-08-01).
+	// task's context on screen.
 	legend := [][2]string{{"↑/↓ (j/k)", "move"}, {"enter", "open"}}
 	if m.armed {
 		legend = append(legend, [2]string{"r", "ready"}, [2]string{"h", "hold"}, [2]string{"i", "inbox"},
@@ -2357,9 +2315,9 @@ func (m topModel) footerView(width int) string {
 // ---- entry point ----
 
 // topActor resolves the acting human principal for steer mode: an
-// explicit --as wins; otherwise it derives from git identity per D7
-// (the local part of user.email). The TUI steers as a root human,
-// never as an agent.
+// explicit --as wins; otherwise it derives from git identity (the local
+// part of user.email). The TUI steers as a root human, never as an
+// agent.
 func topActor(as string) (string, error) {
 	if as == "" {
 		local, err := gitEmailLocalPart("")
@@ -2397,8 +2355,8 @@ func runTUI(args []string) int {
 		fmt.Fprintln(os.Stderr, "tuhdoo: --as means nothing in watch mode; a disarmed pane never acts")
 		return 1
 	}
-	// Guarded launch (T7): the TUI wants a terminal; a pipe, script, or
-	// CI run gets usage instead — what bare invocation always printed.
+	// Guarded launch: the TUI wants a terminal; a pipe, script, or CI
+	// run gets usage instead — what bare invocation always printed.
 	if !isTTY(os.Stdout) {
 		usage(os.Stderr)
 		return 1
@@ -2421,10 +2379,10 @@ func runTUI(args []string) int {
 		}
 		m.actor = actor
 		// The as badge marks an override of the derived identity, not
-		// the flag itself (badge only when special, 2026-08-21): --as
-		// with your own name is not special. When derivation fails with
-		// --as given, there is no derived identity to match — override
-		// by definition.
+		// the flag itself (badge only when special): --as with your own
+		// name is not special. When derivation fails with --as given,
+		// there is no derived identity to match — override by
+		// definition.
 		if as != "" {
 			derived, derr := gitEmailLocalPart("")
 			m.asOverride = derr != nil || derived != actor
@@ -2435,20 +2393,20 @@ func runTUI(args []string) int {
 		return code
 	}
 	m.c = c
-	// The header's sense of place (chrome pass, 2026-08-21): the bold
-	// name is the repo-root directory basename — which ledger this is,
-	// not what binary drew it.
+	// The header's sense of place: the bold name is the repo-root
+	// directory basename — which ledger this is, not what binary drew
+	// it.
 	m.repoName = filepath.Base(r.root)
 	if m.armed {
 		m.api = httpSteering{c: c, actor: m.actor}
 	}
-	// Mouse tracking is armed-only (T7, 2026-07-31): tracking captures
-	// the pointer, so terminal-native text selection needs shift-click
-	// while it is on — a real cost over SSH/tmux. The watch pane — the
-	// one left open to read and copy from — never enables it, keeping
-	// plain click-drag selection there; the model still guards clicks it
-	// would never see (updateMouse via openRow: select and read-only
-	// detail only, never input).
+	// Mouse tracking is armed-only: tracking captures the pointer, so
+	// terminal-native text selection needs shift-click while it is on —
+	// a real cost over SSH/tmux. The watch pane — the one left open to
+	// read and copy from — never enables it, keeping plain click-drag
+	// selection there; the model still guards clicks it would never see
+	// (updateMouse via openRow: select and read-only detail only, never
+	// input).
 	opts := []tea.ProgramOption{tea.WithAltScreen()}
 	if m.armed {
 		opts = append(opts, tea.WithMouseCellMotion())

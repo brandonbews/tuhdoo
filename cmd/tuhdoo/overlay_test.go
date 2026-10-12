@@ -1,7 +1,7 @@
 package main
 
-// The prompt overlay (2026-09-11): the compositor and the box renderer
-// are pure functions — table-driven tests over rendered lines (T1).
+// The prompt overlay: the compositor and the box renderer are pure
+// functions — table-driven tests over rendered lines.
 
 import (
 	"strings"

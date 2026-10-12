@@ -3,8 +3,7 @@ package main
 // Tests for the shared text-input widget (textinput.go): table-driven
 // editing operations in both modes, rendering goldens for the
 // fixed-hint box, and model-level checks that every TUI entry —
-// answer, priority, capture — runs on the same widget through Update
-// (T1: deterministic, table-driven).
+// answer, priority, capture — runs on the same widget through Update.
 
 import (
 	"strings"
@@ -282,9 +281,8 @@ func TestTextInputViewMultilineWraps(t *testing.T) {
 // ---- the widget through the model: one input loop for every entry ----
 
 // Every text entry edits mid-string through Update: capture and answer
-// run on the shared widget — no per-screen input handling. (Priority
-// is a one-keystroke picker, not a text entry, since the
-// keyboard/priority grill, 2026-09-11.)
+// run on the shared widget — no per-screen input handling. (Priority is
+// a one-keystroke picker, not a text entry.)
 func TestTopAllInputsEditMidString(t *testing.T) {
 	// Capture: fix a typo at the head, then rebuild a word by motion.
 	fake := newFakeSteering()
@@ -350,10 +348,10 @@ func TestTopInputAltChordsThroughUpdate(t *testing.T) {
 	}
 }
 
-// The hint never moves while typing (dogfood capture, 2026-08-01): in
-// every text entry it renders on its own line below the box,
-// byte-identical and on the same screen line before and after
-// keystrokes. (The priority picker takes no typing.)
+// The hint never moves while typing: in every text entry it renders on
+// its own line below the box, byte-identical and on the same screen
+// line before and after keystrokes. (The priority picker takes no
+// typing.)
 func TestTopInputHintFixedWhileTyping(t *testing.T) {
 	entries := map[string][]tea.KeyMsg{
 		"capture": {{Type: tea.KeyRunes, Runes: []rune{'n'}}},
@@ -386,11 +384,11 @@ func TestTopInputHintFixedWhileTyping(t *testing.T) {
 	}
 }
 
-// The capture box in the full frame at 80 columns, plain colors
-// (prompt overlay, 2026-09-11 — regenerated: the box is centered over
-// the list now, no longer the footer's slot): the list behind is
-// byte-identical to its no-prompt render outside the box, and the box
-// carries label, the typed row with the cursor glyph, and the hint.
+// The capture box in the full frame at 80 columns, plain colors (the
+// box is centered over the list, not in the footer's slot): the list
+// behind is byte-identical to its no-prompt render outside the box, and
+// the box carries label, the typed row with the cursor glyph, and the
+// hint.
 func TestTopGoldenCaptureBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
@@ -470,8 +468,8 @@ func TestEditInput(t *testing.T) {
 }
 
 // The title editor's box over the detail frame at 80 columns, plain
-// colors (prompt overlay, 2026-09-11 — regenerated): prefilled row,
-// cursor at the end, single-line hint; the task view behind unchanged.
+// colors: prefilled row, cursor at the end, single-line hint; the task
+// view behind unchanged.
 func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
@@ -490,9 +488,9 @@ func TestTopGoldenEditTitleBoxPlain80(t *testing.T) {
 }
 
 // The description editor's box over the detail frame at 80 columns,
-// plain colors (prompt overlay, 2026-09-11 — regenerated): the
-// multi-line prefill renders one gutter row per logical line, cursor
-// on the last, the ctrl+s hint fixed below; a six-line box.
+// plain colors: the multi-line prefill renders one gutter row per
+// logical line, cursor on the last, the ctrl+s hint fixed below; a
+// six-line box.
 func TestTopGoldenEditDescBoxPlain80(t *testing.T) {
 	m := newTopModelUnclaimed(newFakeSteering())
 	m.width, m.height = 80, 40

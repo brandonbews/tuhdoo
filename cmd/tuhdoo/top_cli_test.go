@@ -35,7 +35,7 @@ func refreshTop(t *testing.T, m topModel) topModel {
 }
 
 // daemonTask reads one task's hydration back from the daemon, through
-// the snapshot — the one read there is (T4, 2026-09-10).
+// the snapshot — the one read there is.
 func daemonTask(t *testing.T, c *client, id string) hydratedTask {
 	t.Helper()
 	s, err := fetchSnapshot(c)
@@ -131,8 +131,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 
 	// ---- answer the blocking escalation from the TUI ----
 	// Enter on the Needs Input row routes into the task view with the
-	// escalation preselected (task-view rework, 2026-08-01); enter there
-	// opens answer entry.
+	// escalation preselected; enter there opens answer entry.
 	if r, ok := m.selected(); !ok || r.kind != rowEscalation {
 		t.Fatalf("first row is not the escalation: %+v", m.rows)
 	}
@@ -178,7 +177,7 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Errorf("priority = %v, want 7", next.Task.Priority)
 	}
 
-	// ---- status moves and the priority clear (keyboard/priority grill, 2026-09-11) ----
+	// ---- status moves and the priority clear ----
 	// h on a ready row PATCHes status held — the stored word, never "on
 	// hold" — and the row lands on the ON HOLD shelf on the next poll; r
 	// from there PATCHes it back to open. Each is one task.updated, the
@@ -218,11 +217,11 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 
 	// ---- edit title and description from the task view ----
-	// The focus ring (2026-08-02): a plain open focuses the title, so
-	// enter edits it (single-line, prefilled); three stops down the ring
-	// is the description (multi-line, ctrl+s submits). Both go through
-	// the same PATCH — and task.updated ledger event — as `tuhdoo
-	// update`, so a restart replays the edits.
+	// The focus ring: a plain open focuses the title, so enter edits it
+	// (single-line, prefilled); three stops down the ring is the
+	// description (multi-line, ctrl+s submits). Both go through the
+	// same PATCH — and task.updated ledger event — as `tuhdoo update`,
+	// so a restart replays the edits.
 	m = refreshTop(t, m)
 	m = moveTo(t, m, wrong)
 	m, _ = press(t, m, keyOf(tea.KeyEnter))
@@ -274,8 +273,8 @@ func TestTopSteersRealDaemon(t *testing.T) {
 		t.Fatalf("status = %q, want cancelled", h.Task.Status)
 	}
 
-	// The task.cancelled event — stored bytes never change (T3) — lands
-	// on the data branch stamped with the acting human principal.
+	// The task.cancelled event — stored bytes never change — lands on
+	// the data branch stamped with the acting human principal.
 	// Non-eager writes ride the 2s debounce, so poll.
 	deadline := time.Now().Add(8 * time.Second)
 	var line string
@@ -315,10 +314,10 @@ func TestTopSteersRealDaemon(t *testing.T) {
 	}
 }
 
-// Quick capture against the real daemon (2026-07-31): i → title →
-// enter creates a real inbox task as the steering actor, it renders in
-// the INBOX section on the next poll, and the v2 task.created event —
-// status in the payload — lands on the data branch.
+// Quick capture against the real daemon: n → title → enter creates a
+// real inbox task as the steering actor, it renders in the INBOX
+// section on the next poll, and the v2 task.created event — status in
+// the payload — lands on the data branch.
 func TestTopQuickCaptureRealDaemon(t *testing.T) {
 	repo := newRepo(t)
 	if out, code := runCLI(t, repo, "init"); code != 0 {

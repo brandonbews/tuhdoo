@@ -1,13 +1,12 @@
 package main
 
-// The prompt overlay (keyboard/priority grill, 2026-09-11): every TUI
-// prompt — answer, priority, cancel y/n, capture, and the title,
-// description, and labels editors — renders in a centered bordered
-// box over the screen, lazygit-style, instead of riding the footer in
-// the key legend's slot. The screen behind stays fully rendered, so
-// the row or task being acted on stays in view under the box. Two
-// pure functions (T1): overlay composites rendered lines, promptBox
-// renders the box; neither touches the model.
+// The prompt overlay: every TUI prompt — answer, priority, cancel y/n,
+// capture, and the title, description, and labels editors — renders in
+// a centered bordered box over the screen, lazygit-style, instead of
+// riding the footer in the key legend's slot. The screen behind stays
+// fully rendered, so the row or task being acted on stays in view under
+// the box. Two pure functions: overlay composites rendered lines,
+// promptBox renders the box; neither touches the model.
 
 import (
 	"strings"

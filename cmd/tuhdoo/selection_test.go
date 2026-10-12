@@ -1,8 +1,8 @@
 package main
 
 // Table-driven tests for the selection-bar capability ladder and its
-// pure helpers (T1). The one impure seam, queryTermBG, is exercised
-// only through its pure downstream.
+// pure helpers. The one impure seam, queryTermBG, is exercised only
+// through its pure downstream.
 
 import (
 	"strings"
@@ -56,12 +56,12 @@ func TestSelectionBGLadder(t *testing.T) {
 	}
 }
 
-// The chrome-bar ladder (steering, 2026-08-27) mirrors the selection
-// ladder one register stronger: an answered query earns the ~15%
-// theme tint (vs the selection's 8%, so the surfaces stay distinct);
-// an unanswered 256-color TERM earns the dark/light-picked neutral
-// background — no pinned foreground on any rung, the theme's own fg
-// rides the bar; everything else keeps the floor's bright-black.
+// The chrome-bar ladder mirrors the selection ladder one register
+// stronger: an answered query earns the ~15% theme tint (vs the
+// selection's 8%, so the surfaces stay distinct); an unanswered
+// 256-color TERM earns the dark/light-picked neutral background — no
+// pinned foreground on any rung, the theme's own fg rides the bar;
+// everything else keeps the floor's bright-black.
 func TestChromeBGLadder(t *testing.T) {
 	tests := []struct {
 		name string

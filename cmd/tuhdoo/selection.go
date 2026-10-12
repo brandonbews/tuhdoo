@@ -1,12 +1,12 @@
 package main
 
-// Selection-bar styling for the TUI (2026-07-31): the selected chunk
-// renders as a full-height bar — a ▌ gutter on every line plus an
-// adaptive background tint resolved down a capability ladder. The
-// ladder and tint are pure functions; the terminal interaction lives
-// in the one queryTermBG seam, called once before the bubbletea
-// program starts. Since 2026-08-27 the quiet-chrome bars ride the
-// same answer down their own rung set (chromeBG).
+// Selection-bar styling for the TUI: the selected chunk renders as a
+// full-height bar — a ▌ gutter on every line plus an adaptive
+// background tint resolved down a capability ladder. The ladder and
+// tint are pure functions; the terminal interaction lives in the one
+// queryTermBG seam, called once before the bubbletea program starts.
+// The quiet-chrome bars ride the same answer down their own rung set
+// (chromeBG).
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ type bgAnswer struct {
 // Claude Code parity); anything else gets bright-black, the themed
 // gray. COLORTERM is deliberately an input the ladder never consults:
 // mosh advertises truecolor while swallowing the OSC 11 query
-// (empirical, 2026-07-31), so only an actual answer can unlock the
+// (observed empirically), so only an actual answer can unlock the
 // exact-tint rung.
 func selectionBG(ans bgAnswer, term, colorterm string, dark bool) string {
 	switch {
@@ -48,17 +48,16 @@ func selectionBG(ans bgAnswer, term, colorterm string, dark bool) string {
 }
 
 // chromeBG resolves the quiet-chrome bar background — the task view's
-// section bars and the CANCELLED bar of the Closed shelf — down the same ladder as
-// the selection bar, one register stronger (steering, 2026-08-27:
-// pinned indexed colors read foreign next to the user's theme). An
-// answered query earns a truecolor tint of the actual theme background
-// at ~15% versus the selection's 8%, so the two surfaces never read as
-// one another; an unanswered query on a 256-color TERM (the mosh
-// day-to-day case, where the palette is unreadable) earns a neutral
-// indexed background picked by the dark/light verdict; anything else
-// keeps the floor's bright-black bar. No foreground is pinned on any
-// rung: the theme's own default fg rides the bar. COLORTERM is never
-// consulted (2026-07-31).
+// section bars and the CANCELLED bar of the Closed shelf — down the
+// same ladder as the selection bar, one register stronger (pinned
+// indexed colors read foreign next to the user's theme). An answered
+// query earns a truecolor tint of the actual theme background at ~15%
+// versus the selection's 8%, so the two surfaces never read as one
+// another; an unanswered query on a 256-color TERM (the mosh day-to-day
+// case, where the palette is unreadable) earns a neutral indexed
+// background picked by the dark/light verdict; anything else keeps the
+// floor's bright-black bar. No foreground is pinned on any rung: the
+// theme's own default fg rides the bar. COLORTERM is never consulted.
 func chromeBG(ans bgAnswer, term string, dark bool) string {
 	switch {
 	case ans.ok:
