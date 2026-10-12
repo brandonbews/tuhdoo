@@ -1,7 +1,6 @@
 package syncer
 
-// The referee's half of the D6 confirmation gate (001 D6, revised
-// 2026-08-04; T8 "confirmation gate" row): the one deliberately
+// The referee's half of the confirmation gate: the one deliberately
 // synchronous sync in the system. The daemon judges; these two methods
 // carry the git legwork — GateHead answers "what head would a
 // confirmation push onto, and what does its state say", GatePush lands
@@ -25,7 +24,7 @@ import (
 // referee judges.
 //
 // With no remote configured the error matches gitx.ErrNoRemote: the
-// caller owns the T2 remoteless path (the daemon is the sole writer, so
+// caller owns the remoteless path (the daemon is the sole writer, so
 // its local verdict is final). A pinned target never answers that way
 // (checkRemote): a pinned ledger has a home that is not this machine,
 // so a local verdict would not be final. Any other error means the
@@ -62,7 +61,7 @@ func (s *Syncer) GateHead() (string, *core.State, error) {
 // e, built on top of head, pushed through the remote's atomic ref
 // compare-and-swap. The event touches no ref until the remote has
 // accepted the push, so a lost race leaves nothing behind — no local
-// commit to unwind, no stored bytes to rewrite (T3). An error matching
+// commit to unwind, no stored bytes to rewrite. An error matching
 // gitx.ErrNonFastForward means the remote moved past head (possibly a
 // competitor's confirmation landing first); the caller refetches and
 // re-judges. On success the confirmation is irrevocable: the local ref
@@ -94,7 +93,7 @@ func (s *Syncer) GatePush(head string, e event.Event) error {
 	}
 	tree[path] = oid
 
-	// Views ride every write (T6), under the same highest-wins guard as
+	// Views ride every write, under the same highest-wins guard as
 	// the daemon's own commits: views stamped by a newer generator are
 	// never overwritten — the event still lands, the newer peer renders.
 	format, err := s.stampFormat(tree)
@@ -118,7 +117,7 @@ func (s *Syncer) GatePush(head string, e event.Event) error {
 
 	if err := s.git.Push(s.remote, commit+":"+s.ref); err != nil {
 		if errors.Is(err, gitx.ErrNonFastForward) {
-			s.bumpCollisions() // gate contention is push contention (T8 telemetry)
+			s.bumpCollisions() // gate contention is push contention
 		}
 		return err
 	}

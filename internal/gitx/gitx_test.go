@@ -638,7 +638,7 @@ func TestPushRejectionClassification(t *testing.T) {
 		{
 			// The remote's internal ref-update race, lost: relayed on
 			// stderr, no rejection wording on stdout at all. The literal
-			// shape from the collision-harness storm (2026-08-03).
+			// shape from the collision-harness storm.
 			name:       "remote ref-lock race",
 			stderr:     "remote: error: cannot lock ref 'refs/heads/tuhdoo': is at 4bb2416435a37fcbdafe2ad3ea75e1c31f7f0b39 but expected d2f36340d15d29afa8c1fc4dcf1a26d21008eeaa\nTo /tmp/remote.git\n !\trefs/heads/tuhdoo:refs/heads/tuhdoo\t[remote rejected] (failed to update ref)\n",
 			contention: true,

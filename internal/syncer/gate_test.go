@@ -1,9 +1,9 @@
 package syncer
 
-// Tests for the D6 confirmation gate's syncer half (2026-08-04): the
-// merge chokepoint refuses to introduce a competing confirmation, and
-// GateHead/GatePush land verdicts through the remote's ref CAS with a
-// lost race leaving nothing behind.
+// Tests for the confirmation gate's syncer half: the merge chokepoint
+// refuses to introduce a competing confirmation, and GateHead/GatePush
+// land verdicts through the remote's ref CAS with a lost race leaving
+// nothing behind.
 
 import (
 	"errors"
@@ -203,7 +203,7 @@ func TestGateHeadRemoteless(t *testing.T) {
 	}
 	solo := New(g, st, Options{})
 	if _, _, err := solo.GateHead(); !errors.Is(err, gitx.ErrNoRemote) {
-		t.Fatalf("GateHead without a remote = %v, want ErrNoRemote (the caller owns the T2 remoteless path)", err)
+		t.Fatalf("GateHead without a remote = %v, want ErrNoRemote (the caller owns the remoteless path)", err)
 	}
 }
 

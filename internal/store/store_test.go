@@ -370,9 +370,9 @@ func TestLeasesDoNotTouchEvents(t *testing.T) {
 // the boundary replay judges past claims against, so it must read back
 // at exactly the instant it was written — a tombstone rounded down to
 // the second read as lapsed before a winner's claim minted later in the
-// same second, and replay re-adjudicated the settled contest (2026-09-11
-// collision-harness finding; T8: "live before the instant, lapsed from
-// it onward").
+// same second, and replay re-adjudicated the settled contest (a
+// collision-harness finding; a lease is live before the instant and
+// lapsed from it onward).
 func TestReleaseLeaseKeepsTheExactInstant(t *testing.T) {
 	s, _ := newStore(t)
 	instant := time.Date(2026, 9, 11, 17, 0, 0, 900_000_000, time.UTC)
@@ -414,7 +414,7 @@ func TestLeaseEncodingRoundTripsAndReadsOldFormat(t *testing.T) {
 		// A tombstone keeps its instant exactly: it is the boundary
 		// replay judges past claims against, and rounding it down
 		// re-adjudicated contests whose winner claimed in the same
-		// second as the stand-down (2026-09-11 harness finding).
+		// second as the stand-down (a collision-harness finding).
 		{"released tombstone", encodeLeaseTombstone(instant), instant, true},
 		{"old format without released field", []byte(`{"expires":"2026-08-04T09:30:00Z"}`), truncated, false},
 		{"old second-precision tombstone", []byte(`{"expires":"2026-08-04T09:30:00Z","released":true}`), truncated, true},
@@ -538,9 +538,9 @@ func TestAppendBatchRequiresInit(t *testing.T) {
 
 // A timer-driven flush that fails is logged at failure time and keeps
 // its events pending: nobody is waiting on the timer's error, so the
-// log line is the only place the failure can surface (Go-sweep audit
-// finding, 2026-08-27). Forcing the failure: a store whose branch was
-// never initialized refuses every append.
+// log line is the only place the failure can surface. Forcing the
+// failure: a store whose branch was never initialized refuses every
+// append.
 func TestBatcherBackgroundFlushFailureIsLogged(t *testing.T) {
 	setGitEnv(t)
 	dir := t.TempDir()
@@ -600,7 +600,7 @@ func (s *syncBuffer) String() string {
 }
 
 // Files staged with SetFiles ride the next commit alongside events —
-// the mechanism views (T6) travel on — and ReadFile reads them back.
+// the mechanism views travel on — and ReadFile reads them back.
 // A later SetFiles replaces the earlier staging wholesale: the fresh
 // render wins, and a page the fresh render did not stage is dropped.
 func TestFilesRideBatchesAndReadFile(t *testing.T) {
@@ -662,11 +662,11 @@ func (g *countingGit) CatFiles(oids []string) (map[string][]byte, error) {
 	return g.Git.CatFiles(oids)
 }
 
-// One batch per cold load (T2, 2026-09-10): a fresh Store over a
-// branch of N never-seen events costs exactly one CatFiles call
-// carrying all N OIDs plus the leases — one process, not N — and every
-// read after that issues none. The Store that wrote the blobs never
-// reads them back at all: what it commits, it caches as it goes.
+// One batch per cold load: a fresh Store over a branch of N
+// never-seen events costs exactly one CatFiles call carrying all N
+// OIDs plus the leases — one process, not N — and every read after
+// that issues none. The Store that wrote the blobs never reads them
+// back at all: what it commits, it caches as it goes.
 func TestLoadBatchesNeverSeenBlobs(t *testing.T) {
 	setGitEnv(t)
 	dir := t.TempDir()

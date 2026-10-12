@@ -1,20 +1,19 @@
 // Package store keeps tuhdoo's data — events, views, lease files — on
-// the never-checked-out data branch (design docs 002 T2/T3, 001 D9).
+// the never-checked-out data branch.
 //
-// The Store is the live replica (001 D2, 2026-09-10): it holds the
-// local head commit, the head's tree (path → blob OID), and the
-// decoded events and leases behind that tree in memory. Reads never
-// spawn git; git is touched only by Load (cold start, and the reload
-// that follows a lost compare-and-swap or an external move of the
-// ref) and by Commit. The Store is also the single mover of the data
-// ref (002 T2): every commit — a local batch, the syncer's union
-// merge, a fast-forward — goes through Commit or FastForward, so the
-// replica and the ref advance together. Every write is one commit
-// built from plumbing objects through the private index; the working
-// tree is untouched by construction. The index belongs to the
-// committing path alone: a load never touches it, and the first
-// commit after any reload (or after a failed commit) reseeds it from
-// the head before building on it.
+// The Store is the live replica: it holds the local head commit, the
+// head's tree (path → blob OID), and the decoded events and leases
+// behind that tree in memory. Reads never spawn git; git is touched
+// only by Load (cold start, and the reload that follows a lost
+// compare-and-swap or an external move of the ref) and by Commit. The
+// Store is also the single mover of the data ref: every commit — a
+// local batch, the syncer's union merge, a fast-forward — goes through
+// Commit or FastForward, so the replica and the ref advance together.
+// Every write is one commit built from plumbing objects through the
+// private index; the working tree is untouched by construction. The
+// index belongs to the committing path alone: a load never touches
+// it, and the first commit after any reload (or after a failed commit)
+// reseeds it from the head before building on it.
 package store
 
 import (
@@ -29,7 +28,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/gitx"
 )
 
-// DefaultRef is the data branch: a normal visible branch (T2), never
+// DefaultRef is the data branch: a normal visible branch, never
 // checked out.
 const DefaultRef = "refs/heads/tuhdoo"
 
@@ -43,7 +42,8 @@ const maxCASRetries = 5
 // ErrUndecodable marks a blob the store could read from git but could
 // not decode as the event or lease its path says it is. Callers that
 // must skip rather than fail on an unreadable head (the syncer's
-// confirmation guard) branch on it; everything else fails, as T3 asks.
+// confirmation guard) branch on it; everything else fails rather than
+// skip what it cannot read.
 var ErrUndecodable = errors.New("store: blob does not decode")
 
 // LeaseState is a decoded lease file: its expiry and whether it is a
@@ -73,7 +73,7 @@ type Store struct {
 	// commit and the expected old value of its compare-and-swap.
 	head string
 	// tree is the head commit's tree: path → blob OID for every file
-	// on the branch. The private index (T2) mirrors it at every commit.
+	// on the branch. The private index mirrors it at every commit.
 	tree map[string]string
 	// indexStale is true whenever the private index is not known to
 	// hold exactly tree: at construction, after every load or reload
@@ -268,9 +268,9 @@ func copyTree(tree map[string]string) map[string]string {
 }
 
 // Changed returns the subset of files whose bytes are not already at
-// their path in the head tree — the object-ID diff of T2 (2026-09-10)
-// without writing anything. The daemon runs every re-render through it
-// (T6: views are staged only when their bytes change), so an unchanged
+// their path in the head tree — an object-ID diff, computed without
+// writing anything. The daemon runs every re-render through it
+// (views are staged only when their bytes change), so an unchanged
 // page costs a hash in memory and nothing else. Every file is hashed;
 // no git is spawned. Empty before the first load (nothing is known to
 // be unchanged).
@@ -287,10 +287,10 @@ func (s *Store) Changed(files map[string][]byte) map[string][]byte {
 }
 
 // WriteBlobs computes each file's object ID in memory and writes only
-// the blobs whose OID is not already at that path in against — the
-// object-ID diff of T2 (2026-09-10): a rendered view or a lease whose
-// bytes did not change costs nothing, a genuinely new blob costs one
-// `hash-object -w`. Returns path → OID for every file, written or not.
+// the blobs whose OID is not already at that path in against — an
+// object-ID diff: a rendered view or a lease whose bytes did not
+// change costs nothing, a genuinely new blob costs one `hash-object
+// -w`. Returns path → OID for every file, written or not.
 // The syncer's merge re-render goes through here too, against the
 // merged tree, so it writes only the pages a merge actually changed.
 func (s *Store) WriteBlobs(files map[string][]byte, against map[string]string) (map[string]string, error) {
@@ -558,7 +558,7 @@ func (s *Store) moveRefLocked(newHead, old string) error {
 // cut down to its events and leases: those are valid against any
 // head, but the rendered files were computed against a state the
 // reload has superseded, and landing them now could overwrite pages a
-// newer generator stamped on the moved head (T6: highest stamp wins).
+// newer generator stamped on the moved head (the highest stamp wins).
 // The daemon's next refresh re-renders from the merged state.
 func (s *Store) AppendBatch(b Batch) error {
 	if b.empty() {

@@ -201,7 +201,7 @@ func TestDivergentWritesConvergeAndClaimRaceResolves(t *testing.T) {
 	cycle(t, b) // fast-forwards to the merge
 	sameTrees(t, a, b)
 
-	// Both machines agree on the D6 verdict.
+	// Both machines agree on the claim verdict.
 	for _, p := range []peer{a, b} {
 		s := stateOf(t, p)
 		if got := s.Claims[claimA].Status; got != core.ClaimActive {
@@ -376,7 +376,7 @@ func TestLeaseRenewalSurvivesMerge(t *testing.T) {
 }
 
 // TestLeaseMergeTombstoneRules is the literal-tree table test for the
-// leases/ same-path rule (2026-08-04): a released tombstone beats a
+// leases/ same-path rule: a released tombstone beats a
 // plain lease in either direction, two tombstones keep the earlier
 // close, two plain leases keep the later expiry — and both merge
 // directions produce the identical tree, so a stand-down's immediate

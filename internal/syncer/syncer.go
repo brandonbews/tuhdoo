@@ -1,11 +1,11 @@
-// Package syncer is the background sync loop (002 T2/T8, 001 D2): fetch
-// the remote data branch, merge divergence at the application level,
-// push. It is the network half of tuhdoo's convergence story; the local
-// half is the daemon's serialized writer. The syncer never moves the
-// local ref itself (T2, 2026-09-10: the store is the single mover): a
-// fast-forward and a union merge both land through the store, so the
-// daemon's replica and the ref advance together, and its replays read
-// decoded events and leases from the store's cache by OID.
+// Package syncer is the background sync loop: fetch the remote data
+// branch, merge divergence at the application level, push. It is the
+// network half of tuhdoo's convergence story; the local half is the
+// daemon's serialized writer. The syncer never moves the local ref
+// itself (the store is the single mover): a fast-forward and a union
+// merge both land through the store, so the daemon's replica and the
+// ref advance together, and its replays read decoded events and leases
+// from the store's cache by OID.
 package syncer
 
 import (
@@ -27,7 +27,7 @@ import (
 // (warnIfRewound), and the cycle heals it.
 const TrackingRef = "refs/tuhdoo/remote"
 
-// DefaultInterval is the T8 fetch cadence.
+// DefaultInterval is the fetch cadence.
 const DefaultInterval = 60 * time.Second
 
 // maxCycleRetries bounds one cycle's fetch-merge-push loop when the
@@ -45,7 +45,7 @@ type Status struct {
 	LastFetch  time.Time
 	LastPush   time.Time
 	LastError  string
-	Collisions int // non-fast-forward pushes encountered (T8 evidence)
+	Collisions int // non-fast-forward pushes encountered
 	Merges     int
 }
 
@@ -182,7 +182,7 @@ func (s *Syncer) Run() {
 
 // Poke requests an immediate cycle — the daemon calls this after eager
 // flushes (claims, escalations) so they hit the wire without waiting for
-// the interval (T8).
+// the interval.
 func (s *Syncer) Poke() {
 	select {
 	case s.poke <- struct{}{}:
@@ -217,8 +217,8 @@ func (s *Syncer) cycleAndRecord() {
 	defer s.mu.Unlock()
 	if err != nil {
 		// Unreachable remotes are routine (offline is a degradation,
-		// not an error state worth screaming about — D10); record and
-		// carry on.
+		// not an error state worth screaming about); record and carry
+		// on.
 		s.status.Mode = "error"
 		s.status.LastError = err.Error()
 		return
@@ -229,7 +229,7 @@ func (s *Syncer) cycleAndRecord() {
 // Cycle runs one ref check → fetch → merge → push pass. Exported for
 // tests and for a future `tuhdoo sync` command. The ref check runs
 // first, remote or not: a remoteless daemon must notice a `branch -f`
-// within a cycle just as a syncing one does (001 D2, 2026-09-10).
+// within a cycle just as a syncing one does.
 func (s *Syncer) Cycle() error {
 	if err := s.noticeExternalMove(); err != nil {
 		return err
@@ -272,7 +272,7 @@ func (s *Syncer) Cycle() error {
 		}
 		if errors.Is(err, gitx.ErrNonFastForward) {
 			// Someone pushed between our fetch and push: go around
-			// again — fetch their work, merge, retry (D6 in action).
+			// again — fetch their work, merge, retry.
 			s.bumpCollisions()
 			continue
 		}
@@ -284,7 +284,7 @@ func (s *Syncer) Cycle() error {
 // checkRemote is the presence check every remote-touching path runs
 // before its first fetch: Cycle, GateHead, AdoptRemoteBranch. For the
 // unpinned origin default it asks git whether the remote is configured,
-// and an error matching gitx.ErrNoRemote is the T2 remoteless state —
+// and an error matching gitx.ErrNoRemote is the remoteless state —
 // each caller has its own local arm for it. A pinned target skips the
 // check and always answers nil: it must never read as remoteless, so
 // it never reaches a local arm, and a target that is missing,
@@ -300,15 +300,15 @@ func (s *Syncer) checkRemote() error {
 }
 
 // noticeExternalMove is the one place the ref is compared against git
-// outside the store's own commit path (001 D2, 2026-09-10, accepted):
-// one rev-parse per cycle. The store moves the ref and its replica
+// outside the store's own commit path, a cost accepted on purpose: one
+// rev-parse per cycle. The store moves the ref and its replica
 // together, so a ref that differs from the replica's head was moved
 // from outside — a manual fetch into it, a `branch -f` — and the
 // replica reloads from git (its next commit reseeds the private index
 // from the moved head) and the daemon refreshes. A store that has not
-// loaded yet simply loads. A
-// commit landing between the two reads makes the ref look moved for
-// one cycle; the reload is then a no-op that costs three processes.
+// loaded yet simply loads. A commit landing between the two reads
+// makes the ref look moved for one cycle; the reload is then a no-op
+// that costs three processes.
 func (s *Syncer) noticeExternalMove() error {
 	head := s.store.Head()
 	ref, err := s.git.ReadRef(s.ref)
@@ -343,9 +343,9 @@ func (s *Syncer) noticeExternalMove() error {
 // branch is still moved only by the store, and pushes are never forced.
 //
 // The refused fetch was also a tripwire for a rewound remote. That
-// tripwire is now a log warning plus self-heal (decided by Brandon,
-// 2026-10-12): fetch logs a move that is not forward (warnIfRewound),
-// and the cycle merges and pushes back whatever the remote dropped.
+// tripwire is now a log warning plus self-heal: fetch logs a move that
+// is not forward (warnIfRewound), and the cycle merges and pushes back
+// whatever the remote dropped.
 func (s *Syncer) fetchSpec() string {
 	return "+" + s.ref + ":" + TrackingRef
 }

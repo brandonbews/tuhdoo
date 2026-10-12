@@ -1,12 +1,12 @@
 package store
 
-// The store as live replica (001 D2 / 002 T2, 2026-09-10): head and
-// tree in memory, the private index reseeded by the first commit after
-// every load and reload (never by a load itself), blobs written only
-// when their bytes changed, and the store as the single mover of the
-// ref. Real git underneath a recording wrapper
-// that counts every call by method, so each test pins the subprocess
-// shape of an operation, not just its outcome.
+// The store as live replica: head and tree in memory, the private
+// index reseeded by the first commit after every load and reload
+// (never by a load itself), blobs written only when their bytes
+// changed, and the store as the single mover of the ref. Real git
+// underneath a recording wrapper that counts every call by method, so
+// each test pins the subprocess shape of an operation, not just its
+// outcome.
 
 import (
 	"errors"
@@ -296,7 +296,7 @@ func renderedFiles(n int, version map[string]int) map[string][]byte {
 // fixed processes: one new event and 166 rendered files of which 5
 // changed is six HashObject calls, one UpdateIndex, one WriteTree, one
 // CommitTree, one UpdateRef — and no LsTree, ReadRef, ReadTree, or
-// CatFiles on the success path (T2, 2026-09-10).
+// CatFiles on the success path.
 func TestCommitWritesOnlyChangedBlobs(t *testing.T) {
 	s, rg, dir := newRecordedStore(t)
 
@@ -406,7 +406,7 @@ func (m *movingGit) UpdateRef(ref, newOID, oldOID string) error {
 // A lost compare-and-swap reloads head and tree from git, and the
 // retry reseeds the index from the moved head before rebuilding on
 // it: the resulting tree carries both the concurrent change and ours.
-// This is the trap the design revision names — an index not reseeded
+// This is the trap a private index sets — an index not reseeded
 // after the reload would still hold our stale tree and the concurrent
 // event would vanish from the commit (write-tree writes whatever the
 // index holds). The mover is raw plumbing on purpose: a second Store
@@ -470,7 +470,7 @@ func TestAppendBatchRetriesOnLostCASAndKeepsBothChanges(t *testing.T) {
 
 // The retry drops the batch's rendered files: they were computed
 // against the state the reload superseded, and landing them could
-// overwrite pages a newer generator stamped on the moved head (T6).
+// overwrite pages a newer generator stamped on the moved head.
 // Events and leases ride the retry; views wait for the next render.
 func TestAppendBatchRetryDropsRenderedFiles(t *testing.T) {
 	s, rg, dir := newRecordedStore(t)
@@ -888,7 +888,7 @@ func TestCachesSurviveReloadAndRetry(t *testing.T) {
 }
 
 // A mode-0 removal through the index drops the path from the
-// committed tree (the shape D9 compaction will use); the replica and
+// committed tree (the shape compaction will use); the replica and
 // git agree afterwards.
 func TestCommitRemovesPathsThroughIndex(t *testing.T) {
 	s, rg, dir := newRecordedStore(t)

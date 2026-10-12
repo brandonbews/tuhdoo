@@ -14,11 +14,11 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/views"
 )
 
-// merge builds the app-level merge of two divergent data-branch heads
-// (002 T2): git's merge machinery is never invoked. The merged tree is
-// computed here — deterministically, so both machines merging the same
-// pair of heads (in either order) produce the same tree — and committed
-// with both heads as parents.
+// merge builds the app-level merge of two divergent data-branch heads:
+// git's merge machinery is never invoked. The merged tree is computed
+// here — deterministically, so both machines merging the same pair of
+// heads (in either order) produce the same tree — and committed with
+// both heads as parents.
 //
 // Per-area rules:
 //   - events/  : set union. The same path holding different content is
@@ -26,11 +26,11 @@ import (
 //     so it fails loudly as corruption. Union also means a file present
 //     on only one side always survives; for events that is correctness
 //     (append-only), and for leases it is harmless by construction —
-//     lease files are never deleted, only overwritten (2026-08-04), so
-//     a one-sided lease is simply news the other head hasn't heard yet,
-//     never a resurrection. One exception to the union (D6 writers'
-//     invariant, 2026-08-04): a one-sided claim.confirmed that competes
-//     with the other head's active confirmed claim is refused — see
+//     lease files are never deleted, only overwritten, so a one-sided
+//     lease is simply news the other head hasn't heard yet, never a
+//     resurrection. One exception to the union, so a task never holds
+//     two confirmations: a one-sided claim.confirmed that competes with
+//     the other head's active confirmed claim is refused — see
 //     confirmGuard below.
 //   - leases/  : same path on both sides → a released tombstone beats a
 //     plain lease regardless of expiry; two tombstones → the earlier
@@ -61,8 +61,8 @@ func (s *Syncer) merge(remote string) error {
 
 	// The store commits the union as changes against our tree, with
 	// the remote head as the second parent; it moves the ref and the
-	// replica together (T2: single mover). A head that moved since —
-	// a local batch, an external move — refuses the commit with
+	// replica together (it is the single mover). A head that moved
+	// since — a local batch, an external move — refuses the commit with
 	// ErrRefCASFailed, and the caller's next pass merges afresh.
 	_, err = s.store.Commit(ourHead, treeChanges(ourTree, merged), []string{remote}, "tuhdoo: merge\n")
 	if err != nil {
@@ -148,12 +148,12 @@ func treeChanges(from, to map[string]string) map[string]string {
 	return changes
 }
 
-// confirmGuard enforces the D6 writers' invariant (2026-08-04) at the
-// merge chokepoint: the merged tree never carries a confirmation for a
-// task whose other head already shows a different active confirmed
-// claim. It returns the event paths to leave out of the union — always
+// confirmGuard enforces the writers' invariant at the merge
+// chokepoint: the merged tree never carries a confirmation for a task
+// whose other head already shows a different active confirmed claim.
+// It returns the event paths to leave out of the union — always
 // one-sided claim.confirmed files, never settled history, so stored
-// bytes on any published head stand untouched (T3).
+// bytes on any published head stand untouched.
 //
 // Honest gates never trip this: a confirmation reaches a head only
 // after winning the remote's ref CAS, so competing confirmations cannot
@@ -286,7 +286,8 @@ func (s *Syncer) replayTreeFrozen(tree map[string]string) (*core.State, error) {
 
 // viewsPolicy reads both sides' view-format stamps and decides two
 // things: how non-event, non-lease path conflicts resolve, and whether
-// this binary regenerates views after the union (T6 highest-wins).
+// this binary regenerates views after the union (the highest stamp
+// wins).
 //
 //   - Neither side newer than us → we own the views: conflicts resolve
 //     by lexically-greater OID (arbitrary but symmetric — regeneration
@@ -335,7 +336,7 @@ func (s *Syncer) stampFormat(tree map[string]string) (int, error) {
 // overlayViews replaces the view paths in the merged tree with a fresh
 // render of the merged state, writing only the pages whose bytes
 // differ from what the tree already holds (store.WriteBlobs: the
-// object-ID diff of T2). A replay failure (fail-safe) skips the
+// object-ID diff). A replay failure (fail-safe) skips the
 // overlay: the tree merge is still valid, every machine of this binary
 // version skips identically, and the daemon degrades honestly on its
 // next refresh.
@@ -366,7 +367,7 @@ func (s *Syncer) replayTree(tree map[string]string) (*core.State, error) {
 // need the verdict to be a pure function of the tree (confirmGuard).
 // The tree is read by the store's reader — the one place that
 // classifies paths and batches the blob reads, and the owner of the
-// decode caches (T2, 2026-09-10) — so this replay and the store's head
+// decode caches — so this replay and the store's head
 // load compute the same lease set by construction, and a replay after
 // a fetch reads only the other side's new blobs; views are never read
 // back.

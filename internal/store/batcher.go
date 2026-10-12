@@ -8,23 +8,22 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// DefaultQuiet is the commit debounce (T8): a fleet's burst of events
+// DefaultQuiet is the commit debounce: a fleet's burst of events
 // becomes one commit, while the TUI still feels live.
 const DefaultQuiet = 2 * time.Second
 
 // Batcher accumulates events and commits them as one batch after a quiet
 // interval with no new additions. Flush commits eagerly — the decision
-// to do so for claims and escalations (T8) belongs to the daemon; the
+// to do so for claims and escalations belongs to the daemon; the
 // Batcher only supplies the mechanism.
 //
 // Error reporting: a background (timer-driven) flush that fails keeps
 // its events and files pending for the next attempt and logs the error
 // at failure time — through Log when set, the standard logger
-// otherwise — so a failed timer flush is never silent (Go-sweep audit
-// finding, decided 2026-08-27: the earlier LastError accessor had no
-// reader on the failure path, and a failure surfaced only if a later
-// synchronous Flush happened to run). Callers wanting synchronous
-// errors use Flush, which returns them directly.
+// otherwise — so a failed timer flush is never silent (an earlier
+// LastError accessor had no reader on the failure path, and a failure
+// surfaced only if a later synchronous Flush happened to run). Callers
+// wanting synchronous errors use Flush, which returns them directly.
 //
 // One mutex guards everything; the only concurrency is the time.Timer's
 // callback, which takes the same mutex. AppendBatch runs while holding
@@ -34,7 +33,7 @@ type Batcher struct {
 	store *Store
 	quiet time.Duration
 	// Log, when set, gets one line per commit with its size and cost —
-	// the daemon's evidence stream for what a write costs (001 D2 note).
+	// the daemon's evidence stream for what a write costs.
 	Log *log.Logger
 
 	mu      sync.Mutex
@@ -60,17 +59,16 @@ func (b *Batcher) Add(e event.Event) {
 	b.armLocked()
 }
 
-// SetFiles replaces the file blobs (views, T6) staged to ride the next
+// SetFiles replaces the file blobs (views) staged to ride the next
 // commit, event or timer driven. Replaces, not merges: the daemon
 // stages the full diff of a fresh render against the head tree on
-// every state-version bump (T6, 2026-09-10), so whatever was staged
-// before is stale by construction — a page rendered before a merge
-// landed would otherwise ride a later commit and overwrite the merged
-// one. An empty set clears the staging (the guard refusing to write
-// under a newer peer's stamp). Files restart the quiet timer exactly
-// as events do (D9): a lease lapsing changes the views with no event
-// to carry them — the view-only commit ("0 events, N files") rides the
-// same quiet period.
+// every state-version bump, so whatever was staged before is stale by
+// construction — a page rendered before a merge landed would otherwise
+// ride a later commit and overwrite the merged one. An empty set clears
+// the staging (the guard refusing to write under a newer peer's stamp).
+// Files restart the quiet timer exactly as events do: a lease lapsing
+// changes the views with no event to carry them — the view-only commit
+// ("0 events, N files") rides the same quiet period.
 func (b *Batcher) SetFiles(files map[string][]byte) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

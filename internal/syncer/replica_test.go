@@ -1,10 +1,9 @@
 package syncer
 
-// The syncer over the live replica (002 T2, 2026-09-10): merges land
-// through the store with two parents and the syncer never moves the
-// ref itself; merge-time replays read only the blobs the store's cache
-// lacks; the cycle's ref check notices a ref moved from outside the
-// daemon, remote or not.
+// The syncer over the live replica: merges land through the store with
+// two parents and the syncer never moves the ref itself; merge-time
+// replays read only the blobs the store's cache lacks; the cycle's ref
+// check notices a ref moved from outside the daemon, remote or not.
 
 import (
 	"sort"
