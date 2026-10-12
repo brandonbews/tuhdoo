@@ -145,6 +145,12 @@ func TestUninstallDocStepsLeaveZeroTrace(t *testing.T) {
 	if out, err := sandboxGit(t, leaver, env, "config", "--global", "tuhdoo.principal", "leaver-global"); err != nil {
 		t.Fatalf("set global principal: %v\n%s", err, out)
 	}
+	// And the recorded ledger target a .tuhdoo repo leaves in local
+	// config. Planted after the daemon started, so it changes nothing
+	// about this run's sync — it only has to be gone afterwards.
+	if out, err := sandboxGit(t, leaver, env, "config", "tuhdoo.remote", bare); err != nil {
+		t.Fatalf("set ledger target: %v\n%s", err, out)
+	}
 
 	// Pre-flight: the full documented footprint must exist, or the test
 	// proves nothing.
@@ -195,6 +201,9 @@ func TestUninstallDocStepsLeaveZeroTrace(t *testing.T) {
 	}
 	if b, err := os.ReadFile(globalCfg); err == nil && strings.Contains(string(b), "principal") {
 		t.Errorf("global config still mentions the principal:\n%s", b)
+	}
+	if out, err := sandboxGit(t, leaver, env, "config", "--get", "tuhdoo.remote"); err == nil {
+		t.Errorf("tuhdoo.remote still set after uninstall: %q", strings.TrimSpace(out))
 	}
 	// Worktree untouched — clean status, as if tuhdoo had never run:
 	if out := runGit(t, leaver, "status", "--porcelain"); strings.TrimSpace(out) != "" {

@@ -7,7 +7,7 @@ description: What bringing tuhdoo to a team looks like. One person runs init, te
 
 This page is for the person bringing tuhdoo to a team. By the end, tuhdoo runs in your repo, teammates can join, agents can connect, and you can steer the backlog from a terminal.
 
-Adoption is small: one person initializes tuhdoo inside the repo, everyone else joins with a clone and one command, agents connect through a one-snippet config, and the team steers from a terminal. There is no server to stand up, no vendor, and no accounts. The entire shared state is the **data branch**: a git orphan branch (named `tuhdoo`) inside the repository itself, synced through the remote you already have. Whoever can write to the repo can plan in it. Clone the repo and the plan comes with it.
+Adoption is small: one person initializes tuhdoo inside the repo, everyone else joins with a clone and one command, agents connect through a one-snippet config, and the team steers from a terminal. There is no server to stand up, no vendor, and no accounts. The entire shared state is the **data branch**: a git orphan branch (named `tuhdoo`) inside the repository itself, synced through the remote you already have. Whoever can write to the repo can plan in it. Clone the repo and the plan comes with it. A public repo can keep its plan private instead: see [Keeping the ledger in a private repo](#keeping-the-ledger-in-a-private-repo).
 
 ## 1. One person runs `tuhdoo init`
 
@@ -82,6 +82,38 @@ The work-loop tools (claim, finish, release) are deliberately *not* CLI commands
 **The git host, for free.** The data branch carries generated **views**: browsable markdown (a backlog page and per-task pages) that lets anyone read the plan from GitHub or GitLab without installing anything.
 
 The rhythm that follows is small: capture ideas the moment they occur (`tuhdoo create … --status inbox`), triage the inbox periodically, and keep escalations answered — they are the questions your fleet is blocked on. [`steering.md`](steering.md) covers that loop.
+
+## Keeping the ledger in a private repo
+
+By default the data branch lives on `origin`, beside the code, so a public repo publishes its plan too. To keep the code public and the plan private, put the data branch in a separate private repo, by convention named `<repo>-internal`, and commit a small pointer file named `.tuhdoo` to the code repo. Anyone can see that the repo plans with tuhdoo and where its ledger lives. Only people with access to the private repo can read or write the ledger.
+
+1. **Create the private repo** on your git host, empty. tuhdoo needs nothing from the host but git access: the daemon fetches and pushes the `tuhdoo` branch with your ordinary git credentials.
+2. **Push the existing ledger, if there is one.** From a machine that has the data branch:
+
+   ```sh
+   git push git@github.com:owner/repo-internal.git refs/heads/tuhdoo:refs/heads/tuhdoo
+   ```
+
+3. **Commit `.tuhdoo`** at the root of the code repo. It uses git's config format, like `.gitmodules`:
+
+   ```ini
+   # This repo plans its work with tuhdoo. The ledger lives in a private repo.
+   [ledger]
+   	remote = git@github.com:owner/repo-internal.git
+   ```
+
+   The value is anything `git fetch` and `git push` accept: a URL, a local path, or the name of a configured remote.
+4. **Restart the daemon on every machine.** The daemon reads `.tuhdoo` once, when it starts, and a running daemon keeps its old target until it restarts. Stop it as in [`uninstall.md`](uninstall.md#1-stop-the-daemon), then run any `tuhdoo` command to start a fresh one. `tuhdoo status` now shows `syncing with "git@github.com:owner/repo-internal.git" from .tuhdoo`.
+5. **Optionally, delete the old public branch.** Once every machine has restarted, the `tuhdoo` branch on `origin` is a stale public copy. Delete it with `git push origin --delete tuhdoo`. This is a branch delete, not a force-push: the history lives on in the private repo. Don't delete it sooner, because a daemon still syncing with `origin` would publish the branch again.
+
+What the pointer guarantees:
+
+- **It pins the target.** With `.tuhdoo` present, the daemon syncs with the repo it names and nothing else: never with `origin`, and never quietly local-only. A clone without access to the private repo shows a plain sync error in `tuhdoo status` and keeps working locally, but it never writes the ledger to `origin`. Its agents can still claim tasks, but `confirm_claim` refuses until the private repo is reachable, because a confirmation is only won at the ledger's home.
+- **The clone remembers it.** At startup the daemon records the target in the clone's local git config as `tuhdoo.remote`, which every linked worktree of the clone shares. A worktree on an older branch or tag that predates `.tuhdoo` still syncs with the private repo. A fresh clone learns the target the first time a daemon starts on a branch that has the file, so run tuhdoo there first. You can also set the key by hand for one clone: `git config tuhdoo.remote <url>`. When the file and the key disagree, the file wins and the key is updated.
+- **A broken pointer stops the daemon.** If `.tuhdoo` exists but has no usable `ledger.remote`, the daemon refuses to start and writes why to `.git/tuhdoo/daemon.log`. tuhdoo never guesses where the ledger lives.
+- **Changing the target takes a restart**, exactly like setting it up.
+
+With the ledger in its own repo, the host settings from step 1 move with it: data-branch pushes no longer reach the code repo's CI or branch rules.
 
 ## Leaving
 

@@ -123,13 +123,16 @@ type stateTask struct {
 // syncJSON is the sync loop's health (B7). Mode is one of local-only,
 // syncing, error, or starting (first cycle not finished yet).
 type syncJSON struct {
-	Mode       string `json:"mode"`
-	Remote     string `json:"remote"`
-	LastFetch  string `json:"last_fetch"` // RFC3339
-	LastPush   string `json:"last_push"`
-	LastError  string `json:"last_error"`
-	Collisions int    `json:"collisions"`
-	Merges     int    `json:"merges"`
+	Mode   string `json:"mode"`
+	Remote string `json:"remote"`
+	// RemoteSource is where a pinned ledger target came from (".tuhdoo"
+	// or "git config tuhdoo.remote"); empty for the origin default.
+	RemoteSource string `json:"remote_source"`
+	LastFetch    string `json:"last_fetch"` // RFC3339
+	LastPush     string `json:"last_push"`
+	LastError    string `json:"last_error"`
+	Collisions   int    `json:"collisions"`
+	Merges       int    `json:"merges"`
 }
 
 // stateResp is the snapshot's listing half: the daemon-wide facts plus

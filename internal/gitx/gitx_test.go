@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -463,6 +464,69 @@ func TestRemoteURL(t *testing.T) {
 	}
 	if url != remote {
 		t.Fatalf("RemoteURL = %q, want %q", url, remote)
+	}
+}
+
+// TestReadConfigFile: a git-config-format file read by key — set,
+// unset, absent, malformed — the shape of the .tuhdoo pointer file.
+func TestReadConfigFile(t *testing.T) {
+	g := newRepo(t)
+	write := func(name, body string) string {
+		t.Helper()
+		path := filepath.Join(g.dir, name)
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	path := write("ok", "# a comment\n[ledger]\n\tremote = git@example.com:o/r-internal.git\n")
+	val, ok, err := g.ReadConfig(path, "ledger.remote")
+	if err != nil || !ok || val != "git@example.com:o/r-internal.git" {
+		t.Fatalf("set key: %q, %v, %v; want the URL, true, nil", val, ok, err)
+	}
+
+	path = write("other", "[ledger]\n\tother = 1\n")
+	if val, ok, err := g.ReadConfig(path, "ledger.remote"); err != nil || ok || val != "" {
+		t.Fatalf("unset key: %q, %v, %v; want \"\", false, nil", val, ok, err)
+	}
+
+	if _, ok, err := g.ReadConfig(filepath.Join(g.dir, "no-such-file"), "ledger.remote"); err != nil || ok {
+		t.Fatalf("missing file: %v, %v; want unset, no error", ok, err)
+	}
+
+	path = write("bad", "[ledger\n\tremote = x\n")
+	if _, _, err := g.ReadConfig(path, "ledger.remote"); err == nil {
+		t.Fatal("malformed file: want an error, got none")
+	}
+
+	// Includes are not followed: a pointer file cannot pull in another.
+	write("included", "[ledger]\n\tremote = /elsewhere.git\n")
+	path = write("inc", "[include]\n\tpath = included\n")
+	if _, ok, err := g.ReadConfig(path, "ledger.remote"); err != nil || ok {
+		t.Fatalf("include: %v, %v; want unset, no error", ok, err)
+	}
+}
+
+// TestLocalConfigRoundTrip: SetLocalConfig writes the repository's own
+// config, ReadConfig("") reads it back, a second set replaces the
+// first, and a value that looks like an option is stored as a value.
+func TestLocalConfigRoundTrip(t *testing.T) {
+	g := newRepo(t)
+	if _, ok, err := g.ReadConfig("", "tuhdoo.remote"); err != nil || ok {
+		t.Fatalf("unset: %v, %v; want unset, no error", ok, err)
+	}
+	for _, want := range []string{"/srv/ledger.git", "git@example.com:o/r.git", "-not-an-option"} {
+		if err := g.SetLocalConfig("tuhdoo.remote", want); err != nil {
+			t.Fatalf("SetLocalConfig(%q): %v", want, err)
+		}
+		got, ok, err := g.ReadConfig("", "tuhdoo.remote")
+		if err != nil || !ok || got != want {
+			t.Fatalf("after set %q: %q, %v, %v", want, got, ok, err)
+		}
+	}
+	if got := strings.TrimSpace(runGit(t, g.dir, "config", "--local", "--get-all", "tuhdoo.remote")); got != "-not-an-option" {
+		t.Fatalf("local config holds %q, want exactly one value", got)
 	}
 }
 

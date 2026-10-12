@@ -32,10 +32,13 @@ const DefaultInterval = 60 * time.Second
 const maxCycleRetries = 4
 
 // Status is a snapshot of the loop for status surfaces. Mode is one of
-// "local-only", "syncing", "error".
+// "local-only", "syncing", "error". Remote is the sync target as git is
+// given it; Source says where a pinned target came from ("" for the
+// unpinned origin default).
 type Status struct {
 	Mode       string
 	Remote     string
+	Source     string
 	LastFetch  time.Time
 	LastPush   time.Time
 	LastError  string
@@ -45,8 +48,17 @@ type Status struct {
 
 // Options tune a Syncer. Zero values mean production defaults.
 type Options struct {
-	Ref      string        // data branch; empty means store.DefaultRef
-	Remote   string        // remote name; empty means "origin"
+	Ref    string // data branch; empty means store.DefaultRef
+	Remote string // what fetch and push are given: a remote name, URL, or path; empty means "origin"
+	// Pinned marks Remote as the ledger's declared home (a .tuhdoo file,
+	// or tuhdoo.remote in local config) rather than the origin default.
+	// A pinned target is never asked "is this remote configured?" — it
+	// may be a URL or a path no remote config names — so it can never
+	// read as remoteless: no "local-only" cycle, no local-only gate, no
+	// skipped adoption. Whatever is wrong with it surfaces as the fetch
+	// or push error, and nothing ever falls back to origin.
+	Pinned   bool
+	Source   string        // where a pinned Remote came from, for status; ignored unless Pinned
 	Interval time.Duration // fetch cadence; <= 0 means DefaultInterval
 	Ident    gitx.Identity // merge-commit identity
 	OnMerged func()        // called after the local head moves (daemon refresh)
@@ -60,6 +72,7 @@ type Syncer struct {
 	store    *store.Store
 	ref      string
 	remote   string
+	pinned   bool
 	interval time.Duration
 	ident    gitx.Identity
 	onMerged func()
@@ -94,11 +107,20 @@ func New(g gitx.Git, st *store.Store, opts Options) *Syncer {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
+	// The target is known from the start, so a status read before the
+	// first cycle finishes — or after a first cycle that failed — still
+	// names it.
+	status := Status{Remote: opts.Remote}
+	if opts.Pinned {
+		status.Source = opts.Source
+	}
 	return &Syncer{
 		git:      g,
 		store:    st,
 		ref:      opts.Ref,
 		remote:   opts.Remote,
+		pinned:   opts.Pinned,
+		status:   status,
 		interval: opts.Interval,
 		ident:    opts.Ident,
 		onMerged: opts.OnMerged,
@@ -198,7 +220,7 @@ func (s *Syncer) Cycle() error {
 	if err := s.noticeExternalMove(); err != nil {
 		return err
 	}
-	if _, err := s.git.RemoteURL(s.remote); err != nil {
+	if err := s.checkRemote(); err != nil {
 		if errors.Is(err, gitx.ErrNoRemote) {
 			s.setMode("local-only")
 			return nil
@@ -243,6 +265,24 @@ func (s *Syncer) Cycle() error {
 		return err
 	}
 	return fmt.Errorf("syncer: remote %s kept moving for %d attempts", s.remote, maxCycleRetries)
+}
+
+// checkRemote is the presence check every remote-touching path runs
+// before its first fetch: Cycle, GateHead, AdoptRemoteBranch. For the
+// unpinned origin default it asks git whether the remote is configured,
+// and an error matching gitx.ErrNoRemote is the T2 remoteless state —
+// each caller has its own local arm for it. A pinned target skips the
+// check and always answers nil: it must never read as remoteless, so
+// it never reaches a local arm, and a target that is missing,
+// unreachable, or closed to this machine fails at the fetch instead —
+// a sync error in status and a refused confirmation, never a silent
+// local-only mode.
+func (s *Syncer) checkRemote() error {
+	if s.pinned {
+		return nil
+	}
+	_, err := s.git.RemoteURL(s.remote)
+	return err
 }
 
 // noticeExternalMove is the one place the ref is compared against git

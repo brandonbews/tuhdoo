@@ -78,11 +78,13 @@ once per clone: git config tuhdoo.principal <name>`)
 		return 1
 	}
 
+	// local-only happens only for the origin default: a ledger target
+	// pinned by .tuhdoo or tuhdoo.remote never reads as remoteless.
 	sync := syncLine(snap.state.Sync)
 	if snap.state.Sync.Mode == "local-only" {
-		sync = "local-only — no git remote is configured. That is a normal state:\n" +
-			"               everything works locally; add a remote later and the\n" +
-			"               daemon will publish the branch automatically."
+		sync = "local-only — no origin remote is configured. That is a normal state:\n" +
+			"               everything works locally; add an origin remote later and\n" +
+			"               the daemon will publish the branch automatically."
 	}
 
 	fmt.Printf(`tuhdoo is set up in this repository.

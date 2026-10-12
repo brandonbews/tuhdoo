@@ -536,22 +536,27 @@ func (d *Daemon) snapshotLocked() snapshotResp {
 
 // syncJSON is the sync loop's health for status surfaces.
 type syncJSON struct {
-	Mode       string `json:"mode"` // starting | local-only | syncing | error
-	Remote     string `json:"remote,omitempty"`
-	LastFetch  string `json:"last_fetch,omitempty"` // RFC3339
-	LastPush   string `json:"last_push,omitempty"`
-	LastError  string `json:"last_error,omitempty"`
-	Collisions int    `json:"collisions"`
-	Merges     int    `json:"merges"`
+	Mode   string `json:"mode"` // starting | local-only | syncing | error
+	Remote string `json:"remote,omitempty"`
+	// RemoteSource says where a pinned target came from: ".tuhdoo" or
+	// "git config tuhdoo.remote" (target.go). Absent for the origin
+	// default.
+	RemoteSource string `json:"remote_source,omitempty"`
+	LastFetch    string `json:"last_fetch,omitempty"` // RFC3339
+	LastPush     string `json:"last_push,omitempty"`
+	LastError    string `json:"last_error,omitempty"`
+	Collisions   int    `json:"collisions"`
+	Merges       int    `json:"merges"`
 }
 
 func syncJSONOf(st syncer.Status) syncJSON {
 	out := syncJSON{
-		Mode:       st.Mode,
-		Remote:     st.Remote,
-		LastError:  st.LastError,
-		Collisions: st.Collisions,
-		Merges:     st.Merges,
+		Mode:         st.Mode,
+		Remote:       st.Remote,
+		RemoteSource: st.Source,
+		LastError:    st.LastError,
+		Collisions:   st.Collisions,
+		Merges:       st.Merges,
 	}
 	if st.Mode == "" {
 		out.Mode = "starting"

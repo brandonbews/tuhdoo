@@ -20,7 +20,7 @@ The complete footprint, verified against the code:
 
 - **Three refs.** `refs/heads/tuhdoo`, the local copy of the data branch; `refs/remotes/origin/tuhdoo`, an ordinary remote-tracking ref (full clones only); and `refs/tuhdoo/remote`, the daemon's own tracking ref, where its fetches of the remote data branch land.
 - **The runtime directory** `.git/tuhdoo/`, containing `daemon.json`, `daemon.lock`, `daemon.log`, `daemon.sock`, `machine-id`, and `index` — the daemon's private git index for building data-branch commits, never a checkout — plus, after a daemon killed mid-commit, possibly a stale `index.lock`.
-- **One git config key**, `tuhdoo.principal`, repo-local or `--global` if you set it there. It is only present if you overrode the default identity.
+- **Up to two git config keys.** `tuhdoo.principal`, repo-local or `--global` if you set it there, is only present if you overrode the default identity. `tuhdoo.remote`, repo-local, is only present if the repo keeps its ledger in a separate repo ([`adopting.md`](adopting.md#keeping-the-ledger-in-a-private-repo)): the daemon records the `.tuhdoo` file's target there.
 - **The Model Context Protocol (MCP) entry** in your agent harness's config — the snippet `tuhdoo init` printed — if you added one.
 - **The binary.**
 
@@ -67,15 +67,16 @@ git for-each-ref --format='delete %(refname)' \
 
 This touches only your machine's refs. The team's ledger on the remote is unaffected, and other machines never notice.
 
-### 4. Unset your principal
+### 4. Unset your principal and the ledger target
 
 <!-- uninstall-test: run -->
 ```sh
 git config --unset tuhdoo.principal || true
 git config --global --unset tuhdoo.principal || true
+git config --unset tuhdoo.remote || true
 ```
 
-The `|| true` is there because most machines never set the key, and `git config --unset` exits non-zero when there is nothing to unset.
+The `|| true` is there because most machines never set these keys, and `git config --unset` exits non-zero when there is nothing to unset.
 
 ### 5. Remove the harness MCP entry and the binary
 
@@ -94,6 +95,7 @@ Every check below succeeds only when nothing is left; the last line prints only 
 ```sh
 test -z "$(git for-each-ref refs/heads/tuhdoo refs/remotes/origin/tuhdoo refs/tuhdoo/)" \
   && ! git config --get tuhdoo.principal \
+  && ! git config --get tuhdoo.remote \
   && ! test -e .git/tuhdoo \
   && echo "clean: no trace of tuhdoo on this machine"
 ```
@@ -105,6 +107,8 @@ And `git status` looks exactly as it did before you started: tuhdoo never writes
 ## For the team: retiring the ledger
 
 You probably don't need to. A dormant `tuhdoo` branch costs nothing: it is a small stretch of orphan history that never touches your code branches, never appears in `--single-branch` clones, and (configured per [`joining.md`](joining.md#for-the-repo-admin-branch-protection-and-ci)) never triggers continuous integration (CI) runs. It is also the team's decision record: every task, note, escalation, and answer. The recommended way to stop using tuhdoo is simply to stop: each machine runs the per-machine steps above, and the data branch sits untouched on the remote, rejoinable later.
+
+If your ledger lives in a separate repo ([`adopting.md`](adopting.md#keeping-the-ledger-in-a-private-repo)), that repo is the remote in the commands below: put its URL where they say `origin`.
 
 If you want the branch name gone but the history kept, archive it first, from any machine that still has the local branch:
 

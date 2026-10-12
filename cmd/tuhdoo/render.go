@@ -107,23 +107,45 @@ func newColors(out *os.File) colors {
 
 // syncLine renders the daemon's sync status (B7) as one line, for the
 // one-shot surfaces (status, init). local-only is a normal state,
-// never an error (T2). The TUI header renders syncSegs instead (quiet
-// sync, chrome pass 2026-08-21 — top.go).
+// never an error (T2). A pinned ledger target (a .tuhdoo file or
+// tuhdoo.remote) also says where it came from, and its error says
+// that changing it takes a daemon restart — the daemon resolves the
+// target once, at startup. The TUI header renders syncSegs instead
+// (quiet sync, chrome pass 2026-08-21 — top.go).
 func syncLine(s syncJSON) string {
 	switch s.Mode {
 	case "local-only":
 		return "local-only"
 	case "syncing":
-		line := fmt.Sprintf("syncing with %q", s.Remote)
+		line := fmt.Sprintf("syncing with %q%s", s.Remote, fromSource(s))
 		if t, err := time.Parse(time.RFC3339, s.LastFetch); err == nil {
 			line += " · last fetch " + stamp(t)
 		}
 		return line
 	case "error":
-		return fmt.Sprintf("sync error (remote %q): %s", s.Remote, s.LastError)
+		where := fmt.Sprintf("remote %q", s.Remote)
+		if s.RemoteSource != "" {
+			where += fromSource(s) + "; changing it takes a daemon restart"
+		}
+		return fmt.Sprintf("sync error (%s): %s", where, oneLine(s.LastError))
 	default:
-		return s.Mode // "starting": first cycle hasn't finished
+		// "starting": first cycle hasn't finished. A pinned target is
+		// named already — the first fetch of a far remote can take a
+		// while, and the target is the thing worth knowing meanwhile.
+		if s.RemoteSource != "" {
+			return fmt.Sprintf("%s · remote %q%s", s.Mode, s.Remote, fromSource(s))
+		}
+		return s.Mode
 	}
+}
+
+// fromSource names where a pinned target came from (" from .tuhdoo");
+// empty for the origin default.
+func fromSource(s syncJSON) string {
+	if s.RemoteSource == "" {
+		return ""
+	}
+	return " from " + s.RemoteSource
 }
 
 // stamp renders an absolute UTC instant — same discipline as

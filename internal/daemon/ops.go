@@ -816,8 +816,11 @@ func (d *Daemon) opConfirmClaim(actor, taskID string) (confirmClaimResult, *opEr
 // tools). Each pass judges the head a confirmation would land on and
 // pushes claim.confirmed onto exactly that head through the remote's
 // ref CAS; a non-fast-forward means the remote moved and the loop
-// re-judges, bounded. Remoteless falls to the T2 local arm. The caller
-// must have flushed everything staged, so the judged head carries it.
+// re-judges, bounded. Remoteless falls to the T2 local arm — never for
+// a pinned target (target.go), whose GateHead cannot answer
+// ErrNoRemote: its ledger's home is elsewhere, so a target that cannot
+// be reached is a refusal. The caller must have flushed everything
+// staged, so the judged head carries it.
 func (d *Daemon) gateVerdict(actor, taskID string, now time.Time) (confirmClaimResult, *opError) {
 	for attempt := 0; attempt < confirmGateRetries; attempt++ {
 		head, hstate, err := d.sync.GateHead()
@@ -827,7 +830,7 @@ func (d *Daemon) gateVerdict(actor, taskID string, now time.Time) (confirmClaimR
 		if err != nil {
 			return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
 				"cannot consult the remote (%v): confirmation refused, nothing written — "+
-					"the referee never guesses; retry when the remote is reachable", err)
+					"the referee never guesses; retry when the remote is reachable%s", err, d.pinnedHint())
 		}
 		res, claimID, oe := judgeConfirm(hstate, taskID, actor)
 		if oe != nil {
@@ -851,13 +854,24 @@ func (d *Daemon) gateVerdict(actor, taskID string, now time.Time) (confirmClaimR
 		}
 		if err != nil {
 			return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
-				"confirmation push failed (%v): nothing certified — retry when the remote is reachable", err)
+				"confirmation push failed (%v): nothing certified — retry when the remote is reachable%s", err, d.pinnedHint())
 		}
 		d.refreshAfterGate(now)
 		return confirmedResult(claimID, taskID), nil
 	}
 	return confirmClaimResult{}, opErrf(http.StatusServiceUnavailable,
 		"remote kept moving for %d attempts: confirmation not settled — retry", confirmGateRetries)
+}
+
+// pinnedHint completes a gate refusal for a pinned ledger target: it
+// names the target, where it came from, and that changing it takes a
+// daemon restart (the target is resolved once, at startup). Empty for
+// the origin default, whose refusals read as they always have.
+func (d *Daemon) pinnedHint() string {
+	if !d.target.pinned() {
+		return ""
+	}
+	return fmt.Sprintf(" (ledger remote %q, from %s; after changing it, restart the daemon)", d.target.remote, d.target.source)
 }
 
 // confirmLocally is the T2 remoteless arm of the gate: no remote, one

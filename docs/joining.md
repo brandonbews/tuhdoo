@@ -22,7 +22,7 @@ A plain, full clone (as above) is the recommended shape. Other shapes:
 
 - **`--single-branch` works.** The data branch never needs to be part of your clone. tuhdoo fetches `refs/heads/tuhdoo` from the remote by an explicit refspec, into its own `refs/tuhdoo/remote` tracking ref, so it assumes no remote-tracking configuration.
 - **Shallow clones (`--depth=…`) work.** The data branch is fetched fresh from the remote as above, and tuhdoo replays state from that branch's tip tree only. Truncated history on your code branches never matters to it.
-- **Don't run tuhdoo from a fork.** The daemon syncs with `origin` and nothing else. Cloned from a fork, it faithfully syncs the *fork's* data branch, silently maintaining a divergent copy of the team's ledger. Clone the repository the team actually shares.
+- **Don't run tuhdoo from a fork.** The daemon syncs with `origin` unless the repo's `.tuhdoo` file names a separate ledger repo ([`adopting.md`](adopting.md#keeping-the-ledger-in-a-private-repo)). Cloned from a fork without that file, it faithfully syncs the *fork's* data branch, silently maintaining a divergent copy of the team's ledger. Clone the repository the team actually shares.
 - **Bare and `--mirror` clones can't run tuhdoo.** They have no worktree, and tuhdoo runs inside a working repository.
 
 ## 2. Install the binary
@@ -66,7 +66,7 @@ Run:
 tuhdoo status
 ```
 
-It shows the data branch, `syncing with "origin"`, and a running daemon. Then run:
+It shows the data branch, `syncing with "origin"`, and a running daemon. In a repo that keeps its ledger in a separate private repo, the sync line names that repo instead, `from .tuhdoo`; a sync error there means your git credentials can't reach it yet. Then run:
 
 ```sh
 tuhdoo backlog
