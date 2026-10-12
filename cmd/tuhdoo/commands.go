@@ -35,7 +35,7 @@ func connect() (*repo, *client, int) {
 
 // runInit is idempotent repo setup. The data branch is created by the
 // daemon's startup path (store.Init runs inside the daemon's first
-// load, behind the socket — T4 startup order, 2026-09-10 — and
+// load, behind the socket — and
 // ensureDaemon returns only once that load has landed), so "spawn the
 // daemon, then confirm the branch exists" is the whole job — the
 // simplest honest path, and it means the first command a user ever
@@ -187,7 +187,7 @@ func runBacklog() int {
 }
 
 // printBacklog emits one row per task under a header: serialization,
-// not design (T7, 2026-07-31). Plain aligned columns via tabwriter, no
+// not design. Plain aligned columns via tabwriter, no
 // ANSI ever — the bytes are identical to a terminal and to a pipe — and
 // a STATE column instead of section headers, so `tuhdoo backlog | grep
 // ready` selects exactly the ready rows. Row order mirrors the old
@@ -235,7 +235,7 @@ func newTabWriter(w io.Writer) *tabwriter.Writer {
 
 // priorityText renders a nullable priority as its number, or "" for
 // unprioritized — callers pick the placeholder (cell's "-", or
-// priorityWord's "none"). P0-highest (2026-08-21): 0 is most urgent;
+// priorityWord's "none"). P0-highest: 0 is most urgent;
 // no priority sorts last.
 func priorityText(p *int) string {
 	if p == nil {
@@ -270,13 +270,13 @@ func runTask(id string) int {
 		return code
 	}
 	// One snapshot serves the whole command: short-form/fragment
-	// resolution against the live task list (input sugar only, T7 — a
+	// resolution against the live task list (input sugar only — a
 	// full ID passes through as itself), the daemon's blockage verdicts
 	// for the waiting line, edge-row annotation, and the needed-by
-	// reverse edges (edge rows, 2026-08-11) — which need every task's
+	// reverse edges — which need every task's
 	// depends_on, so the full hydration fetchSnapshot already does
 	// replaces the old state-plus-one-task pair of fetches. N+1 over
-	// the local socket is cheap at v0 volumes (snapshot.go).
+	// the local socket is cheap at one repo's ledger size (snapshot.go).
 	snap, err := fetchSnapshot(c)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tuhdoo task:", err)
@@ -295,13 +295,13 @@ func runTask(id string) int {
 // Resolvers that treat not-found as "try the next namespace" (answer's
 // task-then-escalation fallthrough) must still surface ambiguity
 // loudly: collisions are an error listing the candidates, never a
-// guess (T7).
+// guess.
 type ambiguityError struct{ msg string }
 
 func (e *ambiguityError) Error() string { return e.msg }
 
 // resolveTaskID maps human input — a full ID, the short form, or any
-// unambiguous ID fragment — to one known task ID, the git model (T7):
+// unambiguous ID fragment — to one known task ID, the git model:
 // the long ULID is plumbing, the short form is the human contract.
 // Ambiguity is an error that lists the candidates; nothing is guessed.
 func resolveTaskID(frag string, tasks []stateTask) (string, error) {
@@ -335,10 +335,10 @@ func resolveTaskID(frag string, tasks []stateTask) (string, error) {
 // the type prefix — is a substring of id's tail. The short form is one
 // such substring (the tail's last four), so it needs no special case.
 // Only the ID's own prefix is stripped from the fragment, which is the
-// cross-prefix rule for the tuh-/t- era split (T7, 2026-07-31): a
-// prefixed fragment matches its own era literally (`t-d83w` never
+// cross-prefix rule for the tuh-/t- era split: a
+// prefixed fragment matches its own era literally (`t-qx4r` never
 // matches a `tuh-` task and vice versa — a leftover hyphen can't occur
-// in a ULID tail), while a bare fragment (`d83w`) matches both eras.
+// in a ULID tail), while a bare fragment (`qx4r`) matches both eras.
 func idMatches(id, frag string) bool {
 	f, l := strings.ToLower(frag), strings.ToLower(id)
 	i := strings.Index(l, "-") + 1
@@ -349,11 +349,10 @@ func idMatches(id, frag string) bool {
 // `tuhdoo task <id>` prints it: full IDs throughout, the scriptable
 // plumbing form. st is the task's state-listing row (zero when the
 // caller has none): its loud blockage annotations — loop membership,
-// cancelled deps (2026-08-05 edge grill) — render as a waiting line.
+// cancelled deps — render as a waiting line.
 // s, when non-nil, annotates the depends-on rows with status and title
-// and computes the needed-by block of reverse edges (edge rows,
-// 2026-08-11); a nil snapshot renders bare depends-on IDs and no
-// needed-by block.
+// and computes the needed-by block of reverse edges; a nil snapshot
+// renders bare depends-on IDs and no needed-by block.
 func printTask(w io.Writer, col colors, h hydratedTask, st stateTask, s *snapshot) {
 	t := h.Task
 	fmt.Fprintf(w, "%s%s%s — %s\n\n", col.bold, t.ID, col.reset, oneLine(t.Title))
@@ -396,11 +395,11 @@ func printTask(w io.Writer, col colors, h hydratedTask, st stateTask, s *snapsho
 }
 
 // printEdges prints one edge list — "depends on" or "needed by" — one
-// aligned line per edge (edge rows, 2026-08-11: the comma-joined blob
-// de-blobbed on every surface): full ID — plumbing keeps full IDs (T7)
-// — then dim status word and plain title where the ID resolves in s.
-// Continuation rows indent to the value column; unresolvable IDs stay
-// bare — never an invented status; nothing prints for an empty list.
+// aligned line per edge (no comma-joined blob, on any surface): full
+// ID — plumbing keeps full IDs — then dim status word and plain title
+// where the ID resolves in s. Continuation rows indent to the value
+// column; unresolvable IDs stay bare — never an invented status;
+// nothing prints for an empty list.
 func printEdges(w io.Writer, col colors, s *snapshot, name string, ids []string) {
 	if len(ids) == 0 {
 		return
@@ -446,8 +445,8 @@ type histEntry struct {
 
 // historyOf merges a task's notes, runs, escalations, and edits into
 // one chronological (ULID-ordered) sequence, mirroring internal/views.
-// Each entry's header is a dim stamp and a bold descriptor (entry
-// formatting, 2026-08-03); consecutive entries are separated by one
+// Each entry's header is a dim stamp and a bold descriptor;
+// consecutive entries are separated by one
 // blank line, carried as a leading newline on every entry after the
 // first — never trailing, so the TUI's per-entry TrimRight keeps it —
 // and the section framing alone handles the edges.
@@ -548,7 +547,7 @@ func runEscalations() int {
 }
 
 // printEscalations emits one row per escalation under a header — the
-// same serialization register as printBacklog (T7, 2026-07-31): plain
+// same serialization register as printBacklog: plain
 // aligned columns, no ANSI, full IDs, "-" for empty cells. Open
 // questions first, then answered, raise (ULID) order within each; the
 // STATE column says which, so grep selects either set.

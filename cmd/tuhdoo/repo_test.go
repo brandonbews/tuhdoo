@@ -1,6 +1,6 @@
 package main
 
-// Principal derivation tests (D7, T4): the user.email local-part rule,
+// Principal derivation tests: the user.email local-part rule,
 // the tuhdoo.principal override, and --as beating both. Unit tests
 // call the derivation in-process against real hermetic repos; one
 // integration test proves the mcp shim end-to-end.
@@ -36,13 +36,13 @@ func TestPrincipalDerivation(t *testing.T) {
 
 	// Override absent: behavior unchanged — the local part of
 	// user.email, ugly noreply addresses included.
-	runGit(t, repo, "config", "user.email", "4099114+brandonbews@users.noreply.github.com")
+	runGit(t, repo, "config", "user.email", "12345+sarah@users.noreply.github.com")
 	got, err := gitEmailLocalPart(repo)
 	if err != nil {
 		t.Fatalf("gitEmailLocalPart: %v", err)
 	}
-	if got != "4099114+brandonbews" {
-		t.Fatalf("derived %q, want the email local part 4099114+brandonbews", got)
+	if got != "12345+sarah" {
+		t.Fatalf("derived %q, want the email local part 12345+sarah", got)
 	}
 
 	// Override set: it wins over the email rule.
@@ -74,8 +74,8 @@ func TestPrincipalDerivation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("gitEmailLocalPart after unset: %v", err)
 	}
-	if got != "4099114+brandonbews" {
-		t.Fatalf("derived %q after unset, want 4099114+brandonbews", got)
+	if got != "12345+sarah" {
+		t.Fatalf("derived %q after unset, want 12345+sarah", got)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestTopActorHonorsOverride(t *testing.T) {
 	hermeticGit(t)
 	repo := newRepo(t)
 	t.Chdir(repo) // topActor derives from the current directory
-	runGit(t, repo, "config", "user.email", "4099114+brandonbews@users.noreply.github.com")
+	runGit(t, repo, "config", "user.email", "12345+sarah@users.noreply.github.com")
 	runGit(t, repo, "config", "tuhdoo.principal", "brandon")
 
 	got, err := topActor("")
@@ -122,7 +122,7 @@ func TestTopActorHonorsOverride(t *testing.T) {
 // by the daemon), and --as continues to beat everything.
 func TestMCPShimHonorsPrincipalOverride(t *testing.T) {
 	repo := newRepo(t)
-	runGit(t, repo, "config", "user.email", "4099114+brandonbews@users.noreply.github.com")
+	runGit(t, repo, "config", "user.email", "12345+sarah@users.noreply.github.com")
 	runGit(t, repo, "config", "tuhdoo.principal", "brandon")
 
 	createdBy := func(t *testing.T, args []string, title string) string {

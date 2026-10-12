@@ -1,13 +1,13 @@
 package main
 
-// The stdio MCP shim (002 T4): `tuhdoo mcp` bridges a harness's stdio
+// The stdio MCP shim: `tuhdoo mcp` bridges a harness's stdio
 // to the daemon's /mcp endpoint, so any harness config is just command
 // + args. The shim adds no behavior of its own — it mirrors the
 // daemon's tools verbatim and forwards calls — because the daemon
-// session is what T5's session-bound leases hang off: as long as the
+// session is what the session-bound leases hang off: as long as the
 // shim process is alive and connected, the agent's leases renew.
 //
-// Identity (D7): with no flags, the human half derives from git
+// Identity: with no flags, the human half derives from git
 // identity (the local part of user.email) and the daemon mints the
 // agent half at session bind from the harness's initialize
 // clientInfo.name. That name only arrives over stdio, so the daemon
@@ -79,7 +79,7 @@ func runMCP(args []string) int {
 			err = daemon.ValidateActor(human)
 		}
 		if err != nil {
-			// Fail loudly at connect (T5 acceptance): a session with no
+			// Fail loudly at connect: a session with no
 			// honest principal must not come up at all.
 			fmt.Fprintf(os.Stderr, "tuhdoo mcp: cannot derive a principal from git identity: %v\n"+
 				"set git user.email, or pass one explicitly: tuhdoo mcp --as <human>/<agent>\n", err)
@@ -231,8 +231,8 @@ func bridgeMCP(socket, override, human string) error {
 const stdinTailCap = 256
 
 // stdinRecorder wraps the shim's stdin so a stdio-session death can say
-// what the stream actually delivered. Field incident (2026-07-31, twice
-// while dogfooding on a fifo): the SDK's ndjson decoder fails with
+// what the stream actually delivered. Seen twice while dogfooding on
+// a fifo: the SDK's ndjson decoder fails with
 // "invalid trailing data at the end of stream" only when a decoded JSON
 // value is immediately followed by a non-newline byte in its buffer —
 // so a stray non-protocol write (a bare digit is enough; the decoder

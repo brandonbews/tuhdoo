@@ -17,8 +17,7 @@ type taskJSON struct {
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
-	// Close metadata (Closed shelf, 2026-08-02): set on done and
-	// cancelled tasks only.
+	// Close metadata: set on done and cancelled tasks only.
 	ClosedAt *time.Time `json:"closed_at"`
 	ClosedBy string     `json:"closed_by"`
 }
@@ -92,8 +91,8 @@ type hydratedTask struct {
 // stateTask is one task's listing row — what the render code sorts,
 // buckets, and prints — lifted from a snapshot entry by listingRow
 // (snapshot.go). Not a wire shape of its own since the snapshot
-// (T4, 2026-09-10): the entry carries the task and the verdicts side
-// by side, and the row is the verdicts plus the task's headline.
+// endpoint: the entry carries the task and the verdicts side by side,
+// and the row is the verdicts plus the task's headline.
 type stateTask struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title"`
@@ -101,26 +100,26 @@ type stateTask struct {
 	Priority *int     `json:"priority"`
 	Labels   []string `json:"labels"`
 	Holder   string   `json:"holder"`
-	// One classifier (2026-08-03): the daemon serves core's verdict —
+	// One classifier: the daemon serves core's verdict —
 	// situation is ready / in_progress / blocked for open tasks, the
 	// status word otherwise; the lists carry blocker IDs. The CLI
 	// renders these, it never re-derives them.
 	Situation           string   `json:"situation"`
 	UnmetDeps           []string `json:"unmet_deps"`
 	BlockingEscalations []string `json:"blocking_escalations"`
-	// Loud blockage annotations (2026-08-05 edge grill): the unmet deps
-	// sitting cancelled, and membership in a depends_on loop among
-	// not-done tasks. The daemon's verdict like the lists above — the
-	// CLI renders these, it never re-derives them.
+	// Loud blockage annotations: the unmet deps sitting cancelled, and
+	// membership in a depends_on loop among not-done tasks. The daemon's
+	// verdict like the lists above — the CLI renders these, it never
+	// re-derives them.
 	CancelledDeps []string `json:"cancelled_deps"`
 	Cyclic        bool     `json:"cyclic"`
-	// Close metadata (Closed shelf, 2026-08-02): what the Closed rows
-	// sort and stamp by; nil on open tasks and pre-upgrade daemons.
+	// Close metadata: what the Closed rows sort and stamp by; nil on
+	// open tasks and pre-upgrade daemons.
 	ClosedAt *time.Time `json:"closed_at"`
 	ClosedBy string     `json:"closed_by"`
 }
 
-// syncJSON is the sync loop's health (B7). Mode is one of local-only,
+// syncJSON is the sync loop's health. Mode is one of local-only,
 // syncing, error, or starting (first cycle not finished yet).
 type syncJSON struct {
 	Mode   string `json:"mode"`
@@ -137,9 +136,9 @@ type syncJSON struct {
 
 // stateResp is the snapshot's listing half: the daemon-wide facts plus
 // one row per task, in creation (ULID) order. It was GET /v0/state's
-// body until the snapshot replaced that endpoint (T4, 2026-09-10);
-// now snapshotOf (snapshot.go) assembles it from a snapshotResp so the
-// render code keeps one listing shape.
+// body until the snapshot replaced that endpoint; now snapshotOf
+// (snapshot.go) assembles it from a snapshotResp so the render code
+// keeps one listing shape.
 type stateResp struct {
 	Degraded        string
 	Sync            syncJSON
@@ -162,10 +161,10 @@ type snapshotTask struct {
 	Cyclic              bool     `json:"cyclic"`
 }
 
-// snapshotResp is GET /v0/snapshot?since=N&wait=D (T4, 2026-09-10):
-// the whole replica at one version, every task fully hydrated. The
-// daemon answers at once when its version differs from N — differs,
-// not exceeds: a restarted daemon counts from 1 again — and otherwise
+// snapshotResp is GET /v0/snapshot?since=N&wait=D: the whole replica
+// at one version, every task fully hydrated. The daemon answers at
+// once when its version differs from N — differs, not exceeds: a
+// restarted daemon counts from 1 again — and otherwise
 // parks until a bump or the wait elapses. Unchanged is true only on
 // the wait-elapsed answer, which carries the version alone. Loaded is
 // false only on the placeholder served until the first replay lands

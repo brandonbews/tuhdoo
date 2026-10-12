@@ -10,7 +10,7 @@ package main
 // sessions only).
 //
 // The claim lifecycle (claim, finish_run, release) is deliberately
-// absent here: leases are session-bound (T8) — the daemon renews them
+// absent here: leases are session-bound — the daemon renews them
 // while an MCP session is live, and a claim taken by a one-shot command
 // would have nothing renewing it, lapsing interrupted within the TTL.
 // The MCP shim is the sanctioned work loop; the help text says so.
@@ -68,7 +68,7 @@ func splitList(v string) []string {
 }
 
 // resolveRefs maps each edge reference — full ID, short form, or
-// fragment — through resolveTaskID (T7: short IDs are the human input
+// fragment — through resolveTaskID (short IDs are the human input
 // contract everywhere).
 func resolveRefs(refs []string, tasks []stateTask) ([]string, error) {
 	out := make([]string, len(refs))
@@ -125,7 +125,7 @@ func runCreate(args []string) int {
 		return code
 	}
 	item := map[string]any{"title": title}
-	// Only an explicit --priority travels (P0-highest, 2026-08-21):
+	// Only an explicit --priority travels (P0-highest):
 	// absent means unprioritized, and 0 now means most urgent — a
 	// always-sent default would put every capture on top of the queue.
 	fs.Visit(func(f *flag.Flag) {
@@ -192,7 +192,7 @@ func runUpdate(args []string) int {
 	fs.StringVar(&title, "title", "", "")
 	fs.StringVar(&desc, "desc", "", "")
 	fs.StringVar(&status, "status", "", "")
-	// A string, not an int: "none" is the clear form (2026-09-11).
+	// A string, not an int: "none" is the clear form.
 	fs.StringVar(&priority, "priority", "", "")
 	fs.StringVar(&labels, "labels", "", "")
 	fs.StringVar(&dependsOn, "depends-on", "", "")

@@ -1,8 +1,7 @@
-// Command tuhdoo is the human surface (002 T7, Cycle 4): bare
-// invocation opens the interactive TUI; the one-shot subcommands are
-// scriptable renderings of the same daemon state. Every path talks
-// HTTP to the per-repo daemon over its unix socket, auto-spawning it
-// when absent (T4 lazy lifecycle).
+// Command tuhdoo is the human surface: bare invocation opens the
+// interactive TUI; the one-shot subcommands are scriptable renderings
+// of the same daemon state. Every path talks HTTP to the per-repo
+// daemon over its unix socket, auto-spawning it when absent.
 package main
 
 import (
@@ -26,11 +25,11 @@ func run(args []string) int {
 		return runTUI(nil)
 	}
 	// Every subcommand answers -h/--help with its own usage on stdout,
-	// exit 0 (adopter report, 2026-08-26: `tuhdoo init --help` used to
-	// be rejected as an unexpected argument) — one behavior everywhere,
-	// so muscle memory transfers between commands. First position after
-	// the command only: later positions can be data (answer text, --as
-	// values). A pure print — no repo, no daemon.
+	// exit 0 (`tuhdoo init --help` used to be rejected as an unexpected
+	// argument) — one behavior everywhere, so muscle memory transfers
+	// between commands. First position after the command only: later
+	// positions can be data (answer text, --as values). A pure print —
+	// no repo, no daemon.
 	if len(args) >= 2 && (args[1] == "-h" || args[1] == "--help") && helpFor(os.Stdout, args[0]) {
 		return 0
 	}
@@ -127,7 +126,7 @@ the rest of the line is the answer text`},
 	{"mcp", "mcp", `stdio MCP shim for agent harnesses. The principal is
 auto-derived: git user.email local part + a session
 name minted by the daemon; --as <p> overrides in full
-(e.g. --as brandon/impl-1)`},
+(e.g. --as sarah/impl-1)`},
 	{"protocol", "protocol", `print the agent protocol — the instruction text a
 harness loads for agents, embedded in this binary.
 A pure print: works without a repo or a daemon`},

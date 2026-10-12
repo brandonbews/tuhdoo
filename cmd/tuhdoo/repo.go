@@ -2,7 +2,7 @@ package main
 
 // Repository discovery for the CLI. The few git queries here shell out
 // to git directly instead of going through internal/gitx: gitx's
-// interface is deliberately scoped to data-branch object access (T2)
+// interface is deliberately scoped to data-branch object access
 // and has no toplevel/remote-enumeration calls, and the CLI performs no
 // object writes of its own — branch creation happens on the daemon's
 // startup path.
@@ -108,7 +108,7 @@ func gitDirOf(root string) (string, error) {
 }
 
 // principalConfigKey is the git config key that overrides the derived
-// human principal (T4, revised 2026-07-30). Set once per clone with
+// human principal. Set once per clone with
 // `git config tuhdoo.principal <name>` (or per machine with --global;
 // ordinary git config precedence applies), it replaces the user.email
 // derivation everywhere derivation is used — the mcp shim and the
@@ -116,12 +116,12 @@ func gitDirOf(root string) (string, error) {
 // explicit principal was given.
 const principalConfigKey = "tuhdoo.principal"
 
-// gitEmailLocalPart derives the human half of a D7 principal from git
+// gitEmailLocalPart derives the human half of a principal from git
 // identity. The name records the default rule — the local part of
-// user.email (brandonbews@gmail.com → brandonbews) — but a
+// user.email (sarah@example.com → sarah) — but a
 // tuhdoo.principal config entry, when set, overrides it (handy when
 // user.email is a GitHub noreply address and the local part is
-// `4099114+brandonbews`). This is the one documented auto-derivation
+// `12345+sarah`). This is the one documented auto-derivation
 // path, shared by every surface that acts as a human without an
 // explicit --as (the mcp shim, the TUI).
 func gitEmailLocalPart(dir string) (string, error) {

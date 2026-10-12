@@ -13,7 +13,7 @@ import (
 
 // leaseTTLEnv is a harness knob, not a user setting: a Go duration
 // (e.g. "4m") that sets the claim lease TTL of the daemon this process
-// runs. Unset or empty leaves daemon.DefaultLeaseTTL (T8: 15 min)
+// runs. Unset or empty leaves daemon.DefaultLeaseTTL (15 min)
 // exactly as before — nothing in production sets it. It exists so
 // harness/collision can watch a lease lapse naturally inside a bounded
 // run; a value that does not parse is a startup failure, never a

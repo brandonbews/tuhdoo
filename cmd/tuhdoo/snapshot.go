@@ -33,9 +33,9 @@ const startupBudget = 3 * time.Second
 
 // snapshot is one consistent picture of daemon state at one version:
 // the listing (daemon-wide facts and one row per task) and every task
-// fully hydrated — one request (T4, 2026-09-10), never a hydration per
-// task. version is what the next long poll asks about; unchanged
-// marks the wait-elapsed answer, which carries nothing to render.
+// fully hydrated — one request, never a hydration per task. version is
+// what the next long poll asks about; unchanged marks the wait-elapsed
+// answer, which carries nothing to render.
 type snapshot struct {
 	version   uint64
 	unchanged bool
@@ -50,19 +50,19 @@ func fetchSnapshot(c *client) (*snapshot, error) {
 }
 
 // fetchSnapshotSince reads the snapshot, parking up to wait while the
-// daemon is still at version since (the TUI's long poll; wait 0
-// answers at once). Two startup shapes are waited out within
-// startupBudget: the placeholder a daemon serves until its first
-// replay lands (loaded false — T4 startup order; ensureDaemon already
+// daemon is still at version since (the TUI's long poll; wait 0 answers
+// at once). Two startup shapes are waited out within startupBudget: the
+// placeholder a daemon serves until its first replay lands (loaded
+// false — the daemon serves before it loads; ensureDaemon already
 // waited this out once, but a daemon restarting under a long-lived
 // screen serves it again) by parking on since=0 through the load, and
 // the sync loop's "starting" mode on a freshly loaded daemon whose
-// first cycle (milliseconds) has not yet decided local-only vs
-// syncing — that decision bumps no version, so it is re-read at once
-// on a short cadence. At the budget an undecided sync mode is
-// returned as is; a placeholder never is — it is an error, so a
-// screen polling through a daemon restart shows "retrying" rather
-// than installing an empty board.
+// first cycle (milliseconds) has not yet decided local-only vs syncing
+// — that decision bumps no version, so it is re-read at once on a short
+// cadence. At the budget an undecided sync mode is returned as is; a
+// placeholder never is — it is an error, so a screen polling through a
+// daemon restart shows "retrying" rather than installing an empty
+// board.
 func fetchSnapshotSince(c *client, since uint64, wait time.Duration) (*snapshot, error) {
 	resp, err := readSnapshot(c, since, wait)
 	if err != nil {
@@ -125,8 +125,8 @@ func listingRow(t snapshotTask) stateTask {
 
 // buckets partitions tasks exactly like internal/views' classify: every
 // open task lands in exactly one of ready / inProgress / blocked, and
-// held/inbox tasks (2026-07-31) shelve separately — parked and captured
-// work, never claimable.
+// held/inbox tasks shelve separately — parked and captured work, never
+// claimable.
 type buckets struct {
 	ready      []stateTask // claimable now, highest priority first
 	inProgress []stateTask // actively claimed, creation order
@@ -157,7 +157,7 @@ func (s *snapshot) classify() buckets {
 			b.inbox = append(b.inbox, t)
 		}
 	}
-	// Most urgent first (P0-highest, 2026-08-21), creation (ULID) order
+	// Most urgent first (P0-highest), creation (ULID) order
 	// within a rank — the same ordering core.ReadyTasks serves
 	// claim_next from.
 	sort.SliceStable(b.ready, func(i, j int) bool {
@@ -166,7 +166,7 @@ func (s *snapshot) classify() buckets {
 	return b
 }
 
-// terminalStatus reports whether a status closes a task (D5: done and
+// terminalStatus reports whether a status closes a task (done and
 // cancelled end work; nothing ever deletes it).
 func terminalStatus(status string) bool {
 	return status == "done" || status == "cancelled"
@@ -174,13 +174,13 @@ func terminalStatus(status string) bool {
 
 // waitingOn condenses why a blocked task cannot be claimed into one
 // column cell: dep:<task-id> per unmet dependency, esc:<escalation-id>
-// per open blocking escalation, comma-joined — IDs, never prose
-// (T7, 2026-07-31: the serialized backlog is grep fodder; the story
-// lives in `tuhdoo task <id>`). The loud annotations (2026-08-05 edge
-// grill) keep the same register: a leading "cyclic" marker for a task
-// on a depends_on loop, a ":cancelled" suffix on a dep sitting
-// cancelled. "-" when nothing is waited on. The verdicts are the
-// daemon's (one classifier, 2026-08-03) — this only serializes them.
+// per open blocking escalation, comma-joined — IDs, never prose (the
+// serialized backlog is grep fodder; the story lives in
+// `tuhdoo task <id>`). The loud annotations keep the same register: a
+// leading "cyclic" marker for a task on a depends_on loop, a
+// ":cancelled" suffix on a dep sitting cancelled. "-" when nothing is
+// waited on. The verdicts are the daemon's (one classifier) — this only
+// serializes them.
 func waitingOn(t stateTask) string {
 	var parts []string
 	if t.Cyclic {
@@ -206,11 +206,10 @@ func waitingOn(t stateTask) string {
 // dashboard: dependency IDs pass through disp (shortened and annotated
 // for the screen), and only unmet deps are named — never the
 // escalation. On this screen the Needs Input row is the single home for
-// escalation blockage (grill cycle, 2026-07-31), and a task blocked by
-// escalation alone renders no BLOCKED row at all (see buildRows). Loop
-// membership leads the line and a cancelled dep reads "waiting on
-// cancelled" (2026-08-05 edge grill) — marks a human must act on,
-// distinct from ordinary waiting.
+// escalation blockage, and a task blocked by escalation alone renders
+// no BLOCKED row at all (see buildRows). Loop membership leads the line
+// and a cancelled dep reads "waiting on cancelled" — marks a human must
+// act on, distinct from ordinary waiting.
 func blockedReasonTUI(t stateTask, disp func(string) string) string {
 	var parts []string
 	if t.Cyclic {
@@ -226,11 +225,11 @@ func blockedReasonTUI(t stateTask, disp func(string) string) string {
 	return strings.Join(parts, "; ")
 }
 
-// waitingNote is the task view's loud-annotation line (2026-08-05 edge
-// grill), shared by the one-shot task command and the TUI detail: only
-// the marks a human must act on — loop membership and cancelled deps —
-// never the ordinary unmet-dep list, which the depends-on line already
-// carries. "" when there is nothing to shout.
+// waitingNote is the task view's loud-annotation line, shared by the
+// one-shot task command and the TUI detail: only the marks a human must
+// act on — loop membership and cancelled deps — never the ordinary
+// unmet-dep list, which the depends-on line already carries. "" when
+// there is nothing to shout.
 func waitingNote(t stateTask, disp func(string) string) string {
 	var parts []string
 	if t.Cyclic {
@@ -261,11 +260,11 @@ func (s *snapshot) findTask(id string) (stateTask, bool) {
 }
 
 // dependentsOf lists the tasks whose depends_on names id — the reverse
-// edges behind the NEEDED BY sections (edge rows, 2026-08-11),
-// computed at read time from the snapshot: no stored reverse index.
-// The state listing arrives in creation (ULID) order, so the result is
-// ULID-ordered; every dependent is included regardless of status —
-// accuracy over noise, the status word carries the story.
+// edges behind the NEEDED BY sections, computed at read time from the
+// snapshot: no stored reverse index. The state listing arrives in
+// creation (ULID) order, so the result is ULID-ordered; every dependent
+// is included regardless of status — accuracy over noise, the status
+// word carries the story.
 func (s *snapshot) dependentsOf(id string) []string {
 	var out []string
 	for _, t := range s.state.Tasks {

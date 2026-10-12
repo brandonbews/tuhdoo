@@ -1,12 +1,12 @@
 package main
 
 // Every subcommand answers -h/--help the same way: that command's usage
-// on stdout, exit 0 (adopter report, 2026-08-26 — `tuhdoo init --help`
-// used to be rejected as an unexpected argument). The help text renders
-// from the same per-command table as the global usage(), so the two
-// cannot drift; this file pins the behavior across the full dispatch
-// list, pins the no-drift property against the live global output, and
-// pins that help is a pure print: no repo, no daemon, nothing written.
+// on stdout, exit 0 (`tuhdoo init --help` used to be rejected as an
+// unexpected argument). The help text renders from the same per-command
+// table as the global usage(), so the two cannot drift; this file pins
+// the behavior across the full dispatch list, pins the no-drift
+// property against the live global output, and pins that help is a pure
+// print: no repo, no daemon, nothing written.
 
 import (
 	"bytes"
