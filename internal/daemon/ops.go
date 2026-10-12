@@ -300,8 +300,8 @@ func (d *Daemon) opUpdateTask(actor, id string, req updateTaskReq) (taskJSON, *o
 		}
 		// Refuse to knowingly write a dependency loop. Local hygiene
 		// only, never prevention: a set-union merge can still union two
-		// individually-acyclic writes into a loop no daemon ever saw
-		// (D2/D3) — replay marks those loudly instead (core.Blockage).
+		// individually-acyclic writes into a loop no daemon ever saw;
+		// replay marks those loudly instead (core.Blockage).
 		if loop := d.depLoopLocked(id, *req.DependsOn); loop != nil {
 			return taskJSON{}, opErrf(http.StatusBadRequest,
 				"would create a dependency loop: %s", strings.Join(loop, " → "))

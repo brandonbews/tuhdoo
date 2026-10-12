@@ -25,7 +25,7 @@ const adoptTimeout = 10 * time.Second
 // it logs (at most) and returns, and store.Init mints a fresh root
 // exactly as before. That is always safe: two machines initializing
 // before either pushes produce two roots no matter what, and the
-// app-level union merge converges them (D6/T2) — adoption only keeps
+// app-level union merge converges them — adoption only keeps
 // the common case to a single root. Correctness never rests here.
 //
 // A pinned target goes straight to the bounded fetch (checkRemote): a
