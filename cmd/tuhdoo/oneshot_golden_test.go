@@ -1,8 +1,8 @@
 package main
 
-// Golden tests for the serialized one-shot output (T7, 2026-07-31:
-// serialization, not design). Byte-exact, table-style fixtures, pure
-// data-in/bytes-out (T1): printBacklog and printEscalations take a
+// Golden tests for the serialized one-shot output (serialization, not
+// design). Byte-exact, table-style fixtures, pure
+// data-in/bytes-out: printBacklog and printEscalations take a
 // snapshot and a writer — no TTY probe, no color state — so the bytes
 // here are the bytes every consumer gets, terminal or pipe.
 
@@ -53,7 +53,7 @@ func oneshotSnapshot() *snapshot {
 			{ID: chore, Title: "old chore", Status: "done", Situation: "done"},
 			{ID: wrong, Title: "wrong idea", Status: "cancelled", Situation: "cancelled"},
 			{ID: floor, Title: "sweep the floor", Status: "open", Priority: pint(1), Situation: "ready"},
-			// The loud blockage marks (2026-08-05 edge grill): a
+			// The loud blockage marks: a
 			// depends_on loop pair and a waiter on the cancelled task.
 			{ID: cyca, Title: "refactor auth", Status: "open", Situation: "blocked", UnmetDeps: []string{cycb}, Cyclic: true},
 			{ID: cycb, Title: "split the auth pkg", Status: "open", Situation: "blocked", UnmetDeps: []string{cyca}, Cyclic: true},
@@ -82,7 +82,7 @@ func oneshotSnapshot() *snapshot {
 func TestOneshotBacklogGolden(t *testing.T) {
 	var buf bytes.Buffer
 	printBacklog(&buf, oneshotSnapshot())
-	// Ready is P0-highest (2026-08-21): p1 before p5; unprioritized
+	// Ready is P0-highest: p1 before p5; unprioritized
 	// tasks render the empty-cell "-" in PRI, same as any absent value.
 	want := strings.Join([]string{
 		"ID                             STATE        PRI  HOLDER      LABELS     WAITING                                      TITLE",

@@ -1,6 +1,6 @@
 package main
 
-// ensureDaemon's wait (T4, 2026-09-10) has two phases, each bounded by
+// ensureDaemon's wait has two phases, each bounded by
 // a generous ceiling with failures pointing at daemon.log: the socket
 // accepting — the moment it does, however soon — and then the daemon
 // reporting its ledger loaded. No fixed spawn wait: the daemon binds
@@ -160,7 +160,7 @@ func TestAwaitDaemonReturnsAsSoonAsSocketAccepts(t *testing.T) {
 
 func TestAwaitDaemonCeilingNamesDaemonLog(t *testing.T) {
 	if daemonStartCeiling != 30*time.Second {
-		t.Fatalf("daemonStartCeiling = %v, want the generous 30s the design names", daemonStartCeiling)
+		t.Fatalf("daemonStartCeiling = %v, want the generous 30s ceiling", daemonStartCeiling)
 	}
 	r := fakeRepo(t)
 	const ceiling = 200 * time.Millisecond

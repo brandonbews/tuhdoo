@@ -24,7 +24,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// mcpTools is the T5 surface the shim must mirror: exactly these twelve.
+// mcpTools is the daemon's tool surface the shim must mirror: exactly
+// these twelve.
 var mcpTools = []string{
 	"add_note", "claim_next", "claim_task", "confirm_claim", "create_task",
 	"escalate", "finish_run", "get_backlog", "get_task", "relay_answer",
@@ -32,7 +33,7 @@ var mcpTools = []string{
 }
 
 // mustMirrorTools asserts the session's tool surface is exactly the
-// twelve T5 tools, in order.
+// twelve daemon tools, in order.
 func mustMirrorTools(t *testing.T, cs *mcp.ClientSession) {
 	t.Helper()
 	var names []string
@@ -97,7 +98,7 @@ func TestMCPShimBridgesStdio(t *testing.T) {
 	}
 	defer cs.Close()
 
-	// The mirrored surface is exactly the twelve T5 tools, and sessions
+	// The mirrored surface is exactly the twelve tools, and sessions
 	// carry the daemon's orientation instructions.
 	mustMirrorTools(t, cs)
 	if instr := cs.InitializeResult().Instructions; !strings.Contains(instr, "claim_next") {
@@ -199,9 +200,9 @@ func TestMCPShimExitsWhenDaemonDies(t *testing.T) {
 }
 
 // A stdio-stream death must say which stream ended and what stdin
-// actually delivered (field incident 2026-07-31: the SDK's bare
-// "invalid trailing data at the end of stream" named neither). Both
-// cases reproduce the field mechanism: the ndjson decoder emits that
+// actually delivered (the SDK's bare "invalid trailing data at the
+// end of stream" names neither). Both cases reproduce the mechanism
+// seen in practice: the ndjson decoder emits that
 // error only when a decoded JSON value is immediately followed by a
 // non-newline byte, which is what any digit-led junk on the stream
 // produces. The "dormant digit" case is the nastier shape: the decoder
@@ -317,7 +318,7 @@ func TestMCPShimRejectsBadPrincipal(t *testing.T) {
 	mustContain(t, out, "usage")
 }
 
-// Zero-config identity (D7): with no --as, the human half derives from
+// Zero-config identity: with no --as, the human half derives from
 // git user.email's local part and the daemon mints the agent half from
 // the harness's clientInfo.name at session bind.
 func TestMCPShimAutoDerivesPrincipal(t *testing.T) {

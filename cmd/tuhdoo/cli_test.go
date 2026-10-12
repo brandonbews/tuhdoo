@@ -203,7 +203,7 @@ func TestInitRemoteless(t *testing.T) {
 		t.Fatalf("init exit %d; output:\n%s", code, out)
 	}
 	mustContain(t, out, "local-only", "normal state", branchName(), "branches-ignore")
-	// The universal MCP harness snippet (002 T4) rides the same output.
+	// The universal MCP harness snippet rides the same output.
 	mustContain(t, out, `"mcpServers"`, `"command": "tuhdoo"`, `"args": ["mcp"]`)
 	// The branch-protection line: hosts whose rulesets require PRs on
 	// all branches would silently break the daemon's direct pushes.
@@ -306,7 +306,7 @@ func TestAutoSpawnSingleDaemon(t *testing.T) {
 	}
 }
 
-// With a remote configured, status reports the live sync state (B7)
+// With a remote configured, status reports the live sync state
 // instead of local-only.
 func TestStatusWithRemote(t *testing.T) {
 	repo := newRepo(t)
@@ -484,10 +484,9 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		return m
 	}
 
-	// backlog: serialized column output (T7, 2026-07-31) — one row per
-	// task, STATE column, dep:/esc: waiting IDs, no ANSI ever. Status
-	// words are the stored words (2026-08-01); held stays the on-hold
-	// token, one word for grep/awk.
+	// backlog: serialized column output — one row per task, STATE
+	// column, dep:/esc: waiting IDs, no ANSI ever. Status words are the
+	// stored words; held stays the on-hold token, one word for grep/awk.
 	out, code := runCLI(t, repo, "backlog")
 	if code != 0 {
 		t.Fatalf("backlog exit %d; output:\n%s", code, out)
@@ -516,11 +515,10 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 			}
 		}
 	}
-	// Ready is priority-ordered — P0-highest (2026-08-21): p1
-	// floor-sweeping before p5 parser, checked by row order above;
-	// waiting reasons are IDs, not prose; the holder is attributed on
-	// the in-progress row; labels ride the parser's row as a plain
-	// comma cell.
+	// Ready is priority-ordered — P0-highest: p1 floor-sweeping before
+	// p5 parser, checked by row order above; waiting reasons are IDs,
+	// not prose; the holder is attributed on the in-progress row; labels
+	// ride the parser's row as a plain comma cell.
 	mustContain(t, out, "dep:"+parser, "esc:"+lic.ID, "brandon/a1")
 	if ready := grepState(out, "ready"); len(ready) > 1 && !strings.Contains(ready[1], "go") {
 		t.Errorf("parser row lost its label cell: %q", ready[1])
@@ -537,9 +535,8 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	mustContain(t, out, flake, "investigate the flake",
 		"claimed by brandon/a1", "the flake is in the retry loop",
 		"confirmed: the retry loop swallows the race")
-	// Consecutive history entries are separated by one blank line
-	// (entry formatting, 2026-08-03): the first note's body, a blank,
-	// then the second note's header.
+	// Consecutive history entries are separated by one blank line: the
+	// first note's body, a blank, then the second note's header.
 	if !strings.Contains(out, "the flake is in the retry loop\n\n  ") {
 		t.Errorf("no blank separator between history entries:\n%s", out)
 	}
@@ -552,7 +549,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"Do we need unicode?", "A (brandon): ASCII first.",
 		// The docs task depends on the parser, so the parser's one-shot
 		// view carries the reverse edge as a needed-by row — full ID,
-		// status word, title (edge rows, 2026-08-11).
+		// status word, title.
 		"needed by   "+docs+"  open  ship the docs")
 
 	// task with an unknown id: clear failure.
@@ -563,7 +560,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	mustContain(t, out, "unknown task")
 
 	// task <short-form>: resolves to the same task — the short form is
-	// the human input contract (T7); output still carries the full ID.
+	// the human input contract; output still carries the full ID.
 	out, code = runCLI(t, repo, "task", event.ShortID(flake))
 	if code != 0 {
 		t.Fatalf("task %s exit %d; output:\n%s", event.ShortID(flake), code, out)
@@ -573,7 +570,7 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 	// task with an ambiguous fragment (every ULID starts with 0): an
 	// error listing the candidates, never a guess. The old-era prefix on
 	// the same fragment matches nothing here — these tasks are all
-	// tuh-minted, and a fragment's prefix is literal (T7, 2026-07-31).
+	// tuh-minted, and a fragment's prefix is literal.
 	out, code = runCLI(t, repo, "task", "tuh-0")
 	if code == 0 {
 		t.Errorf("ambiguous fragment exited 0; output:\n%s", out)
@@ -625,8 +622,8 @@ func TestReadCommandsRenderSeededState(t *testing.T) {
 		"1 done", "1 cancelled", "1 question open", "brandon/a1")
 }
 
-// The watch and top verbs died in Cycle 4 (002 T7): the TUI is bare
-// `tuhdoo`, watch is its --watch mode. The tombstones must say so.
+// The watch and top verbs are retired: the TUI is bare `tuhdoo`,
+// watch is its --watch mode. The tombstones must say so.
 func TestDeadVerbTombstones(t *testing.T) {
 	repo := newRepo(t)
 	out, code := runCLI(t, repo, "watch")
@@ -642,7 +639,7 @@ func TestDeadVerbTombstones(t *testing.T) {
 	mustContain(t, out, "bare tuhdoo")
 }
 
-// Verb-less dispatch (Cycle 4): help is a real command on stdout; bare
+// Verb-less dispatch: help is a real command on stdout; bare
 // invocation without a terminal falls back to usage (the guarded
 // launch) instead of half-starting a TUI; unknown commands and bad
 // flags stay loud.

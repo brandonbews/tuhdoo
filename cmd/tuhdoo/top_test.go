@@ -17,8 +17,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// pint builds the pointer literals nullable priority fixtures need
-// (P0-highest flip, 2026-08-21).
+// pint builds the pointer literals nullable priority fixtures need.
 func pint(n int) *int { return &n }
 
 // topSnapshot seeds every section: one blocking escalation (on an
@@ -68,7 +67,7 @@ func topSnapshot() *snapshot {
 					ID: "01R1", Task: "t-flak", Actor: "brandon/a1",
 					Outcome: "interrupted", Summary: "Bisecting the flake.",
 				}},
-				// Answered out of band and relayed (T5 relay_answer):
+				// Answered out of band and relayed (relay_answer):
 				// settled, so it is not in OpenEscalations — it renders
 				// only in the task's history, attribution marked.
 				Escalations: []escalationJSON{{
@@ -105,9 +104,9 @@ func newWatchModel() topModel {
 
 // unclaimed releases t-flak's claim on a model — no holder, situation
 // ready — and rebuilds the rows. A task under a live claim has no
-// priority stop and takes no r/h/i or p (keyboard/priority grill,
-// 2026-09-11), so tests that walk t-flak's full ring — it carries the
-// fixture's richest biography — steer the released task.
+// priority stop and takes no r/h/i or p, so tests that walk t-flak's
+// full ring — it carries the fixture's richest biography — steer the
+// released task.
 func unclaimed(m topModel) topModel {
 	for i := range m.snap.state.Tasks {
 		if m.snap.state.Tasks[i].ID == "t-flak" {
@@ -121,7 +120,7 @@ func unclaimed(m topModel) topModel {
 func newTopModelUnclaimed(api steeringAPI) topModel { return unclaimed(newTopModel(api)) }
 
 // classify's ready ordering is claim_next's (snapshot.go): most
-// urgent first (P0-highest, 2026-08-21 — lower number wins), and
+// urgent first (P0-highest — lower number wins), and
 // within a priority the creation (ULID) order the state listing
 // arrives in — the sort is stable, so equal-priority tasks never
 // swap.
@@ -142,7 +141,7 @@ func TestClassifyReadyTieBreak(t *testing.T) {
 
 // newTopModelWithDep reseeds t-lic with an unmet dependency before
 // building the model. Escalation-only blockage earns no task row (the
-// Needs Input row is its single home, 2026-07-31), and an armed enter
+// Needs Input row is its single home), and an armed enter
 // on that row answers — so tests that open t-lic's detail from the
 // list walk to the BLOCKED row its unmet dep earns.
 func newTopModelWithDep(api steeringAPI) topModel {
@@ -162,8 +161,8 @@ func newTopModelWithDep(api steeringAPI) topModel {
 type fakeSteering struct {
 	answers    map[string]string
 	priorities map[string]int
-	cleared    []string // clearPriority targets, in order (the picker's -, 2026-09-11)
-	moves      []string // setStatus calls as "id status", in order (r/h/i, 2026-09-11)
+	cleared    []string // clearPriority targets, in order (the picker's -)
+	moves      []string // setStatus calls as "id status", in order (r/h/i)
 	cancelled  []string
 	captured   []string            // quick-capture titles, in order
 	titles     map[string]string   // task-view title edits
@@ -296,9 +295,9 @@ func TestBuildRowsOrderAndSections(t *testing.T) {
 		{rowTask, "ready", "t-pars"},
 		{rowTask, "inprogress", "t-flak"},
 		// t-lic is blocked by its escalation alone: its Needs Input row
-		// is its single representation — no blocked row (2026-07-31).
+		// is its single representation — no blocked row.
 		{rowTask, "held", "t-park"},  // the shelves close the list,
-		{rowTask, "inbox", "t-idea"}, // held above inbox (2026-07-31)
+		{rowTask, "inbox", "t-idea"}, // held above inbox
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("got %d rows, want %d: %+v", len(rows), len(want), rows)
@@ -335,8 +334,7 @@ func TestTopViewRendersSeededState(t *testing.T) {
 	// The escalation-blocked task renders exactly once — its task-shaped
 	// Needs Input row — and the question exactly once, on that row's
 	// question: line. No BLOCKED row, no "needs input (above)" pointer,
-	// no "blocking" word: the ! badge carries it (grill cycle,
-	// 2026-07-31).
+	// no "blocking" word: the ! badge carries it.
 	if n := strings.Count(v, "Which license?"); n != 1 {
 		t.Errorf("question renders %d times, want exactly 1; view:\n%s", n, v)
 	}
@@ -430,11 +428,11 @@ func TestTopSelectionSurvivesRefresh(t *testing.T) {
 	}
 }
 
-// TestTopAnswerFlow is the routing contract (task-view rework,
-// 2026-08-01, superseding the 2026-07-30 inline prompt): enter on a
-// Needs Input row lands in the task view with the escalation
-// preselected — never the old bottom-of-dashboard answer prompt — and
-// enter there opens answer entry, submitting through the same plumbing.
+// TestTopAnswerFlow is the routing contract (it replaced an inline
+// prompt): enter on a Needs Input row lands in the task view with the
+// escalation preselected — never the old bottom-of-dashboard answer
+// prompt — and enter there opens answer entry, submitting through the
+// same plumbing.
 func TestTopAnswerFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -492,8 +490,8 @@ func TestTopAnswerFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	// Success says nothing (feedback only, 2026-08-21): the refreshed
-	// screen is the confirmation.
+	// Success says nothing (feedback only): the refreshed screen is the
+	// confirmation.
 	if m.status != "" {
 		t.Errorf("status = %q, want empty after success", m.status)
 	}
@@ -508,7 +506,7 @@ func TestTopAnswerRejectsEmptyAndEscCancels(t *testing.T) {
 	if cmd != nil {
 		t.Error("empty answer still submitted")
 	}
-	// The rejection is the prompt box's own (prompt overlay, 2026-09-11):
+	// The rejection is the prompt box's own (prompt overlay):
 	// the status strip behind stays clear.
 	if m.mode != modeAnswer || !strings.Contains(m.inputErr, "empty") || m.status != "" {
 		t.Errorf("empty answer: mode %d inputErr %q status %q", m.mode, m.inputErr, m.status)
@@ -533,8 +531,8 @@ func TestTopActionKeysRespectRowKind(t *testing.T) {
 	if m.mode != modeNav {
 		t.Errorf("c on an escalation row entered mode %d", m.mode)
 	}
-	// a is free (status-vocabulary revision, 2026-08-01: cancel moved
-	// back to c) — it does nothing anywhere, task rows included.
+	// a is free (cancel moved back to c) — it does nothing anywhere, task
+	// rows included.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	if m.mode != modeNav {
 		t.Errorf("freed key a still entered mode %d", m.mode)
@@ -547,7 +545,7 @@ func TestTopActionKeysRespectRowKind(t *testing.T) {
 	}
 }
 
-// The priority picker (keyboard/priority grill, 2026-09-11): p opens
+// The priority picker: p opens
 // the box, a digit writes that priority at once and closes, - clears
 // through clearPriority and closes, esc closes with no write, and
 // every other key is ignored with the box still open.
@@ -682,7 +680,7 @@ func TestTopCancelFlow(t *testing.T) {
 		!strings.Contains(v, "history stays on the ledger") {
 		t.Errorf("confirm prompt missing; view:\n%s", v)
 	}
-	// The archive vocabulary is retired (2026-08-01).
+	// The archive vocabulary is retired.
 	if strings.Contains(v, "archive t-pars") {
 		t.Errorf("confirm prompt still says archive; view:\n%s", v)
 	}
@@ -705,7 +703,7 @@ func TestTopCancelFlow(t *testing.T) {
 	if len(fake.cancelled) != 1 || fake.cancelled[0] != "t-pars" {
 		t.Errorf("cancelled %v, want [t-pars]", fake.cancelled)
 	}
-	// No confirmation (feedback only, 2026-08-21): the row vanishing on
+	// No confirmation (feedback only): the row vanishing on
 	// the refresh is the confirmation.
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
@@ -801,8 +799,7 @@ func TestWatchModeDisarmed(t *testing.T) {
 		t.Error("q in watch mode should quit")
 	}
 	v := m.View()
-	// The badge reads a dim "watch" since the chrome pass (2026-08-21;
-	// was "watch mode").
+	// The badge reads a dim "watch" (it was "watch mode").
 	for _, want := range []string{"watch", "BLOCKED (0)", "↑/↓ (j/k) move · enter open · tab closed · q quit"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("watch-mode view missing %q; view:\n%s", want, v)
@@ -836,16 +833,16 @@ func TestTopEnterOpensDetail(t *testing.T) {
 		"run by brandon/a1 — interrupted", "Bisecting the flake.",
 		"Skip the flaky test until fixed?",
 		"A (brandon, relayed by brandon/a1): Skip it, link the issue.",
-		// One blank line between consecutive history entries (entry
-		// formatting, 2026-08-03) — the separator survives the per-entry
-		// TrimRight because it leads the next entry.
+		// One blank line between consecutive history entries — the
+		// separator survives the per-entry TrimRight because it leads the
+		// next entry.
 		"Skip it, link the issue.\n\n  2026-07-29 15:00 UTC  note by brandon/a1",
 		"Repros only under -race.\n\n  (unknown time)  run by brandon/a1 — interrupted",
 		// A plain open focuses the title stop at the top of the view.
 		"▌ t-flak — investigate the flake",
 		// The armed legend: the ring is always live, enter opens editors;
 		// t-flak is under a live claim, so only cancel is advertised
-		// beside them (keyboard/priority grill, 2026-09-11).
+		// beside them.
 		"↑/↓ (j/k) move · enter edit · c cancel · esc back · q quit",
 	} {
 		if !strings.Contains(v, want) {
@@ -942,7 +939,7 @@ func TestTopDetailScrollClamps(t *testing.T) {
 }
 
 // Edge markers: a row whose task has dependencies says so on its dim
-// meta line (two-line rows, 2026-08-05); edge-free rows stay one line
+// meta line (two-line rows); edge-free rows stay one line
 // — the "no labels, no edges" signal. Same renderer in both modes.
 func TestTopEdgeMarkers(t *testing.T) {
 	for name, m := range map[string]topModel{
@@ -1007,17 +1004,17 @@ func TestTopActor(t *testing.T) {
 // already-short toy IDs pass through untouched.
 func TestShortID(t *testing.T) {
 	tests := []struct{ in, want string }{
-		// A real same-batch trio: identical prefixes, distinct tails.
-		{"t-01KYT63MB28Z535SMJC9B0D83W", "t-d83w"},
-		{"t-01KYT63MB28Z535SMJCA63RQJM", "t-rqjm"},
-		{"t-01KYT63MB28Z535SMJCBC7SY1P", "t-sy1p"},
+		// A same-batch trio: identical prefixes, distinct tails.
+		{"t-01KYT63MB28Z535SMJC9B0QX4R", "t-qx4r"},
+		{"t-01KYT63MB28Z535SMJCA63WV7K", "t-wv7k"},
+		{"t-01KYT63MB28Z535SMJCBC7ZN5T", "t-zn5t"},
 		{"t-lic", "t-lic"},
 		{"t-epic", "t-epic"},
-		{"01KYT63MB28Z535SMJC9B0D83W", "d83w"}, // no type prefix
+		{"01KYT63MB28Z535SMJC9B0QX4R", "qx4r"}, // no type prefix
 		// Post-rebrand IDs shorten with their own tuh- prefix; the two
-		// eras coexist side by side (T7, 2026-07-31).
-		{"tuh-01KYT63MB28Z535SMJC9B0D83W", "tuh-d83w"},
-		{"tuh-01KYT63MB28Z535SMJCA63RQJM", "tuh-rqjm"},
+		// eras coexist side by side.
+		{"tuh-01KYT63MB28Z535SMJC9B0QX4R", "tuh-qx4r"},
+		{"tuh-01KYT63MB28Z535SMJCA63WV7K", "tuh-wv7k"},
 	}
 	for _, tt := range tests {
 		if got := event.ShortID(tt.in); got != tt.want {
@@ -1029,8 +1026,8 @@ func TestShortID(t *testing.T) {
 // List rows, waiting: reasons, and edge markers show the short form;
 // the full ULID never renders in the list.
 func TestTopRowsShowShortIDs(t *testing.T) {
-	long := "t-01KYT63MB28Z535SMJC9B0D83W"
-	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	long := "t-01KYT63MB28Z535SMJC9B0QX4R"
+	dep := "t-01KYT63MB28Z535SMJCA63WV7K"
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
 			{ID: long, Title: "the long one", Status: "open", Situation: "blocked", UnmetDeps: []string{dep}},
@@ -1044,11 +1041,11 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 	m := topModel{armed: true, actor: "brandon", snap: s, rows: buildRows(s)}
 	v := m.View()
 	for _, want := range []string{
-		"▌ t-rqjm      its dependency", // ready row, selected; unprioritized = no badge
+		"▌ t-wv7k      its dependency", // ready row, selected; unprioritized = no badge
 		"▌             1 dep",          // its edge marker on the meta line, barred too
-		"t-d83w      the long one",     // blocked row: blank badge cell
+		"t-qx4r      the long one",     // blocked row: blank badge cell
 		// The waiting: reason annotates its dep with status and title.
-		"waiting: depends on t-rqjm (open — its dependency)",
+		"waiting: depends on t-wv7k (open — its dependency)",
 	} {
 		if !strings.Contains(v, want) {
 			t.Errorf("view missing %q; view:\n%s", want, v)
@@ -1058,19 +1055,19 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 		t.Errorf("full ULID leaked into the list; view:\n%s", v)
 	}
 	// The detail screen is short-form throughout — the `id` line included
-	// (T7 revision, 2026-08-02: the full ULID has no TUI surface; one-shot
+	// (the full ULID has no TUI surface; one-shot
 	// `tuhdoo task <id>` is where the full form lives).
 	m, _ = press(t, m, keyOf(tea.KeyEnter)) // cursor on the ready row (dep)
 	dv := m.View()
 	for _, want := range []string{
-		"t-rqjm — its dependency",
-		"id          t-rqjm",
-		// Its edges render as section rows (edge rows, 2026-08-11) —
+		"t-wv7k — its dependency",
+		"id          t-wv7k",
+		// Its edges render as section rows —
 		// short IDs there too, and this pair depends on each other, so
 		// both directions show the same row shape.
 		" DEPENDS ON (1)",
 		" NEEDED BY (1)",
-		"  t-d83w  open  the long one",
+		"  t-qx4r  open  the long one",
 	} {
 		if !strings.Contains(dv, want) {
 			t.Errorf("detail view missing %q; view:\n%s", want, dv)
@@ -1083,15 +1080,14 @@ func TestTopRowsShowShortIDs(t *testing.T) {
 
 // taskRef is the edge annotation contract: references that resolve in
 // the snapshot carry status and title (done and cancelled tasks are in
-// the state listing even though they render no rows — the annotation
-// is what proves such an edge isn't dangling); unresolvable IDs render
+// the state listing even though they render no rows — the annotation is
+// what proves such an edge isn't dangling); unresolvable IDs render
 // bare — never an invented status; long titles are ellipsized. Status
-// words are the stored words (status-vocabulary revision, 2026-08-01),
-// except held, which reads "on hold".
+// words are the stored words, except held, which reads "on hold".
 func TestSnapshotTaskRef(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks, stateTask{
-		ID:     "t-01KYT63MB28Z535SMJC9B0D83W",
+		ID:     "t-01KYT63MB28Z535SMJC9B0QX4R",
 		Title:  strings.Repeat("wide ", 20), // 100 runes, ellipsized at 40
 		Status: "cancelled",
 	})
@@ -1099,12 +1095,12 @@ func TestSnapshotTaskRef(t *testing.T) {
 		{"t-lic", "t-lic (open — choose a license)"},
 		{"t-chor", "t-chor (done — old chore)"}, // done: no row anywhere, still resolves
 		{"t-epic", "t-epic"},                    // unresolvable: bare, no status
-		// The shelves annotate with their own words (2026-07-31): a dep
+		// The shelves annotate with their own words: a dep
 		// waiting on an inbox/held task says exactly why it waits.
 		{"t-park", "t-park (on hold — polish the docs)"},
 		{"t-idea", "t-idea (inbox — idea: dark mode)"},
-		{"t-01KYT63MB28Z535SMJC9B0D83W",
-			"t-d83w (cancelled — wide wide wide wide wide wide wide wide…)"},
+		{"t-01KYT63MB28Z535SMJC9B0QX4R",
+			"t-qx4r (cancelled — wide wide wide wide wide wide wide wide…)"},
 	}
 	for _, tt := range tests {
 		if got := s.taskRef(tt.id); got != tt.want {
@@ -1113,7 +1109,7 @@ func TestSnapshotTaskRef(t *testing.T) {
 	}
 }
 
-// The task view's DEPENDS ON section (edge rows, 2026-08-11): the
+// The task view's DEPENDS ON section: the
 // comma-joined depends-on field line is gone — one row per edge now,
 // bold short ID (plain here), dim status word, plain title, each a
 // single line. An edge to a task the snapshot has never heard of
@@ -1150,10 +1146,10 @@ func TestTopDetailAnnotatesEdges(t *testing.T) {
 	}
 }
 
-// edgeSnapshot seeds an epic-shaped structure for the edge sections
-// (edge rows, 2026-08-11): t-epic depends on four children spanning
-// every status family, t-bbbb is needed by two tasks (creation order),
-// and t-lone has no edges at all.
+// edgeSnapshot seeds an epic-shaped structure for the edge sections:
+// t-epic depends on four children spanning every status family, t-bbbb
+// is needed by two tasks (creation order), and t-lone has no edges at
+// all.
 func edgeSnapshot() *snapshot {
 	return &snapshot{
 		state: stateResp{
@@ -1184,7 +1180,7 @@ func edgeSnapshot() *snapshot {
 	}
 }
 
-// The edge sections end to end (edge rows, 2026-08-11): several deps
+// The edge sections end to end: several deps
 // render as aligned single lines with their status words visible; the
 // depended-on task shows a NEEDED BY section listing every dependent
 // regardless of status, in ULID order; a task with neither edge
@@ -1361,7 +1357,7 @@ func TestTopDetailEdgeClick(t *testing.T) {
 	}
 }
 
-// The one-shot edge rows (edge rows, 2026-08-11): with a snapshot the
+// The one-shot edge rows: with a snapshot the
 // depends-on block renders one line per edge — full ID, status word,
 // title — plus a needed-by block of the reverse edges; unresolvable
 // IDs stay bare rows. Full IDs throughout: plumbing keeps full IDs.
@@ -1393,9 +1389,9 @@ func TestPrintTaskEdgeRows(t *testing.T) {
 // display sugar: full IDs on the title and edge lines, no canonical
 // `id` line, no annotations.
 func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
-	long := "t-01KYT63MB28Z535SMJC9B0D83W"
-	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
-	dep2 := "t-01KYT63MB28Z535SMJCBC7SY1P"
+	long := "t-01KYT63MB28Z535SMJC9B0QX4R"
+	dep := "t-01KYT63MB28Z535SMJCA63WV7K"
+	dep2 := "t-01KYT63MB28Z535SMJCBC7ZN5T"
 	var b strings.Builder
 	printTask(&b, colors{}, hydratedTask{Task: taskJSON{
 		ID: long, Title: "the long one",
@@ -1404,7 +1400,7 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 	v := b.String()
 	for _, want := range []string{
 		long + " — the long one",
-		// One row per edge (edge rows, 2026-08-11): the second dep sits
+		// One row per edge: the second dep sits
 		// on its own continuation line, indented to the value column —
 		// and with no snapshot the rows stay bare full IDs.
 		"depends on  " + dep + "\n              " + dep2 + "\n",
@@ -1413,14 +1409,14 @@ func TestPrintTaskOneShotKeepsFullIDs(t *testing.T) {
 			t.Errorf("one-shot rendering missing %q; output:\n%s", want, v)
 		}
 	}
-	for _, reject := range []string{"t-d83w", "t-rqjm", "id          "} {
+	for _, reject := range []string{"t-qx4r", "t-wv7k", "id          "} {
 		if strings.Contains(v, reject) {
 			t.Errorf("one-shot rendering grew TUI sugar %q; output:\n%s", reject, v)
 		}
 	}
 }
 
-// The task view's waiting line (2026-08-05 edge grill) carries the loud
+// The task view's waiting line carries the loud
 // annotations only: loop membership and cancelled deps render, a plain
 // unmet dep grows no line — the depends-on line already tells that.
 func TestPrintTaskWaitingLine(t *testing.T) {
@@ -1441,7 +1437,7 @@ func TestPrintTaskWaitingLine(t *testing.T) {
 }
 
 // The dashboard's waiting: line marks loop members and cancelled deps
-// distinctly from ordinary waiting (2026-08-05 edge grill), rendering
+// distinctly from ordinary waiting, rendering
 // only the daemon's verdicts — never re-deriving them.
 func TestBlockedReasonTUIMarks(t *testing.T) {
 	id := func(s string) string { return s }
@@ -1457,7 +1453,7 @@ func TestBlockedReasonTUIMarks(t *testing.T) {
 	}
 }
 
-// History entry formatting (2026-08-03) on the one-shot rendering: one
+// History entry formatting on the one-shot rendering: one
 // blank line between consecutive entries — none before the first or
 // after the last, the section framing owns the edges — and each
 // header's descriptor bold while its stamp stays dim; the run outcome
@@ -1534,7 +1530,7 @@ func TestPrintTaskHistoryEntryFormatting(t *testing.T) {
 	}
 }
 
-// Task edits render in history (2026-08-11 grill): every task.updated
+// Task edits render in history: every task.updated
 // is an entry — dim stamp, bold "edit by <actor>" descriptor, and the
 // daemon's compact per-field summaries verbatim on the detail line;
 // a multi-field edit is one entry. Both surfaces share historyOf, so
@@ -1573,8 +1569,8 @@ func TestPrintTaskHistoryUpdateEntry(t *testing.T) {
 // pass through, short forms and unambiguous fragments resolve,
 // ambiguity errors listing every candidate, and nothing is guessed.
 func TestResolveTaskID(t *testing.T) {
-	long := "t-01KYT63MB28Z535SMJC9B0D83W"
-	dep := "t-01KYT63MB28Z535SMJCA63RQJM"
+	long := "t-01KYT63MB28Z535SMJC9B0QX4R"
+	dep := "t-01KYT63MB28Z535SMJCA63WV7K"
 	tasks := []stateTask{
 		{ID: long, Title: "the long one"},
 		{ID: dep, Title: "its dependency"},
@@ -1584,9 +1580,9 @@ func TestResolveTaskID(t *testing.T) {
 	}{
 		{name: "full ID", frag: long, want: long},
 		{name: "full ID lowercase", frag: strings.ToLower(long), want: long},
-		{name: "short form", frag: "t-d83w", want: long},
-		{name: "bare tail fragment", frag: "d83w", want: long},
-		{name: "uppercase fragment", frag: "63RQJM", want: dep},
+		{name: "short form", frag: "t-qx4r", want: long},
+		{name: "bare tail fragment", frag: "qx4r", want: long},
+		{name: "uppercase fragment", frag: "63WV7K", want: dep},
 		{name: "long unique fragment", frag: "t-01KYT63MB28Z535SMJCA", want: dep},
 		{name: "ambiguous", frag: "t-01KYT63MB2", wantErr: "ambiguous"},
 		{name: "unknown", frag: "t-nope", wantErr: "unknown task"},
@@ -1600,7 +1596,7 @@ func TestResolveTaskID(t *testing.T) {
 					t.Fatalf("err = %v, want containing %q", err, tt.wantErr)
 				}
 				if tt.wantErr == "ambiguous" {
-					for _, cand := range []string{"t-d83w", "t-rqjm", long, dep} {
+					for _, cand := range []string{"t-qx4r", "t-wv7k", long, dep} {
 						if !strings.Contains(err.Error(), cand) {
 							t.Errorf("ambiguity error missing candidate %q: %v", cand, err)
 						}
@@ -1618,15 +1614,15 @@ func TestResolveTaskID(t *testing.T) {
 	}
 }
 
-// The cross-prefix rule for the tuh-/t- era split (T7, 2026-07-31): a
-// fragment's prefix is matched literally against the ID, so t-d83w and
-// tuh-d83w name distinct tasks even with identical tails; a bare
+// The cross-prefix rule for the tuh-/t- era split: a
+// fragment's prefix is matched literally against the ID, so t-qx4r and
+// tuh-qx4r name distinct tasks even with identical tails; a bare
 // fragment matches both eras and turns ambiguous when the tails
 // collide. Neither prefix is ever rejected.
 func TestResolveTaskIDCrossPrefix(t *testing.T) {
-	oldID := "t-01KYT63MB28Z535SMJC9B0D83W"   // pre-rebrand era
-	newID := "tuh-01KYT63MB28Z535SMJC9B0D83W" // same tail, tuh- era
-	other := "tuh-01KYT63MB28Z535SMJCA63RQJM"
+	oldID := "t-01KYT63MB28Z535SMJC9B0QX4R"   // pre-rebrand era
+	newID := "tuh-01KYT63MB28Z535SMJC9B0QX4R" // same tail, tuh- era
+	other := "tuh-01KYT63MB28Z535SMJCA63WV7K"
 	tasks := []stateTask{
 		{ID: oldID, Title: "the old-era one"},
 		{ID: newID, Title: "the new-era twin"},
@@ -1637,11 +1633,11 @@ func TestResolveTaskIDCrossPrefix(t *testing.T) {
 	}{
 		{name: "old full ID", frag: oldID, want: oldID},
 		{name: "new full ID", frag: newID, want: newID},
-		{name: "old short form stays in its era", frag: "t-d83w", want: oldID},
-		{name: "new short form stays in its era", frag: "tuh-d83w", want: newID},
-		{name: "new short form, unique tail", frag: "tuh-rqjm", want: other},
-		{name: "bare tail spans both eras", frag: "d83w", wantErr: "ambiguous"},
-		{name: "bare unique tail resolves", frag: "rqjm", want: other},
+		{name: "old short form stays in its era", frag: "t-qx4r", want: oldID},
+		{name: "new short form stays in its era", frag: "tuh-qx4r", want: newID},
+		{name: "new short form, unique tail", frag: "tuh-wv7k", want: other},
+		{name: "bare tail spans both eras", frag: "qx4r", wantErr: "ambiguous"},
+		{name: "bare unique tail resolves", frag: "wv7k", want: other},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1671,7 +1667,7 @@ func TestResolveTaskIDCrossPrefix(t *testing.T) {
 	}
 }
 
-// ---- the armed detail screen steers the viewed task (task t-…63RQJM) ----
+// ---- the armed detail screen steers the viewed task ----
 
 // openDetail walks the cursor to a task's row and opens its detail.
 func openDetail(t *testing.T, m topModel, id string) topModel {
@@ -1702,9 +1698,8 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 		t.Fatalf("plain open did not focus the title; view:\n%s", v)
 	}
 	// The footer legend advertises the ring; "enter answer" rides the
-	// NEEDS INPUT bar itself (edit affordance, 2026-08-01). At the
-	// 80-column default the armed legend wraps after p priority
-	// (keyboard/priority grill, 2026-09-11).
+	// NEEDS INPUT bar itself (edit affordance). At the 80-column default
+	// the armed legend wraps after p priority.
 	if !strings.Contains(v, "↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority") ||
 		!strings.Contains(v, "\n c cancel · esc back · q quit") {
 		t.Errorf("armed detail footer wrong; view:\n%s", v)
@@ -1752,7 +1747,7 @@ func TestTopDetailAnswerFlow(t *testing.T) {
 	}
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
-	// Success says nothing (feedback only, 2026-08-21): the refresh
+	// Success says nothing (feedback only): the refresh
 	// below moving the answer into HISTORY is the confirmation.
 	if m.status != "" {
 		t.Errorf("status = %q, want empty after success", m.status)
@@ -1887,7 +1882,7 @@ func TestTopDetailCancelFlow(t *testing.T) {
 	if m.mode != modeDetail {
 		t.Fatalf("cancel knocked the model out of detail: mode %d", m.mode)
 	}
-	// Success says nothing (feedback only, 2026-08-21): the status word
+	// Success says nothing (feedback only): the status word
 	// changing on the refresh below is the confirmation.
 	if m.status != "" {
 		t.Errorf("status = %q, want empty after success", m.status)
@@ -1915,10 +1910,9 @@ func TestTopDetailCancelFlow(t *testing.T) {
 
 // enter on the focused title stop (where a plain open lands) edits the
 // viewed task's title in the widget's single-line mode, prefilled with
-// the current title (task-view edits, 2026-08-01; ring, 2026-08-02):
-// submit goes through the same task.updated plumbing as `tuhdoo update
-// --title`, and the refreshed snapshot re-renders the view with the
-// new content.
+// the current title: submit goes through the same task.updated plumbing
+// as `tuhdoo update --title`, and the refreshed snapshot re-renders the
+// view with the new content.
 func TestTopDetailEditTitleFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := openDetail(t, newTopModel(fake), "t-flak")
@@ -1964,7 +1958,7 @@ func TestTopDetailEditTitleFlow(t *testing.T) {
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
 	if m.status != "" {
-		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
+		t.Errorf("status = %q, want empty after success (feedback only)", m.status)
 	}
 	// The refresh lands the edit: the view re-renders with the new title.
 	fresh := topSnapshot()
@@ -2065,7 +2059,7 @@ func TestTopDetailEditDescriptionFlow(t *testing.T) {
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
 	if m.status != "" {
-		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
+		t.Errorf("status = %q, want empty after success (feedback only)", m.status)
 	}
 	// The refresh lands the edit: the DESCRIPTION section re-renders.
 	fresh := topSnapshot()
@@ -2105,7 +2099,7 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 	// A description-less task (t-pars): the dim "none" placeholder is a
 	// real ring stop, the editor opens empty, and a typed description is
 	// a real change. Four stops down: priority, labels, the t-chor dep
-	// row (edge rows, 2026-08-11), then the description.
+	// row, then the description.
 	m = openDetail(t, newTopModel(fake), "t-pars")
 	m, _ = press(t, m,
 		tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
@@ -2132,7 +2126,7 @@ func TestTopDetailEditDescriptionUnchangedEscAndFirstWrite(t *testing.T) {
 }
 
 // enter on the focused labels stop edits the list as one comma-joined
-// line (labels editable, 2026-08-05): prefilled "tui, design", parsed
+// line: prefilled "tui, design", parsed
 // with splitList on submit — split on commas, trim, drop empties, no
 // dedup, no case-folding: what was typed is what is stored.
 func TestTopDetailEditLabelsFlow(t *testing.T) {
@@ -2187,7 +2181,7 @@ func TestTopDetailEditLabelsFlow(t *testing.T) {
 	mm, _ := m.Update(am)
 	m = mm.(topModel)
 	if m.status != "" {
-		t.Errorf("status = %q, want empty after success (feedback only, 2026-08-21)", m.status)
+		t.Errorf("status = %q, want empty after success (feedback only)", m.status)
 	}
 	// The refresh lands the edit: the meta line re-renders the new list.
 	fresh := topSnapshot()
@@ -2201,7 +2195,7 @@ func TestTopDetailEditLabelsFlow(t *testing.T) {
 	}
 }
 
-// The labels editor's guard rails (labels editable, 2026-08-05): an
+// The labels editor's guard rails: an
 // unchanged submit writes nothing (the raw editWas guard), a respaced
 // submit parses element-wise equal and writes nothing, esc abandons
 // without a write, an emptied submit is a real write that clears every
@@ -2274,12 +2268,10 @@ func multiEscSnapshot() *snapshot {
 	return &snapshot{
 		state: stateResp{
 			// An unmet dep keeps t-two a task row (BLOCKED): with the
-			// blocking escalation its single home in Needs Input
-			// (2026-07-31), an unclaimed escalation-blocked task has no
-			// task row to open detail from. A holder would earn the row
-			// too, but a claimed task has no priority stop
-			// (keyboard/priority grill, 2026-09-11) and these tests walk
-			// the full ring.
+			// blocking escalation its single home in Needs Input, an
+			// unclaimed escalation-blocked task has no task row to open
+			// detail from. A holder would earn the row too, but a claimed
+			// task has no priority stop and these tests walk the full ring.
 			Tasks: []stateTask{{ID: "t-two", Title: "twice escalated", Status: "open",
 				Situation: "blocked", UnmetDeps: []string{"t-dep"}, BlockingEscalations: []string{"01E1"}}},
 			OpenEscalations: []escalationJSON{e1, e2},
@@ -2433,7 +2425,7 @@ func TestTopDetailEnterOpensEditorPerStop(t *testing.T) {
 	}
 }
 
-// Wrap-then-indent (2026-08-02): the title and description blocks wrap
+// Wrap-then-indent: the title and description blocks wrap
 // to the mark column's inner width first, then every screen line sits
 // on the column — so a focused block's gutter is continuous across
 // wrapped continuations and blank paragraph separators, instead of
@@ -2458,7 +2450,7 @@ func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
 		t.Fatalf("title block should be two wrapped lines; line 2 = %q", body[2])
 	}
 	// Focus the description — four stops down, past priority, labels,
-	// and the t-chor dep row (edge rows, 2026-08-11): every line of the
+	// and the t-chor dep row: every line of the
 	// block — continuations and the blank paragraph separator included —
 	// carries the gutter.
 	m, _ = press(t, m,
@@ -2501,11 +2493,11 @@ func TestTopDetailFocusedBlockGutterContinuous(t *testing.T) {
 	}
 }
 
-// The e/E edit chords are retired (the ring replaced them, 2026-08-02):
-// E stays a dead key, and e — rebound as the context toggle (escalation
-// readability, 2026-08-11) — is inert in an armed view unless an
-// escalation stop is focused: it never opens an editor, never leaves
-// the view. t-flak has no open escalation, so both keys change nothing.
+// The e/E edit chords are retired (the ring replaced them): E stays a
+// dead key, and e — rebound as the context toggle — is inert in an
+// armed view unless an escalation stop is focused: it never opens an
+// editor, never leaves the view. t-flak has no open escalation, so both
+// keys change nothing.
 func TestTopDetailEAndEUnbound(t *testing.T) {
 	m := openDetail(t, newTopModel(newFakeSteering()), "t-flak")
 	v := m.View()
@@ -2520,11 +2512,11 @@ func TestTopDetailEAndEUnbound(t *testing.T) {
 	}
 }
 
-// structuredEscSnapshot seeds one task with two open escalations
-// (escalation readability, 2026-08-11): 01E8 carries a multi-line
-// question — the structure the agent wrote — and a 13-line context;
-// 01E9 a one-line question with a one-line context. Ring order: title,
-// priority, labels, 01E8 (stop 3), 01E9 (stop 4), description.
+// structuredEscSnapshot seeds one task with two open escalations: 01E8
+// carries a multi-line question — the structure the agent wrote — and a
+// 13-line context; 01E9 a one-line question with a one-line context.
+// Ring order: title, priority, labels, 01E8 (stop 3), 01E9 (stop 4),
+// description.
 func structuredEscSnapshot() *snapshot {
 	raised := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
 	ctx := make([]string, 13)
@@ -2568,7 +2560,7 @@ func gutterLines(body []string) []string {
 	return out
 }
 
-// The escalation block's rework (escalation readability, 2026-08-11):
+// The escalation block's rework:
 // the question keeps its line structure instead of being one-lined; the
 // context collapses to its first line plus an accurate hidden-line
 // count; e toggles the focused escalation's context open and closed —
@@ -2887,8 +2879,8 @@ func TestWatchModeDetailFullyDisarmed(t *testing.T) {
 	if !strings.Contains(v, "NEEDS INPUT (1)") || !strings.Contains(v, "Which license?") {
 		t.Errorf("open escalation missing from watch detail; view:\n%s", v)
 	}
-	// The labels line renders here too — one uniform rule (labels
-	// editable, 2026-08-05) — read-only like everything else.
+	// The labels line renders here too — one uniform rule — read-only
+	// like everything else.
 	if !strings.Contains(v, "labels      none") {
 		t.Errorf("watch detail missing the labels placeholder line; view:\n%s", v)
 	}
@@ -2963,7 +2955,7 @@ func TestTopListWrapsAndScrolls(t *testing.T) {
 	}
 }
 
-// ---- mouse (task t-…HJEV9VK): click selects, click again acts as enter ----
+// ---- mouse: click selects, click again acts as enter ----
 
 // clickAt is a left-button press at screen position (x, y).
 func clickAt(x, y int) tea.MouseMsg {
@@ -3047,7 +3039,7 @@ func TestTopClickSelectsAcrossVariableHeights(t *testing.T) {
 // Click on the already-selected row acts as enter — and a double-click
 // is exactly that: press one selects, press two finds it selected. On
 // a task row that opens detail; on an escalation row it opens the task
-// view with the question preselected (task-view rework, 2026-08-01).
+// view with the question preselected.
 func TestTopClickOnSelectedActsAsEnter(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
@@ -3185,11 +3177,11 @@ func TestTopClickIgnoredDuringInput(t *testing.T) {
 	}
 }
 
-// A click on a row under an open prompt box is dead (prompt overlay,
-// 2026-09-11): the box hides the row but the screen behind still
-// renders it, and rowAt/detailStopAt are never consulted while an
-// input mode is live — so the cursor, the mode, and the focus stay
-// put, from the list and from the task view alike.
+// A click on a row under an open prompt box is dead: the box hides the
+// row but the screen behind still renders it, and rowAt/detailStopAt
+// are never consulted while an input mode is live — so the cursor, the
+// mode, and the focus stay put, from the list and from the task view
+// alike.
 func TestTopClickUnderBoxIgnored(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	mm, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
@@ -3258,12 +3250,12 @@ func TestTopDetailWrapsToWidth(t *testing.T) {
 	}
 }
 
-// ---- inbox and held (2026-07-31): quick capture and the shelves ----
+// ---- inbox and held: quick capture and the shelves ----
 
-// The full capture flow: n opens a single-line input (keyboard/priority
-// grill, 2026-09-11 — i until then), typing builds the title, enter
-// creates a title-only inbox item through the steering API — no y/n
-// anywhere (capture is reversible via cancel).
+// The full capture flow: n opens a single-line input (it was i before),
+// typing builds the title, enter creates a title-only inbox item
+// through the steering API — no y/n anywhere (capture is reversible via
+// cancel).
 func TestTopQuickCaptureFlow(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -3292,7 +3284,7 @@ func TestTopQuickCaptureFlow(t *testing.T) {
 	if m.mode != modeNav {
 		t.Errorf("mode after submit = %d, want modeNav", m.mode)
 	}
-	// No "captured to inbox" confirmation (feedback only, 2026-08-21):
+	// No "captured to inbox" confirmation (feedback only):
 	// the INBOX section growing a row is the confirmation — accepted
 	// that it may land below the fold.
 	mm, _ := m.Update(am)
@@ -3330,7 +3322,7 @@ func TestWatchModeNeverAdvertisesCapture(t *testing.T) {
 	}
 }
 
-// ---- status moves and the Closed toggle (keyboard/priority grill, 2026-09-11) ----
+// ---- status moves and the Closed toggle ----
 
 // moveTable is the r/h/i contract on every kind of row: the setStatus
 // call each key sends ("" for a silent nothing) — a no-op on the
@@ -3486,7 +3478,7 @@ func TestTopClosedTogglesOnTab(t *testing.T) {
 	}
 }
 
-// The legends, screen by screen (keyboard/priority grill, 2026-09-11):
+// The legends, screen by screen:
 // the armed list names every key, watch names no steering key, Closed
 // names only browsing, and the task view advertises what is live on
 // the viewed task — the full set on an open task, c alone under a
@@ -3581,7 +3573,7 @@ func TestTopBlockedOnShelvedDependency(t *testing.T) {
 	}
 }
 
-// ---- Needs Input as the single home (task tuh-…VK83BN, 2026-07-31) ----
+// ---- Needs Input as the single home ----
 
 // A task blocked by both unmet deps and an open blocking escalation
 // keeps rows in both sections; its waiting: line names only the deps —
@@ -3669,7 +3661,7 @@ func wrapForSearch(v string) string {
 	return strings.Join(strings.Fields(out), " ")
 }
 
-// ---- the Closed list (Closed shelf, 2026-08-02; tab since the keyboard/priority grill, 2026-09-11): the done/cancelled shelf ----
+// ---- the Closed list (reached with tab): the done/cancelled shelf ----
 
 // closedSnapshot extends topSnapshot with close metadata and more
 // terminal tasks: three done and two cancelled, created in one order
@@ -3758,7 +3750,7 @@ func TestTopClosedOpensFromBothPanes(t *testing.T) {
 		v := m.View()
 		for _, wantS := range []string{
 			"DONE (3)", "CANCELLED (2)",
-			// Two-line anatomy (grill 2026-08-05): title line, then the
+			// Two-line anatomy: title line, then the
 			// dim meta line with the close stamp · closing actor tail.
 			"▌ t-ship      ship the tui",
 			"▌             [tui] · 2026-07-30 · brandon/claude-code-1",
@@ -4007,7 +3999,7 @@ func TestTopDetailTerminalStatusAndEscalationRecord(t *testing.T) {
 	}
 }
 
-// The poll chain (T4, 2026-09-10) holds exactly one snapshot request
+// The poll chain holds exactly one snapshot request
 // at a time: Init asks for the first by message, the guard turns away
 // every further ask while it is in flight, and the answer — a fresh
 // snapshot or the unchanged version — is what issues the next poll,

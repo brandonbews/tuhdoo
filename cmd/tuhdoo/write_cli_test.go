@@ -96,9 +96,9 @@ func TestCreateUpdateAnswer(t *testing.T) {
 		t.Errorf("labels not fully replaced:\n%s", out)
 	}
 
-	// --priority none clears a set priority (2026-09-11: the CLI half
-	// of clearable priority — it travels as clear_priority; the
-	// numeric form still travels as priority).
+	// --priority none clears a set priority (the CLI half of clearable
+	// priority — it travels as clear_priority; the numeric form still
+	// travels as priority).
 	out, code = runCLI(t, repo, "update", parser, "--priority", "none")
 	if code != 0 {
 		t.Fatalf("update --priority none exit %d; output:\n%s", code, out)
@@ -119,9 +119,8 @@ func TestCreateUpdateAnswer(t *testing.T) {
 	mustContain(t, out, "--priority wants an integer or none")
 
 	// update --status is the curation path (done/cancelled). One
-	// vocabulary since the status-vocabulary revision (2026-08-01):
-	// the flag word is the stored word, and the "archived" input alias
-	// is gone.
+	// vocabulary: the flag word is the stored word, and the "archived"
+	// input alias is gone.
 	out, code = runCLI(t, repo, "update", docs, "--status", "cancelled")
 	if code != 0 {
 		t.Fatalf("update --status exit %d; output:\n%s", code, out)
@@ -225,7 +224,7 @@ func TestCreateUpdateAnswer(t *testing.T) {
 
 // An ambiguous task fragment in `answer` is a loud task-candidate
 // listing, never a silent fallthrough to escalation matching: the
-// resolver contract (T7) promises collisions list candidates, and
+// resolver contract promises collisions list candidates, and
 // before the fix the discarded ambiguity fell through to "no open
 // escalation matches" or a guess. Not-found fragments must keep
 // falling through to escalation-ID matching.
@@ -283,7 +282,7 @@ func TestAnswerAmbiguousTaskFragment(t *testing.T) {
 	mustContain(t, out, "answered", "TOML or YAML?")
 }
 
-// Capture and the shelves over the CLI (2026-07-31): title-only
+// Capture and the shelves over the CLI: title-only
 // create --status inbox, park with --status held, promote/pause/resume
 // with update --status — the same round trips the MCP surface has.
 func TestCreateCaptureAndPromote(t *testing.T) {
@@ -314,7 +313,7 @@ func TestCreateCaptureAndPromote(t *testing.T) {
 	mustContain(t, out, "invalid status")
 
 	// The shelves render: backlog rows carry the on-hold / inbox STATE
-	// values (serialized form, T7 2026-07-31; on-hold above inbox),
+	// values (serialized form; on-hold above inbox),
 	// status counts them, and the task biography keeps its status line.
 	out, _ = runCLI(t, repo, "backlog")
 	mustContain(t, out, "on-hold", parked, "inbox", idea, "idea: dark mode")

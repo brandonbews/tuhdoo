@@ -1,8 +1,8 @@
 package main
 
 // Daemon connection: discovery via <git-dir>/tuhdoo/daemon.json,
-// auto-spawn when absent (T4 lazy lifecycle), and an HTTP client that
-// speaks over the unix socket.
+// auto-spawn when absent, and an HTTP client that speaks over the unix
+// socket.
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ import (
 // daemonStartCeiling bounds each phase of ensureDaemon's wait: first
 // for a freshly spawned daemon's socket to accept connections, then for
 // the daemon to report its ledger loaded. The daemon binds its socket
-// before it loads the ledger (T4 startup order, 2026-09-10), so the
+// before it loads the ledger, so the
 // first phase is a ceiling on process start — generous, because it is
 // never the normal case — and the second on the load itself (a
 // measured 7.2 s cold start; the ceiling leaves room for a bigger
@@ -93,7 +93,7 @@ func readAPIResponse(resp *http.Response, method, path string) ([]byte, error) {
 }
 
 // write performs one write request stamped with the acting principal
-// (X-Tuhdoo-Actor, D7). Non-200 responses surface the daemon's error
+// (X-Tuhdoo-Actor). Non-200 responses surface the daemon's error
 // message.
 func (c *client) write(method, path, actor string, body any) error {
 	return c.writeResp(method, path, actor, body, nil)
@@ -129,8 +129,8 @@ func (c *client) writeResp(method, path, actor string, body, dst any) error {
 
 // ensureDaemon returns a client for the repo's daemon, spawning one
 // when none is serving. It returns only once the daemon reports its
-// ledger loaded: the daemon serves before it loads (T4 startup order,
-// 2026-09-10) and answers a placeholder until the first replay lands,
+// ledger loaded: the daemon serves before it loads and answers a
+// placeholder until the first replay lands,
 // and readiness is absorbed here, once, rather than by every caller —
 // whichever way the socket was found, the loaded phase follows.
 func ensureDaemon(r *repo) (*client, error) {
@@ -182,7 +182,7 @@ func awaitDaemon(r *repo, exited <-chan int, ceiling time.Duration) (*client, er
 // the daemon reports its ledger loaded, bounded by ceiling: the
 // placeholder is version 0 and the first replay version 1, so
 // GET /v0/snapshot?since=0&wait=<ceiling> is answered the moment the
-// load lands (T4, 2026-09-10) — no polling cadence, no fixed wait. A
+// load lands — no polling cadence, no fixed wait. A
 // daemon whose first load fails ends itself — socket and discovery
 // file torn down, parked requests woken with the placeholder on the
 // way out — so a placeholder answered early is re-asked, and a request
