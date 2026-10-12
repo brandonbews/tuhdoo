@@ -113,7 +113,4 @@ walks a machine — or a whole team — away with zero trace.
 
 ## Learn more
 
-The full documentation lives in [`docs/`](docs/README.md). The design
-record — vision, decisions, and their rationale — lives in
-`internal-docs/`; start with
-[`internal-docs/design/001-core-design.md`](internal-docs/design/001-core-design.md).
+The full documentation lives in [`docs/`](docs/README.md).

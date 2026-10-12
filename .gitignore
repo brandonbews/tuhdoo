@@ -4,3 +4,12 @@
 .DS_Store
 ._*
 Thumbs.db
+
+# Agent worktrees (Claude Code)
+/.claude/worktrees/
+
+# Maintainer notes (a clone of the private tuhdoo-internal repo) and the local
+# agent instructions and command its install-hooks.sh links in
+/internal-docs
+/CLAUDE.local.md
+/.claude/commands/drain-backlog.md
