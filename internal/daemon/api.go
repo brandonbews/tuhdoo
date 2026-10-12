@@ -1,9 +1,9 @@
 package daemon
 
-// The JSON HTTP API (002 T4): boring REST over the unix socket. Every
+// The JSON HTTP API: boring REST over the unix socket. Every
 // handler is decode → ops.go call → respond; the MCP surface (mcp.go)
 // wraps the same operations, so the two cannot disagree. Writers
-// identify themselves with the X-Tuhdoo-Actor header (D7 principal:
+// identify themselves with the X-Tuhdoo-Actor header (a principal:
 // "human" or "human/agent").
 
 import (
@@ -19,7 +19,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/syncer"
 )
 
-// The read side is one endpoint (T4, 2026-09-10): GET /v0/snapshot, a
+// The read side is one endpoint: GET /v0/snapshot, a
 // versioned long poll carrying every task fully hydrated. /v0/state
 // and GET /v0/tasks/{id} are gone with the per-task hydration loop
 // they served.
@@ -28,7 +28,7 @@ func (d *Daemon) handler() http.Handler {
 	mux.HandleFunc("GET /v0/snapshot", d.handleSnapshot)
 	// The deleted reads answer 404 by name: the mux alone would answer
 	// GET /v0/tasks/{id} with 405 (PATCH still lives there), and a
-	// pre-revision client deserves to hear where the read went.
+	// older client deserves to hear where the read went.
 	mux.HandleFunc("GET /v0/state", handleGone)
 	mux.HandleFunc("GET /v0/tasks/{id}", handleGone)
 	mux.HandleFunc("POST /v0/tasks", d.handleCreateTasks)
@@ -39,7 +39,7 @@ func (d *Daemon) handler() http.Handler {
 	mux.HandleFunc("POST /v0/escalations", d.handleEscalate)
 	mux.HandleFunc("POST /v0/escalations/answer", d.handleAnswerEscalation)
 	mux.HandleFunc("POST /v0/notes", d.handleAddNote)
-	// The MCP endpoint (T4): GET, POST, and DELETE all route to the one
+	// The MCP endpoint: GET, POST, and DELETE all route to the one
 	// streamable handler.
 	mux.Handle("/mcp", d.mcpHandler())
 	return mux
@@ -62,18 +62,18 @@ type taskJSON struct {
 	Status      string    `json:"status"`
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
-	// Close metadata (history view, 2026-08-02): present on done and
-	// cancelled tasks only — replay-derived, never stored (T3).
+	// Close metadata (history view): present on done and cancelled
+	// tasks only — replay-derived, never stored.
 	ClosedAt *time.Time `json:"closed_at,omitempty"`
 	ClosedBy string     `json:"closed_by,omitempty"`
 }
 
 // scopeTaskJSON is the slim orientation row served by get_backlog's
-// scope sections (T5 read parity, 2026-08-02). No description by
-// design — orientation lists, hydration digs (get_task). The trailing
-// fields are per-scope payoffs: holder/lease_expires on in_progress
-// rows, waiting_on on blocked rows, closed_at/closed_by on done and
-// cancelled rows.
+// scope sections, which let an agent read what the human surfaces
+// show. No description by design — orientation lists, hydration digs
+// (get_task). The trailing fields are per-scope payoffs:
+// holder/lease_expires on in_progress rows, waiting_on on blocked rows,
+// closed_at/closed_by on done and cancelled rows.
 type scopeTaskJSON struct {
 	ID           string     `json:"id"`
 	Title        string     `json:"title"`
@@ -83,7 +83,7 @@ type scopeTaskJSON struct {
 	Holder       string     `json:"holder,omitempty" jsonschema:"in_progress rows: the principal holding the active claim"`
 	LeaseExpires *time.Time `json:"lease_expires,omitempty" jsonschema:"in_progress rows: when the holder's lease expires unless renewed"`
 	WaitingOn    []string   `json:"waiting_on,omitempty" jsonschema:"blocked rows: condensed reasons — dep:<task-id> per unmet dependency, esc:<escalation-id> per open blocking escalation; hydrate with get_task for the story"`
-	// Loud blockage annotations (2026-08-05 edge grill). Annotations
+	// Loud blockage annotations. Annotations
 	// only: blocked stays the status, these say more about why.
 	CancelledDeps []string   `json:"cancelled_deps,omitempty" jsonschema:"blocked rows: the unmet dependencies sitting cancelled — cancelled never counts as done; re-pointing the edge is a human decision"`
 	Cyclic        bool       `json:"cyclic,omitempty" jsonschema:"blocked rows: this task sits on a depends_on loop among not-done tasks and can never become ready until a human cuts an edge"`
@@ -159,7 +159,7 @@ type updateJSON struct {
 	Fields []string `json:"fields"`
 }
 
-// hydratedTask is one task with everything attached (T5 get_task:
+// hydratedTask is one task with everything attached (get_task:
 // start work in one call).
 type hydratedTask struct {
 	Task        taskJSON         `json:"task"`
@@ -170,8 +170,8 @@ type hydratedTask struct {
 	Updates     []updateJSON     `json:"updates"`
 
 	// Warning carries the standing confirm-before-merge rule on claim
-	// responses (agent protocol step 5; D6 call-time stand-down) and is
-	// empty on plain hydration (get_task).
+	// responses (agent protocol step 5; a claim that lost its race
+	// learns it at call time) and is empty on plain hydration (get_task).
 	Warning string `json:"warning,omitempty" jsonschema:"on claim responses: the standing rule — call confirm_claim and merge only on a confirmed verdict; merging on an unconfirmed claim is a protocol violation"`
 }
 
@@ -369,7 +369,7 @@ type snapshotTask struct {
 	// Holder is the actor of the active claim (also claim.actor; kept
 	// as the listing's one-word answer).
 	Holder string `json:"holder,omitempty"`
-	// One classifier (2026-08-03): core's verdict rides the wire so no
+	// One classifier: core's verdict rides the wire so no
 	// client re-derives it. Situation is always present — ready /
 	// in_progress / blocked for open tasks, the status word for the
 	// rest. The blocker lists carry IDs for every task regardless of
@@ -378,7 +378,7 @@ type snapshotTask struct {
 	Situation           string   `json:"situation"`
 	UnmetDeps           []string `json:"unmet_deps,omitempty"`
 	BlockingEscalations []string `json:"blocking_escalations,omitempty"`
-	// Loud blockage annotations (2026-08-05 edge grill): the unmet deps
+	// Loud blockage annotations: the unmet deps
 	// sitting cancelled, and membership in a depends_on loop among
 	// not-done tasks. Annotations, not statuses — a marked task is
 	// still just blocked; clients render the why, never re-derive it.
@@ -386,7 +386,7 @@ type snapshotTask struct {
 	Cyclic        bool     `json:"cyclic,omitempty"`
 }
 
-// snapshotResp is GET /v0/snapshot (T4, 2026-09-10): the whole replica
+// snapshotResp is GET /v0/snapshot: the whole replica
 // at one version. Version is the daemon's state version; a client
 // loops with the version it last saw as ?since=. Unchanged is true
 // only on the answer to a wait that elapsed with no bump — then the
@@ -423,7 +423,7 @@ const maxSnapshotWait = 60 * time.Second
 // The answer is immediate when the version differs from N — differs,
 // not exceeds: a daemon restarted by a deploy counts from 1 again, and
 // a pane holding an older, larger version is answered at once rather
-// than parked (T4). Otherwise the request parks on the broadcast
+// than parked. Otherwise the request parks on the broadcast
 // channel until a bump — a staged write, a merge, a lease lapsing —
 // or the wait elapses, which answers the unchanged version so the
 // client re-polls. Shutdown wakes every parked request before the
@@ -608,7 +608,7 @@ func escalationJSONOf(e *core.Escalation) escalationJSON {
 }
 
 // requireActor extracts and validates the X-Tuhdoo-Actor header, which
-// every write must carry (D7 principal: "human" or "human/agent").
+// every write must carry (a principal: "human" or "human/agent").
 func requireActor(w http.ResponseWriter, r *http.Request) (string, bool) {
 	a := r.Header.Get(actorHeader)
 	if err := ValidateActor(a); err != nil {
@@ -618,11 +618,11 @@ func requireActor(w http.ResponseWriter, r *http.Request) (string, bool) {
 	return a, true
 }
 
-// actorHeader carries the D7 principal on every write, on both the
+// actorHeader carries the principal on every write, on both the
 // HTTP and MCP surfaces.
 const actorHeader = "X-Tuhdoo-Actor"
 
-// ValidateActor checks a D7 principal ("human" or "human/agent").
+// ValidateActor checks a principal ("human" or "human/agent").
 // Exported for the CLI's mcp shim, which binds the principal before the
 // daemon ever sees it.
 func ValidateActor(a string) error {

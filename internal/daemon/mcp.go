@@ -1,12 +1,12 @@
 package daemon
 
-// The MCP surface (002 T5): streamable HTTP on the same unix socket,
+// The MCP surface: streamable HTTP on the same unix socket,
 // exactly twelve tools, projected from the same ops.go operations as
 // the HTTP API. One *mcp.Server is minted per session so tool closures can
 // capture the session's actor (bound from the X-Tuhdoo-Actor header on
 // the initialize POST) and its claim set for lease auto-renewal —
 // session liveness, not agent diligence, is what keeps leases alive
-// (T5: no heartbeat tool).
+// (there is no heartbeat tool).
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/core"
 )
 
-// mcpInstructions orients a fresh agent (T5: the D1 loop in minimum
+// mcpInstructions orients a fresh agent (the work loop in minimum
 // calls). The full protocol lives in docs/agent-protocol.md; this is
 // the elevator version every session carries.
 const mcpInstructions = "tuhdoo is the shared work ledger for this repository. " +
@@ -34,8 +34,9 @@ const mcpInstructions = "tuhdoo is the shared work ledger for this repository. "
 	"if the session drops, the task returns to the pool."
 
 // mcpKeepAliveFailures tolerated before the daemon declares the session
-// dead — mirroring T8's "three missed renewals = expiry" posture, so a
-// transiently slow client is not confused with a vanished one.
+// dead — mirroring the lease's "three missed renewals = expiry"
+// posture, so a transiently slow client is not confused with a
+// vanished one.
 const mcpKeepAliveFailures = 3
 
 // mcpSession is one connected agent: its principal and the claims made
@@ -73,7 +74,7 @@ func (s *mcpSession) track(task, claim string) {
 }
 
 // heldClaim reports the claim this session made on task, if any — the
-// confirm_claim gate is for the session that holds the claim (T5).
+// confirm_claim gate is for the session that holds the claim.
 func (s *mcpSession) heldClaim(task string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -101,7 +102,7 @@ func (s *mcpSession) snapshot() map[string]string {
 // agentNameHeader carries the harness's MCP initialize clientInfo.name,
 // forwarded by the shim when no --as override was given. Its presence
 // asks the daemon to mint the agent half of the principal at session
-// bind (D7: agent names are assigned when a harness connects over MCP).
+// bind (agent names are assigned when a harness connects over MCP).
 const agentNameHeader = "X-Tuhdoo-Agent-Name"
 
 // mcpHandler mounts the streamable HTTP endpoint. The getServer
@@ -134,7 +135,7 @@ func (d *Daemon) mcpHandler() http.Handler {
 // validateSessionIdentity checks the identity headers at the door.
 // Without an agent name, the actor must be a full valid principal.
 // With one, the actor must be a root human (single segment) — the shim
-// derives it from git identity (D7) and the daemon mints the agent
+// derives it from git identity and the daemon mints the agent
 // half at bind.
 func validateSessionIdentity(actor, client string) error {
 	if err := ValidateActor(actor); err != nil {
@@ -186,7 +187,7 @@ func sanitizeAgentName(client string) string {
 	return out
 }
 
-// newMCPServer builds the per-session server: the twelve T5 tools plus
+// newMCPServer builds the per-session server: the twelve tools plus
 // the lease-renewal machinery tied to session liveness. A non-empty
 // client name means the principal is auto-derived: actor is the root
 // human and the agent half is minted at session bind.
@@ -218,7 +219,7 @@ func (d *Daemon) newMCPServer(actor, client string) *mcp.Server {
 					// disconnect (DELETE), keepalive failure, or
 					// daemon shutdown. Renewals stop; the leases
 					// expire on their own and replay returns the
-					// tasks to the pool (T5).
+					// tasks to the pool.
 					_ = ss.Wait()
 					close(s.stop)
 					d.log.Printf("daemon: mcp: session for %s ended", s.principal())
@@ -231,7 +232,8 @@ func (d *Daemon) newMCPServer(actor, client string) *mcp.Server {
 }
 
 // renewSessionLeases renews every claim this session holds, every
-// LeaseTTL/3 (T8: 15 min TTL, renewed every 5), until the session ends.
+// LeaseTTL/3 (by default a 15 min TTL, renewed every 5), until the
+// session ends.
 func (d *Daemon) renewSessionLeases(s *mcpSession) {
 	ticker := time.NewTicker(d.leaseTTL / 3)
 	defer ticker.Stop()
@@ -248,11 +250,10 @@ func (d *Daemon) renewSessionLeases(s *mcpSession) {
 // renewOnce re-checks each tracked claim under d.mu, renewing the
 // active ones and dropping closed ones (released elsewhere, expired,
 // finished) from tracking. A provisionally-voided claim is the one
-// exception (escalation-decided 2026-08-04, D6 clause 3): it stays
-// tracked but is never renewed — the loser must be able to hear "lost"
-// from its own tools (confirm_claim gates on this session's tracking),
-// while the unrenewed lease lapses on schedule so expiry synthesis
-// still closes a loser that never reports.
+// exception: it stays tracked but is never renewed — the loser must be
+// able to hear "lost" from its own tools (confirm_claim gates on this
+// session's tracking), while the unrenewed lease lapses on schedule so
+// expiry synthesis still closes a loser that never reports.
 func (d *Daemon) renewOnce(s *mcpSession) {
 	claims := s.snapshot()
 	if len(claims) == 0 {
@@ -317,7 +318,7 @@ type backlogResult struct {
 	Inbox []taskJSON `json:"inbox" jsonschema:"untriaged captures (status inbox), creation order — never served by claim_next/claim_task; promoting one to open means supplying a prompt-quality description first"`
 	Held  []taskJSON `json:"held" jsonschema:"triaged but deliberately paused tasks (status held), creation order — never served by claim_next/claim_task; resume by setting status open"`
 
-	// Scope sections (T5 read parity, 2026-08-02). Pointers so presence
+	// Scope sections. Pointers so presence
 	// tracks the request exactly: a requested-but-empty section is an
 	// empty array, an unrequested one is absent, and an omitted scope
 	// leaves the response byte-identical to the three arrays above.
@@ -357,7 +358,7 @@ type releaseClaimInput struct {
 
 type releaseClaimResult struct {
 	Released string `json:"released" jsonschema:"the released claim ID"`
-	Message  string `json:"message,omitempty" jsonschema:"the daemon's acknowledgment when this release was a race loser standing down (D6): the attempt is recorded as superseded; salvage via add_note"`
+	Message  string `json:"message,omitempty" jsonschema:"the daemon's acknowledgment when this release was a race loser standing down: the attempt is recorded as superseded; salvage via add_note"`
 }
 
 type finishRunInput struct {
@@ -389,7 +390,7 @@ type addNoteInput struct {
 
 type eventIDResult struct {
 	ID      string `json:"id" jsonschema:"the recorded event's ID"`
-	Warning string `json:"warning,omitempty" jsonschema:"a stand-down notice when your claim on this task has lost its race (D6: losers learn at call-time) — stand down, do not merge, close any open PR, and record the attempt with finish_run"`
+	Warning string `json:"warning,omitempty" jsonschema:"a stand-down notice when your claim on this task has lost its race (nothing is pushed: losers learn at call time) — stand down, do not merge, close any open PR, and record the attempt with finish_run"`
 }
 
 type createTasksInput struct {
@@ -407,8 +408,8 @@ type updateTaskInput struct {
 	Description *string `json:"description,omitempty" jsonschema:"new description; omit to leave unchanged"`
 	Status      *string `json:"status,omitempty" jsonschema:"new status: open, inbox, held, done, or cancelled; omit to leave unchanged. open<->held is pause/resume; inbox->open is promotion — supply a prompt-quality description with it (see the agent protocol)"`
 	Priority    *int    `json:"priority,omitempty" jsonschema:"new priority — P0-highest: 0 is most urgent, larger numbers less urgent; omit to leave unchanged. To clear a set priority back to unprioritized, send clear_priority instead"`
-	// clear_priority is a field, not a tool (T5: the count stays
-	// twelve — the same precedent as the status field, 2026-07-31).
+	// clear_priority is a field, not a tool (the count stays twelve —
+	// the same precedent as the status field).
 	ClearPriority bool      `json:"clear_priority,omitempty" jsonschema:"true clears a set priority back to unprioritized (the task then sorts after every prioritized one); cannot be combined with priority"`
 	Labels        *[]string `json:"labels,omitempty" jsonschema:"full replacement label list; omit to leave unchanged"`
 	DependsOn     *[]string `json:"depends_on,omitempty" jsonschema:"full replacement dependency-edge list (task IDs); omit to leave unchanged"`
@@ -416,10 +417,11 @@ type updateTaskInput struct {
 
 // ---- tool registration ----
 
-// addMCPTools registers exactly the twelve T5 tools. Op failures return
+// addMCPTools registers exactly the twelve tools. Op failures return
 // as Go errors, which the SDK packs into the result with IsError set —
 // a tool error the model can read and correct, never a protocol error.
-// Additions to this list require a design-doc revision first.
+// The surface is small on purpose: an addition to this list is a
+// design decision first, never a convenience.
 func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "get_backlog",
@@ -454,8 +456,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Atomically claim the best ready task and return it hydrated. " +
 			"An empty pool returns claimed:false — a normal outcome, not an error. " +
 			"The claim's lease auto-renews while this session stays connected. " +
-			"A claim is provisional (D6): before merging anything from the work, call " +
-			"confirm_claim and merge only on a confirmed verdict.",
+			"A claim is provisional (another machine's earlier claim can void it): before merging " +
+			"anything from the work, call confirm_claim and merge only on a confirmed verdict.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimNextInput) (*mcp.CallToolResult, claimNextResult, error) {
 		h, oe := d.opClaimNext(s.principal(), in.Labels)
 		if oe != nil {
@@ -475,8 +477,8 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Description: "Claim one specific task (the human-directed path) and return it hydrated. " +
 			"Fails if the task is already claimed, not open, blocked by unmet dependencies, " +
 			"or blocked by an open blocking escalation; the error names the specific blockers. " +
-			"A claim is provisional (D6): before merging anything from the work, call " +
-			"confirm_claim and merge only on a confirmed verdict.",
+			"A claim is provisional (another machine's earlier claim can void it): before merging " +
+			"anything from the work, call confirm_claim and merge only on a confirmed verdict.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in claimTaskInput) (*mcp.CallToolResult, hydratedTask, error) {
 		h, oe := d.opClaimTask(s.principal(), in.Task)
 		if oe != nil {
@@ -490,7 +492,7 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 
 	mcp.AddTool(srv, &mcp.Tool{
 		Name: "confirm_claim",
-		Description: "Make your claim's verdict final before you merge (the D6 referee's gate). " +
+		Description: "Make your claim's verdict final before you merge (the gate that settles a claim race). " +
 			"A claim is provisional — an earlier claim on another machine can void yours without " +
 			"this session hearing about it — so call this before merging, arming auto-merge, or " +
 			"pushing to a shared branch. Answers confirmed (irrevocable: merge freely) or lost " +
@@ -531,13 +533,13 @@ func (d *Daemon) addMCPTools(srv *mcp.Server, s *mcpSession) {
 		Name: "finish_run",
 		Description: "Record how your attempt ended: outcome, links (branch/PR/commits), and a " +
 			"summary for whoever comes next. Every claim should end in a finish_run or a " +
-			"release_claim. done is refereed (D6): the daemon runs the confirmation gate, and " +
+			"release_claim. done is refereed by the daemon: it runs the confirmation gate, and " +
 			"an attempt that lost its claim race is recorded superseded instead — your links " +
 			"and summary are kept as the salvage record, and the result says so.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, in finishRunInput) (*mcp.CallToolResult, finishRunResult, error) {
 		// Agents report their own verdicts only; "interrupted" and
-		// "superseded" are daemon-synthesized (T5). The op rejects them
-		// for every caller (2026-09-11), so no narrowing here.
+		// "superseded" are daemon-synthesized. The op rejects them for
+		// every caller, so no narrowing here.
 		res, oe := d.opFinishRun(s.principal(), finishRunReq{
 			Task: in.Task, Outcome: in.Outcome, Branch: in.Branch,
 			PR: in.PR, Commits: in.Commits, MergedAs: in.MergedAs, Summary: in.Summary,

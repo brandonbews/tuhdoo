@@ -1,11 +1,11 @@
 package daemon
 
-// The loser's whole story (D6 clause 3, 2026-08-04): losers learn at
-// call-time, a finish on a lost attempt is coerced to superseded with
-// the reported links kept for salvage, a loser that never reports is
-// closed by replay's synthesized superseded run at lease expiry (after
-// which a late finish is turned away toward add_note), and a voided
-// claimant's release_claim is an acknowledged stand-down, not an error.
+// The loser's whole story: losers learn at call time, a finish on a
+// lost attempt is coerced to superseded with the reported links kept for
+// salvage, a loser that never reports is closed by replay's synthesized
+// superseded run at lease expiry (after which a late finish is turned
+// away toward add_note), and a voided claimant's release_claim is an
+// acknowledged stand-down, not an error.
 
 import (
 	"net/http"
@@ -62,7 +62,7 @@ func runEvents(t *testing.T, evs []event.Event) map[string][]event.RunFinished {
 // TestFinishDoneByRaceLoserCoercedToSuperseded: the referee at the
 // finish. A loser reporting done records superseded — links kept as the
 // salvage record, the result saying so plainly — while the winner's
-// done stands (refereed through the gate, which remoteless is the T2
+// done stands (refereed through the gate, which remoteless is the
 // local arm writing the claim.confirmed itself).
 func TestFinishDoneByRaceLoserCoercedToSuperseded(t *testing.T) {
 	d, c := startDaemon(t)
@@ -374,12 +374,12 @@ func TestCallTimeStandDownNotices(t *testing.T) {
 	}
 }
 
-// TestTwoDaemonLoserStory is D6 clause 3 end to end: two daemons on one
-// remote race a claim; after they converge, the loser's finish_run(done)
-// is coerced to superseded with its branch kept, and the winner's
-// finish_run(done) — never having called confirm_claim — wins the gate
-// at the remote and records done. Exactly one confirmation, one done,
-// one superseded, on the shared branch itself.
+// TestTwoDaemonLoserStory is the loser's story end to end: two daemons
+// on one remote race a claim; after they converge, the loser's
+// finish_run(done) is coerced to superseded with its branch kept, and
+// the winner's finish_run(done) — never having called confirm_claim —
+// wins the gate at the remote and records done. Exactly one
+// confirmation, one done, one superseded, on the shared branch itself.
 func TestTwoDaemonLoserStory(t *testing.T) {
 	dA, dB, rootA, rootB := twoDaemonRemote(t)
 
@@ -398,7 +398,7 @@ func TestTwoDaemonLoserStory(t *testing.T) {
 	mustCycle(t, dA)
 	mustCycle(t, dB)
 
-	// Both claim behind one starting gun — a genuine D6 race.
+	// Both claim behind one starting gun — a genuine claim race.
 	sides := []struct {
 		d     *Daemon
 		actor string
@@ -512,8 +512,8 @@ func TestTwoDaemonLoserStory(t *testing.T) {
 // TestRenewOnceKeepsVoidedClaimsTracked: the renewal tick must not
 // evict a provisionally-voided claim from session tracking — a race
 // loser has to hear "lost" from its own confirm_claim, which gates on
-// that tracking (D6 clause 3; escalation-decided 2026-08-04, the
-// collision harness's settle phase is the field shape). The voided
+// that tracking (the collision harness's settle phase produces exactly
+// this shape). The voided
 // claim stays tracked but is never renewed, so its lease still lapses
 // on schedule and expiry synthesis closes a loser that never reports.
 // Closed and unknown claims are still dropped.
@@ -572,13 +572,13 @@ func TestRenewOnceKeepsVoidedClaimsTracked(t *testing.T) {
 }
 
 // TestReclaimAfterLostRaceKeepsBothAttemptsOnRecord is the write side
-// of close-by-claim (2026-08-27). A loser whose claim lost the race
+// of close-by-claim. A loser whose claim lost the race
 // may legitimately claim the same task again once the winner walks
 // away; the finish then closes the SECOND attempt — the stored
 // run.finished names its claim — and the first, never-reported attempt
 // keeps its own synthesized superseded trace when its lease lapses,
-// instead of being double-booked closed by the later run (D6 clause 3:
-// one close per attempt).
+// instead of being double-booked closed by the later run (one close
+// per attempt).
 func TestReclaimAfterLostRaceKeepsBothAttemptsOnRecord(t *testing.T) {
 	d, c := startDaemon(t)
 	const winner, loser = "brandon/win", "brandon/lose"

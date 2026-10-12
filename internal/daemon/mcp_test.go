@@ -1,6 +1,6 @@
 package daemon
 
-// MCP surface integration tests (B9 Accept): a real SDK client speaking
+// MCP surface acceptance tests: a real SDK client speaking
 // streamable HTTP over the daemon's real unix socket. The actor header
 // is injected by the test HTTP client, exactly as the tuhdoo mcp shim
 // does in production.
@@ -171,7 +171,7 @@ func flushedEvents(t *testing.T, d *Daemon) []event.Event {
 	return events
 }
 
-// mcpTools is the T5 surface: exactly these twelve, nothing else.
+// mcpTools is the whole surface: exactly these twelve, nothing else.
 var mcpTools = []string{
 	"add_note", "claim_next", "claim_task", "confirm_claim", "create_task",
 	"escalate", "finish_run", "get_backlog", "get_task", "relay_answer",
@@ -186,7 +186,7 @@ func TestMCPFullLoop(t *testing.T) {
 	const actor = "brandon/impl-1"
 	cs := mcpConnect(t, d, actor, nil)
 
-	// The surface is exactly the twelve T5 tools.
+	// The surface is exactly the twelve tools.
 	var names []string
 	for tool, err := range cs.Tools(context.Background(), nil) {
 		if err != nil {
@@ -242,8 +242,8 @@ func TestMCPFullLoop(t *testing.T) {
 	}
 
 	// The ledger: exactly the loop's events, all stamped with the
-	// session principal. finish_run(done) is refereed (D6): the gate's
-	// claim.confirmed lands with it — remoteless, via the T2 local arm.
+	// session principal. finish_run(done) is refereed: the gate's
+	// claim.confirmed lands with it — remoteless, via the local arm.
 	events := flushedEvents(t, d)
 	wantTypes := []string{
 		event.TypeTaskCreated, event.TypeClaimMade, event.TypeNoteAdded,
@@ -265,7 +265,7 @@ func TestMCPFullLoop(t *testing.T) {
 	}
 }
 
-// merged_as (additive, 2026-08-06 linkage grill): finish_run accepts
+// merged_as (additive): finish_run accepts
 // the landed commit(s) and persists them end-to-end — the stored
 // run.finished payload carries the field, and get_task's run row
 // exposes it alongside branch and PR.
@@ -312,7 +312,7 @@ func TestMCPFinishRunMergedAs(t *testing.T) {
 	}
 }
 
-// Inbox and held over the MCP surface (2026-07-31): title-only capture
+// Inbox and held over the MCP surface: title-only capture
 // through create_task lands as a real inbox event; get_backlog shows
 // the shelves as their own arrays; claim_next skips them; and the full
 // promote round trip runs through update_task — fields, not tools.
@@ -409,7 +409,7 @@ func TestMCPInboxCaptureAndPromotion(t *testing.T) {
 	}
 }
 
-// Curation over the MCP surface (parity audit, 2026-07-31): every
+// Curation over the MCP surface: every
 // steering action a human asks for rides update_task fields, not tools.
 // Cancelling is update_task status cancelled — the task leaves every
 // get_backlog array but stays readable by ID (nothing is deleted);
@@ -514,7 +514,7 @@ func TestMCPCurationUpdates(t *testing.T) {
 	}
 }
 
-// clear_priority is an update_task field, not a tool (T5: still twelve,
+// clear_priority is an update_task field, not a tool (still twelve,
 // pinned by TestMCPFullLoop above): true clears a set priority back
 // to unprioritized, and pairing it with priority is a tool error.
 func TestMCPUpdateTaskClearPriority(t *testing.T) {
@@ -544,7 +544,7 @@ func TestMCPUpdateTaskClearPriority(t *testing.T) {
 	}
 }
 
-// relay_answer (T5, 2026-07-30 revision): an agent records an
+// relay_answer: an agent records an
 // out-of-band answer; the event's actor is the agent, the payload
 // attributes the answer to the session's root principal, and the task
 // unblocks exactly as a steering answer would unblock it.
@@ -739,7 +739,7 @@ func TestMCPConnectionDropExpiresLease(t *testing.T) {
 
 // While the session lives, the daemon renews the lease on its own —
 // with a short TTL, only auto-renewal can keep the claim active past
-// several expiry windows (T5: no heartbeat tool).
+// several expiry windows (there is no heartbeat tool).
 func TestMCPSessionAutoRenewsLease(t *testing.T) {
 	// Lease expiries are stored at second precision (truncated), so a
 	// renewal at t stores floor(t+ttl): with ttl 1s a renewal can land
@@ -842,7 +842,7 @@ func TestMCPBatchDAGAtomic(t *testing.T) {
 	}
 }
 
-// Auto-minted principals (D7): when the shim forwards the harness's
+// Auto-minted principals: when the shim forwards the harness's
 // clientInfo.name, the daemon completes the principal at session bind
 // as <human>/<client>-<n> — and two concurrent sessions from the same
 // human and harness get distinct principals.
@@ -923,7 +923,7 @@ func TestSanitizeAgentName(t *testing.T) {
 	}
 }
 
-// get_backlog scope (T5 read parity, 2026-08-02): omitting scope keeps
+// get_backlog scope: omitting scope keeps
 // the response byte-identical to the three-array shape (the work-loop
 // hot path); each requested section arrives as slim, description-free
 // rows carrying its payoff fields; unknown scope values error clearly.
@@ -932,9 +932,10 @@ func TestMCPBacklogScope(t *testing.T) {
 	const actor = "brandon/impl-1"
 	cs := mcpConnect(t, d, actor, nil)
 
-	// Seed a born-done task straight into the ledger (the B12 migration
-	// shape): the write surfaces reject born-terminal creates, so the
-	// creation-event close fallback only ever arrives as stored history.
+	// Seed a born-done task straight into the ledger (the shape a
+	// backlog migration produces): the write surfaces reject born-terminal
+	// creates, so the creation-event close fallback only ever arrives as
+	// stored history.
 	// Its hour-old ULID makes it the oldest close on the shelf.
 	oldID, err := event.NewID(time.Now().Add(-time.Hour), bytes.NewReader(make([]byte, 10)))
 	if err != nil {
@@ -1073,11 +1074,11 @@ func TestMCPBacklogScope(t *testing.T) {
 	}
 }
 
-// get_backlog's blocked rows carry the loud annotations (2026-08-05
-// edge grill) additively: cyclic on loop members, cancelled_deps on
-// waiters of a cancelled dependency, plain rows unchanged. The loop is
-// seeded as stored history — the merge arrival shape — since no tool
-// knowingly writes one.
+// get_backlog's blocked rows carry the loud annotations additively:
+// cyclic on loop members, cancelled_deps on waiters of a cancelled
+// dependency, plain rows unchanged. The loop is seeded as stored
+// history — the merge arrival shape — since no tool knowingly writes
+// one.
 func TestMCPBlockedRowsCarryLoopAndCancelledMarks(t *testing.T) {
 	d, _ := startDaemon(t)
 	cs := mcpConnect(t, d, "brandon/impl-1", nil)

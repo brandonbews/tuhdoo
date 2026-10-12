@@ -1,11 +1,10 @@
 package daemon
 
-// Startup order (T4, 2026-09-10: lock, socket, discovery file, then
-// load). The socket serves while the first replay is still in flight —
-// reads answer "starting", writes a retryable 503, MCP session setup
-// succeeds and a tool call gets the same retryable error — and a first
-// load that fails ends the daemon with its socket and discovery file
-// torn down.
+// Startup order (lock, socket, discovery file, then load). The socket
+// serves while the first replay is still in flight — reads answer
+// "starting", writes a retryable 503, MCP session setup succeeds and a
+// tool call gets the same retryable error — and a first load that fails
+// ends the daemon with its socket and discovery file torn down.
 
 import (
 	"bytes"

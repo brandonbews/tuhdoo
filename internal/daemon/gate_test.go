@@ -1,8 +1,8 @@
 package daemon
 
-// Integration tests for the D6 confirmation gate (2026-08-04): the
-// collision-harness shape in miniature — two real daemons on two clones
-// of one bare remote racing confirm_claim — plus the T2 remoteless and
+// Integration tests for the confirmation gate: the collision-harness
+// shape in miniature — two real daemons on two clones of one bare
+// remote racing confirm_claim — plus the remoteless and
 // unreachable-remote arms. Everything asserted is machine-checked
 // against the real branch trees, not daemon caches.
 
@@ -80,7 +80,7 @@ func confirmedEvents(t *testing.T, evs []event.Event) map[string][]event.ClaimCo
 }
 
 // TestConfirmClaimRemoteless: no remote configured is a normal state
-// (T2) — the daemon is the sole writer, so confirmation is locally
+// — the daemon is the sole writer, so confirmation is locally
 // sound, instant, and idempotent.
 func TestConfirmClaimRemoteless(t *testing.T) {
 	d, c := startDaemon(t)
@@ -116,7 +116,7 @@ func TestConfirmClaimRemoteless(t *testing.T) {
 
 // TestConfirmClaimUnreachableRemoteRefusesHonestly: with a remote
 // configured but unreachable the referee refuses with a retryable
-// error and writes nothing — it never guesses (D6: accuracy outranks
+// error and writes nothing — it never guesses (accuracy outranks
 // liveness).
 func TestConfirmClaimUnreachableRemoteRefusesHonestly(t *testing.T) {
 	setGitEnv(t)
@@ -179,7 +179,7 @@ func TestConfirmClaimTwoDaemonsOneWinner(t *testing.T) {
 		mustCycle(t, dA)
 		mustCycle(t, dB)
 
-		// Both daemons claim behind one starting gun — a genuine D6
+		// Both daemons claim behind one starting gun — a genuine claim
 		// race: neither has fetched the other's claim when it claims.
 		type claimOut struct {
 			claim string
@@ -290,7 +290,7 @@ func TestConfirmClaimTwoDaemonsOneWinner(t *testing.T) {
 
 // movingRemoteGit wraps the daemon's real git and advances the bare
 // remote's data branch just before delegating each push — the
-// deterministic worst case of D6 contention: a peer lands between every
+// deterministic worst case of claim contention: a peer lands between every
 // fetch and push, so every push loses the remote's ref CAS for real
 // (the rejection travels the same gitx classification as production).
 type movingRemoteGit struct {

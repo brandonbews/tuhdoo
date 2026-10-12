@@ -1,6 +1,6 @@
 package daemon
 
-// The versioned replica (001 D2/D3/D6/D9, 002 T4/T6, 2026-09-10): a
+// The versioned replica: a
 // monotonic state version bumped on staged writes, merges, and lease
 // transitions; a memo served at an unchanged version; one long-polled
 // snapshot that parks until the version moves; views re-rendered on
@@ -270,7 +270,8 @@ func TestSnapshotParksUntilBump(t *testing.T) {
 
 // A lease that expires at T wakes a parked request at T: the fake
 // clock reaches T, the transition timer fires, and the pane redraws
-// with the task back in the pool (D6 clause 5's accepted consequence).
+// with the task back in the pool (a lapse wakes every parked waiter at
+// once, by design).
 func TestSnapshotWakesAtLeaseExpiry(t *testing.T) {
 	d, c, clock, ft := startFakeTimeDaemon(t, 15*time.Minute)
 	task := createOne(t, c, "brandon", map[string]any{"title": "the pane sees the lapse"})
@@ -479,7 +480,7 @@ func TestViewsFollowTheVersion(t *testing.T) {
 
 	// Three renewal ticks stage zero files: the render carries no
 	// expiry, so nothing differs from the tree — a flush after them is
-	// a no-op. Renewal is the holding session's tick (T8), so the test
+	// a no-op. Renewal is the holding session's tick, so the test
 	// plays the session.
 	s := &mcpSession{actor: "brandon/a1", stop: make(chan struct{}), claims: make(map[string]string)}
 	s.track(task, held.Claim.ID)

@@ -90,7 +90,7 @@ func startDaemonOpts(t *testing.T, opts Options) (*Daemon, *http.Client) {
 // startDaemonAt starts a daemon on an existing repository — for tests
 // that wire remotes or run multiple daemons around one bare repo
 // (gate_test.go). Callers own the git setup. It returns once the first
-// replay has landed: Run loads the ledger behind the socket (T4
+// replay has landed: Run loads the ledger behind the socket (the
 // startup order), and these tests want a loaded daemon, not a
 // "starting" one.
 func startDaemonAt(t *testing.T, root string, opts Options) (*Daemon, *http.Client) {
@@ -287,7 +287,7 @@ func TestConcurrentCreatesLinearHistory(t *testing.T) {
 	}
 }
 
-// Inbox and held (2026-07-31): captures and paused tasks are ordinary
+// Inbox and held: captures and paused tasks are ordinary
 // shared state, but the claim tools never serve them — open is the only
 // claimable status. Title-only capture works; promote/pause/resume
 // round-trips run through the ordinary update surface.
@@ -341,7 +341,7 @@ func TestClaimNeverServesInboxOrHeld(t *testing.T) {
 }
 
 // Close metadata rides both read payloads the TUI snapshot is built
-// from (history view, 2026-08-02): the snapshot's task entry and the
+// from (history view): the snapshot's task entry and the
 // single-task hydration. Open tasks carry none; a cancel stamps both;
 // reopening clears both.
 func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
@@ -392,7 +392,7 @@ func TestStateAndHydrationCarryCloseMetadata(t *testing.T) {
 }
 
 // Hydration exposes the edit records replay derives from task.updated
-// (2026-08-11 grill: every edit gets a history entry) — the same path
+// (every edit gets a history entry) — the same path
 // notes, runs, and escalations ride, so get_task and the CLI/TUI
 // history surfaces see every field edit, one entry per event.
 func TestHydrationCarriesUpdateRecords(t *testing.T) {
@@ -413,7 +413,7 @@ func TestHydrationCarriesUpdateRecords(t *testing.T) {
 	}
 }
 
-// Priority is clearable (2026-09-11, task.updated v4): PATCH with
+// Priority is clearable (task.updated v4): PATCH with
 // clear_priority:true clears a set priority; the emitted event is v4
 // with an explicit null priority key; an update that does not touch
 // priority emits a v4 event with no priority key at all; sending both
@@ -469,11 +469,10 @@ func TestClearPriority(t *testing.T) {
 	}
 }
 
-// One classifier (tuh-01KZ0ES83SFH6MKWP82YRXWQD6): the snapshot serves
-// core's verdict per task — situation always present (ready /
-// in_progress / blocked for open tasks, the status word otherwise) and
-// the blocker ID lists for every task regardless of status — so no
-// client re-derives the rules.
+// One classifier: the snapshot serves core's verdict per task —
+// situation always present (ready / in_progress / blocked for open
+// tasks, the status word otherwise) and the blocker ID lists for every
+// task regardless of status — so no client re-derives the rules.
 func TestStateServesTheDerivedSituation(t *testing.T) {
 	_, c := startDaemon(t)
 
@@ -527,7 +526,7 @@ func TestStateServesTheDerivedSituation(t *testing.T) {
 
 // update_task refuses a depends_on replacement that would close a
 // dependency loop visible in current local state, naming the loop's
-// tasks (2026-08-05 edge grill). Local hygiene only, not prevention:
+// tasks. Local hygiene only, not prevention:
 // set-union merge can still union two individually-acyclic writes into
 // a loop no daemon ever saw — replay marks those instead.
 func TestUpdateTaskRefusesLoopClosingEdit(t *testing.T) {
@@ -609,9 +608,9 @@ func seedDepLoop(t *testing.T, d *Daemon, a, b string) {
 	}
 }
 
-// The snapshot carries the loud blockage annotations (2026-08-05 edge
-// grill): cyclic on loop members, cancelled_deps on waiters of a
-// cancelled dependency — while situation stays plain "blocked".
+// The snapshot carries the loud blockage annotations: cyclic on loop
+// members, cancelled_deps on waiters of a cancelled dependency — while
+// situation stays plain "blocked".
 func TestStateMarksLoopsAndCancelledDeps(t *testing.T) {
 	d, c := startDaemon(t)
 	seedDepLoop(t, d, "t-loopa", "t-loopb")
@@ -646,11 +645,10 @@ func TestStateMarksLoopsAndCancelledDeps(t *testing.T) {
 	}
 }
 
-// claim_task's not-ready conflict names the actual blockers
-// (tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): the open blocking escalation's ID
-// for an escalation-blocked task — never the old catch-all "unmet
-// dependencies" — the unmet dep IDs for a dep-blocked one, and both
-// when both hold.
+// claim_task's not-ready conflict names the actual blockers: the open
+// blocking escalation's ID for an escalation-blocked task — never the
+// old catch-all "unmet dependencies" — the unmet dep IDs for a
+// dep-blocked one, and both when both hold.
 func TestClaimTaskConflictNamesBlockers(t *testing.T) {
 	_, c := startDaemon(t)
 
@@ -724,7 +722,7 @@ func TestEscalateAndNoteUnknownTask(t *testing.T) {
 
 // The claim lifecycle over the API — claim_next hydrates and leases,
 // holder checks bite, release returns the task to the pool. (Renewal
-// has no request shape on any layer: it is the session's tick, T8.)
+// has no request shape on any layer: it is the session's tick.)
 func TestClaimLifecycle(t *testing.T) {
 	d, c := startDaemon(t)
 
@@ -780,7 +778,7 @@ func TestClaimLifecycle(t *testing.T) {
 // finish_run over the HTTP portal: a real claim then a finish lands
 // the run with the reported outcome (done is refereed — remoteless,
 // the gate's local arm confirms the claim first), and the outcome set
-// is narrowed at the op layer for every caller (2026-09-11): the
+// is narrowed at the op layer for every caller: the
 // daemon-synthesized verdicts, interrupted and superseded, are
 // rejected from HTTP exactly as from the MCP tool, with nothing
 // written.
@@ -829,7 +827,7 @@ func TestFinishRunOverHTTP(t *testing.T) {
 	}
 }
 
-// D6 clause 5: expiry is evaluated at read time. A lease that lapses
+// Expiry is evaluated at read time. A lease that lapses
 // with no intervening write must read as lapsed on every read surface —
 // cached state cannot be trusted to age the verdict on its own, so
 // get_task and the snapshot (the TUI's poll) replay at the current
@@ -1037,7 +1035,7 @@ func TestSecondInstanceFails(t *testing.T) {
 	mustDo(t, c, "GET", "/v0/snapshot", "", nil, http.StatusOK)
 }
 
-// T3 fail-safe — an incomprehensible event flips the daemon to
+// Fail-safe — an incomprehensible event flips the daemon to
 // read-only: writes 503 with the upgrade message, reads keep serving
 // the last good state.
 func TestFailSafeReadOnly(t *testing.T) {
@@ -1089,8 +1087,8 @@ func TestFailSafeReadOnly(t *testing.T) {
 	}
 }
 
-// T3 fail-safe meets T5 leases: a degraded daemon must stop renewing
-// session-held claims. The last good state still lists the claim as
+// Fail-safe meets session-bound leases: a degraded daemon must stop
+// renewing session-held claims. The last good state still lists the claim as
 // active, so without the mcp.go guard the renewal tick would keep
 // re-leasing off state the daemon can no longer verify; instead the
 // tick renews nothing and the lease lapses honestly on schedule.
@@ -1215,7 +1213,7 @@ func TestShutdownFinalSyncPushesPendingCommits(t *testing.T) {
 	}
 }
 
-// Views ride local writes (T6). After ordinary daemon writes —
+// Views ride local writes. After ordinary daemon writes —
 // no sync merge anywhere — the data branch carries the four rendered
 // views alongside the events. The escalate call is eager, so this also
 // proves staged views ride an eager flush, not just the debounce.
@@ -1248,7 +1246,7 @@ func TestViewsRideLocalWrites(t *testing.T) {
 	}
 }
 
-// Highest version wins (B8). Views stamped by a newer generator
+// Highest version wins. Views stamped by a newer generator
 // are never overwritten by this daemon's local writes — events flow,
 // views stay exactly as the newer peer left them.
 func TestViewsGuardRefusesNewerStamp(t *testing.T) {
@@ -1296,7 +1294,7 @@ func TestViewsGuardRefusesNewerStamp(t *testing.T) {
 
 // The overlay of process-written events carries a write only until a
 // refresh sees it on the branch, then trims it — it must not grow for
-// the process lifetime (t-01KYRMFV10W1N28TCN5ZZ9Z2C1). State must serve
+// the process lifetime. State must serve
 // the write throughout: from the overlay before the flush, from the
 // branch after the trim.
 func TestOverlayTrimsAfterFlush(t *testing.T) {
@@ -1348,7 +1346,7 @@ func TestTrimOverlayKeepsUnlandedEvent(t *testing.T) {
 	}
 }
 
-// The finish_run guard (t-01KYVMD4PS9NMQVP1K5HQ8769X): a run.finished
+// The finish_run guard: a run.finished
 // event only lands when the acting principal has an attempt of their
 // own to close — the live claim, or their own released/voided claim not
 // yet closed by a later run of theirs. Each row builds its own task and
@@ -1447,7 +1445,7 @@ func TestFinishRunGuard(t *testing.T) {
 			wantRuns: 1,
 		},
 		{
-			name: "done after own release is not certifiable (2026-08-04: done is refereed)",
+			name: "done after own release is not certifiable (done is refereed)",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
 				release(t, "brandon/a1", task)
@@ -1505,7 +1503,7 @@ func TestFinishRunGuard(t *testing.T) {
 		},
 		{
 			// superseded is the referee's verdict, never a report: the op
-			// rejects it for every caller (2026-09-11), before any judgment
+			// rejects it for every caller, before any judgment
 			// — a loser records superseded by reporting what it did (the
 			// coercion cases below), not by naming the verdict.
 			name: "race loser reporting superseded is rejected: synthesized outcomes are never reported",
@@ -1519,7 +1517,7 @@ func TestFinishRunGuard(t *testing.T) {
 			wantErr:  "daemon-synthesized",
 		},
 		{
-			name: "race loser reporting done is coerced to superseded (D6)",
+			name: "race loser reporting done is coerced to superseded",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
 				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
@@ -1531,7 +1529,7 @@ func TestFinishRunGuard(t *testing.T) {
 			wantRuns:    1,
 		},
 		{
-			name: "race loser reporting failed is coerced to superseded (D6)",
+			name: "race loser reporting failed is coerced to superseded",
 			setup: func(t *testing.T, task string) {
 				claim(t, "brandon/a1", task)
 				mintVoidedClaim(t, d, task, "brandon/a2", time.Hour)
@@ -1613,9 +1611,9 @@ func TestFinishRunGuard(t *testing.T) {
 }
 
 // The guard is write-side only: a claimless run.finished already stored
-// on a ledger (the dogfood branch carries one) replays exactly as
-// before — recorded, tied to no claim, moving neither hold nor task
-// status. T3: stored events are never rewritten and never
+// on a ledger (one written before the guard existed) replays exactly
+// as before — recorded, tied to no claim, moving neither hold nor task
+// status. Stored events are never rewritten and never
 // retro-invalidated.
 func TestReplayAcceptsStoredClaimlessRun(t *testing.T) {
 	d, c := startDaemon(t)
@@ -1667,7 +1665,7 @@ func TestReplayAcceptsStoredClaimlessRun(t *testing.T) {
 	}
 }
 
-// ValidateActor pins the D7 principal grammar ("human" or
+// ValidateActor pins the principal grammar ("human" or
 // "human/agent") — exported for the CLI's mcp shim, and until now only
 // pinned indirectly through its consumers.
 func TestValidateActor(t *testing.T) {
