@@ -1,9 +1,9 @@
 package main
 
-// Golden render tests for the dashboard's mock-a layout (task
-// t-01KYVJ2607S5S390CVYSF3PVG4): full-width bars, the shared column
-// grid, ellipsis rules, and chunk-safe windowing — all with injected
-// width/height (T1: deterministic rendering, table-driven).
+// Golden render tests for the dashboard's list layout: full-width bars,
+// the shared column grid, ellipsis rules, and chunk-safe windowing —
+// all with injected width/height (deterministic rendering,
+// table-driven).
 
 import (
 	"errors"
@@ -31,9 +31,8 @@ var ansiColors = colors{
 // rungColors is the same palette resolved on the 256-color rung: the
 // one faint survivor — dimRed — swaps SGR-2, which mosh renders as a
 // no-op, for an indexed code, and orange exists. dim is theme-derived
-// ANSI 90 on every rung (fourth revision, 2026-08-26) and bgDarkGray
-// stays the floor's plain 100 here — runTUI re-resolves it down the
-// chromeBG ladder (steering, 2026-08-27).
+// ANSI 90 on every rung and bgDarkGray stays the floor's plain 100 here
+// — runTUI re-resolves it down the chromeBG ladder.
 var rungColors = colors{
 	reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[90m", rev: "\x1b[7m",
 	green: "\x1b[32m", yellow: "\x1b[33m", red: "\x1b[31m", magenta: "\x1b[35m",
@@ -59,8 +58,7 @@ func noFaint(t *testing.T, surface, v string) {
 }
 
 // legendKey and legendSep compose the expected bytes of the unfilled
-// footer legend (chrome hierarchy, 2026-08-03): bold key token, dim
-// label, dim · separators.
+// footer legend: bold key token, dim label, dim · separators.
 func legendKey(key, label string) string {
 	return "\x1b[1m" + key + "\x1b[0m\x1b[90m " + label + "\x1b[0m"
 }
@@ -79,23 +77,23 @@ func TestTopGoldenPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
 	want := strings.Join([]string{
-		// The header (chrome pass, 2026-08-21): the bold repo-root
-		// basename — this fixture's repo is called tuhdoo — dim
-		// separator and sync word, and no badge at all: an armed pane
-		// acting as its own derived identity is the normal state.
+		// The header: the bold repo-root basename — this fixture's repo
+		// is called tuhdoo — dim separator and sync word, and no badge
+		// at all: an armed pane acting as its own derived identity is
+		// the normal state.
 		" tuhdoo · local-only                                                            ",
 		"",
-		// Bars carry no key hints (keyboard/priority grill, 2026-09-11):
-		// the footer legend is the single place keys are advertised.
+		// Bars carry no key hints: the footer legend is the single
+		// place keys are advertised.
 		" NEEDS INPUT (1)                                                                ",
 		"▌ t-lic   !   choose a license",
 		"▌             question: Which license?",
 		"▌             brandon/a2 · 2026-07-29 14:03 UTC",
 		"",
 		" READY (2)                                                                      ",
-		// Two-line rows (grill 2026-08-05): full title, dim meta line —
-		// and a bare row (t-flor) stays one line, the "no labels, no
-		// edges" signal. P0-highest (2026-08-21): p1 leads p5.
+		// Two-line rows: full title, dim meta line — and a bare row
+		// (t-flor) stays one line, the "no labels, no edges" signal.
+		// P0-highest: p1 leads p5.
 		"  t-flor  p1  sweep the floor",
 		"  t-pars  p5  write the parser",
 		"              2 deps",
@@ -113,16 +111,14 @@ func TestTopGoldenPlain80(t *testing.T) {
 		" INBOX (1)                                                                      ",
 		"  t-idea      idea: dark mode",
 	}, "\n") + "\n" +
-		// The footer pins to the bottom rows (chrome hierarchy,
-		// 2026-08-03): rows 25-38 are the blank pad, rows 39-40 the
-		// footer.
+		// The footer pins to the bottom rows: rows 25-38 are the blank
+		// pad, rows 39-40 the footer.
 		strings.Repeat("\n", 14) +
-		// The armed legend (keyboard/priority grill, 2026-09-11) is 111
-		// cells, so at 80 columns it wraps after p priority; the done
-		// tally rides the last line, where it now fits. The pinned
-		// frame's last line is unterminated: bubbletea drops overflow
-		// from the top, so a trailing newline (an extra empty
-		// split-line) would cost the header row.
+		// The armed legend is 111 cells, so at 80 columns it wraps
+		// after p priority; the done tally rides the last line, where
+		// it now fits. The pinned frame's last line is unterminated:
+		// bubbletea drops overflow from the top, so a trailing newline
+		// (an extra empty split-line) would cost the header row.
 		" ↑/↓ (j/k) move · enter open · r ready · h hold · i inbox · p priority          \n" +
 		" c cancel · n new · tab closed · q quit                                  1 done "
 	got := m.View()
@@ -134,11 +130,10 @@ func TestTopGoldenPlain80(t *testing.T) {
 	}
 }
 
-// The armed list legend at 60 columns, plain colors (keyboard/priority
-// grill, 2026-09-11): legendLine wraps at item boundaries — never
-// mid-item, never truncated — onto a second gutter-aligned line, with
-// the done tally on the last line. Byte-exact bottom two rows of a
-// 40-row frame.
+// The armed list legend at 60 columns, plain colors: legendLine wraps
+// at item boundaries — never mid-item, never truncated — onto a second
+// gutter-aligned line, with the done tally on the last line. Byte-exact
+// bottom two rows of a 40-row frame.
 func TestTopGoldenLegend60(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 60, 40
@@ -162,14 +157,13 @@ func TestTopGoldenLegend60(t *testing.T) {
 // Bar composition with real colors, at 80 and 120 columns: one style
 // wraps the whole padded line; counts ride the left edge, and no bar
 // carries a key hint.
-// The ready-row priority badge ramp (P0-highest grill, 2026-08-21):
-// p0 bright red (contrast ramp, 2026-08-25 — normal red reads
-// low-contrast on dark themes; negatives too, the int is unbounded and
-// lower is more urgent), p1 orange on the 256-color rung and yellow on
-// the 16-color floor (the p1/p2 collision there is the accepted cost
-// of not faking orange), p2 yellow, p3+ dim, no badge at all without a
-// priority. Since 2026-08-25 (steering) the ramp colors the badge in
-// every section — held rows included.
+// The ready-row priority badge ramp (P0-highest): p0 bright red (normal
+// red reads low-contrast on dark themes; negatives too, the int is
+// unbounded and lower is more urgent), p1 orange on the 256-color rung
+// and yellow on the 16-color floor (the p1/p2 collision there is the
+// accepted cost of not faking orange), p2 yellow, p3+ dim, no badge at
+// all without a priority. The ramp colors the badge in every section —
+// held rows included.
 func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	const orange208 = "\x1b[38;5;208m"
 	mk := func(id string, p *int) stateTask {
@@ -195,9 +189,8 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 		orange208 + "p1\x1b[0m ",
 		"\x1b[33mp2\x1b[0m ",
 		"\x1b[90mp3\x1b[0m ",
-		// Held takes the ramp too (steering, 2026-08-25): a parked p0 is
-		// still a p0. (t-parkd renders as its short form t-arkd — prefix
-		// plus 4-char tail.)
+		// Held takes the ramp too: a parked p0 is still a p0. (t-parkd
+		// renders as its short form t-arkd — prefix plus 4-char tail.)
 		"\x1b[90mt-arkd\x1b[0m  \x1b[91mp0\x1b[0m ",
 	} {
 		if !strings.Contains(v, want) {
@@ -224,15 +217,14 @@ func TestTopGoldenPriorityBadgeRamp(t *testing.T) {
 	}
 }
 
-// termColors is newColors' TERM resolution (contrast ramp 2026-08-25;
-// dim theme-derived and bars darkened 2026-08-26): every 16-color TERM
-// gets the floor palette — dim is ANSI 90 there too, theme-derived on
-// every rung — while a TERM advertising 256color swaps dimRed's faint
-// for an indexed code (mosh renders SGR-2 as a no-op) and earns
-// orange, which runTUI used to resolve; bgDarkGray is runTUI's to
-// re-resolve (chromeBG), so newColors keeps it at the floor's 100.
-// COLORTERM never unlocks the rung — its signature takes only TERM:
-// mosh advertises truecolor it won't honor (the 2026-07-31 finding).
+// termColors is newColors' TERM resolution: every 16-color TERM gets
+// the floor palette — dim is ANSI 90 there too, theme-derived on every
+// rung — while a TERM advertising 256color swaps dimRed's faint for an
+// indexed code (mosh renders SGR-2 as a no-op) and earns orange, which
+// runTUI used to resolve; bgDarkGray is runTUI's to re-resolve
+// (chromeBG), so newColors keeps it at the floor's 100. COLORTERM never
+// unlocks the rung — its signature takes only TERM: mosh advertises
+// truecolor it won't honor (observed empirically).
 func TestTermColorsLadder(t *testing.T) {
 	for _, term := range []string{"xterm", "screen", "vt100", ""} {
 		if got := termColors(term); got != ansiColors {
@@ -246,14 +238,13 @@ func TestTermColorsLadder(t *testing.T) {
 	}
 }
 
-// The dashboard on the 256-color rung (contrast ramp + bar recolors
-// II, 2026-08-25; dim theme-derived 2026-08-26): the muted-by-design
-// row surfaces read muted without SGR-2 — ids, p3+ badges, and meta
-// lines take the theme's own bright-black (ANSI 90), the blocked
-// row's waiting: lead takes muted red 131 — while the bars carry the
-// same black-on-color bytes as the floor (BLOCKED black on bright red,
-// ON HOLD black on slot-7 gray) and badges ride the ramp in every
-// section. No SGR-2 byte survives anywhere in the frame.
+// The dashboard on the 256-color rung: the muted-by-design row surfaces
+// read muted without SGR-2 — ids, p3+ badges, and meta lines take the
+// theme's own bright-black (ANSI 90), the blocked row's waiting: lead
+// takes muted red 131 — while the bars carry the same black-on-color
+// bytes as the floor (BLOCKED black on bright red, ON HOLD black on
+// slot-7 gray) and badges ride the ramp in every section. No SGR-2 byte
+// survives anywhere in the frame.
 func TestTopGoldenRungMutedList(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
@@ -271,12 +262,12 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 		// meta line.
 		"\x1b[90mt-pars\x1b[0m  \x1b[90mp5\x1b[0m  \x1b[1mwrite the parser\x1b[0m",
 		"              \x1b[90m2 deps\x1b[0m",
-		// The held row's badge rides the ramp (steering, 2026-08-25):
-		// p2 yellow, on the otherwise dim shelf row.
+		// The held row's badge rides the ramp: p2 yellow, on the
+		// otherwise dim shelf row.
 		"\x1b[90mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
 		// A blocked row's badge rides it too: p1 orange on the rung.
 		"\x1b[90mt-wait\x1b[0m  \x1b[38;5;208mp1\x1b[0m  \x1b[1mbuild on the idea\x1b[0m",
-		// Bar recolors II: black on bright red, black on slot-7 gray —
+		// The bars: black on bright red, black on slot-7 gray —
 		// in-palette on every rung.
 		"\x1b[30;101m" + padBar(120, " BLOCKED (1)", "") + "\x1b[0m",
 		"\x1b[30;47m" + padBar(120, " ON HOLD (1)", "") + "\x1b[0m",
@@ -297,8 +288,8 @@ func TestTopGoldenRungMutedList(t *testing.T) {
 // The task view on the mosh rung: runTUI resolves bgDarkGray down the
 // chromeBG ladder — an unanswered dark 256color TERM lands on the
 // neutral bg 238 with no pinned foreground, the theme's own fg riding
-// the bar (steering, 2026-08-27) — and the id value and placeholders
-// take the theme-derived muted gray. No SGR-2 anywhere.
+// the bar — and the id value and placeholders take the theme-derived
+// muted gray. No SGR-2 anywhere.
 func TestTopGoldenRungTaskViewBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = rungColors
@@ -346,13 +337,12 @@ func TestRungCLIReadSurfaces(t *testing.T) {
 	noFaint(t, "printTask", v)
 }
 
-// Badges ride the ramp in every section (steering, 2026-08-25 —
-// reversing the 2026-08-21 no-badge-in-inbox/blocked/history and
-// held-dim consequences): an in-progress p0 is bright red beside its
-// yellow holder tail, an inbox capture's p2 is yellow, and history
-// rows carry their stored priority — a closed p0 stays bright red.
-// Blocked and held badges are pinned by the rung golden; unprioritized
-// rows everywhere stay bare, pinned by the ramp golden.
+// Badges ride the ramp in every section (no section hides or dims
+// them): an in-progress p0 is bright red beside its yellow holder tail,
+// an inbox capture's p2 is yellow, and history rows carry their stored
+// priority — a closed p0 stays bright red. Blocked and held badges are
+// pinned by the rung golden; unprioritized rows everywhere stay bare,
+// pinned by the ramp golden.
 func TestTopGoldenBadgesEverySection(t *testing.T) {
 	s := topSnapshot()
 	for i := range s.state.Tasks {
@@ -406,11 +396,10 @@ func TestTopGoldenBars(t *testing.T) {
 		m.col = ansiColors
 		m.width, m.height = width, 60
 		v := m.View()
-		// The unfilled footer (chrome hierarchy, 2026-08-03): bold keys,
-		// dim labels and separators, an unstyled space fill. The armed
-		// legend is 111 cells (keyboard/priority grill, 2026-09-11):
-		// one line at 120 with the done tally beside it, two at 80 —
-		// wrapped after p priority, the tally on the last line.
+		// The unfilled footer: bold keys, dim labels and separators, an
+		// unstyled space fill. The armed legend is 111 cells: one line
+		// at 120 with the done tally beside it, two at 80 — wrapped
+		// after p priority, the tally on the last line.
 		head := " " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "open") +
 			legendSep + legendKey("r", "ready") + legendSep + legendKey("h", "hold") +
 			legendSep + legendKey("i", "inbox") + legendSep + legendKey("p", "priority")
@@ -423,22 +412,20 @@ func TestTopGoldenBars(t *testing.T) {
 			foot = head + strings.Repeat(" ", width-70) + "\n" + " " + tail + strings.Repeat(" ", width-39-7) + "\x1b[90m1 done \x1b[0m"
 		}
 		for _, bar := range []string{
-			// The unfilled header (chrome hierarchy, 2026-08-03; chrome
-			// pass, 2026-08-21): the repo-root basename bold, separator
-			// and sync word dim, and no badge — armed as your own derived
-			// identity is unmarked, the normal state.
+			// The unfilled header: the repo-root basename bold,
+			// separator and sync word dim, and no badge — armed as your
+			// own derived identity is unmarked, the normal state.
 			"\x1b[1m tuhdoo\x1b[0m\x1b[90m · \x1b[0m\x1b[90mlocal-only\x1b[0m" +
 				strings.Repeat(" ", width-20),
-			// No bar carries a key hint (keyboard/priority grill,
-			// 2026-09-11): counts ride the left edge, the fill is bare.
+			// No bar carries a key hint: counts ride the left edge, the
+			// fill is bare.
 			"\x1b[30;45m" + padBar(width, " NEEDS INPUT (1)", "") + "\x1b[0m",
 			"\x1b[30;42m" + padBar(width, " READY (2)", "") + "\x1b[0m",
 			"\x1b[30;43m" + padBar(width, " IN PROGRESS (1)", "") + "\x1b[0m",
-			// Bar recolors II (2026-08-25): BLOCKED is black on bright
-			// red — the p0 badge's background twin — and ON HOLD black on
-			// slot-7 gray, so every dashboard bar reads black-on-color;
-			// INBOX keeps black on bright-white (bar recolors,
-			// 2026-08-04).
+			// BLOCKED is black on bright red — the p0 badge's
+			// background twin — and ON HOLD black on slot-7 gray, so
+			// every dashboard bar reads black-on-color; INBOX keeps
+			// black on bright-white.
 			"\x1b[30;101m" + padBar(width, " BLOCKED (0)", "") + "\x1b[0m",
 			"\x1b[30;47m" + padBar(width, " ON HOLD (1)", "") + "\x1b[0m",
 			"\x1b[30;107m" + padBar(width, " INBOX (1)", "") + "\x1b[0m",
@@ -458,8 +445,8 @@ func TestTopGoldenBars(t *testing.T) {
 			t.Errorf("width %d: question lead not magenta; view:\n%s", width, v)
 		}
 		// Shelf rows keep the dim id, but titles are bold in every
-		// section (2026-07-31) and badges ride the ramp everywhere
-		// (steering, 2026-08-25): the held p2 is yellow now.
+		// section and badges ride the ramp everywhere: the held p2 is
+		// yellow.
 		for _, row := range []string{
 			"\x1b[90mt-park\x1b[0m  \x1b[33mp2\x1b[0m  \x1b[1mpolish the docs\x1b[0m",
 			"\x1b[90mt-idea\x1b[0m      \x1b[1midea: dark mode\x1b[0m",
@@ -472,11 +459,10 @@ func TestTopGoldenBars(t *testing.T) {
 	}
 }
 
-// The blocked row stacks title / meta / waiting (two-line rows,
-// 2026-08-05): the waiting: line keeps its own dim-red lead below the
-// dim meta line — a reason, not metadata — matching its section bar
-// (bar recolors, 2026-08-04): a full-brightness red lead would be
-// louder than the bar above it.
+// The blocked row stacks title / meta / waiting: the waiting: line
+// keeps its own dim-red lead below the dim meta line — a reason, not
+// metadata — matching its section bar: a full-brightness red lead
+// would be louder than the bar above it.
 func TestTopGoldenBlockedStack(t *testing.T) {
 	s := topSnapshot()
 	s.state.Tasks = append(s.state.Tasks,
@@ -500,10 +486,10 @@ func TestTopGoldenBlockedStack(t *testing.T) {
 	}
 }
 
-// The in-progress mode tail (two-line rows, 2026-08-05): "← holder"
-// renders yellow at the end of the otherwise dim meta line — the " · "
-// joiner before it stays dim — and a holder with no labels or edges
-// still earns the meta line, tail alone.
+// The in-progress mode tail: "← holder" renders yellow at the end of
+// the otherwise dim meta line — the " · " joiner before it stays dim —
+// and a holder with no labels or edges still earns the meta line, tail
+// alone.
 func TestTopGoldenHolderTailYellow(t *testing.T) {
 	s := topSnapshot()
 	h := s.tasks["t-flak"]
@@ -525,9 +511,8 @@ func TestTopGoldenHolderTailYellow(t *testing.T) {
 }
 
 // An escalation row stays three lines, its meta line extended by the
-// same one meta-line rule: [labels] · edges · actor · stamp (two-line
-// rows, 2026-08-05) — the metadata sits on line 3 because the question
-// outranks it.
+// same one meta-line rule: [labels] · edges · actor · stamp — the
+// metadata sits on line 3 because the question outranks it.
 func TestTopGoldenEscalationExtendedMeta(t *testing.T) {
 	s := topSnapshot()
 	h := s.tasks["t-lic"]
@@ -543,15 +528,14 @@ func TestTopGoldenEscalationExtendedMeta(t *testing.T) {
 	}
 }
 
-// Gutter alignment (amendment, 2026-08-05): a list mixing t- and tuh-
-// prefixes derives one ID column from the snapshot's widest short ID
-// (floor gridIDW), so every title, meta line, and waiting: line sits
-// on the same derived column — and the width is snapshot-stable, so
-// scrolling cannot change it.
+// Gutter alignment: a list mixing t- and tuh- prefixes derives one ID
+// column from the snapshot's widest short ID (floor gridIDW), so every
+// title, meta line, and waiting: line sits on the same derived column —
+// and the width is snapshot-stable, so scrolling cannot change it.
 func TestTopGoldenMixedIDColumns(t *testing.T) {
-	newID := "tuh-01KYT63MB28Z535SMJC9B0D83W" // tuh-d83w: 8 wide, sets the column
-	oldID := "t-01KYT63MB28Z535SMJCA63RQJM"   // t-rqjm: 6 wide, padded to 8
-	blkID := "t-01KYT63MB28Z535SMJCBC7SY1P"   // t-sy1p
+	newID := "tuh-01KYT63MB28Z535SMJC9B0QX4R" // tuh-qx4r: 8 wide, sets the column
+	oldID := "t-01KYT63MB28Z535SMJCA63WV7K"   // t-wv7k: 6 wide, padded to 8
+	blkID := "t-01KYT63MB28Z535SMJCBC7ZN5T"   // t-zn5t
 	s := &snapshot{
 		state: stateResp{Tasks: []stateTask{
 			{ID: newID, Title: "the new-era task", Status: "open", Priority: pint(2), Situation: "ready"},
@@ -571,17 +555,17 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	// to the same column (the selected row's gutter replaces the first
 	// two cells).
 	mustContain(t, v,
-		// P0-highest (2026-08-21): the p1 row leads ready and carries
-		// the selection bar on both of its lines.
-		"▌ t-rqjm    p1  the old-era task",
+		// P0-highest: the p1 row leads ready and carries the selection
+		// bar on both of its lines.
+		"▌ t-wv7k    p1  the old-era task",
 		"▌               [infra]",
-		"  tuh-d83w  p2  the new-era task",
+		"  tuh-qx4r  p2  the new-era task",
 		"                [era] · 1 dep",
-		"  t-sy1p        the waiting task",
+		"  t-zn5t        the waiting task",
 		"                1 dep",
-		"                waiting: depends on t-rqjm (open — the old-era task)")
+		"                waiting: depends on t-wv7k (open — the old-era task)")
 	// The un-derived 6-wide floor column must not appear anywhere.
-	if strings.Contains(v, "t-rqjm  p1") {
+	if strings.Contains(v, "t-wv7k  p1") {
 		t.Errorf("t- row fell back to the 6-wide column; view:\n%s", v)
 	}
 	// Scrolling cannot change the column: with a window too short for
@@ -593,10 +577,10 @@ func TestTopGoldenMixedIDColumns(t *testing.T) {
 	}
 	sv := m.View()
 	mustContain(t, sv,
-		"▌ t-sy1p        the waiting task",
+		"▌ t-zn5t        the waiting task",
 		"▌               1 dep",
-		"▌               waiting: depends on t-rqjm (open — the old-era task)")
-	if strings.Contains(sv, "t-sy1p      the") {
+		"▌               waiting: depends on t-wv7k (open — the old-era task)")
+	if strings.Contains(sv, "t-zn5t      the") {
 		t.Errorf("scrolling narrowed the derived column; view:\n%s", sv)
 	}
 }
@@ -646,8 +630,8 @@ func TestTopGoldenSelectionBar(t *testing.T) {
 	}
 	// A two-line task row (t-pars: title + meta line) carries the bar on
 	// both lines — the selection covers all of a row's lines, whatever
-	// its height (two-line rows, 2026-08-05). Two steps: the one-line
-	// t-flor leads ready under P0-highest.
+	// its height. Two steps: the one-line t-flor leads ready under
+	// P0-highest.
 	m, _ = press(t, m, keyOf(tea.KeyDown), keyOf(tea.KeyDown))
 	sel = nil
 	for _, l := range strings.Split(m.View(), "\n") {
@@ -669,8 +653,8 @@ func TestTopGoldenSelectionBar(t *testing.T) {
 }
 
 // Watch mode: bars carry no steering hints, the header carries the
-// dim "watch" badge (chrome pass, 2026-08-21 — was "watch mode"), and
-// the footer legend is the disarmed one.
+// dim "watch" badge (no longer "watch mode"), and the footer legend is
+// the disarmed one.
 func TestTopGoldenWatchBars(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.armed = false
@@ -684,19 +668,19 @@ func TestTopGoldenWatchBars(t *testing.T) {
 	}
 }
 
-// The header chrome pass (T7, 2026-08-21), pinned state by state. The
-// bold name is the repo-root basename — no product name anywhere in
-// the frame: you know what you launched; you need to know which ledger
-// this is. Healthy sync (a fetch within two T8 fetch intervals) is a
-// static dim ⇅ glyph alone — no timestamp, no ticking relative time,
-// no spinner: sync is a ~60s background cycle, and motion would claim
-// a liveness the screen cannot honestly show. Stale sync adds the
-// relative age in yellow; local-only stays a word (remoteless is a
-// normal mode — a bare missing glyph would look broken); errors stay
-// loud text. Badge only when special: dim "watch" disarmed, "as
-// <principal>" at normal weight only when --as overrode the derived
-// identity, and nothing at all on an armed pane acting as its own
-// derived identity — absence is the normal state (the vim convention).
+// The header, pinned state by state. The bold name is the repo-root
+// basename — no product name anywhere in the frame: you know what you
+// launched; you need to know which ledger this is. Healthy sync (a
+// fetch within two default fetch intervals) is a static dim ⇅ glyph
+// alone — no timestamp, no ticking relative time, no spinner: sync is a
+// ~60s background cycle, and motion would claim a liveness the screen
+// cannot honestly show. Stale sync adds the relative age in yellow;
+// local-only stays a word (remoteless is a normal mode — a bare missing
+// glyph would look broken); errors stay loud text. Badge only when
+// special: dim "watch" disarmed, "as <principal>" at normal weight only
+// when --as overrode the derived identity, and nothing at all on an
+// armed pane acting as its own derived identity — absence is the normal
+// state (the vim convention).
 func TestTopGoldenHeaderChrome(t *testing.T) {
 	newModel := func(sync syncJSON) topModel {
 		s := topSnapshot()
@@ -764,12 +748,11 @@ func TestTopGoldenHeaderChrome(t *testing.T) {
 	}
 }
 
-// The status strip (feedback only, chrome pass 2026-08-21): the line
-// below the header carries feedback alone — in-flight markers and
-// validation on the quiet chrome bar, errors on the loud bgRed bar,
-// full-width so feedback reads as frame, never as content — and a
-// success renders nothing at all: the screen updating is the
-// confirmation.
+// The status strip (feedback only): the line below the header carries
+// feedback alone — in-flight markers and validation on the quiet chrome
+// bar, errors on the loud bgRed bar, full-width so feedback reads as
+// frame, never as content — and a success renders nothing at all: the
+// screen updating is the confirmation.
 func TestTopGoldenStatusStrip(t *testing.T) {
 	fake := newFakeSteering()
 	m := newTopModel(fake)
@@ -801,10 +784,9 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 		}
 	}
 
-	// Validation is the prompt box's own (prompt overlay, 2026-09-11 —
-	// regenerated: it rode the quiet strip until then): the rejection
-	// replaces the hint line inside the box, red, the prompt stays open,
-	// and the strip behind stays clear.
+	// Validation is the prompt box's own (not the quiet strip): the
+	// rejection replaces the hint line inside the box, red, the prompt
+	// stays open, and the strip behind stays clear.
 	m, _ = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}, keyOf(tea.KeyEnter))
 	v = m.View()
 	if want := "\x1b[90m│\x1b[0m \x1b[31mtitle cannot be empty\x1b[0m"; !strings.Contains(v, want) {
@@ -835,9 +817,9 @@ func TestTopGoldenStatusStrip(t *testing.T) {
 	}
 }
 
-// Two-line ellipsis rules (grill 2026-08-05): titles plain-ellipsize
-// to the width with no suffix fight — labels live on the meta line and
-// never lose to a long title; the meta line ellipsizes independently.
+// Two-line ellipsis rules: titles plain-ellipsize to the width with no
+// suffix fight — labels live on the meta line and never lose to a long
+// title; the meta line ellipsizes independently.
 func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	long := strings.Repeat("A", 70)
 	near := strings.Repeat("C", 60)
@@ -872,12 +854,12 @@ func TestTopGoldenEllipsisAndLabels(t *testing.T) {
 	}
 }
 
-// The task view at 80 columns, plain colors (task-view rework,
-// 2026-08-01): the dashboard's header bar, the field block (bold names
-// degrade to plain), the NEEDS INPUT section with the routed-to
-// escalation as the selected row, DESCRIPTION and HISTORY bars, and the
-// footer bar — byte-exact geometry, entered by pressing enter on the
-// dashboard's Needs Input row.
+// The task view at 80 columns, plain colors: the dashboard's header
+// bar, the field block (bold names degrade to plain), the NEEDS INPUT
+// section with the routed-to escalation as the selected row,
+// DESCRIPTION and HISTORY bars, and the footer bar — byte-exact
+// geometry, entered by pressing enter on the dashboard's Needs Input
+// row.
 func TestTopGoldenTaskViewPlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	h := m.snap.tasks["t-lic"]
@@ -900,12 +882,12 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		"  status      open",
 		"  priority    none",
 		// The labels line always renders — the dim placeholder degrades
-		// to plain "none" here (labels editable, 2026-08-05).
+		// to plain "none" here.
 		"  labels      none",
 		"  created     2026-07-29 12:00 UTC by brandon",
 		"",
 		// The section bar carries the context-toggle hint alongside the
-		// answer key (escalation readability, 2026-08-11).
+		// answer key.
 		" NEEDS INPUT (1)                                       enter answer · e context ",
 		"▌ !   Which license?",
 		"▌     brandon/a2 · 2026-07-29 14:03 UTC",
@@ -916,10 +898,9 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 		" HISTORY                                                                        ",
 		"  no activity yet",
 	}, "\n") + "\n" +
-		// Footer pinned to rows 39-40 (chrome hierarchy, 2026-08-03):
-		// rows 20-38 are the blank pad. The armed task-view legend
-		// (keyboard/priority grill, 2026-09-11) wraps after p priority
-		// at 80 columns.
+		// Footer pinned to rows 39-40: rows 20-38 are the blank pad.
+		// The armed task-view legend wraps after p priority at 80
+		// columns.
 		strings.Repeat("\n", 19) +
 		" ↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority          \n" +
 		" c cancel · esc back · q quit                                                   "
@@ -935,7 +916,7 @@ func TestTopGoldenTaskViewPlain80(t *testing.T) {
 // A plain open (from a task row) focuses the title stop: at plain
 // colors the selection degrades to the ▌ gutter alone, on the title
 // line's two-cell mark column; every other stop keeps its blank mark
-// cells (focused-field rendering, 2026-08-02).
+// cells.
 func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.width, m.height = 80, 40
@@ -954,12 +935,11 @@ func TestTopGoldenTaskViewFocusedTitlePlain80(t *testing.T) {
 	}
 }
 
-// The task view's edge sections at 80 columns, plain colors (edge
-// rows, 2026-08-11): DEPENDS ON renders one row per edge — short ID,
-// status word, title on one aligned grid, statuses padded to the
-// widest word — under a structural bar carrying the armed "enter open"
-// hint; the old depends-on field line is gone from the header block.
-// Byte-exact geometry.
+// The task view's edge sections at 80 columns, plain colors: DEPENDS ON
+// renders one row per edge — short ID, status word, title on one
+// aligned grid, statuses padded to the widest word — under a structural
+// bar carrying the armed "enter open" hint; the old depends-on field
+// line is gone from the header block. Byte-exact geometry.
 func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 	s := edgeSnapshot()
 	m := topModel{api: newFakeSteering(), actor: "brandon", armed: true, repoName: "tuhdoo", snap: s, rows: buildRows(s)}
@@ -988,9 +968,8 @@ func TestTopGoldenTaskViewEdgesPlain80(t *testing.T) {
 		padBar(80, " HISTORY", ""),
 		"  no activity yet",
 	}, "\n") + "\n" +
-		// Footer pinned to rows 39-40 (chrome hierarchy, 2026-08-03):
-		// rows 22-38 are the blank pad; the armed legend wraps at 80
-		// (keyboard/priority grill, 2026-09-11).
+		// Footer pinned to rows 39-40: rows 22-38 are the blank pad;
+		// the armed legend wraps at 80.
 		strings.Repeat("\n", 17) +
 		" ↑/↓ (j/k) move · enter edit · r ready · h hold · i inbox · p priority          \n" +
 		" c cancel · esc back · q quit                                                   "
@@ -1021,13 +1000,12 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	for _, want := range []string{
 		"\x1b[30;45m" + padBar(80, " NEEDS INPUT (1)", "enter answer · e context ") + "\x1b[0m",
 		// DESCRIPTION and HISTORY are quiet chrome — bgDarkGray, white
-		// on bright-black (bar recolors II, 2026-08-25; was
-		// reverse-dim): shelf, not queue.
+		// on bright-black: shelf, not queue.
 		"\x1b[100m" + padBar(80, " DESCRIPTION", "") + "\x1b[0m",
 		"\x1b[100m" + padBar(80, " HISTORY", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill — two
-		// lines at 80 (keyboard/priority grill, 2026-09-11): 70 cells
-		// then 10 of pad, 29 cells then 51 of pad.
+		// lines at 80: 70 cells then 10 of pad, 29 cells then 51 of
+		// pad.
 		" " + legendKey("↑/↓ (j/k)", "move") + legendSep + legendKey("enter", "edit") +
 			legendSep + legendKey("r", "ready") + legendSep + legendKey("h", "hold") +
 			legendSep + legendKey("i", "inbox") + legendSep + legendKey("p", "priority") +
@@ -1038,7 +1016,7 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		"  \x1b[1mid\x1b[0m          \x1b[90mt-lic\x1b[0m",
 		"  \x1b[1mstatus\x1b[0m      open",
 		// The empty labels line: the placeholder is dim, like the empty
-		// description body (labels editable, 2026-08-05).
+		// description body.
 		"  \x1b[1mlabels\x1b[0m      \x1b[90mnone\x1b[0m",
 	} {
 		if !strings.Contains(v, want) {
@@ -1065,8 +1043,8 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 		}
 	}
 	// Watch mode: same view, no steering hint, nothing selected. The
-	// context toggle is reading, not steering, so its hint stays — alone
-	// (escalation readability, 2026-08-11).
+	// context toggle is reading, not steering, so its hint stays —
+	// alone.
 	w := newWatchModel()
 	w.col = ansiColors
 	w.width, w.height = 80, 40
@@ -1083,10 +1061,10 @@ func TestTopGoldenTaskViewBarsAndSelection(t *testing.T) {
 	}
 }
 
-// The Closed list at 80 columns, plain colors (Closed shelf, 2026-08-02):
-// the two-bar layout — DONE then CANCELLED, each newest close first —
-// rows on the ready-row anatomy with the dim close stamp and closing
-// actor appended, and the read-only footer legend. Byte-exact.
+// The Closed list at 80 columns, plain colors: the two-bar layout —
+// DONE then CANCELLED, each newest close first — rows on the ready-row
+// anatomy with the dim close stamp and closing actor appended, and the
+// read-only footer legend. Byte-exact.
 func TestTopGoldenClosedPlain80(t *testing.T) {
 	m := newClosedModel(newFakeSteering())
 	m.width, m.height = 80, 40
@@ -1095,8 +1073,8 @@ func TestTopGoldenClosedPlain80(t *testing.T) {
 		" tuhdoo · local-only                                                            ",
 		"",
 		" DONE (3)                                                                       ",
-		// Two-line rows (grill 2026-08-05): the close stamp · closing
-		// actor is the mode tail of the dim meta line, off line 1.
+		// Two-line rows: the close stamp · closing actor is the mode
+		// tail of the dim meta line, off line 1.
 		"▌ t-ship      ship the tui",
 		"▌             [tui] · 2026-07-30 · brandon/claude-code-1",
 		"  t-mgr8      migrate the backlog",
@@ -1110,8 +1088,7 @@ func TestTopGoldenClosedPlain80(t *testing.T) {
 		"  t-drop      drop the wiki",
 		"              2026-07-27 · brandon",
 	}, "\n") + "\n" +
-		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 16-39 are the blank pad.
+		// Footer pinned to row 40: rows 16-39 are the blank pad.
 		strings.Repeat("\n", 24) +
 		" ↑/↓ (j/k) move · enter open · esc back · q quit                                "
 	got := m.View()
@@ -1126,7 +1103,7 @@ func TestTopGoldenClosedPlain80(t *testing.T) {
 // Closed bar composition with real colors: DONE keeps the ready
 // green, CANCELLED the shelves' reverse-dim, neither carries a hint,
 // and a row's title stays bold while its close metadata rides the dim
-// meta line below (two-line rows, 2026-08-05).
+// meta line below.
 func TestTopGoldenClosedBars(t *testing.T) {
 	m := newClosedModel(newFakeSteering())
 	m.col = ansiColors
@@ -1135,9 +1112,9 @@ func TestTopGoldenClosedBars(t *testing.T) {
 	v := m.View()
 	for _, want := range []string{
 		"\x1b[30;42m" + padBar(80, " DONE (3)", "") + "\x1b[0m",
-		// CANCELLED is quiet chrome — bgDarkGray, white on bright-black
-		// (bar recolors II, 2026-08-25): the brightened bgGray belongs
-		// to the dashboard's ON HOLD alone.
+		// CANCELLED is quiet chrome — bgDarkGray, white on bright-black:
+		// the brightened bgGray belongs to the dashboard's ON HOLD
+		// alone.
 		"\x1b[100m" + padBar(80, " CANCELLED (2)", "") + "\x1b[0m",
 		// The unfilled footer: bold keys, dim labels, no fill. The
 		// legend's visible width is 48 cells, so 32 cells of plain pad.
@@ -1145,7 +1122,7 @@ func TestTopGoldenClosedBars(t *testing.T) {
 			legendSep + legendKey("esc", "back") + legendSep + legendKey("q", "quit") +
 			strings.Repeat(" ", 32),
 		// The title line ends bold; the close metadata rides the dim
-		// meta line below it (two-line rows, 2026-08-05).
+		// meta line below it.
 		"\x1b[90mt-mgr8\x1b[0m      \x1b[1mmigrate the backlog\x1b[0m\n" +
 			"              \x1b[90m1 dep · 2026-07-29 · brandon\x1b[0m",
 	} {
@@ -1177,7 +1154,7 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"  status      cancelled — 2026-07-27 by brandon",
 		"  priority    none",
 		// Rendered on terminal tasks too — one uniform rule — but never
-		// a stop there (labels editable, 2026-08-05).
+		// a stop there.
 		"  labels      none",
 		"  created     2026-07-20 12:00 UTC by brandon",
 		"",
@@ -1189,8 +1166,7 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 		"    Q: Keep the wiki export?",
 		"    unanswered",
 	}, "\n") + "\n" +
-		// Footer pinned to row 40 (chrome hierarchy, 2026-08-03): rows
-		// 18-39 are the blank pad.
+		// Footer pinned to row 40: rows 18-39 are the blank pad.
 		strings.Repeat("\n", 22) +
 		" ↑/↓ (j/k) move · enter edit · esc back · q quit                                "
 	got := m.View()
@@ -1202,10 +1178,10 @@ func TestTopGoldenTaskViewTerminalPlain80(t *testing.T) {
 	}
 }
 
-// The task view's history entries with real colors (entry formatting,
-// 2026-08-03): dim stamp, bold descriptor on all three entry kinds —
-// the run outcome folds into its bold descriptor — and exactly one
-// blank line between consecutive entries.
+// The task view's history entries with real colors: dim stamp, bold
+// descriptor on all three entry kinds — the run outcome folds into its
+// bold descriptor — and exactly one blank line between consecutive
+// entries.
 func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 	m := newTopModel(newFakeSteering())
 	m.col = ansiColors
@@ -1227,16 +1203,15 @@ func TestTopGoldenTaskViewHistoryEntries(t *testing.T) {
 	}
 }
 
-// The footer pins to the bottom row whenever the height is known
-// (chrome hierarchy, 2026-08-03), a live prompt overlaid or not: a
-// short body pads with blank lines to a full-height frame, on all
-// three screens. Before the first WindowSizeMsg the
-// footer floats after the body, as it always did. The invariant is
-// bubbletea's, not an abstract one: the renderer splits the view on \n
-// and drops overflow from the TOP, so a pinned frame must split into
-// exactly height lines with the footer last and unterminated — one
-// trailing newline is an extra empty split-line that costs the header
-// row (the off-by-one shipped in the first chrome-hierarchy cut).
+// The footer pins to the bottom row whenever the height is known, a
+// live prompt overlaid or not: a short body pads with blank lines to a
+// full-height frame, on all three screens. Before the first
+// WindowSizeMsg the footer floats after the body, as it always did. The
+// invariant is bubbletea's, not an abstract one: the renderer splits
+// the view on \n and drops overflow from the TOP, so a pinned frame
+// must split into exactly height lines with the footer last and
+// unterminated — one trailing newline is an extra empty split-line that
+// costs the header row (an off-by-one an earlier version shipped).
 func TestTopGoldenFooterPinned(t *testing.T) {
 	bottom := func(t *testing.T, v string, height int, want string) {
 		t.Helper()
@@ -1253,9 +1228,8 @@ func TestTopGoldenFooterPinned(t *testing.T) {
 	m.width, m.height = 80, 40
 	bottom(t, m.View(), 40, "q quit")
 	// A live input prompt (priority, opened from a ready row) leaves the
-	// pinned frame alone (prompt overlay, 2026-09-11 — until then it
-	// rode the footer's slot): the legend keeps the bottom row and the
-	// box, hint included, sits over the list.
+	// pinned frame alone: the legend keeps the bottom row and the box,
+	// hint included, sits over the list.
 	mp, _ := press(t, m, keyOf(tea.KeyDown), tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
 	if mp.mode != modePriority {
 		t.Fatalf("p on a ready row: mode %d, want modePriority", mp.mode)
@@ -1328,7 +1302,7 @@ func TestTopGoldenWindowKeepsRowsWhole(t *testing.T) {
 	}
 }
 
-// ---- the prompt overlay (2026-09-11): prompts in a centered box ----
+// ---- the prompt overlay: prompts in a centered box ----
 
 // Every prompt, from both screens, at 80x40 plain colors: the screen
 // behind is byte-identical to its no-prompt render outside the box
@@ -1355,9 +1329,8 @@ func TestTopGoldenPromptOverlay(t *testing.T) {
 		mode  int
 		box   []string // inner lines
 	}{
-		// The priority picker (keyboard/priority grill, 2026-09-11): the
-		// label carries the current value, no text row, the three-key
-		// hint.
+		// The priority picker: the label carries the current value, no
+		// text row, the three-key hint.
 		{"list priority", func(t *testing.T, m topModel) topModel {
 			m, _ = press(t, m, esc(tea.KeyDown)) // t-flor
 			return m

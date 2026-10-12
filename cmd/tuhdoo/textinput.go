@@ -1,24 +1,24 @@
 package main
 
-// The shared text-input widget (tasks tuh-…GXKYPWW, tuh-…TNDJHYED):
-// every text entry in the TUI — answer, priority, capture, and any
-// future editor — runs on this one struct. Hand-rolled on a []rune
-// buffer and a cursor index, not bubbles textinput/textarea: the TUI's
-// rendering is hand-rolled SGR (render.go's colors, no lipgloss), so
-// the same-family widgets would drag in a second styling system for
-// code no one here can audit line by line (T1: boring Go).
+// The shared text-input widget: every text entry in the TUI — answer,
+// priority, capture, and any future editor — runs on this one struct.
+// Hand-rolled on a []rune buffer and a cursor index, not bubbles
+// textinput/textarea: the TUI's rendering is hand-rolled SGR
+// (render.go's colors, no lipgloss), so the same-family widgets would
+// drag in a second styling system for code no one here can audit line
+// by line.
 //
 // The widget renders its buffer lines behind a "> " gutter inside the
-// prompt box (overlay.go, 2026-09-11 — until then it drew its own
-// header bar and hint in the footer's slot): the box carries the label
-// above and the hint on its own fixed line below, so the hint never
-// rides the end of the typed text (dogfood capture, 2026-08-01).
+// prompt box (overlay.go; it once drew its own header bar and hint in
+// the footer's slot): the box carries the label above and the hint on
+// its own fixed line below, so the hint never rides the end of the
+// typed text.
 //
-// Multi-line is a mode of this same widget (Brandon, 2026-07-31):
-// it adds hard wrapping at the box width, up/down movement across the
-// wrapped rows, and enter-inserts-newline; submit moves to ctrl+s
-// (see hint). Single-line mode keeps enter-submits — enter is the
-// caller's key there, never an edit.
+// Multi-line is a mode of this same widget: it adds hard wrapping at
+// the box width, up/down movement across the wrapped rows, and
+// enter-inserts-newline; submit moves to ctrl+s (see hint). Single-line
+// mode keeps enter-submits — enter is the caller's key there, never an
+// edit.
 
 import (
 	"unicode"
@@ -289,13 +289,12 @@ func (in textInput) hint(verb string) string {
 }
 
 // view renders the buffer rows behind the "> " gutter at the prompt
-// box's inner width (prompt overlay, 2026-09-11 — the label and the
-// hint are the box's lines now, overlay.go): one line per rendered
-// row, the █ cursor glyph on the cursor's row, and the index of that
-// row, which the box keeps in view when the rows outgrow it. Every
-// line fits inner; single-line mode scrolls a window over the buffer
-// instead of wrapping, so it is always exactly one line no matter what
-// is typed.
+// box's inner width (the label and the hint are the box's own lines,
+// overlay.go): one line per rendered row, the █ cursor glyph on the
+// cursor's row, and the index of that row, which the box keeps in view
+// when the rows outgrow it. Every line fits inner; single-line mode
+// scrolls a window over the buffer instead of wrapping, so it is always
+// exactly one line no matter what is typed.
 func (in textInput) view(inner int) (lines []string, cursorRow int) {
 	w := inputInnerWidth(inner)
 	if in.multiline {
