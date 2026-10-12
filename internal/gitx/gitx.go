@@ -179,10 +179,14 @@ type Git interface {
 	WriteTree() (oid string, err error)
 
 	// Fetch fetches refspec from remote. A refspec naming a ref the
-	// remote lacks returns an error matching ErrRemoteRefMissing.
-	// Refspecs are used unforced on purpose: the data branch never
-	// rewinds (no-force-push law), so a non-fast-forward fetch is
-	// corruption and must fail loudly.
+	// remote lacks returns an error matching ErrRemoteRefMissing; any
+	// other failure carries git's stderr. The refspec is passed to git
+	// as given, a leading "+" included: the syncer forces its fetches
+	// into its own tracking ref (syncer.TrackingRef), a scratch mirror
+	// nothing relies on moving only forward. A rewound remote is
+	// therefore no longer a failed fetch: the syncer logs a warning and
+	// heals it (syncer.warnIfRewound). A forced fetch rewrites only a
+	// local ref; Push has no force option at all.
 	Fetch(remote, refspec string) error
 
 	// FetchTimeout is Fetch bounded by a wall-clock deadline: the git

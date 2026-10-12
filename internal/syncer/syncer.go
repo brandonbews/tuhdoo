@@ -21,7 +21,10 @@ import (
 )
 
 // TrackingRef is where fetches of the remote data branch land: a ref
-// tuhdoo owns outright, so no remote-tracking config is assumed.
+// tuhdoo owns outright, so no remote-tracking config is assumed. It is
+// a scratch mirror of the remote's head, and every fetch force-updates
+// it (fetchSpec). A move that is not forward is logged as a warning
+// (warnIfRewound), and the cycle heals it.
 const TrackingRef = "refs/tuhdoo/remote"
 
 // DefaultInterval is the T8 fetch cadence.
@@ -83,6 +86,17 @@ type Syncer struct {
 	stop     chan struct{}
 	done     chan struct{}
 	stopOnce sync.Once
+
+	// fetchMu serializes every fetch into TrackingRef. The background
+	// cycle and the confirmation gate (GateHead, on an MCP request)
+	// both fetch, often at once: a claim pokes the syncer and
+	// confirm_claim follows straight away. Two concurrent `git fetch`
+	// processes race for the ref's lock, and the loser fails with
+	// "cannot lock ref". Held for the whole of fetch (the before-read,
+	// the fetch, the after-read, the rewind check) and around
+	// adoption's fetch. Lock order: fetchMu, then mu (fetch records its
+	// time under mu); nothing takes fetchMu while holding mu.
+	fetchMu sync.Mutex
 
 	mu         sync.Mutex
 	started    bool
@@ -316,10 +330,42 @@ func (s *Syncer) noticeExternalMove() error {
 	return nil
 }
 
+// fetchSpec is the refspec of every fetch of the remote data branch:
+// the cycle's, the confirmation gate's (both through fetch), and
+// adoption's. The leading "+" lets git move TrackingRef to whatever
+// the remote holds, even when that is not a descendant of its old
+// value. Nothing relies on the tracking ref moving only forward:
+// merges are app-level unions, and the push is the compare-and-swap
+// that protects the remote. Unforced, it was a ratchet. After a target
+// switch (a new .tuhdoo) it still held the old target's newer head,
+// git refused every fetch from the new target as non-fast-forward, and
+// the loop stalled. Forcing touches only this local ref: the data
+// branch is still moved only by the store, and pushes are never forced.
+//
+// The refused fetch was also a tripwire for a rewound remote. That
+// tripwire is now a log warning plus self-heal (decided by Brandon,
+// 2026-10-12): fetch logs a move that is not forward (warnIfRewound),
+// and the cycle merges and pushes back whatever the remote dropped.
+func (s *Syncer) fetchSpec() string {
+	return "+" + s.ref + ":" + TrackingRef
+}
+
 // fetch updates TrackingRef and returns the remote head, or "" when the
-// remote has no data branch yet (first push still pending).
+// remote has no data branch yet (first push still pending). It logs a
+// warning when the fetch moved TrackingRef anywhere but forward. One
+// fetch at a time (fetchMu).
 func (s *Syncer) fetch() (string, error) {
-	err := s.git.Fetch(s.remote, s.ref+":"+TrackingRef)
+	s.fetchMu.Lock()
+	defer s.fetchMu.Unlock()
+
+	// The tracking ref before the fetch, for the rewind check. Missing
+	// (nothing fetched yet) or unreadable just means no check this time.
+	before, err := s.git.ReadRef(TrackingRef)
+	if err != nil {
+		before = ""
+	}
+
+	err = s.git.Fetch(s.remote, s.fetchSpec())
 	if err != nil {
 		if errors.Is(err, gitx.ErrRemoteRefMissing) {
 			s.recordFetch()
@@ -332,7 +378,30 @@ func (s *Syncer) fetch() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("syncer: %w", err)
 	}
+	s.warnIfRewound(before, oid)
 	return oid, nil
+}
+
+// warnIfRewound logs one line when a fetch moved TrackingRef backwards
+// or sideways: before, its value ahead of the fetch, is not an ancestor
+// of after. The forced fetch has already taken the new value, and the
+// cycle heals the remote: reconcile merges, and the push restores
+// whatever the remote dropped. It is expected once after the ledger
+// target changes (the tracking ref still holds the old target's head);
+// otherwise someone rewrote the remote branch, which a human should
+// hear about. Logging is the only effect: no status change, and a
+// failed ancestry check is skipped, never an error.
+func (s *Syncer) warnIfRewound(before, after string) {
+	if before == "" || before == after {
+		return
+	}
+	forward, err := s.git.IsAncestor(before, after)
+	if err != nil || forward {
+		return
+	}
+	s.logf("sync: remote data branch moved backwards or sideways (was %s, now %s); "+
+		"merging and pushing back anything it dropped — expected once after the ledger target changes, "+
+		"otherwise someone rewrote the remote branch", before, after)
 }
 
 // reconcile brings remote work into the local ref through the store:

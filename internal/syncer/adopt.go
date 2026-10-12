@@ -46,13 +46,18 @@ func (s *Syncer) AdoptRemoteBranch() {
 		return
 	}
 
-	// Fetch into the syncer's own tracking ref, bounded so a dead
-	// remote cannot stall startup, then create the local ref through
-	// the store with a must-not-exist CAS — never clobbering a branch
-	// that appeared concurrently. The store has not loaded (there was
-	// no branch to load), so its fast-forward is from "no ref" to the
-	// fetched head, and it loads the adopted branch as it lands.
-	err := s.git.FetchTimeout(s.remote, s.ref+":"+TrackingRef, adoptTimeout)
+	// Fetch into the syncer's own tracking ref with the cycle's forced
+	// refspec, bounded so a dead remote cannot stall startup, then
+	// create the local ref through the store with a must-not-exist CAS,
+	// never clobbering a branch that appeared concurrently. The store
+	// has not loaded (there was no branch to load), so its fast-forward
+	// is from "no ref" to the fetched head, and it loads the adopted
+	// branch as it lands. fetchMu is held to the end, like any fetch
+	// into the tracking ref: the rest only reads that ref and moves the
+	// local one through the store, and never fetches again.
+	s.fetchMu.Lock()
+	defer s.fetchMu.Unlock()
+	err := s.git.FetchTimeout(s.remote, s.fetchSpec(), adoptTimeout)
 	if err != nil {
 		if errors.Is(err, gitx.ErrRemoteRefMissing) {
 			return // remote has no data branch yet; mint as usual

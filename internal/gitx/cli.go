@@ -554,8 +554,16 @@ func (g *CLI) FetchTimeout(remote, refspec string, timeout time.Duration) error 
 	return g.fetch(ctx, remote, refspec)
 }
 
+// fetch runs git fetch without --quiet. Under --quiet git also hides
+// its per-ref status lines, and some refusals are reported only there:
+// a non-fast-forward fetch exits 1 with nothing on stderr, and the
+// error used to end in an empty message. Without --quiet that line
+// ("! [rejected] … (non-fast-forward)") is on stderr, which run puts
+// in the error. Nothing gets noisier: stderr is captured, never
+// printed, and only read when git fails. Progress meters stay off
+// because stderr is not a terminal.
 func (g *CLI) fetch(ctx context.Context, remote, refspec string) error {
-	_, stderr, err := g.runCtx(ctx, nil, nil, "fetch", "--quiet", remote, refspec)
+	_, stderr, err := g.runCtx(ctx, nil, nil, "fetch", remote, refspec)
 	if err != nil {
 		// The deadline check comes first: a killed git prints nothing
 		// classifiable, and callers deserve a message naming the bound.
