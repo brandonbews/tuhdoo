@@ -14,7 +14,7 @@ import (
 
 // Sentinel failures, matched with errors.Is. Both stop replay entirely:
 // a partial state computed by skipping events is how two machines end up
-// with different truths from the same log (T3 — fail-safe, never
+// with different truths from the same log (fail-safe, never
 // best-effort).
 var (
 	// ErrCannotReplay: an event from a newer daemon (unknown type, or a
@@ -45,7 +45,7 @@ func (e *ReplayError) Error() string {
 func (e *ReplayError) Unwrap() error { return e.Sentinel }
 
 // Input is everything replay may depend on. Leases live outside the
-// event log (D9: mutable files) and clocks are never read in here, so
+// event log (they are mutable files) and clocks are never read in here, so
 // both arrive as data: same Input, same State, on every machine.
 type Input struct {
 	Events []event.Event
@@ -74,8 +74,8 @@ func terminalStatus(s string) bool {
 
 // knownStatus reports whether s is a status this binary understands.
 // An unknown value is a malformed event, never best-effort-bucketed:
-// mis-filing a status a newer binary wrote is exactly the divergence T3
-// forbids (the writer bumps the schema version instead — see upcast.go).
+// mis-filing a status a newer binary wrote is exactly how two machines
+// diverge (the writer bumps the schema version instead — see upcast.go).
 func knownStatus(s string) bool {
 	switch s {
 	case StatusOpen, StatusInbox, StatusHeld, StatusDone, StatusCancelled:
@@ -87,7 +87,7 @@ func knownStatus(s string) bool {
 // Replay computes state from an event set. Events are treated as a set:
 // duplicates (by ID) collapse, and input order is irrelevant — replay
 // sorts by ID (ULID lexical order, the one total order every machine
-// agrees on, D6/T3).
+// agrees on).
 func (r *Replayer) Replay(in Input) (*State, error) {
 	events := dedupeAndSort(in.Events)
 
@@ -113,7 +113,7 @@ func (r *Replayer) Replay(in Input) (*State, error) {
 
 	// Final lease check: a holder whose lease is gone or past Now has
 	// expired — the task returns to the pool and the abandoned attempt
-	// becomes a synthesized "interrupted" run (T5: never assume an
+	// becomes a synthesized "interrupted" run (never assume an
 	// agent's last act was tidy).
 	for _, c := range holder {
 		if c == nil || c.Status != ClaimActive {
@@ -126,7 +126,7 @@ func (r *Replayer) Replay(in Input) (*State, error) {
 		}
 	}
 
-	// Loser expiry check (D6 clause 3, 2026-08-04): a voided claim is an
+	// Loser expiry check: a voided claim is an
 	// attempt the race ended, and its loser owes a closing run — the
 	// daemon coerces any finish_run on it to "superseded". A loser that
 	// never reports leaves a trace anyway: once the voided claim's lease
@@ -196,9 +196,9 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			return malformed("task %s already exists", e.Task)
 		}
 		// Empty status is the v1 reading: every task minted before the
-		// field existed (v2, 2026-07-31) was born open. Anything else
+		// field existed (v2) was born open. Anything else
 		// must be a known status — vocabulary is validated, transitions
-		// never are (T3: no rejected-event edge cases).
+		// never are (no rejected-event edge cases).
 		status := p.Status
 		if status == "" {
 			status = StatusOpen
@@ -211,8 +211,8 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			Priority: p.Priority, Labels: p.Labels, DependsOn: p.DependsOn,
 			Status: status, CreatedBy: e.Actor, CreatedAt: when,
 		}
-		// Born terminal (B12 migration shape): the creation event is the
-		// closing event.
+		// Born terminal (the shape a backlog import produces): the
+		// creation event is the closing event.
 		if terminalStatus(status) {
 			t.ClosedAt, t.ClosedBy = when, e.Actor
 		}
@@ -228,10 +228,10 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		if !ok {
 			return malformed("update of unknown task %s", e.Task)
 		}
-		// Field-level last-writer-wins, in ULID order (D6's logical
-		// ordering applied to curation). Each written field also records
-		// its line in the task's edit history (2026-08-11: every edit
-		// gets an entry) — old values read here, before the write.
+		// Field-level last-writer-wins, in ULID order (the logical
+		// ordering that referees claims, applied to curation). Each written
+		// field also records its line in the task's edit history (every
+		// edit gets an entry) — old values read here, before the write.
 		u := Update{ID: e.ID, Task: e.Task, Actor: e.Actor}
 		if p.Title != nil {
 			u.Fields = append(u.Fields, "retitled")
@@ -243,7 +243,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		}
 		if p.Status != nil {
 			// Any known status may follow any other: transitions are
-			// mechanically permissive (2026-07-31) — promote/pause
+			// mechanically permissive — promote/pause
 			// semantics are protocol, not replay rules.
 			if !knownStatus(*p.Status) {
 				return malformed("unknown task status %q", *p.Status)
@@ -262,7 +262,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			t.Status = *p.Status
 		}
 		if p.Priority.Present {
-			// v4 tri-state (2026-09-11): the key was sent, so this is
+			// v4 tri-state: the key was sent, so this is
 			// an edit — a number sets, a nil Value (explicit null)
 			// clears back to unprioritized, and the history line reads
 			// "priority 2→none". A v3 null never reaches here: the
@@ -307,7 +307,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			c.Status = ClaimActive
 			holder[e.Task] = c
 		default:
-			// D6 winner rule: earliest claim wins, later claims are
+			// Winner rule: earliest claim wins, later claims are
 			// voided. No human, no prompt — replay code is the referee.
 			c.Status = ClaimVoided
 		}
@@ -325,7 +325,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 			return malformed("confirmation on task %s names claim %s, which is on task %s",
 				e.Task, p.Claim, c.Task)
 		}
-		// D6 (2026-08-04): a confirmed claim wins its contest
+		// A confirmed claim wins its contest
 		// unconditionally. A contest is one continuous hold on the task —
 		// it opens when a claim takes the hold and closes when the hold
 		// ends (finish, release, lease expiry) — and a confirmation binds
@@ -387,11 +387,11 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 		default:
 			return malformed("unknown run outcome %q", p.Outcome)
 		}
-		// The event's own claim field (additive, 2026-08-27) is the real
+		// The event's own claim field (additive) is the real
 		// linkage; a legacy event without one falls back to inferring the
 		// holder's claim below. Never validated against s.Claims: a
 		// dangling reference deterministically links nothing, and the
-		// hold/status semantics never depend on it (T3: replay never
+		// hold/status semantics never depend on it (replay never
 		// re-judges stored runs).
 		run := Run{ID: e.ID, Task: e.Task, Claim: p.Claim, Actor: e.Actor,
 			Machine: e.Machine, Outcome: p.Outcome, Branch: p.Branch, PR: p.PR,
@@ -478,8 +478,7 @@ func apply(s *State, holder map[string]*Claim, synthesized *[]Run, leases map[st
 }
 
 // priorityLabel renders a nullable priority for edit-history lines:
-// the number, or "none" for unprioritized (P0-highest flip,
-// 2026-08-21).
+// the number, or "none" for unprioritized.
 func priorityLabel(p *int) string {
 	if p == nil {
 		return "none"
@@ -492,8 +491,8 @@ func priorityLabel(p *int) string {
 // order), after the field name. A replacement that changes membership
 // not at all (a reorder, or a re-send of the same list) reads
 // name-only, like the text fields. render maps items for display —
-// identity for labels, the short-ID form for depends_on edges (T7: the
-// short form is the human contract; the grill's decided shape).
+// identity for labels, the short-ID form for depends_on edges (the
+// short form is the one humans read and type).
 func listDelta(field string, from, to []string, render func(string) string) string {
 	var parts []string
 	for _, v := range to {
@@ -527,7 +526,7 @@ func interruptedRun(c *Claim) Run {
 }
 
 // supersededRun is the trace a race loser that never reported leaves
-// behind (D6, 2026-08-04). Branch-less by construction: the branch name
+// behind. Branch-less by construction: the branch name
 // is knowable only to the losing agent, so a synthesized close cannot
 // carry one — salvage with a branch pointer exists only when the loser
 // reported through finish_run.
@@ -541,14 +540,14 @@ func supersededRun(c *Claim) Run {
 // the one close-matching rule, shared with the daemon's write-side
 // guard (attemptCloseLocked) so guard and synthesis can never disagree
 // about whether a close is still owed. A run whose event named its
-// claim (the additive run.finished claim field, 2026-08-27) closes
+// claim (the additive run.finished claim field) closes
 // exactly that claim — a later attempt by the same actor no longer
 // double-books as an earlier lost attempt's close, erasing its
-// superseded trace (D6 clause 3: one close per attempt) — and a
+// superseded trace (one close per attempt) — and a
 // synthesized run likewise binds to its claim. A legacy run, minted
 // before the field existed, keeps the original heuristic — same task,
 // same actor, minted after the claim — so stored history replays to
-// the state it always had (T3).
+// the state it always had.
 func RunCloses(r *Run, c *Claim) bool {
 	if r.Synthesized || r.claimFromEvent {
 		return r.Claim == c.ID

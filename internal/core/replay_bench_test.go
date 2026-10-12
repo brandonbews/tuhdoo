@@ -1,14 +1,14 @@
 package core
 
-// Scaling benchmarks for the pure replay core (T1), added while working
-// the "retire full-replay-per-write" question: the daemon replays the
+// Scaling benchmarks for the pure replay core, added to answer whether
+// full replay per write should be retired: the daemon replays the
 // full event set on every refresh, so the growth curve of Replay is what
 // decides when incremental apply or snapshot-bounded replay would ever
 // be worth their complexity. Run with:
 //
 //	go test ./internal/core -bench BenchmarkReplay -benchmem
 //
-// Measured on the dogfood machine (Apple M4, 2026-07-30): ~2.5µs per
+// Measured on the dogfood machine (Apple M4): ~2.5µs per
 // event, linear — 1k events ≈ 2.5ms, 10k ≈ 25ms, 100k ≈ 253ms per full
 // replay. The event log grows by ~50 events per active dogfood day, so
 // full replay stays in single-digit milliseconds for a year of use and

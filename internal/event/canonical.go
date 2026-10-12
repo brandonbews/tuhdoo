@@ -1,4 +1,4 @@
-// Package event defines the tuhdoo event envelope (002-technology.md, T3):
+// Package event defines the tuhdoo event envelope:
 // canonical JSON encoding, ULID identifiers, date-sharded storage paths,
 // and the v1 event-type catalog.
 //
@@ -17,7 +17,7 @@ import (
 // Canonicalize returns the canonical encoding of a JSON document.
 // It is the single authority on what "canonical" means in tuhdoo.
 //
-// Canonicalization rules (T3):
+// Canonicalization rules:
 //
 //  1. No insignificant whitespace anywhere.
 //  2. Object keys are sorted by byte value (ascending), at every depth.

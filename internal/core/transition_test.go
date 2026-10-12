@@ -6,7 +6,7 @@ import (
 )
 
 // NextTransition is the memoization boundary for read-time lease
-// expiry (D6 clause 5, 2026-09-10): the earliest expiry strictly after
+// expiry: the earliest expiry strictly after
 // now. Table-driven over the shapes the daemon meets — no leases, every
 // lease already lapsed, a mix, released tombstones (which the store
 // decodes as leases lapsed at their stand-down instant), and ties.

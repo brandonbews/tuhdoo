@@ -7,7 +7,7 @@ import (
 )
 
 // Upcaster lifts a payload one schema version: v → v+1, in memory only.
-// Stored bytes are never rewritten (T3).
+// Stored bytes are never rewritten.
 type Upcaster func(data json.RawMessage) (json.RawMessage, error)
 
 type upKey struct {
@@ -26,19 +26,19 @@ func (r *Replayer) RegisterUpcaster(typ string, from int, fn Upcaster) {
 // carries — NewReplayer calls it, so no caller can forget it and
 // compute a different truth from the same log.
 //
-// task.created/task.updated v1→v2 (2026-07-31, inbox/held statuses):
+// task.created/task.updated v1→v2 (inbox/held statuses):
 // the payload shapes are forward-compatible — a v1 task.created has no
 // status field (read as "open"; replay defaults the empty value), and a
 // v1 task.updated carries only status values v2 also knows — so both
 // lifts are the identity. The bump exists for the OLD side, not this
 // one: a v1-only binary decoding a task.created that carries
 // status:"inbox" would silently drop the unknown field and mint the
-// task open and claimable (verified 2026-07-31), which is mis-bucketing,
+// task open and claimable (verified), which is mis-bucketing,
 // not additive reading. Writing such payloads at v2 turns that into the
-// honest T3 outcome — "schema version above this binary's — upgrade
+// honest outcome — "schema version above this binary's — upgrade
 // tuhdoo", fail-safe read-only mode.
-// task.created/task.updated v2→v3 (2026-08-21, P0-highest priority
-// flip): v3 makes priority nullable (null = unprioritized, sorts last)
+// task.created/task.updated v2→v3 (P0-highest priority): v3 makes
+// priority nullable (null = unprioritized, sorts last)
 // and flips the number line (lower = more urgent, 0 the most). The lift
 // translates v2 semantics faithfully: an explicit 0 — v2's "default,
 // unprioritized" — becomes null, which for task.updated reads as
@@ -47,8 +47,8 @@ func (r *Replayer) RegisterUpcaster(typ string, from int, fn Upcaster) {
 // Nonzero values carry through numerically: their v2 intent (higher =
 // more urgent) cannot be renumbered mechanically on an unbounded
 // scale, so live nonzero priorities are hand-corrected by ordinary
-// task.updated events at migration instead (the 2026-08-21 flip plan).
-// task.updated v3→v4 (2026-09-11, clearable priority): v4 makes the
+// task.updated events at migration instead.
+// task.updated v3→v4 (clearable priority): v4 makes the
 // priority key tri-state — absent = unchanged, explicit null = clear,
 // number = set — where v3 spent null on "unchanged". The lift deletes
 // a v3 null priority key so it reads as v4 absent (unchanged, exactly
@@ -109,7 +109,7 @@ func dropNullPriority(data json.RawMessage) (json.RawMessage, error) {
 }
 
 // upcast brings one event to the current schema version of its type, or
-// fails with ErrCannotReplay. This is the fail-safe gate (T3): events
+// fails with ErrCannotReplay. This is the fail-safe gate: events
 // from a newer daemon (unknown type, or version above ours) and old
 // events with a broken upcaster ladder both stop replay honestly rather
 // than degrade it silently.

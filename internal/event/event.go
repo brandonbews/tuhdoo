@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Event is the decoded form of one stored event: the T3 envelope fields,
+// Event is the decoded form of one stored event: the envelope fields,
 // the raw payload, and any envelope-level fields this binary does not
 // know about. Unknown fields are carried as raw bytes so that
 // Decode → Encode round-trips them byte-identically (additive-first
@@ -14,10 +14,10 @@ type Event struct {
 	ID      string                     // ULID; the sole ordering key
 	Type    string                     // "noun.verb", e.g. "task.created"
 	V       int                        // schema version of this type (not of the format)
-	Actor   string                     // D7 principal, e.g. "brandon/impl-2"
+	Actor   string                     // principal (human/agent), e.g. "sarah/impl-2"
 	Machine string                     // stable per-machine id
 	Task    string                     // subject task id; empty means no subject task
-	Sig     json.RawMessage            // reserved (D7); preserved verbatim; null on new events
+	Sig     json.RawMessage            // reserved for a future signature; preserved verbatim; null on new events
 	Data    json.RawMessage            // type-specific payload
 	Unknown map[string]json.RawMessage // envelope fields we don't recognize
 }
@@ -26,7 +26,7 @@ type Event struct {
 var nullJSON = json.RawMessage("null")
 
 // New builds an Event for a v1-catalog payload, marshaling the payload
-// into Data and setting Sig to null as T3 requires for new events.
+// into Data and setting Sig to null, as every new event requires.
 // task may be empty for events with no subject task — headroom for
 // future catalog types: every current type has a subject, and replay
 // rejects a subject-less event until a type that needs one arrives

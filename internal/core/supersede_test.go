@@ -1,6 +1,6 @@
 package core
 
-// Replay tests for loser expiry synthesis (D6 clause 3, 2026-08-04): a
+// Replay tests for loser expiry synthesis: a
 // voided claim whose lease lapses with no closing run by its actor gets
 // a synthesized branch-less superseded run — the trace a race loser
 // that never reported leaves behind — and a real close by the loser
@@ -177,7 +177,7 @@ func TestEveryExpiredLoserLeavesItsOwnTrace(t *testing.T) {
 }
 
 func TestStoodDownLoserTombstoneKeepsContestHistoryStable(t *testing.T) {
-	// The finding-1 shape from the collision harness (2026-08-04 grill):
+	// A shape the collision harness found:
 	// a confirmation out-ranked the earlier-ULID claim, the loser stood
 	// down, and the daemon closed its lease by OVERWRITING it with a
 	// released tombstone pinned to the stand-down instant — never by

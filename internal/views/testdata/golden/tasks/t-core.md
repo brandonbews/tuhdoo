@@ -26,7 +26,7 @@ Fix in progress.
 
 > Should upcasters live in core or in a separate package?
 
-T3 says in-memory only; either placement satisfies that.
+Upcasting is in-memory only; either placement satisfies that.
 
 **Answer** (`brandon`): Keep them in core; they are part of honest replay.
 

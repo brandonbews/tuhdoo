@@ -72,7 +72,7 @@ func list(vs ...string) *[]string { return &vs }
 func TestClaimRaceIsOrderInsensitive(t *testing.T) {
 	// Two agents on two machines claim the same task. Whatever order the
 	// events arrive in (union merges guarantee nothing), the earliest
-	// ULID wins and every machine agrees (D6).
+	// ULID wins and every machine agrees.
 	c1, c2 := tick(t, 2), tick(t, 3)
 	events := []event.Event{
 		taskCreated(t, 1, "t1", "fix login"),
@@ -286,10 +286,9 @@ func TestHolderLateFinishLandsDone(t *testing.T) {
 	}
 }
 
-// merged_as (additive, 2026-08-06 linkage grill): a run.finished may
-// carry the commit(s) that actually landed on a durable branch; events
-// written before the field existed replay unchanged with none — T3
-// additive-first, no upcaster.
+// merged_as (additive): a run.finished may carry the commit(s) that
+// actually landed on a durable branch; events written before the field
+// existed replay unchanged with none — additive-first, no upcaster.
 func TestFinishRunMergedAs(t *testing.T) {
 	tests := []struct {
 		name string
@@ -353,11 +352,10 @@ func TestReadyRespectsDependenciesAndPriority(t *testing.T) {
 	}
 }
 
-// ClaimBlockers names Ready's dependency and escalation clauses
-// (task tuh-01KYWKT8NQ980F0NF4MN3VMT0Y): unmet dep IDs and open
-// blocking escalation IDs in stored order, reported regardless of the
-// task's status or claim state — those cases carry their own words at
-// the call site.
+// ClaimBlockers names Ready's dependency and escalation clauses:
+// unmet dep IDs and open blocking escalation IDs in stored order,
+// reported regardless of the task's status or claim state — those
+// cases carry their own words at the call site.
 func TestClaimBlockers(t *testing.T) {
 	esc1, esc2 := tick(t, 10), tick(t, 11)
 	claim := tick(t, 12)
@@ -409,9 +407,8 @@ func TestClaimBlockers(t *testing.T) {
 }
 
 // Blockage is the annotated "why is this blocked" answer every surface
-// reads (2026-08-05 edge grill, tuh-01KZ9Y3THHH5B8GT22T1A1WPYP):
-// ClaimBlockers' lists plus loop membership among not-done tasks and
-// cancelled-dep marking. Loops arrive by set-union merge of two
+// reads: ClaimBlockers' lists plus loop membership among not-done tasks
+// and cancelled-dep marking. Loops arrive by set-union merge of two
 // individually-acyclic writes, so the fixtures build them from raw
 // creation events — exactly the shape replay meets after such a merge.
 func TestBlockage(t *testing.T) {
@@ -472,7 +469,7 @@ func TestBlockage(t *testing.T) {
 	}
 }
 
-// Situation is the one classifier (task tuh-01KZ0ES83SFH6MKWP82YRXWQD6):
+// Situation is the one classifier:
 // ready / in_progress / blocked for open tasks, the status word itself
 // for everything else, "" for unknown IDs. Tested table-driven next to
 // Ready so the words and the predicates can never drift apart.
@@ -571,7 +568,7 @@ func TestAnswerTaskMismatchIsMalformed(t *testing.T) {
 	}
 }
 
-// Attribution of answers (T5 relay_answer, 2026-07-30 revision): the
+// Attribution of answers (relay_answer): the
 // payload's answered_by wins over the envelope actor when present, and
 // an envelope actor differing from it is recorded as the relay. Events
 // from before the field existed (empty answered_by) keep attributing to
@@ -655,7 +652,7 @@ func TestBlockingEscalationGatesReadiness(t *testing.T) {
 	}
 }
 
-// The status model (2026-07-31): inbox and held join open/done/cancelled.
+// The status model: inbox and held join open/done/cancelled.
 // Only open is claimable; transitions are mechanically permissive —
 // replay validates vocabulary, never paths.
 func TestCreateWithStatus(t *testing.T) {
@@ -714,9 +711,9 @@ func TestV1TaskCreatedReplaysOpen(t *testing.T) {
 	}
 }
 
-// The parents edge is retired (edge grill, 2026-08-05): stored payloads
-// that still carry a "parents" array replay without error — readers
-// ignore fields they have no place for (T3), no version bump, stored
+// The parents edge is retired: stored payloads that still carry a
+// "parents" array replay without error — readers ignore fields they
+// have no place for, no version bump, stored
 // bytes untouched — and every remaining field lands as usual.
 func TestRetiredParentsFieldTolerated(t *testing.T) {
 	created := event.Event{ID: tick(t, 1), Type: event.TypeTaskCreated, V: 2,
@@ -809,7 +806,7 @@ func TestInboxHeldDependenciesBlock(t *testing.T) {
 }
 
 // An unknown status in task.updated stops replay as malformed — the
-// same fail-safe posture the pre-inbox binary had (verified 2026-07-31),
+// same fail-safe posture the pre-inbox binary had (verified),
 // now paired with the v2 schema bump so old binaries stop with "upgrade
 // tuhdoo" instead of "malformed" when they meet the new values.
 func TestUnknownStatusUpdateStopsReplay(t *testing.T) {
@@ -825,7 +822,7 @@ func TestUnknownStatusUpdateStopsReplay(t *testing.T) {
 }
 
 // What a v1-only binary sees when a v2 binary has written: the exact
-// old-binary fail-safe this cycle's version bump exists to guarantee. A
+// old-binary fail-safe the v1→v2 version bump exists to guarantee. A
 // replayer stripped of the standard v1→v2 upcasters stands in for the
 // old binary meeting bytes from the future — replay stops with
 // ErrCannotReplay ("upgrade tuhdoo"), never a mis-bucketed open task.
@@ -915,8 +912,8 @@ func TestUpcasterLiftsOldEvents(t *testing.T) {
 	}
 }
 
-// MoreUrgent is the one priority comparator (P0-highest flip,
-// 2026-08-21): among numbers lower wins, 0 the most urgent; a
+// MoreUrgent is the one priority comparator: among numbers lower
+// wins, 0 the most urgent; a
 // prioritized task always outranks an unprioritized one; two
 // unprioritized tasks tie (callers keep ULID order via stable sort).
 func TestMoreUrgentP0Highest(t *testing.T) {
@@ -942,7 +939,7 @@ func TestMoreUrgentP0Highest(t *testing.T) {
 	}
 }
 
-// The full ready ordering (P0-highest flip, 2026-08-21): prioritized
+// The full ready ordering (P0 highest): prioritized
 // tasks ascending by number, unprioritized after all of them, creation
 // (ULID) order within a rank.
 func TestReadyTasksOrderP0Highest(t *testing.T) {
@@ -969,7 +966,7 @@ func TestReadyTasksOrderP0Highest(t *testing.T) {
 	}
 }
 
-// The v2→v3 priority upcasters (P0-highest flip, 2026-08-21): a v2
+// The v2→v3 priority upcasters (P0 becomes highest): a v2
 // "priority": 0 — that era's "default, unprioritized" — lifts to null,
 // so historical zeros read as no-priority, never as v3's most-urgent;
 // nonzero values carry through numerically (live ones are
@@ -1021,7 +1018,7 @@ func TestV2PriorityZeroUpcastsToUnprioritized(t *testing.T) {
 	})
 }
 
-// task.updated v4 (2026-09-11, clearable priority): the priority key is
+// task.updated v4 (clearable priority): the priority key is
 // tri-state — absent = unchanged, explicit null = clear, number = set.
 // v3 spent null on "unchanged", so a stored v3 null must keep meaning
 // that (the v3→v4 upcaster drops the key in memory; bytes untouched),
@@ -1071,7 +1068,7 @@ func TestTaskUpdatedPriorityTriState(t *testing.T) {
 }
 
 // A task.updated from a binary newer than this one (v5) stops replay
-// with ErrCannotReplay — the T3 fail-safe, never a guessed reading.
+// with ErrCannotReplay — the fail-safe, never a guessed reading.
 func TestTaskUpdatedV5FailsSafe(t *testing.T) {
 	future := evt(t, 2, event.TypeTaskUpdated, "sarah", "t1",
 		event.TaskUpdated{Priority: event.SetPriority(1)})
@@ -1086,10 +1083,10 @@ func TestTaskUpdatedV5FailsSafe(t *testing.T) {
 	}
 }
 
-// ClosedAt/ClosedBy (2026-08-02, T5 read parity / history view): the
-// event *entering* a terminal status is the closing event; leaving
-// terminal clears the stamp; a task created directly terminal (the B12
-// migration shape) closes at its creation event.
+// ClosedAt/ClosedBy (read parity, history view): the event *entering*
+// a terminal status is the closing event; leaving terminal clears the
+// stamp; a task created directly terminal (the shape a backlog import
+// produces) closes at its creation event.
 func TestClosedMetadata(t *testing.T) {
 	create := func(n int, status string) event.Event {
 		return evt(t, n, event.TypeTaskCreated, "brandon", "t1",
@@ -1180,8 +1177,8 @@ func TestClosedMetadataOrderInsensitive(t *testing.T) {
 	}
 }
 
-// Every task.updated leaves an Update record (2026-08-11 grill: every
-// edit gets a line, no filtering): actor plus one compact summary per
+// Every task.updated leaves an Update record (every edit gets a line,
+// no filtering): actor plus one compact summary per
 // written field — old→new for scalars, captured from state before the
 // field-level apply; membership deltas for lists (short-ID form for
 // depends_on edges); name-only for the text fields. One event touching
