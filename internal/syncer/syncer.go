@@ -87,6 +87,17 @@ type Syncer struct {
 	done     chan struct{}
 	stopOnce sync.Once
 
+	// fetchMu serializes every fetch into TrackingRef. The background
+	// cycle and the confirmation gate (GateHead, on an MCP request)
+	// both fetch, often at once: a claim pokes the syncer and
+	// confirm_claim follows straight away. Two concurrent `git fetch`
+	// processes race for the ref's lock, and the loser fails with
+	// "cannot lock ref". Held for the whole of fetch (the before-read,
+	// the fetch, the after-read, the rewind check) and around
+	// adoption's fetch. Lock order: fetchMu, then mu (fetch records its
+	// time under mu); nothing takes fetchMu while holding mu.
+	fetchMu sync.Mutex
+
 	mu         sync.Mutex
 	started    bool
 	status     Status
@@ -341,8 +352,12 @@ func (s *Syncer) fetchSpec() string {
 
 // fetch updates TrackingRef and returns the remote head, or "" when the
 // remote has no data branch yet (first push still pending). It logs a
-// warning when the fetch moved TrackingRef anywhere but forward.
+// warning when the fetch moved TrackingRef anywhere but forward. One
+// fetch at a time (fetchMu).
 func (s *Syncer) fetch() (string, error) {
+	s.fetchMu.Lock()
+	defer s.fetchMu.Unlock()
+
 	// The tracking ref before the fetch, for the rewind check. Missing
 	// (nothing fetched yet) or unreadable just means no check this time.
 	before, err := s.git.ReadRef(TrackingRef)

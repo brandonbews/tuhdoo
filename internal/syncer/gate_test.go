@@ -7,8 +7,10 @@ package syncer
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -270,6 +272,46 @@ func TestGatePushLostRaceLeavesNothing(t *testing.T) {
 		s := stateOf(t, p)
 		if got := s.Claims[claim]; got.Status != core.ClaimActive || got.Confirmation != tick(t, 4) {
 			t.Fatalf("claim = %s/%q, want active with confirmation %s", got.Status, got.Confirmation, tick(t, 4))
+		}
+	}
+}
+
+// TestCycleAndGateFetchConcurrently: the background cycle and the
+// confirmation gate both fetch into TrackingRef, and the daemon runs
+// them at once (a claim pokes the syncer, and confirm_claim follows
+// straight away). Unserialized, the two `git fetch` processes raced
+// for the ref's lock and the loser failed with "cannot lock ref
+// 'refs/tuhdoo/remote'": a refused confirmation over nothing. Each
+// round moves the remote first, so both fetches have an update to
+// write and the race has its window. Without fetchMu this fails in
+// the first round, so a dozen rounds is ample.
+func TestCycleAndGateFetchConcurrently(t *testing.T) {
+	a, b := newPair(t)
+	cycle(t, b)
+	cycle(t, a)
+
+	for round := 1; round <= 12; round++ {
+		if err := b.store.AppendBatch(store.Batch{Events: []event.Event{
+			evt(t, round, event.TypeTaskCreated, "brandon", "m-b", fmt.Sprintf("t-b%d", round), event.TaskCreated{Title: "move the remote"}),
+		}}); err != nil {
+			t.Fatal(err)
+		}
+		cycle(t, b)
+
+		var wg sync.WaitGroup
+		var cycleErr, gateErr error
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			cycleErr = a.sync.Cycle()
+		}()
+		go func() {
+			defer wg.Done()
+			_, _, gateErr = a.sync.GateHead()
+		}()
+		wg.Wait()
+		if cycleErr != nil || gateErr != nil {
+			t.Fatalf("round %d: concurrent Cycle = %v, GateHead = %v; want both nil", round, cycleErr, gateErr)
 		}
 	}
 }
