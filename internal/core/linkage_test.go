@@ -1,13 +1,13 @@
 package core
 
-// Close-by-claim linkage (D6 clause 3; 2026-08-27 revision): a
+// Close-by-claim linkage: a
 // run.finished event may name the claim whose attempt it closes (the
 // additive claim payload field), and close matching then binds to that
 // claim alone — a later attempt's close no longer erases an earlier
 // lost attempt's superseded trace. Events without the field keep the
 // original task+actor+order heuristic, so legacy history replays to
-// the state it always had (T3: stored bytes never rewritten, settled
-// contests never move).
+// the state it always had (stored bytes are never rewritten, and
+// settled contests never move).
 
 import (
 	"testing"
@@ -17,11 +17,11 @@ import (
 )
 
 func TestReclaimAfterLostRaceYieldsBothCloses(t *testing.T) {
-	// The double-booking shape (Go-sweep audit, 2026-08-27): brandon's
-	// first claim lost the race and its lease lapsed unreported; the
-	// winner released without finishing; brandon re-claimed and finished
-	// done. The done run names the second claim, so it closes only that
-	// attempt — the first still gets its synthesized superseded trace:
+	// The double-booking shape: an agent's first claim lost the race
+	// and its lease lapsed unreported; the winner released without
+	// finishing; the same agent re-claimed and finished done. The done
+	// run names the second claim, so it closes only that attempt — the
+	// first still gets its synthesized superseded trace:
 	// two closes, one per attempt, identical in every arrival order.
 	cWin, cLost, cAgain := tick(t, 2), tick(t, 3), tick(t, 6)
 	events := []event.Event{
@@ -105,7 +105,7 @@ func TestLoserSalvageRunCarriesItsClaim(t *testing.T) {
 }
 
 func TestLegacyRunsWithoutLinkageReplayUnchanged(t *testing.T) {
-	// T3: events minted before the claim field existed carry none and
+	// Events minted before the claim field existed carry none and
 	// keep replaying through the original heuristic — any later run of
 	// the same actor on the task closes the attempt — so existing
 	// ledgers replay to the state they always had, INCLUDING the shape

@@ -42,13 +42,13 @@ func goldenEvents(t *testing.T) map[string]Event {
 		task    string
 		payload any
 	}{
-		// task.created and task.updated are v3 (2026-08-21, P0-highest
-		// flip): priority is nullable — these fixtures pin explicit
+		// task.created is v3 and task.updated v4 (P0-highest priority):
+		// priority is nullable — these fixtures pin explicit
 		// numbers; the v2 fixtures' bytes live on through the upcaster
 		// tests in internal/core.
 		TypeTaskCreated: {0x01, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", TaskCreated{
 			Title:       "Write the event model",
-			Description: "Envelope, canonical JSON, catalog. See docs/design/002-technology.md T3.",
+			Description: "Envelope, canonical JSON, catalog. See internal/event/canonical.go.",
 			Status:      "inbox",
 			Priority:    num(2),
 			Labels:      []string{"core", "v0"},
@@ -80,7 +80,7 @@ func goldenEvents(t *testing.T) map[string]Event {
 			Blocking: true,
 		}},
 		TypeEscalationAnswered: {0x07, "t-01BX5ZZKBKACTAV9WEVGEMMVRY", EscalationAnswered{
-			Answer:     "No — additions only in v1; removal is a Cycle 3 question.",
+			Answer:     "No — additions only in v1; removal is a later question.",
 			AnsweredBy: "brandon", // relayed: the envelope actor below is the scribe
 			Escalation: "01BX5ZZKBKACTAV9WEVGEMMVS0",
 		}},
@@ -155,7 +155,7 @@ func TestGoldenRoundTrip(t *testing.T) {
 	}
 }
 
-// task.updated's priority is tri-state since v4 (2026-09-11): absent =
+// task.updated's priority is tri-state since v4: absent =
 // unchanged, null = clear, number = set. The fixtures below pin all
 // three states on the wire — absent must stay absent, which a plain
 // *int cannot do — and the v3 fixtures (null meant unchanged; a number

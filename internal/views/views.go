@@ -1,11 +1,11 @@
 // Package views renders core.State into the generated markdown views on
-// the data branch (002 T6). Every function here is pure: same State in,
+// the data branch. Every function here is pure: same State in,
 // byte-identical views out, on every machine, forever. That is what the
 // package trades everything else for — no clocks (so no relative times),
 // no map iteration (all walks go through the State's order slices or an
 // explicit sort), no template engine, no I/O.
 //
-// The design target (2026-07-31) is rendered markdown on a git host:
+// The target is rendered markdown on a git host:
 // someone glancing at the branch on GitHub. README.md is the landing
 // page (a needs-input callout plus one-row counts), escalations.md is
 // the steering inbox (questions a human can answer, blocking first),
@@ -25,32 +25,32 @@ import (
 	"github.com/brandonbews/tuhdoo/internal/event"
 )
 
-// FormatVersion is the view-format contract of T3's three-contract
-// taxonomy: a single integer, bumped whenever rendered output changes.
+// FormatVersion is the view-format contract: a single integer, bumped
+// whenever rendered output changes.
 // Peers compare it via CanWrite before regenerating (highest wins).
 // 2: relayed escalation answers carry "(relayed by ...)" attribution.
 // 3: held and inbox statuses render as their own backlog sections.
 // 4: the held status renders as "on hold" everywhere humans read it.
 // 5: rendered-first redesign — short IDs, at-a-glance counts, escalations
 // as answerable questions, cancelled reads "archived".
-// 6: status-vocabulary revision (2026-08-01) — displayed words are the
+// 6: status-vocabulary revision — displayed words are the
 // stored words: cancelled renders as "cancelled" (archive retired);
 // "on hold" for held stays as the one sanctioned display mapping.
 // 7: blocked rows mark dependency-loop members and cancelled
-// dependencies (2026-08-05 edge grill).
-// 8: task edits render in history (2026-08-11 grill) — every
+// dependencies.
+// 8: task edits render in history — every
 // task.updated is an entry: actor, stamp, compact per-field summary.
-// 9: README de-assumes the host repo (2026-08-11 grill) — the "design
+// 9: README de-assumes the host repo — the "design
 // lives in `docs/`" sentence becomes a https://tuhdoo.com pointer, and
 // the fixed prose is tightened to the utilitarian bar.
-// 10: P0-highest priority flip (2026-08-21) — ready sorts most-urgent
+// 10: P0-highest priority flip — ready sorts most-urgent
 // first (0 on top), and unprioritized tasks (no priority set) sort
 // last and render "—" in priority cells, "none" on task pages.
 const FormatVersion = 10
 
-// MetaPath is where the view-format stamp lives. T6 named "views/.meta",
-// but the views render at the branch root (README.md and friends), so
-// the stamp lives at the root too.
+// MetaPath is where the view-format stamp lives. The views render at
+// the branch root (README.md and friends), so the stamp lives at the
+// root too.
 const MetaPath = ".views-meta.json"
 
 // Render produces every view file as path → bytes. Paths are relative to
@@ -71,7 +71,7 @@ func Render(s *core.State) map[string][]byte {
 
 // CanWrite reports whether this generator may overwrite the existing
 // views, given the current meta stamp's bytes (nil/empty when absent).
-// Highest version wins (T6): a stamp declaring a HIGHER format means a
+// Highest version wins: a stamp declaring a HIGHER format means a
 // newer peer owns the views — the daemon must write events only and let
 // that peer regenerate. An absent or unreadable stamp never blocks:
 // refusing to write over garbage would wedge view generation forever,
@@ -97,7 +97,7 @@ func Format(meta []byte) int {
 
 // buckets is the backlog partition of tasks. Every open task lands in
 // exactly one of ready / inProgress / blocked; held and inbox tasks
-// (2026-07-31) shelve separately — parked and captured work, never
+// shelve separately — parked and captured work, never
 // claimable.
 type buckets struct {
 	ready      []*core.Task // claimable now, highest priority first
@@ -130,7 +130,7 @@ func classify(s *core.State) buckets {
 			b.inbox = append(b.inbox, t)
 		}
 	}
-	// Most urgent first (P0-highest, 2026-08-21), creation (ULID) order
+	// Most urgent first (P0 highest), creation (ULID) order
 	// within a rank — the same ordering core.ReadyTasks serves
 	// claim_next from.
 	sort.SliceStable(b.ready, func(i, j int) bool {
@@ -224,7 +224,7 @@ func backlog(s *core.State, b buckets) []byte {
 		w.WriteString("\n")
 	}
 
-	// Held above Inbox (2026-07-31): held items passed triage and sit
+	// Held above Inbox: held items passed triage and sit
 	// closer to workable than raw captures do.
 	w.WriteString("## On hold\n\n")
 	if len(b.held) == 0 {
@@ -268,9 +268,9 @@ func compactList(w *strings.Builder, tasks []*core.Task) {
 // waitingOn names why a blocked task cannot be claimed: each unmet
 // dependency, and/or an open blocking escalation. The escalation's
 // question is not repeated here — blocked rows link to the steering
-// inbox instead (the same doctrine the TUI settled: rows stop
-// repeating the question). The loud annotations (2026-08-05 edge
-// grill) render distinctly from ordinary waiting: loop membership
+// inbox instead (the TUI does the same: rows stop repeating the
+// question). The loud annotations render distinctly from ordinary
+// waiting: loop membership
 // leads the cell — a cyclic task can never become ready on its own —
 // and a cancelled dependency reads "waiting on cancelled", because
 // re-pointing that edge is a human decision.
@@ -358,8 +358,8 @@ func openEscalation(w *strings.Builder, s *core.State, e *core.Escalation) {
 }
 
 // priorityCell renders a nullable priority for backlog table cells:
-// the number, or an em dash for unprioritized (P0-highest flip,
-// 2026-08-21 — absent means "no priority", never 0).
+// the number, or an em dash for unprioritized (absent means "no
+// priority", never 0).
 func priorityCell(p *int) string {
 	if p == nil {
 		return "—"
@@ -394,7 +394,7 @@ func taskPage(s *core.State, t *core.Task) []byte {
 	if t.Description == "" {
 		w.WriteString("_No description._\n")
 	} else {
-		writeBlock(&w, t.Description) // verbatim: descriptions are prompts (T5)
+		writeBlock(&w, t.Description) // verbatim: descriptions are prompts
 	}
 
 	w.WriteString("\n## History\n\n")
@@ -477,8 +477,8 @@ func noteEntry(n *core.Note) string {
 }
 
 // updateEntry renders one task edit: actor, stamp, and the compact
-// per-field summaries core recorded at replay (2026-08-11 grill —
-// every edit gets an entry). A summary-less entry (an event that wrote
+// per-field summaries core recorded at replay (every edit gets an
+// entry). A summary-less entry (an event that wrote
 // no fields) keeps its heading: the edit still happened.
 func updateEntry(u *core.Update) string {
 	var w strings.Builder
@@ -544,7 +544,7 @@ func escEntry(e *core.Escalation) string {
 }
 
 // relaySuffix marks an answer recorded on the answerer's behalf — the
-// out-of-band path, where an agent is the scribe (T5 relay_answer).
+// out-of-band path, where an agent is the scribe (relay_answer).
 func relaySuffix(e *core.Escalation) string {
 	if e.RelayedBy == "" {
 		return ""
@@ -573,7 +573,7 @@ func depLinks(s *core.State, ids []string) string {
 }
 
 // HumanStatus maps a stored status to the word humans read. Since the
-// status-vocabulary revision (2026-08-01) the displayed words are the
+// status-vocabulary revision the displayed words are the
 // stored words with exactly one exception: held reads "on hold". This
 // is the mapping's only definition — every display surface (markdown
 // views, CLI, TUI) calls it here.

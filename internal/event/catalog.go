@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-// The event-type catalog (T3, T5). Additive payload changes never bump
+// The event-type catalog. Additive payload changes never bump
 // a version, so these only move on a breaking change (rare by design).
 // "Additive" means an old reader ignoring the field still computes
 // correct state — a field whose absence implied a default that its
-// presence can contradict (task.created's status, 2026-07-31) is
+// presence can contradict (task.created's status) is
 // breaking in additive clothing, and bumps.
 const (
 	TypeTaskCreated        = "task.created"
@@ -26,19 +26,19 @@ const (
 // Versions maps each catalog type to the schema version this binary
 // writes and fully understands.
 //
-// task.created/task.updated moved to v2 on 2026-07-31 (inbox/held task
-// statuses): v2 task.created carries a status field, and v2 task.updated
+// task.created/task.updated moved to v2 for the inbox/held task
+// statuses: v2 task.created carries a status field, and v2 task.updated
 // may carry the new status values. v1-only binaries would mint a
 // status-carrying task.created as open-and-claimable (unknown fields are
 // ignored — verified mis-bucketing) and reject an inbox/held
 // task.updated as malformed rather than as needing an upgrade; at v2
-// they instead fail safe with "upgrade tuhdoo" (T3 read-only mode). The
+// they instead fail safe with "upgrade tuhdoo" (read-only mode). The
 // v1→v2 upcasters are the identity (internal/core/upcast.go).
-// claim.confirmed is new on 2026-08-04 (D6 confirmation gate): a new
-// type, not a version bump — additive-first (T3). Older binaries meeting
+// claim.confirmed (the claim confirmation gate) arrived as a new
+// type, not a version bump — additive-first. Older binaries meeting
 // one enter read-only fail-safe with the "upgrade tuhdoo" message.
-// task.created/task.updated moved to v3 on 2026-08-21 (P0-highest
-// priority flip): priority becomes nullable — null/absent means
+// task.created/task.updated moved to v3 for the P0-highest priority
+// flip: priority becomes nullable — null/absent means
 // "unprioritized" (sorts after every prioritized task), and among
 // numbers LOWER is now more urgent, 0 the most. The bump is the value
 // flip, not the shape: a v2 reader would decode a v3 "priority":0 —
@@ -47,7 +47,7 @@ const (
 // upcasters translate old semantics faithfully: 0 (v2's "default,
 // unprioritized") lifts to null; nonzero values carry through
 // numerically (internal/core/upcast.go).
-// task.updated moved to v4 on 2026-09-11 (clearable priority): the
+// task.updated moved to v4 for clearable priority: the
 // priority key becomes tri-state — absent means "unchanged", an
 // explicit null means "clear back to unprioritized", a number sets.
 // v3 spent null on "unchanged", so "clear" and "leave alone" were the
@@ -68,10 +68,10 @@ var Versions = map[string]int{
 	TypeNoteAdded:          1,
 }
 
-// Run outcomes for RunFinished: the agent-reported set (T5 finish_run)
+// Run outcomes for RunFinished: the agent-reported set (finish_run)
 // plus two daemon-only outcomes — "interrupted" for runs orphaned by
 // lease expiry and "superseded" for work voided by losing a cross-machine
-// claim race (D6).
+// claim race.
 const (
 	OutcomeDone        = "done"
 	OutcomeFailed      = "failed"
@@ -92,12 +92,12 @@ const (
 // not recognize, so decoded payloads re-encode byte-identically.
 
 // TaskCreated is the payload of "task.created". DependsOn is the DAG
-// edge: task IDs of prerequisite tasks. Status (v2, 2026-07-31) is the
+// edge: task IDs of prerequisite tasks. Status (v2) is the
 // task's initial status; empty means "open", the only reading v1 events
-// could carry. Priority (v3, 2026-08-21) is nullable: null means
+// could carry. Priority (v3) is nullable: null means
 // "unprioritized", and among numbers lower is more urgent, 0 the most.
-// Stored events may still carry "parents" (retired 2026-08-05,
-// display-only while it lived); it rides the Unknown map like any other
+// Stored events may still carry "parents" (retired; display-only
+// while it lived); it rides the Unknown map like any other
 // field this binary has no place for.
 type TaskCreated struct {
 	Title       string   `json:"title"`
@@ -112,7 +112,7 @@ type TaskCreated struct {
 
 // TaskUpdated is the payload of "task.updated". Only changed fields are
 // non-null; null means "unchanged" — except Priority, which since v4
-// (2026-09-11) is tri-state: absent means unchanged, an explicit null
+// is tri-state: absent means unchanged, an explicit null
 // clears, a number sets (PriorityChange).
 type TaskUpdated struct {
 	Title       *string        `json:"title"`
@@ -125,8 +125,8 @@ type TaskUpdated struct {
 	Unknown map[string]json.RawMessage `json:"-"`
 }
 
-// PriorityChange is task.updated's tri-state priority field (v4,
-// 2026-09-11). On the wire: key absent = unchanged, explicit null =
+// PriorityChange is task.updated's tri-state priority field (v4).
+// On the wire: key absent = unchanged, explicit null =
 // clear back to unprioritized, number = set. A plain *int cannot say
 // "absent" (nil marshals as null), so this small value type carries
 // presence explicitly: the zero value is "unchanged" and omitzero
@@ -171,7 +171,7 @@ type ClaimMade struct {
 	Unknown map[string]json.RawMessage `json:"-"`
 }
 
-// ClaimConfirmed is the payload of "claim.confirmed" (D6, 2026-08-04):
+// ClaimConfirmed is the payload of "claim.confirmed":
 // the referee's irrevocable verdict, won through the remote's ref
 // compare-and-swap. Claim names the claim.made event it confirms; the
 // task, confirming actor, and machine live on the envelope as usual.
@@ -191,12 +191,11 @@ type ClaimReleased struct {
 
 // RunFinished is the payload of "run.finished". Outcome is one of the
 // Outcome* constants. Branch, PR, Commits, and MergedAs are stored
-// strings, never dereferenced (T2: host-agnostic). MergedAs (additive,
-// 2026-08-06 linkage grill) is the commit(s) on a durable branch that
-// carry this work, if known — the one pointer that outlives squash and
-// rebase merges, where the branch and its reported commits die at
-// merge. Claim (additive, 2026-08-27 close-by-claim revision — the T3
-// note in 002) is the claim.made event ID of the attempt this run
+// strings, never dereferenced (tuhdoo stays host-agnostic). MergedAs
+// (additive) is the commit(s) on a durable branch that carry this
+// work, if known — the one pointer that outlives squash and rebase
+// merges, where the branch and its reported commits die at merge.
+// Claim (additive) is the claim.made event ID of the attempt this run
 // closes: the daemon's finish guard always resolved it, and recording
 // it lets replay match closes by claim identity instead of inferring
 // by task+actor+order. Events written before either field existed
@@ -226,9 +225,9 @@ type EscalationRaised struct {
 // EscalationAnswered is the payload of "escalation.answered".
 // Escalation is the event ID of the escalation.raised being answered.
 // AnsweredBy is the principal the answer is attributed to — the
-// envelope actor's root when relayed through relay_answer (T5,
-// 2026-07-30 revision). Additive: events written before the field
-// existed carry none, and replay falls back to the envelope actor.
+// envelope actor's root when relayed through relay_answer. Additive:
+// events written before the field existed carry none, and replay falls
+// back to the envelope actor.
 type EscalationAnswered struct {
 	Answer     string `json:"answer"`
 	AnsweredBy string `json:"answered_by"`
@@ -238,8 +237,7 @@ type EscalationAnswered struct {
 }
 
 // NoteAdded is the payload of "note.added": optional mid-flight
-// checkpoints — continuity is carried by the typed transition events
-// (T5, notes doctrine revised 2026-07-30).
+// checkpoints — continuity is carried by the typed transition events.
 type NoteAdded struct {
 	Text string `json:"text"`
 

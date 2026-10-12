@@ -1,6 +1,6 @@
 package core
 
-// Replay tests for the D6 confirmation gate (2026-08-04 revision): a
+// Replay tests for the claim confirmation gate: a
 // confirmed claim wins its contest unconditionally, one confirmation
 // per contest (not one per task forever), and corrupt double
 // confirmations resolve deterministically — fail-safe, never fail-stop.

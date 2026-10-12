@@ -113,7 +113,7 @@ func goldenInput(t *testing.T) core.Input {
 		}),
 		evt(t, 10, event.TypeEscalationRaised, "brandon/impl-1", "t-core", event.EscalationRaised{
 			Question: "Should upcasters live in core or in a separate package?",
-			Context:  "T3 says in-memory only; either placement satisfies that.",
+			Context:  "Upcasting is in-memory only; either placement satisfies that.",
 			Blocking: false,
 		}),
 		evt(t, 11, event.TypeRunFinished, "brandon/impl-1", "t-core", event.RunFinished{
@@ -141,7 +141,7 @@ func goldenInput(t *testing.T) core.Input {
 			Context:  "It races a 10ms sleep against the scheduler. Rewriting means faking the clock.",
 			Blocking: true,
 		}),
-		// An out-of-band answer relayed by an agent (T5 relay_answer):
+		// An out-of-band answer relayed by an agent (relay_answer):
 		// envelope actor is the scribe, answered_by the attribution.
 		evt(t, 18, event.TypeEscalationRaised, "sarah/impl-9", "tuh-01KYRMFV10W1N28TCN5NDADMN4", event.EscalationRaised{
 			Question: "Reuse the repo lockfile for the daemon singleton?",
@@ -152,7 +152,7 @@ func goldenInput(t *testing.T) core.Input {
 			AnsweredBy: "sarah",
 			Escalation: tick(t, 18),
 		}),
-		// The shelves (2026-07-31): a held task (paused after triage, via
+		// The shelves: a held task (paused after triage, via
 		// an update), a task born held, and a title-only inbox capture —
 		// plus a task depending on the capture, so the dep-status
 		// annotation covers a not-done, not-open dependency.
@@ -173,7 +173,7 @@ func goldenInput(t *testing.T) core.Input {
 			Title:     "Route claims by label",
 			DependsOn: []string{"t-idea"},
 		}),
-		// Loud blockage marks (2026-08-05 edge grill): a two-task
+		// Loud blockage marks: a two-task
 		// depends_on loop — two individually-acyclic creates whose union
 		// is a loop, the merge shape no daemon knowingly writes — and a
 		// task waiting on the cancelled t-old.
@@ -189,7 +189,7 @@ func goldenInput(t *testing.T) core.Input {
 			Title:     "Build on the go-git spike",
 			DependsOn: []string{"t-old"},
 		}),
-		// A multi-field edit (2026-08-11 grill): one task.updated, one
+		// A multi-field edit: one task.updated, one
 		// history entry — text field name-only, scalar old→new, and
 		// membership deltas on both list fields.
 		evt(t, 27, event.TypeTaskUpdated, "brandon", "t-web", event.TaskUpdated{
@@ -303,7 +303,7 @@ func TestRenderProducesExactPathSet(t *testing.T) {
 	}
 }
 
-// The loud blockage marks (2026-08-05 edge grill) in the rendered
+// The loud blockage marks in the rendered
 // backlog: loop members read cyclic — distinctly from ordinary waiting —
 // and a waiter on a cancelled dep says so; blocked stays the section,
 // no new status words.

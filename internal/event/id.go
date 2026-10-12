@@ -22,7 +22,7 @@ func NewID(now time.Time, entropy io.Reader) (string, error) {
 }
 
 // IDTime returns the UTC timestamp embedded in an event ID. Replay uses
-// it for the claim winner rule (D6): deterministic given the ID, whether
+// it for the claim winner rule: deterministic given the ID, whether
 // or not the writing machine's clock was truthful.
 func IDTime(id string) (time.Time, error) {
 	u, err := ulid.ParseStrict(id)
@@ -34,11 +34,11 @@ func IDTime(id string) (time.Time, error) {
 
 // ShortID abbreviates a prefixed task ID for display: the ID's own type
 // prefix (everything through the first hyphen — `tuh-` for tasks minted
-// after the 2026-07-31 rebrand, `t-` for older ones) plus the ULID's
+// after the rebrand, `t-` for older ones) plus the ULID's
 // last four characters, lowercased (`tuh-d83w`). The tail is where
 // same-batch ULIDs actually differ — their timestamp prefixes match —
 // so abbreviation comes from the right-hand end. Display and input
-// sugar only (T7): stored and transmitted IDs stay full-length.
+// sugar only: stored and transmitted IDs stay full-length.
 func ShortID(id string) string {
 	i := strings.Index(id, "-")
 	tail := id[i+1:]

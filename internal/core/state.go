@@ -1,9 +1,9 @@
 // Package core is tuhdoo's deterministic heart: pure functions from an
-// event set to project state (001 D5/D6, 002 T3). Nothing in this
-// package reads a clock, touches I/O, or spawns a goroutine — time and
-// lease data are inputs, and the same inputs always produce the same
-// state on every machine. That property is what lets divergent branch
-// histories merge by set-union and still converge (D2).
+// event set to project state. Nothing in this package reads a clock,
+// touches I/O, or spawns a goroutine — time and lease data are inputs,
+// and the same inputs always produce the same state on every machine.
+// That property is what lets divergent branch histories merge by
+// set-union and still converge.
 package core
 
 import (
@@ -12,15 +12,15 @@ import (
 )
 
 // Task statuses stored in state. "Claimed" is deliberately not a status:
-// whether a task is being worked on is derived from claims (D6), so a
+// whether a task is being worked on is derived from claims, so a
 // crashed agent can never wedge a task in a stuck status.
 //
-// Only StatusOpen is ever claimable (Ready below). Inbox and held
-// (2026-07-31 grill cycle) are the capture and pause tiers: "inbox" is
-// never-triaged capture carrying inherent review debt; "held" passed
-// triage and is workable but deliberately paused. Transitions between
-// statuses are mechanically permissive — replay validates the
-// vocabulary, never the path (no rejected-event edge cases, T3); the
+// Only StatusOpen is ever claimable (Ready below). Inbox and held are
+// the capture and pause tiers: "inbox" is never-triaged capture carrying
+// inherent review debt; "held" passed triage and is workable but
+// deliberately paused. Transitions between statuses are mechanically
+// permissive — replay validates the vocabulary, never the path (no
+// rejected-event edge cases); the
 // semantics (promote deliberately, the tasks-are-prompts bar applies at
 // promotion) live in docs/agent-protocol.md, not in code.
 const (
@@ -31,10 +31,10 @@ const (
 	StatusCancelled = "cancelled"
 )
 
-// Task is the unit of intent (D5): DAG edges, not a fixed hierarchy.
-// Priority (P0-highest flip, 2026-08-21): nil means unprioritized —
-// such tasks sort after every prioritized one; among numbers lower is
-// more urgent, 0 the most. Unbounded, no clamp.
+// Task is the unit of intent: DAG edges, not a fixed hierarchy.
+// Priority: nil means unprioritized — such tasks sort after every
+// prioritized one; among numbers lower is more urgent, 0 (P0) the most.
+// Unbounded, no clamp.
 type Task struct {
 	ID          string
 	Title       string
@@ -49,8 +49,8 @@ type Task struct {
 	// ClosedAt/ClosedBy record the event that put the task in its
 	// current terminal status (done/cancelled): stamped on entering,
 	// cleared on leaving, derived at replay only — no stored-byte
-	// changes (T3). A task created directly terminal (the B12
-	// migration shape) closes at its creation event. Zero-valued on
+	// changes. A task created directly terminal (the shape a backlog
+	// import produces) closes at its creation event. Zero-valued on
 	// every non-terminal task.
 	ClosedAt time.Time
 	ClosedBy string
@@ -62,7 +62,7 @@ type ClaimStatus string
 const (
 	// ClaimActive: the claim holds the task and its lease is unexpired.
 	ClaimActive ClaimStatus = "active"
-	// ClaimVoided: lost the D6 race — another claim already held the
+	// ClaimVoided: lost the claim race — another claim already held the
 	// task when this one arrived.
 	ClaimVoided ClaimStatus = "voided"
 	// ClaimReleased: ended voluntarily (release_claim).
@@ -73,7 +73,7 @@ const (
 	ClaimExpired ClaimStatus = "expired"
 )
 
-// Claim records one "agent X on machine Y is working on task Z" (D5).
+// Claim records one "agent X on machine Y is working on task Z".
 type Claim struct {
 	ID      string // the claim.made event ID
 	Task    string
@@ -83,7 +83,7 @@ type Claim struct {
 	MadeAt  time.Time
 
 	// Confirmation is the claim.confirmed event ID that made this
-	// claim's verdict final (D6, 2026-08-04), empty while the verdict is
+	// claim's verdict final, empty while the verdict is
 	// only provisional. A confirmation settles the race, not liveness: a
 	// confirmed claim can still end (finish, release, lease expiry), and
 	// the empty/non-empty distinction is what lets replay tell a
@@ -91,16 +91,16 @@ type Claim struct {
 	Confirmation string
 }
 
-// Run is one attempt record (D5). Most runs come from run.finished
+// Run is one attempt record. Most runs come from run.finished
 // events; runs with Synthesized true are derived by replay for claims
 // whose lease lapsed without one — outcome "interrupted" for a holder
 // that went silent, "superseded" for a race loser that never reported
-// (D6, 2026-08-04) — the daemon may later materialize those as real
+// — the daemon may later materialize those as real
 // events, but state never waits for it.
 type Run struct {
 	ID          string // the run.finished event ID, or the claim ID when synthesized
 	Task        string
-	Claim       string // the claim whose attempt this run closes: the event's own claim field (2026-08-27), replay's holder inference for legacy events, or the claim itself when synthesized; empty on legacy non-holder runs
+	Claim       string // the claim whose attempt this run closes: the event's own claim field on newer events, replay's holder inference for legacy events, or the claim itself when synthesized; empty on legacy non-holder runs
 	Actor       string
 	Machine     string
 	Outcome     string
@@ -112,7 +112,7 @@ type Run struct {
 	Synthesized bool
 
 	// claimFromEvent marks a run whose run.finished event itself named
-	// the claim it closes (the additive claim field, 2026-08-27).
+	// the claim it closes (the additive claim field).
 	// RunCloses matches such runs — and synthesized ones — by claim
 	// identity; for legacy runs, where a non-empty Claim is only
 	// replay's holder inference, it keeps the original task+actor+order
@@ -120,7 +120,7 @@ type Run struct {
 	claimFromEvent bool
 }
 
-// Escalation is an agent-raised question awaiting a human (D5).
+// Escalation is an agent-raised question awaiting a human.
 type Escalation struct {
 	ID         string // the escalation.raised event ID
 	Task       string
@@ -135,7 +135,7 @@ type Escalation struct {
 	Answered   bool
 }
 
-// Note is a comment on a task (D5).
+// Note is a comment on a task.
 type Note struct {
 	ID      string
 	Task    string
@@ -144,8 +144,8 @@ type Note struct {
 	AddedAt time.Time
 }
 
-// Update is the visible record of one task.updated event (2026-08-11
-// grill): who edited, and a compact summary per written field — old→new
+// Update is the visible record of one task.updated event: who edited,
+// and a compact summary per written field — old→new
 // for scalars, membership deltas for lists, name-only for text (the
 // current text is visible in the same view). Every edit gets an entry,
 // no filtering: a curated subset would recreate the invisible-edit bug
@@ -234,11 +234,11 @@ func (s *State) ClaimBlockers(taskID string) (unmetDeps, blockingEscalations []s
 	return unmetDeps, blockingEscalations
 }
 
-// Blockage is the annotated "why is this blocked" answer (2026-08-05
-// edge grill): ClaimBlockers' two lists plus the two conditions every
+// Blockage is the annotated "why is this blocked" answer:
+// ClaimBlockers' two lists plus the two conditions every
 // surface must mark loudly rather than fold into ordinary waiting.
 // Cyclic-freedom structurally cannot be a global invariant — set-union
-// merge (D2/D3) can union two individually-acyclic writes into a loop
+// merge can union two individually-acyclic writes into a loop
 // no daemon ever saw — so loops are surfaced, never assumed away. A
 // cancelled dependency keeps blocking (cancelled never counts as done);
 // re-pointing the edge is a human decision, and the annotation is what
@@ -313,8 +313,8 @@ const (
 	SituationBlocked    = "blocked"
 )
 
-// Situation is the one classifier (2026-08-03 grill): the derived
-// bucket every surface files a task under, one word per task. Open
+// Situation is the one classifier: the derived bucket every surface
+// files a task under, one word per task. Open
 // tasks split into ready / in_progress / blocked; for every other
 // status the situation is the status word itself, so consumers switch
 // on a single field. Unknown tasks get "". Computed from state at read
@@ -336,9 +336,9 @@ func (s *State) Situation(taskID string) string {
 	return SituationBlocked
 }
 
-// ReadyTasks returns claimable tasks, most urgent first: P0-highest
-// (2026-08-21 flip) — prioritized tasks ascending by number (0 first),
-// unprioritized tasks after all of them, ULID order within a rank.
+// ReadyTasks returns claimable tasks, most urgent first: prioritized
+// tasks ascending by number (0 first), unprioritized tasks after all of
+// them, ULID order within a rank.
 // This is the ordering claim_next serves from.
 func (s *State) ReadyTasks() []*Task {
 	var ready []*Task
@@ -352,9 +352,9 @@ func (s *State) ReadyTasks() []*Task {
 	return ready
 }
 
-// MoreUrgent is the one priority comparator (P0-highest flip,
-// 2026-08-21): a prioritized task outranks an unprioritized one, and
-// among numbers lower wins, 0 the most urgent. Every surface that
+// MoreUrgent is the one priority comparator: a prioritized task
+// outranks an unprioritized one, and among numbers lower wins, 0 the
+// most urgent. Every surface that
 // orders by priority uses this, so no two surfaces can disagree about
 // the queue.
 func MoreUrgent(a, b *int) bool {

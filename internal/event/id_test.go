@@ -102,7 +102,7 @@ func TestPathKnownValue(t *testing.T) {
 // and keeps only the lowercased tail — pinned as current behavior.
 func TestShortIDAbbreviation(t *testing.T) {
 	tests := []struct{ in, want string }{
-		{"tuh-01KYRMFV10W1N28TCN5ZZ9Z2C1", "tuh-z2c1"},
+		{"tuh-01KYRMFV10W1N28TCN5HQ8X7B4", "tuh-x7b4"},
 		{"t-01BX5ZZKBKACTAV9WEVGEMMVRY", "t-mvry"},
 		{"esc-01ABCDEFGH", "esc-efgh"},
 		{"t-abc", "t-abc"},
