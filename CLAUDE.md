@@ -14,4 +14,4 @@ A coordination fabric for agent fleets, steered by humans: a shared backlog, wor
 
 ## Maintainer notes
 
-`internal-docs/` is a gitignored clone of the private `tuhdoo-internal` repo; its README covers setup. It may be missing, and that's fine.
+`internal-docs/` is a gitignored clone of the private `brandonbews/tuhdoo-internal` repo; when it's there, `CLAUDE.local.md` loads its rules. It may be missing, and that's fine. To set it up on a computer, follow the README's "Private notes".
