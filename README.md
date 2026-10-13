@@ -114,3 +114,27 @@ walks a machine — or a whole team — away with zero trace.
 ## Learn more
 
 The full documentation lives in [`docs/`](docs/README.md).
+
+## Private notes
+
+The maintainer keeps the design decisions, the plan and the rules agents
+follow for this project in a private repo, `brandonbews/tuhdoo-internal`,
+cloned into this checkout as `internal-docs/`. Its `tuhdoo` branch is also
+the ledger this repo plans its work with; [`.tuhdoo`](.tuhdoo) names it.
+This repo ignores `/internal-docs`, `/CLAUDE.local.md` and
+`/.claude/commands/drain-backlog.md`, and everything builds and tests the
+same without them. To set up a computer with it:
+
+1. Clone this repo, then the private one inside it, as `internal-docs`
+   (not `internal`, which the Go packages own):
+   `git clone https://github.com/brandonbews/tuhdoo-internal.git internal-docs`.
+2. Run `sh internal-docs/scripts/install-hooks.sh`, and again after moving
+   either checkout. It's safe to rerun, and it refuses to replace a file or
+   a hook it didn't write.
+   - It links `CLAUDE.local.md` here to `internal-docs/agent-rules.md`, so
+     Claude Code loads those rules in this checkout and in worktrees under
+     `.claude/worktrees/`, and links `.claude/commands/drain-backlog.md` to
+     the private copy of the `/drain-backlog` command.
+   - It installs a `post-checkout` hook that links `internal-docs` and the
+     command into every new worktree (and `CLAUDE.local.md`, for a worktree
+     outside this checkout).

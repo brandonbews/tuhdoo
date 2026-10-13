@@ -87,8 +87,14 @@ var leakAllowlist = []struct{ path, substring, why string }{
 		"an MCP protocol version, which is named by its date"},
 	{"cmd/tuhdoo/mcp_cmd.go", "2026-07-28",
 		"an MCP protocol version, which is named by its date"},
-	{"CLAUDE.md", "is a gitignored clone of the private `tuhdoo-internal` repo",
+	{"CLAUDE.md", "is a gitignored clone of the private `brandonbews/tuhdoo-internal` repo",
 		"tells maintainers where their private notes clone goes"},
+	// The README's "Private notes" section is the setup guide for that
+	// clone, so it names the repo, the folder and the files it links.
+	{"README.md", "tuhdoo-internal", "the private notes repo the setup clones"},
+	{"README.md", "internal-docs", "the folder the private notes clone goes in"},
+	{"README.md", "CLAUDE.local", "the file the setup script links"},
+	{"README.md", "agent-rules", "the file CLAUDE.local.md links to"},
 	{".gitignore", "a clone of the private tuhdoo-internal repo",
 		"explains the ignore entries below it"},
 	{".gitignore", "/internal-docs",
