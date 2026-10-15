@@ -1,10 +1,11 @@
 // Site-wide constants: the origin every absolute URL is built on, and the
 // landing page's title and description (also the fallbacks for the 404).
 
-// www is the canonical host: the apex redirects to it (the host's domain
-// config), so every absolute URL we emit (canonical, og:url, og:image,
-// sitemap, llms.txt) must live on www or crawlers see a redirect hop.
-export const ORIGIN = "https://www.tuhdoo.com";
+// The apex is the canonical host: www redirects to it (a redirect rule on
+// the domain's Cloudflare zone), so every absolute URL we emit (canonical,
+// og:url, og:image, sitemap, llms.txt) must live on the apex or crawlers
+// see a redirect hop.
+export const ORIGIN = "https://tuhdoo.com";
 
 export const SITE_NAME = "tuhdoo";
 
