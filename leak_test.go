@@ -81,6 +81,8 @@ var leakAllowlist = []struct{ path, substring, why string }{
 		"general advice about the adopting project's own design docs"},
 	{"docs/joining.md", "(verified live, 2026-08-21)",
 		"the day a claim about Vercel was last checked, so readers can judge how fresh it is"},
+	{"docs/joining.md", "(verified live on a public repository, 2026-10-11)",
+		"the day a claim about Cloudflare Pages was last checked, so readers can judge how fresh it is"},
 	{"docs/recipes/vercel.md", "verified live against a real adopter repo on 2026-08-21",
 		"the day the recipe was last checked, so readers can judge how fresh it is"},
 	{"npm/smoke.sh", `"protocolVersion":"2025-06-18"`,
